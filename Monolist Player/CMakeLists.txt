@@ -44,6 +44,14 @@ qt_add_executable(monolist
     src/artworkcache.h             src/artworkcache.cpp
 )
 
+# components/ and views/ hold .qml files outside the module root. Qt 6.8+ wants
+# a qmldir in each so the directory imports in Main.qml and the views resolve
+# through the module rather than the old implicit-directory path. NEW makes Qt
+# generate them; without it the build still works but warns (QTP0004).
+if(QT_KNOWN_POLICY_QTP0004)
+    qt_policy(SET QTP0004 NEW)
+endif()
+
 set_source_files_properties(Theme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 
 qt_add_qml_module(monolist
