@@ -81,6 +81,13 @@ qt_add_qml_module(monolist
         views/DownloadsView.qml
     RESOURCES
         Icons.js
+        # Bundled so the design renders identically on Windows, macOS and Linux
+        # without asking the user to install anything. Archivo is OFL-1.1;
+        # fonts/OFL.txt travels with it as the licence requires.
+        fonts/Archivo-Regular.ttf
+        fonts/Archivo-SemiBold.ttf
+        fonts/Archivo-ExtraBold.ttf
+        fonts/OFL.txt
 )
 
 target_include_directories(monolist PRIVATE src)

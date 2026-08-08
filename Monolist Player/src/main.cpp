@@ -1,3 +1,4 @@
+#include <QFontDatabase>
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
@@ -24,6 +25,29 @@ int main(int argc, char *argv[])
     // Neutral control style: the design is drawn entirely by the QML components,
     // platform styles would override paddings and colors.
     QQuickStyle::setStyle(QStringLiteral("Basic"));
+
+    // Load the bundled typeface. The design names "Archivo" directly and its
+    // letter-spacing is tuned to that face, so a fallback sans does not just
+    // look different — the tracking is wrong for it. Registering the fonts from
+    // resources means no system install is required on any platform.
+    {
+        const QStringList faces = {
+            QStringLiteral(":/qt/qml/Monolist/fonts/Archivo-Regular.ttf"),
+            QStringLiteral(":/qt/qml/Monolist/fonts/Archivo-SemiBold.ttf"),
+            QStringLiteral(":/qt/qml/Monolist/fonts/Archivo-ExtraBold.ttf")
+        };
+        bool loadedAny = false;
+        for (const QString &face : faces) {
+            if (QFontDatabase::addApplicationFont(face) >= 0)
+                loadedAny = true;
+            else
+                qWarning("Monolist: could not load bundled font %s", qPrintable(face));
+        }
+        if (!loadedAny) {
+            qWarning("Monolist: no bundled fonts loaded — the interface will fall back "
+                     "to the default sans and the design will not match.");
+        }
+    }
 
     AppDatabase database;
     if (!database.open())

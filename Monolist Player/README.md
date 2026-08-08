@@ -149,9 +149,18 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$(brew --pref
 cmake --build build
 ```
 
-The UI names the **Archivo** family (400/600/800) directly. Without it Qt
-substitutes the default sans; the layout still holds but the design will not
-match.
+### Typeface
+
+**Archivo (400/600/800) is bundled** in `fonts/` and registered from Qt
+resources at startup, so nothing needs installing on any platform. Google ships
+Archivo as a variable font only; the three static instances here were cut from
+it with `fonttools varLib.instancer` and renamed so a single family "Archivo"
+carries all three weights. Archivo is OFL-1.1 and `fonts/OFL.txt` travels with
+it, as the licence requires.
+
+This matters more than it sounds: the design's letter-spacing (`Theme.tracking`,
+including negative tracking on headings) is calibrated for Archivo's metrics, so
+a fallback sans does not merely look different — the tracking is wrong for it.
 
 ## Runtime dependencies
 
