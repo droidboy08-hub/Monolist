@@ -1,0 +1,61 @@
+#pragma once
+
+#include <QObject>
+#include <QString>
+
+struct mpv_handle;
+
+// Thin Qt wrapper around libmpv, configured for audio-only playback.
+//
+// libmpv delivers events on its own thread; the wakeup callback re-enters the
+// Qt event loop through a queued invocation, so every signal below is emitted
+// on the thread that owns this object. Nothing here touches QML directly.
+//
+// Replaces the simulated clock the UI prototype ran on: position and duration
+// now come from the decoder, not a QTimer.
+class MpvEngine : public QObject
+{
+    Q_OBJECT
+public:
+    explicit MpvEngine(QObject *parent = nullptr);
+    ~MpvEngine() override;
+
+    // False when libmpv could not be initialised. The app still runs — the
+    // controller reports the failure instead of pretending to play.
+    bool isValid() const { return m_mpv != nullptr; }
+    QString lastError() const { return m_lastError; }
+
+    // Accepts a local file path or a direct stream URL. Playback starts paused
+    // or playing according to `startPlaying`.
+    void load(const QString &urlOrPath, bool startPlaying = true);
+    void stop();
+    void setPaused(bool paused);
+    void seekAbsolute(qint64 ms);
+    void setVolume(qreal volume);        // 0.0 – 1.0
+    void setSpeed(qreal speed);
+    void setReplayGainEnabled(bool enabled);
+
+Q_SIGNALS:
+    void positionChanged(qint64 ms);
+    void durationChanged(qint64 ms);
+    void pausedChanged(bool paused);
+    void bufferingChanged(bool buffering);
+    void endOfFile();                    // natural end, not a manual stop
+    void loadFailed(const QString &reason);
+    void metadataChanged(const QString &title, const QString &artist);
+
+private Q_SLOTS:
+    void drainEvents();
+
+private:
+    static void onWakeup(void *ctx);
+    void observeProperties();
+    void applyBaseOptions();
+    void setOption(const char *name, const char *value);
+
+    mpv_handle *m_mpv = nullptr;
+    QString m_lastError;
+    bool m_paused = true;
+    bool m_buffering = false;
+    qint64 m_duration = 0;
+};

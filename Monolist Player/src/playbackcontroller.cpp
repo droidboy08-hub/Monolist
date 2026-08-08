@@ -1,0 +1,388 @@
+#include "playbackcontroller.h"
+#include "appdatabase.h"
+#include "downloadmanager.h"
+#include "mpvengine.h"
+#include "streamresolver.h"
+#include "trackmodel.h"
+
+#include <QFileInfo>
+#include <QRandomGenerator>
+#include <QSqlQuery>
+#include <QVariant>
+
+PlaybackController::PlaybackController(MpvEngine *engine,
+                                       StreamResolver *resolver,
+                                       DownloadManager *downloads,
+                                       QObject *parent)
+    : QObject(parent)
+    , m_engine(engine)
+    , m_resolver(resolver)
+    , m_downloads(downloads)
+{
+    if (m_engine) {
+        connect(m_engine, &MpvEngine::positionChanged, this, [this](qint64 ms) {
+            if (ms == m_position)
+                return;
+            m_position = ms;
+            Q_EMIT positionChanged();
+        });
+
+        connect(m_engine, &MpvEngine::durationChanged, this, &PlaybackController::setDuration);
+
+        connect(m_engine, &MpvEngine::pausedChanged, this, [this](bool paused) {
+            setPlayingFlag(!paused);
+        });
+
+        connect(m_engine, &MpvEngine::bufferingChanged, this, [this](bool buffering) {
+            if (buffering == m_buffering)
+                return;
+            m_buffering = buffering;
+            Q_EMIT bufferingChanged();
+        });
+
+        connect(m_engine, &MpvEngine::endOfFile, this, &PlaybackController::handleEndOfFile);
+
+        connect(m_engine, &MpvEngine::loadFailed, this, [this](const QString &reason) {
+            setPlayingFlag(false);
+            setStatus(QStringLiteral("Playback failed"), QString(), false);
+            Q_EMIT playbackError(reason);
+        });
+
+        m_engine->setVolume(m_volume);
+    }
+
+    if (m_resolver) {
+        connect(m_resolver, &StreamResolver::resolved, this, &PlaybackController::handleResolved);
+        connect(m_resolver, &StreamResolver::failed, this, &PlaybackController::handleResolveFailed);
+    }
+}
+
+bool PlaybackController::engineAvailable() const
+{
+    return m_engine && m_engine->isValid();
+}
+
+void PlaybackController::setQueue(TrackModel *model)
+{
+    m_queue = model;
+}
+
+qreal PlaybackController::progress() const
+{
+    return m_duration > 0 ? qreal(m_position) / qreal(m_duration) : 0.0;
+}
+
+QString PlaybackController::positionText() const
+{
+    return TrackModel::formatDuration(m_position);
+}
+
+QString PlaybackController::durationText() const
+{
+    return TrackModel::formatDuration(m_duration);
+}
+
+void PlaybackController::setStatus(const QString &text, const QString &source, bool resolving)
+{
+    const bool changed = text != m_statusText
+                      || source != m_sourceLabel
+                      || resolving != m_resolving;
+    m_statusText = text;
+    m_sourceLabel = source;
+    m_resolving = resolving;
+    if (changed)
+        Q_EMIT statusChanged();
+}
+
+void PlaybackController::setPlayingFlag(bool playing)
+{
+    if (playing == m_playing)
+        return;
+    m_playing = playing;
+    Q_EMIT playingChanged();
+}
+
+void PlaybackController::setDuration(qint64 ms)
+{
+    if (ms == m_duration)
+        return;
+    m_duration = ms;
+    Q_EMIT durationChanged();
+}
+
+void PlaybackController::recordHistory(int trackId)
+{
+    if (trackId <= 0)
+        return;
+    QSqlQuery history(AppDatabase::connection());
+    history.prepare(QStringLiteral("INSERT INTO history (track_id) VALUES (?)"));
+    history.addBindValue(trackId);
+    history.exec();
+}
+
+void PlaybackController::loadIndex(int index)
+{
+    if (!m_queue)
+        return;
+    const int count = m_queue->rowCount();
+    if (count == 0 || index < 0 || index >= count)
+        return;
+
+    m_index = index;
+    beginTrack(m_queue->get(index), /*autoPlay=*/false);
+}
+
+void PlaybackController::playIndex(int index)
+{
+    if (!m_queue)
+        return;
+    const int count = m_queue->rowCount();
+    if (count == 0 || index < 0 || index >= count)
+        return;
+
+    m_index = index;
+    beginTrack(m_queue->get(index), /*autoPlay=*/true);
+}
+
+void PlaybackController::playSource(const QString &videoId,
+                                    const QString &title,
+                                    const QString &artist)
+{
+    if (videoId.isEmpty())
+        return;
+
+    m_index = -1;
+    beginTrack(QVariantMap{
+                   { QStringLiteral("trackId"),    0 },
+                   { QStringLiteral("sourceId"),   videoId },
+                   { QStringLiteral("title"),      title },
+                   { QStringLiteral("artist"),     artist },
+                   { QStringLiteral("album"),      QString() },
+                   { QStringLiteral("durationMs"), 0 },
+                   { QStringLiteral("sourceUrl"),  QString() },
+                   { QStringLiteral("artwork"),    QString() }
+               },
+               /*autoPlay=*/true);
+}
+
+// The source ladder. Everything that decides *where* audio comes from lives
+// here; the rest of the class only cares that something is playing.
+void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
+{
+    if (m_resolver && !m_pendingVideoId.isEmpty())
+        m_resolver->cancel(m_pendingVideoId);
+    m_pendingVideoId.clear();
+
+    m_currentTrack = track;
+    m_favourite = track.value(QStringLiteral("favourite")).toBool();
+    m_position = 0;
+    m_autoPlayAfterResolve = autoPlay;
+    setDuration(track.value(QStringLiteral("durationMs")).toLongLong());
+
+    Q_EMIT currentTrackChanged();
+    Q_EMIT favouriteChanged();
+    Q_EMIT positionChanged();
+
+    recordHistory(track.value(QStringLiteral("trackId")).toInt());
+
+    if (!engineAvailable()) {
+        setStatus(QStringLiteral("Audio engine unavailable"), QString(), false);
+        Q_EMIT playbackError(m_engine ? m_engine->lastError()
+                                      : QStringLiteral("libmpv was not initialised."));
+        return;
+    }
+
+    const QString videoId = track.value(QStringLiteral("sourceId")).toString();
+
+    // 1 — a downloaded copy, or any source that is already a local file.
+    QString localPath;
+    if (m_downloads && !videoId.isEmpty())
+        localPath = m_downloads->localPathFor(videoId);
+    if (localPath.isEmpty()) {
+        const QString source = track.value(QStringLiteral("sourceUrl")).toString();
+        if (!source.isEmpty() && QFileInfo::exists(source))
+            localPath = source;
+    }
+
+    if (!localPath.isEmpty()) {
+        setStatus(QStringLiteral("Offline"), QStringLiteral("Local file"), false);
+        m_engine->load(localPath, autoPlay);
+        return;
+    }
+
+    // 2 — resolve a stream. Nothing plays until the resolver answers.
+    if (!videoId.isEmpty() && m_resolver) {
+        m_pendingVideoId = videoId;
+        setStatus(QStringLiteral("Resolving source…"), QString(), true);
+        m_resolver->resolve(videoId);
+        return;
+    }
+
+    // 3 — a plain remote URL stored on the row.
+    const QString source = track.value(QStringLiteral("sourceUrl")).toString();
+    if (!source.isEmpty()) {
+        setStatus(QStringLiteral("Streaming"), QStringLiteral("Direct URL"), false);
+        m_engine->load(source, autoPlay);
+        return;
+    }
+
+    setStatus(QStringLiteral("No playable source"), QString(), false);
+    Q_EMIT playbackError(QStringLiteral("This track has no local file and no source id."));
+}
+
+void PlaybackController::handleResolved(const QString &videoId, const QString &url, int tier)
+{
+    if (videoId != m_pendingVideoId)
+        return;                       // a later track superseded this one
+    m_pendingVideoId.clear();
+
+    QString label;
+    switch (tier) {
+    case StreamResolver::TierYtDlp:     label = QStringLiteral("yt-dlp");    break;
+    case StreamResolver::TierPiped:     label = QStringLiteral("Piped");     break;
+    case StreamResolver::TierInvidious: label = QStringLiteral("Invidious"); break;
+    default:                            label = QStringLiteral("Stream");    break;
+    }
+
+    setStatus(QStringLiteral("Streaming"), label, false);
+    if (m_engine)
+        m_engine->load(url, m_autoPlayAfterResolve);
+}
+
+void PlaybackController::handleResolveFailed(const QString &videoId, const QString &reason)
+{
+    if (videoId != m_pendingVideoId)
+        return;
+    m_pendingVideoId.clear();
+
+    setPlayingFlag(false);
+    setStatus(QStringLiteral("Source unavailable"), QString(), false);
+    Q_EMIT playbackError(reason);
+}
+
+void PlaybackController::handleEndOfFile()
+{
+    if (m_repeatMode == RepeatOne) {
+        m_position = 0;
+        Q_EMIT positionChanged();
+        if (m_index >= 0)
+            playIndex(m_index);
+        return;
+    }
+    next();
+}
+
+void PlaybackController::play()
+{
+    if (!engineAvailable())
+        return;
+    if (m_index < 0 && m_currentTrack.isEmpty()) {
+        playIndex(0);
+        return;
+    }
+    m_engine->setPaused(false);
+}
+
+void PlaybackController::pause()
+{
+    if (engineAvailable())
+        m_engine->setPaused(true);
+}
+
+void PlaybackController::togglePlay()
+{
+    m_playing ? pause() : play();
+}
+
+void PlaybackController::next()
+{
+    if (!m_queue || m_queue->rowCount() == 0)
+        return;
+    const int count = m_queue->rowCount();
+
+    int target = m_index + 1;
+    if (m_shuffle && count > 1) {
+        do {
+            target = QRandomGenerator::global()->bounded(count);
+        } while (target == m_index);
+    } else if (target >= count) {
+        if (m_repeatMode == RepeatOff) {
+            pause();
+            return;                   // end of queue — stop rather than restart
+        }
+        target = 0;
+    }
+
+    const bool wasPlaying = m_playing || m_resolving;
+    if (wasPlaying)
+        playIndex(target);
+    else
+        loadIndex(target);
+}
+
+void PlaybackController::previous()
+{
+    if (!m_queue)
+        return;
+
+    // Restart the current track first, the way every other player behaves.
+    if (m_position > 3000) {
+        setPosition(0);
+        return;
+    }
+
+    const bool wasPlaying = m_playing || m_resolving;
+    const int target = m_index > 0 ? m_index - 1 : 0;
+    if (wasPlaying)
+        playIndex(target);
+    else
+        loadIndex(target);
+}
+
+void PlaybackController::setPosition(qint64 ms)
+{
+    const qint64 clamped = m_duration > 0 ? qBound<qint64>(0, ms, m_duration)
+                                          : qMax<qint64>(0, ms);
+    m_position = clamped;
+    if (engineAvailable())
+        m_engine->seekAbsolute(clamped);
+    Q_EMIT positionChanged();
+}
+
+void PlaybackController::seekFraction(qreal fraction)
+{
+    setPosition(qint64(qBound(0.0, fraction, 1.0) * qreal(m_duration)));
+}
+
+void PlaybackController::setVolume(qreal volume)
+{
+    const qreal clamped = qBound(0.0, volume, 1.0);
+    if (qFuzzyCompare(clamped + 1.0, m_volume + 1.0))
+        return;
+    m_volume = clamped;
+    if (m_engine)
+        m_engine->setVolume(clamped);
+    Q_EMIT volumeChanged();
+}
+
+void PlaybackController::setShuffle(bool shuffle)
+{
+    if (shuffle == m_shuffle)
+        return;
+    m_shuffle = shuffle;
+    Q_EMIT shuffleChanged();
+}
+
+void PlaybackController::cycleRepeat()
+{
+    m_repeatMode = (m_repeatMode + 1) % 3;
+    Q_EMIT repeatModeChanged();
+}
+
+void PlaybackController::toggleFavourite()
+{
+    m_favourite = !m_favourite;
+    if (m_queue && m_index >= 0)
+        m_queue->toggleFavourite(m_index);
+    Q_EMIT favouriteChanged();
+}
