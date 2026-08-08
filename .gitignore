@@ -1,0 +1,85 @@
+# ---- Dependencies ----
+node_modules/
+.pnp
+.pnp.js
+
+# ---- Build output ----
+dist/
+dist-ssr/
+dist_electron/
+build/
+out/
+release/
+*.local
+
+# ---- Qt / CMake ----
+build*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+*.qmlc
+*.jsc
+.qt/
+.qtc_clangd/
+*_qmlcache.qrc
+Makefile
+
+# ---- Packaged binaries & archives (keep the repo source-only) ----
+*.exe
+*.msi
+*.dmg
+*.pkg
+*.deb
+*.rpm
+*.AppImage
+*.apk
+*.aab
+*.zip
+*.7z
+*.rar
+*.tar
+*.tar.gz
+
+# Distribution folders holding shipped installers
+Success Builds/
+STANDALONE SETUP/
+
+# ---- Native platform build output ----
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+ios/App/Pods/
+ios/App/build/
+ios/DerivedData/
+
+# ---- Logs ----
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ---- Google Drive sync temp ----
+.tmp.drivedownload/
+.tmp.driveupload/
+
+# ---- Editor / OS ----
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ---- Secrets ----
+.env
+.env.local
+.env.*.local

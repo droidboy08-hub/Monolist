@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>Lumen — Desktop Music Player</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="app/styles.css">
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+  <div class="bg-orbs" aria-hidden="true">
+    <div class="orb o1"></div>
+    <div class="orb o2"></div>
+    <div class="orb o3"></div>
+    <div class="orb o4"></div>
+    <div class="orb o5"></div>
+  </div>
+
+  <div id="root"></div>
+
+  <script type="text/babel" src="tweaks-panel.jsx"></script>
+  <script type="text/babel" src="app/components.jsx"></script>
+  <script type="text/babel" src="app/views.jsx"></script>
+  <script type="text/babel" src="app/settings.jsx"></script>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+      "platform": "win",
+      "accent": "forest",
+      "warmth": "cool",
+      "density": "regular",
+      "glassIntensity": 1,
+      "quality": "high",
+      "dlQuality": "very-high",
+      "crossfade": 4,
+      "storage": 8,
+      "gapless": true,
+      "normalize": true,
+      "lyrics": false,
+      "autoDl": true,
+      "wifiOnly": true
+    }/*EDITMODE-END*/;
+
+    const ACCENT_MAP = {
+      violet: { a: "oklch(64% 0.20 295)", b: "oklch(72% 0.18 200)", warm: "oklch(78% 0.18 55)" },
+      coral:  { a: "oklch(67% 0.20 25)",  b: "oklch(72% 0.18 60)",  warm: "oklch(74% 0.16 340)" },
+      ocean:  { a: "oklch(60% 0.18 230)", b: "oklch(68% 0.16 195)", warm: "oklch(74% 0.16 160)" },
+      forest: { a: "oklch(58% 0.16 155)", b: "oklch(66% 0.16 110)", warm: "oklch(74% 0.16 80)"  },
+    };
+
+    const WARMTH_MAP = {
+      warm: ["#FFD7B0", "#FFB7C8", "#FFE2AE", "#F2C3FF", "#FFEAC4"],
+      balanced: ["#FFC7E6", "#FFD89A", "#93D9FF", "#C7B9FF", "#FFE08C"],
+      cool: ["#C7E2FF", "#B6F0E2", "#D4C7FF", "#A8C9FF", "#E5F0FF"],
+    };
+
+    function App() {
+      const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+
+      const [view, setView]       = useState("library");
+      const [currentId, setCurId] = useState(1);
+      const [playing, setPlaying] = useState(true);
+      const [progress, setProgress] = useState(0.42);
+      const [volume, setVolume]   = useState(0.68);
+      const [online, setOnline]   = useState(true);
+      const [tracks, setTracks]   = useState(TRACKS);
+      const [settingsOpen, setSettingsOpen] = useState(false);
+
+      const current = tracks.find(x => x.id === currentId);
+
+      const onPlay = (id) => {
+        if (id === currentId) setPlaying(p => !p);
+        else { setCurId(id); setPlaying(true); setProgress(0); }
+      };
+      const onPlayPause = () => setPlaying(p => !p);
+      const onPrev = () => {
+        const i = tracks.findIndex(x => x.id === currentId);
+        const prev = tracks[(i - 1 + tracks.length) % tracks.length];
+        setCurId(prev.id); setProgress(0);
+      };
+      const onNext = () => {
+        const i = tracks.findIndex(x => x.id === currentId);
+        const nxt = tracks[(i + 1) % tracks.length];
+        setCurId(nxt.id); setProgress(0);
+      };
+      const onToggleDl = (id) => {
+        setTracks(ts => ts.map(x => x.id === id ? { ...x, downloaded: !x.downloaded } : x));
+      };
+
+      /* auto-progress when playing */
+      useEffect(() => {
+        if (!playing) return;
+        const [m, s] = current.dur.split(":").map(Number);
+        const total = m * 60 + s;
+        const tick = setInterval(() => {
+          setProgress(p => {
+            const next = p + 1 / total;
+            if (next >= 1) { onNext(); return 0; }
+            return next;
+          });
+        }, 1000);
+        return () => clearInterval(tick);
+      }, [playing, currentId]);
+
+      /* apply tweaks to CSS vars */
+      const accentColors = ACCENT_MAP[t.accent] || ACCENT_MAP.violet;
+      const warmth = WARMTH_MAP[t.warmth] || WARMTH_MAP.balanced;
+
+      const cssVars = {
+        "--accent":     accentColors.a,
+        "--accent-2":   accentColors.b,
+        "--accent-warm":accentColors.warm,
+      };
+
+      // Replace body background based on warmth
+      useEffect(() => {
+        const [a,b,c,d,e] = warmth;
+        document.body.style.background = `
+          radial-gradient(120% 80% at 0% 0%,   ${a} 0%, transparent 55%),
+          radial-gradient(90% 70% at 100% 0%,  ${b} 0%, transparent 50%),
+          radial-gradient(120% 90% at 100% 100%, ${c} 0%, transparent 55%),
+          radial-gradient(110% 90% at 0% 100%, ${d} 0%, transparent 55%),
+          linear-gradient(180deg, ${e}, ${d})
+        `;
+      }, [t.warmth]);
+
+      const tracksWithState = tracks;
+
+      return (
+        <div className="app-shell" style={cssVars}>
+          <div className="window">
+            <WindowChrome
+              platform={t.platform}
+              onNav={(id) => setView(id)}
+              view={view}
+              onOpenSettings={() => setSettingsOpen(true)}/>
+
+            <div className="body">
+              <Sidebar view={view} online={online} onNav={(id) => setView(id)}/>
+
+              <div className="main-pane">
+                {view === "library"   && <Library    onPlay={onPlay} currentId={currentId} playing={playing} onToggleDl={onToggleDl}/>}
+                {view === "search"    && <Search     onPlay={onPlay} currentId={currentId} playing={playing} onToggleDl={onToggleDl}/>}
+                {view === "playlists" && <Playlists  onPlay={onPlay} currentId={currentId} playing={playing} onToggleDl={onToggleDl}/>}
+                {view === "downloads" && <Downloads  onPlay={onPlay} currentId={currentId} playing={playing} onToggleDl={onToggleDl}/>}
+              </div>
+            </div>
+
+            <NowPlaying
+              track={tracksWithState.find(x => x.id === currentId)}
+              playing={playing}
+              progress={progress}
+              setProgress={setProgress}
+              volume={volume}
+              setVolume={setVolume}
+              onPlayPause={onPlayPause}
+              onPrev={onPrev}
+              onNext={onNext}
+              onToggleDl={onToggleDl}/>
+          </div>
+
+          <Settings open={settingsOpen} onClose={() => setSettingsOpen(false)} t={t} setTweak={setTweak}/>
+
+          <TweaksPanel title="Tweaks">
+            <TweakSection label="Window"/>
+            <TweakRadio label="Platform" value={t.platform}
+              options={["mac","win"]}
+              onChange={v => setTweak("platform", v)}/>
+
+            <TweakSection label="Glass tone"/>
+            <TweakRadio label="Warmth" value={t.warmth}
+              options={["warm","balanced","cool"]}
+              onChange={v => setTweak("warmth", v)}/>
+
+            <TweakSection label="Accent"/>
+            <TweakSelect label="Color" value={t.accent}
+              options={["violet","coral","ocean","forest"]}
+              onChange={v => setTweak("accent", v)}/>
+          </TweaksPanel>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+  </script>
+</body>
+</html>

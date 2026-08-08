@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-ChildItem -Recurse \"C:\\\\Users\\\\Droid\\\\Desktop\\\\Desktop Multiplatorm Music Player\\\\Old Music player\\\\youtube-music-player\\\\src\" -File | Select-Object @{n='Size';e={$_.Length}}, @{n='Path';e={$_.FullName.Replace\\('C:\\\\Users\\\\Droid\\\\Desktop\\\\Desktop Multiplatorm Music Player\\\\Old Music player\\\\youtube-music-player\\\\',''\\)}} | Sort-Object Path | Format-Table -AutoSize | Out-String -Width 200)",
+      "PowerShell(Get-ChildItem -Recurse \"C:\\\\Users\\\\Droid\\\\Desktop\\\\Desktop Multiplatorm Music Player\\\\Ui design Qt\" -File | Select-Object @{n='Size';e={$_.Length}}, @{n='Path';e={$_.FullName.Replace\\('C:\\\\Users\\\\Droid\\\\Desktop\\\\Desktop Multiplatorm Music Player\\\\Ui design Qt\\\\',''\\)}} | Sort-Object Path | Format-Table -AutoSize | Out-String -Width 200)"
+    ]
+  }
+}

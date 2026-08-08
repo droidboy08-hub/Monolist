@@ -1,0 +1,207 @@
+{
+  "main": {
+    "id": "73fadbe1d4690a1d",
+    "type": "split",
+    "children": [
+      {
+        "id": "6a7144faabcf55a2",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "dc2052da2a7a38d9",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "IDEAS FOR UI DESIGN (ELECTRON ).md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "IDEAS FOR UI DESIGN (ELECTRON )"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "10a570f91cd4d858",
+    "type": "split",
+    "children": [
+      {
+        "id": "bbeba06e9559c11c",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "1b226fb512705d19",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "e20dae586e2c20e1",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "455b9be4d495463a",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "970d1654782b1be7",
+    "type": "split",
+    "children": [
+      {
+        "id": "ca27f8050394993d",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "2eef403c21dd9ae2",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "README.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for README"
+            }
+          },
+          {
+            "id": "9a224b6b1d09585b",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "README.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from README"
+            }
+          },
+          {
+            "id": "dabb4a5bb5d855cb",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "cd25a8a520afa303",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "e592f3da34f81f8b",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "README.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of README"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false
+    }
+  },
+  "active": "dc2052da2a7a38d9",
+  "lastOpenFiles": [
+    "IDEAS FOR UI DESIGN (ELECTRON ).md",
+    "Untitled",
+    "node_modules/@electron/fuses/node_modules/fs-extra/README.md",
+    "README.md",
+    "node_modules/color-convert/README.md",
+    "node_modules/color-convert/CHANGELOG.md",
+    "2026-05-11.md",
+    "dist_electron/win-unpacked/resources/app.asar.unpacked/node_modules/@tailwindcss/oxide-win32-x64-msvc/desktop.ini",
+    "dist_electron/win-unpacked/resources/app.asar.unpacked/node_modules/@tailwindcss/desktop.ini",
+    "dist_electron/youtube-music-player-0.0.0-x64.nsis.7z",
+    "dist_electron/Melody Setup 0.0.0.exe.blockmap",
+    "dist_electron/Melody Setup 0.0.0.__uninstaller.exe",
+    "dist_electron/Melody Setup 0.0.0.exe",
+    "dist_electron/win-unpacked/RCX5D07.tmp",
+    "dist_electron/win-unpacked/LICENSE.electron.txt",
+    "dist_electron/win-unpacked/chrome_200_percent.pak",
+    "PortBackup2.md",
+    "PROJECT_MEMORY_BACKUP.md"
+  ]
+}
