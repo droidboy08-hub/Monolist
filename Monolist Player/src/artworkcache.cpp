@@ -3,6 +3,8 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QMetaObject>
+#include <QMutex>
+#include <QMutexLocker>
 #include <QNetworkAccessManager>
 #include <QNetworkDiskCache>
 #include <QNetworkReply>
@@ -16,6 +18,9 @@
 
 // ------------------------------------------------------------ ArtworkResponse
 
+// Lives on QML's pixmap reader thread; the fetcher drives it from the main
+// thread. Emitting finished() from another thread is the documented pattern for
+// QQuickImageResponse, but the reply pointer is shared, so it is guarded.
 class ArtworkResponse : public QQuickImageResponse
 {
     Q_OBJECT
@@ -27,10 +32,25 @@ public:
 
     QString errorString() const override { return m_error; }
 
+    // Called by QML, on QML's thread. The reply belongs to the fetcher's
+    // thread, so the abort is posted there rather than invoked directly.
     void cancel() override
     {
-        if (m_reply && m_reply->isRunning())
-            m_reply->abort();
+        QMutexLocker lock(&m_mutex);
+        if (m_reply)
+            QMetaObject::invokeMethod(m_reply, "abort", Qt::QueuedConnection);
+    }
+
+    void attachReply(QNetworkReply *reply)
+    {
+        QMutexLocker lock(&m_mutex);
+        m_reply = reply;
+    }
+
+    void detachReply()
+    {
+        QMutexLocker lock(&m_mutex);
+        m_reply = nullptr;
     }
 
 public Q_SLOTS:
@@ -46,10 +66,9 @@ public Q_SLOTS:
         Q_EMIT finished();
     }
 
-public:
-    QPointer<QNetworkReply> m_reply;
-
 private:
+    mutable QMutex m_mutex;
+    QNetworkReply *m_reply = nullptr;
     QImage m_image;
     QString m_error;
 };
@@ -116,14 +135,36 @@ void ArtworkFetcher::fetch(ArtworkResponse *response,
     request.setTransferTimeout(10000);
 
     QNetworkReply *reply = m_network->get(request);
-    response->m_reply = reply;
+    response->attachReply(reply);
 
-    QObject::connect(reply, &QNetworkReply::finished, response, [reply, response, scaled]() {
+    // Context is `this`, not `response`.
+    //
+    // QQuickAsyncImageProvider calls the provider from QML's pixmap reader
+    // thread, so `response` lives on that thread. Using it as the context made
+    // this lambda run there while the reply is owned by the QNetworkAccessManager
+    // on this thread — reading it from the wrong thread raced with the socket
+    // still appending, produced a garbage internal length, and QByteArray::resize
+    // then threw std::bad_alloc. Everything that touches the reply has to stay
+    // here; only the finished QImage crosses threads.
+    QObject::connect(reply, &QNetworkReply::finished, this, [reply, response, scaled]() {
         reply->deleteLater();
+        response->detachReply();
+
         if (reply->error() != QNetworkReply::NoError) {
             response->fail(reply->errorString());
             return;
         }
+
+        // Artwork is a thumbnail. Anything wildly larger is a redirect to a
+        // page, a captive portal, or a broken instance — refuse it rather than
+        // decoding it.
+        constexpr qint64 kMaxArtworkBytes = 24LL * 1024 * 1024;
+        if (reply->bytesAvailable() > kMaxArtworkBytes) {
+            response->fail(QStringLiteral("Artwork response too large (%1 bytes).")
+                               .arg(reply->bytesAvailable()));
+            return;
+        }
+
         QImage image;
         if (!image.loadFromData(reply->readAll())) {
             response->fail(QStringLiteral("Artwork data was not a readable image."));
@@ -146,11 +187,15 @@ QQuickImageResponse *ArtworkCache::requestImageResponse(const QString &id,
 {
     auto *response = new ArtworkResponse;
 
+    // Artwork.qml percent-encodes the address so the "//" in the scheme
+    // survives QML's url parsing; undo that here.
+    const QString source = QUrl::fromPercentEncoding(id.toUtf8());
+
     // requestImageResponse runs on QML's image thread; hop to the fetcher's
     // thread before touching the network stack.
     QMetaObject::invokeMethod(m_fetcher, "fetch", Qt::QueuedConnection,
                               Q_ARG(ArtworkResponse *, response),
-                              Q_ARG(QString, id),
+                              Q_ARG(QString, source),
                               Q_ARG(QSize, requestedSize));
     return response;
 }

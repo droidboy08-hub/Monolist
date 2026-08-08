@@ -53,6 +53,11 @@ void YtDlpRequest::start(const QString &program, const QStringList &arguments, b
     m_process->setProcessChannelMode(QProcess::SeparateChannels);
 
     connect(m_process, &QProcess::readyReadStandardOutput, this, &YtDlpRequest::handleStdout);
+    // Drain stderr as it arrives. Left unread, a verbose run fills the pipe
+    // buffer and yt-dlp blocks writing to it, which looks like a hang.
+    connect(m_process, &QProcess::readyReadStandardError, this, [this]() {
+        m_stderr.append(m_process->readAllStandardError());
+    });
     connect(m_process, &QProcess::finished, this, &YtDlpRequest::handleFinished);
     connect(m_process, &QProcess::errorOccurred, this, [this](QProcess::ProcessError error) {
         if (error == QProcess::FailedToStart)
@@ -106,13 +111,20 @@ void YtDlpRequest::handleFinished(int exitCode, QProcess::ExitStatus status)
     if (m_settled)
         return;
 
+    // finished() can arrive with data still sitting in the pipe — readyRead is
+    // not guaranteed to have delivered every last chunk first. A --dump-json
+    // response is ~600 KB, so losing the tail meant the JSON failed to parse
+    // and the whole yt-dlp tier was reported as a failure.
+    handleStdout();
+
     if (status == QProcess::CrashExit) {
         settleFailed(QStringLiteral("yt-dlp terminated unexpectedly."));
         return;
     }
 
     if (exitCode != 0) {
-        const QString stderrText = QString::fromUtf8(m_process->readAllStandardError()).trimmed();
+        m_stderr.append(m_process->readAllStandardError());
+        const QString stderrText = QString::fromUtf8(m_stderr).trimmed();
         settleFailed(stderrText.isEmpty()
                          ? QStringLiteral("yt-dlp exited with code %1.").arg(exitCode)
                          : stderrText.section(QLatin1Char('\n'), -1));

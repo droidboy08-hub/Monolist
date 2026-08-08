@@ -248,9 +248,19 @@ void StreamResolver::startInvidiousRace(Job *job)
 
                     const int status = reply->attribute(
                         QNetworkRequest::HttpStatusCodeAttribute).toInt();
+                    const QString contentType = reply->header(
+                        QNetworkRequest::ContentTypeHeader).toString();
+
+                    // A dead or rate-limited instance answers 200 with an HTML
+                    // error page. Accepting on status alone handed mpv a web
+                    // page and produced "unrecognized file format", so require
+                    // the response to actually claim to be media.
+                    const bool isMedia = contentType.startsWith(QLatin1String("audio/"))
+                                      || contentType.startsWith(QLatin1String("video/"))
+                                      || contentType.startsWith(QLatin1String("application/octet-stream"));
 
                     if (live && reply->error() == QNetworkReply::NoError
-                        && status >= 200 && status < 400) {
+                        && status >= 200 && status < 300 && isMedia) {
                         succeed(job, url.toString());
                         return;
                     }

@@ -20,7 +20,12 @@ Rectangle {
     Image {
         id: image
         anchors.fill: parent
-        source: root.source.length > 0 ? "image://artwork/" + root.source : ""
+        // Percent-encoded: the provider id goes through URL parsing, which
+        // collapses the "//" in "https://" and hands the provider a broken
+        // address. The provider decodes it back.
+        source: root.source.length > 0
+                ? "image://artwork/" + encodeURIComponent(root.source)
+                : ""
         sourceSize.width: Math.max(1, Math.ceil(root.width))
         sourceSize.height: Math.max(1, Math.ceil(root.height))
         fillMode: Image.PreserveAspectCrop

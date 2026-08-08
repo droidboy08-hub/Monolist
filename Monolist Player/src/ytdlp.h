@@ -38,6 +38,7 @@ private:
 
     QProcess *m_process = nullptr;
     QByteArray m_stdout;
+    QByteArray m_stderr;
     QString m_destinationPath;
     bool m_expectJson = true;
     bool m_settled = false;

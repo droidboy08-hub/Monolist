@@ -135,92 +135,98 @@ void AppDatabase::migrate()
         q.exec(QStringLiteral(
             "CREATE INDEX IF NOT EXISTS idx_tracks_source_id ON tracks(source_id)"));
     }
+
+    removeSampleData();
+
+    // history.track_id is ON DELETE SET NULL, so removing a track leaves a row
+    // that records only a timestamp and points at nothing. Not guarded by the
+    // one-time marker: it stays true whenever a track is deleted.
+    q.exec(QStringLiteral("DELETE FROM history WHERE track_id IS NULL"));
 }
 
-void AppDatabase::seedSampleDataIfEmpty()
+// The interface prototype seeded invented albums and tracks so the layout had
+// something to render. They are not the user's data and there is no real
+// content to confuse them with, so they are removed once, on the launch after
+// this version lands.
+//
+// Deliberately narrow: only rows matching the seeded titles exactly, and only
+// where nothing real has attached to them — no source id, no local file, not
+// favourited. A downloaded track or anything played from a real source is left
+// alone even if it happens to share a title.
+void AppDatabase::removeSampleData()
 {
+    QSqlQuery guard(connection());
+    guard.prepare(QStringLiteral("SELECT value FROM settings WHERE key = ?"));
+    guard.addBindValue(QStringLiteral("sample_data_removed"));
+    if (guard.exec() && guard.next())
+        return;                       // already done; never run twice
+
+    static const QStringList seededTracks = {
+        QStringLiteral("Rot / 07"),
+        QStringLiteral("Elevation Study"),
+        QStringLiteral("Westbound Platform"),
+        QString::fromUtf8("Béton Brut"),
+        QStringLiteral("Interval (Loop II)"),
+        QString::fromUtf8("Schwarzweiß")
+    };
+    static const QStringList seededAlbums = {
+        QStringLiteral("Blueprint"),
+        QStringLiteral("Terminal West"),
+        QStringLiteral("Signalfarbe"),
+        QStringLiteral("Grid City")
+    };
+    static const QStringList seededPlaylists = {
+        QStringLiteral("Studio Monitors"),
+        QStringLiteral("Concrete & Glass"),
+        QStringLiteral("Night Drive 03"),
+        QString::fromUtf8("Archiv — Tape A"),
+        QStringLiteral("Rotterdam Mixes"),
+        QStringLiteral("Field Recordings"),
+        QStringLiteral("Red Line Radio")
+    };
+
     QSqlDatabase db = connection();
-    QSqlQuery count(db);
+    db.transaction();
 
-    count.exec(QStringLiteral("SELECT COUNT(*) FROM playlists"));
-    if (count.next() && count.value(0).toInt() == 0) {
-        const QList<QPair<QString, int>> playlists = {
-            { QStringLiteral("Studio Monitors"), 34 },
-            { QStringLiteral("Concrete & Glass"), 58 },
-            { QStringLiteral("Night Drive 03"), 21 },
-            { QString::fromUtf8("Archiv — Tape A"), 46 },
-            { QStringLiteral("Rotterdam Mixes"), 17 },
-            { QStringLiteral("Field Recordings"), 63 },
-            { QStringLiteral("Red Line Radio"), 29 }
-        };
-        QSqlQuery insert(db);
-        insert.prepare(QStringLiteral(
-            "INSERT INTO playlists (position, name, track_count) VALUES (?, ?, ?)"));
-        for (int i = 0; i < playlists.size(); ++i) {
-            insert.addBindValue(i);
-            insert.addBindValue(playlists.at(i).first);
-            insert.addBindValue(playlists.at(i).second);
-            insert.exec();
-        }
+    QSqlQuery track(db);
+    track.prepare(QStringLiteral(
+        "DELETE FROM tracks WHERE title = ?"
+        " AND source_id = '' AND source_url = '' AND favourite = 0"));
+    for (const QString &title : seededTracks) {
+        track.addBindValue(title);
+        track.exec();
     }
 
-    count.exec(QStringLiteral("SELECT COUNT(*) FROM albums"));
-    if (count.next() && count.value(0).toInt() == 0) {
-        struct AlbumSeed { const char *title; const char *artist; const char *year; };
-        const QList<AlbumSeed> albums = {
-            { "Blueprint", "Mira Volt", "2026" },
-            { "Terminal West", "The Cantilevers", "2025" },
-            { "Signalfarbe", "Neu Maschine", "2026" },
-            { "Grid City", "Otto Frey Ensemble", "2024" }
-        };
-        QSqlQuery insert(db);
-        insert.prepare(QStringLiteral(
-            "INSERT INTO albums (position, title, artist, year, format, artwork)"
-            " VALUES (?, ?, ?, ?, 'LP', '')"));
-        for (int i = 0; i < albums.size(); ++i) {
-            insert.addBindValue(i);
-            insert.addBindValue(QString::fromUtf8(albums.at(i).title));
-            insert.addBindValue(QString::fromUtf8(albums.at(i).artist));
-            insert.addBindValue(QString::fromUtf8(albums.at(i).year));
-            insert.exec();
-        }
+    QSqlQuery album(db);
+    album.prepare(QStringLiteral("DELETE FROM albums WHERE title = ? AND artwork = ''"));
+    for (const QString &title : seededAlbums) {
+        album.addBindValue(title);
+        album.exec();
     }
 
-    count.exec(QStringLiteral("SELECT COUNT(*) FROM featured"));
-    if (count.next() && count.value(0).toInt() == 0) {
-        QSqlQuery insert(db);
-        insert.prepare(QStringLiteral(
-            "INSERT INTO featured (kicker, title_line1, title_line2, meta, album_id, active)"
-            " VALUES (?, ?, ?, ?, (SELECT id FROM albums WHERE title = 'Signalfarbe'), 1)"));
-        insert.addBindValue(QString::fromUtf8("NEW ALBUM — OUT NOW"));
-        insert.addBindValue(QString::fromUtf8("Neu Maschine"));
-        insert.addBindValue(QString::fromUtf8("— Signalfarbe"));
-        insert.addBindValue(QString::fromUtf8("11 tracks · 47 min"));
-        insert.exec();
+    QSqlQuery playlist(db);
+    playlist.prepare(QStringLiteral("DELETE FROM playlists WHERE name = ?"));
+    for (const QString &name : seededPlaylists) {
+        playlist.addBindValue(name);
+        playlist.exec();
     }
 
-    count.exec(QStringLiteral("SELECT COUNT(*) FROM tracks"));
-    if (count.next() && count.value(0).toInt() == 0) {
-        struct TrackSeed { const char *title; const char *artist; const char *album; int ms; };
-        const QList<TrackSeed> tracks = {
-            { "Rot / 07", "Neu Maschine", "Signalfarbe", 227000 },
-            { "Elevation Study", "Mira Volt", "Blueprint", 252000 },
-            { "Westbound Platform", "The Cantilevers", "Terminal West", 178000 },
-            { "Béton Brut", "Otto Frey Ensemble", "Grid City", 304000 },
-            { "Interval (Loop II)", "Mira Volt", "Blueprint", 201000 },
-            { "Schwarzweiß", "Neu Maschine", "Signalfarbe", 280000 }
-        };
-        QSqlQuery insert(db);
-        insert.prepare(QStringLiteral(
-            "INSERT INTO tracks (position, title, artist, album, duration_ms, source_url, artwork, favourite)"
-            " VALUES (?, ?, ?, ?, ?, '', '', 0)"));
-        for (int i = 0; i < tracks.size(); ++i) {
-            insert.addBindValue(i);
-            insert.addBindValue(QString::fromUtf8(tracks.at(i).title));
-            insert.addBindValue(QString::fromUtf8(tracks.at(i).artist));
-            insert.addBindValue(QString::fromUtf8(tracks.at(i).album));
-            insert.addBindValue(tracks.at(i).ms);
-            insert.exec();
-        }
-    }
+    // The featured poster referenced a seeded album.
+    QSqlQuery featured(db);
+    featured.exec(QStringLiteral(
+        "DELETE FROM featured WHERE album_id IS NULL"
+        " OR album_id NOT IN (SELECT id FROM albums)"));
+
+    QSqlQuery history(db);
+    history.exec(QStringLiteral(
+        "DELETE FROM history WHERE track_id IS NOT NULL"
+        " AND track_id NOT IN (SELECT id FROM tracks)"));
+
+    QSqlQuery mark(db);
+    mark.prepare(QStringLiteral("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)"));
+    mark.addBindValue(QStringLiteral("sample_data_removed"));
+    mark.addBindValue(QStringLiteral("1"));
+    mark.exec();
+
+    db.commit();
 }

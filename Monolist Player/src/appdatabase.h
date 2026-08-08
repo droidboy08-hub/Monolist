@@ -14,11 +14,12 @@ public:
     bool open();
     void createSchema();
     void migrate();                 // additive column/table changes, safe to re-run
-    void seedSampleDataIfEmpty();
 
     static QSqlDatabase connection();
     static QString databaseFilePath();
 
 private:
     static bool hasColumn(const QString &table, const QString &column);
+    // One-time removal of the interface prototype's invented content.
+    static void removeSampleData();
 };

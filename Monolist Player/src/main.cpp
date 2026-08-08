@@ -3,6 +3,7 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQuickStyle>
+#include <QTimer>
 
 #include "appdatabase.h"
 #include "artworkcache.h"
@@ -53,8 +54,7 @@ int main(int argc, char *argv[])
     if (!database.open())
         qWarning("Monolist: local database unavailable, running with in-memory data only.");
     database.createSchema();
-    database.migrate();
-    database.seedSampleDataIfEmpty();
+    database.migrate();   // also clears the prototype's invented content, once
 
     Library library;
     library.load();
@@ -113,6 +113,36 @@ int main(int argc, char *argv[])
                      &app, []() { QCoreApplication::exit(-1); },
                      Qt::QueuedConnection);
     qmlEngine.loadFromModule("Monolist", "Main");
+
+    // --play <videoId> [seconds]
+    //
+    // Drives one playback attempt without anyone touching the interface, so the
+    // resolve -> mpv -> artwork path can be exercised under a debugger or in a
+    // script. Quits on its own so it cannot hang a test run.
+    const QStringList args = app.arguments();
+    const int flag = args.indexOf(QStringLiteral("--play"));
+    if (flag >= 0 && flag + 1 < args.size()) {
+        const QString videoId = args.at(flag + 1);
+        const int seconds = (flag + 2 < args.size()) ? args.at(flag + 2).toInt() : 20;
+
+        QObject::connect(&player, &PlaybackController::playbackError, &app,
+                         [](const QString &reason) {
+                             qWarning("selftest: playback error: %s", qPrintable(reason));
+                         });
+        QObject::connect(&player, &PlaybackController::statusChanged, &app, [&player]() {
+            qWarning("selftest: status=%s source=%s",
+                     qPrintable(player.statusText()), qPrintable(player.sourceLabel()));
+        });
+
+        QTimer::singleShot(500, &app, [&player, videoId]() {
+            qWarning("selftest: playing %s", qPrintable(videoId));
+            player.playSource(videoId, QStringLiteral("Selftest"), QStringLiteral("Selftest"));
+        });
+        QTimer::singleShot(seconds * 1000, &app, []() {
+            qWarning("selftest: done, quitting");
+            QCoreApplication::quit();
+        });
+    }
 
     return app.exec();
 }
