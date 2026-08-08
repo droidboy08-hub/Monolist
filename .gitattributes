@@ -1,0 +1,26 @@
+# Normalise line endings: LF in the repository, native in the working tree.
+* text=auto
+
+# Scripts that must keep a specific ending regardless of platform
+*.sh    text eol=lf
+gradlew text eol=lf
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+
+# Binary assets — never diff or convert
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.icns binary
+*.jar  binary
+*.woff  binary
+*.woff2 binary
+*.ttf  binary
+*.otf  binary
+*.m4a  binary
+*.mp3  binary
+*.exe  binary
+*.7z   binary
+*.zip  binary
