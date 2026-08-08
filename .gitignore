@@ -69,6 +69,9 @@ lerna-debug.log*
 # ---- Editor / OS ----
 .vscode/*
 !.vscode/extensions.json
+.vs/
+CMakeSettings.json
+*.user
 .idea/
 .DS_Store
 Thumbs.db

@@ -90,7 +90,7 @@ Rectangle {
             font.pixelSize: 13
             color: Theme.text
             selectionColor: Theme.accent
-            selectedTextColor: Theme.onAccent
+            selectedTextColor: Theme.accentForeground
             clip: true
             onAccepted: root.searchActivated(text)
 

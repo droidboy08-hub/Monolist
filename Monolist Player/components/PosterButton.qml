@@ -15,7 +15,7 @@ Button {
     hoverEnabled: true
 
     background: Rectangle {
-        color: control.hovered || control.down ? Theme.text : Theme.onAccent
+        color: control.hovered || control.down ? Theme.text : Theme.accentForeground
     }
 
     contentItem: Item {
@@ -31,7 +31,7 @@ Button {
                 width: 16
                 height: 16
                 anchors.verticalCenter: parent.verticalCenter
-                color: control.hovered || control.down ? Theme.onAccent : Theme.text
+                color: control.hovered || control.down ? Theme.accentForeground : Theme.text
             }
 
             Text {
@@ -40,7 +40,7 @@ Button {
                 font.family: Theme.fontFamily
                 font.pixelSize: 15
                 font.weight: Theme.weightBlack
-                color: control.hovered || control.down ? Theme.onAccent : Theme.text
+                color: control.hovered || control.down ? Theme.accentForeground : Theme.text
             }
         }
     }

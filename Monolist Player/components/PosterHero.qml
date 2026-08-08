@@ -27,7 +27,7 @@ Rectangle {
             font.pixelSize: 12
             font.weight: Font.Bold
             font.letterSpacing: Theme.tracking(12, 0.18)
-            color: Theme.onAccent
+            color: Theme.accentForeground
         }
 
         Text {
@@ -39,7 +39,7 @@ Rectangle {
             font.letterSpacing: Theme.tracking(root.width < 900 ? 48 : 72, -0.03)
             lineHeight: 0.95
             lineHeightMode: Text.ProportionalHeight
-            color: Theme.onAccent
+            color: Theme.accentForeground
             wrapMode: Text.WordWrap
         }
 
@@ -58,7 +58,7 @@ Rectangle {
                 font.family: Theme.fontFamily
                 font.pixelSize: 13
                 font.weight: Theme.weightMedium
-                color: Theme.onAccent
+                color: Theme.accentForeground
             }
         }
     }

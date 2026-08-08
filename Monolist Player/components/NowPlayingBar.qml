@@ -124,7 +124,7 @@ Rectangle {
                     name: Player.playing ? "pause" : "play"
                     width: 18
                     height: 18
-                    color: Theme.onAccent
+                    color: Theme.accentForeground
                 }
 
                 HoverHandler { id: playHover; cursorShape: Qt.PointingHandCursor }

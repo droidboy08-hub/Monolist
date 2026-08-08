@@ -18,7 +18,7 @@ QtObject {
 
     readonly property color accent600: "#dd2b0f"
     readonly property color accent700: "#ae1800"
-    readonly property color onAccent: "#f3f2f2"
+    readonly property color accentForeground: "#f3f2f2"
 
     readonly property color ghostHover: "#1aec3013"   // accent 10%
     readonly property color ghostActive: "#2eec3013"  // accent 18%

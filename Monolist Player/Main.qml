@@ -160,5 +160,7 @@ ApplicationWindow {
     }
     Shortcut { sequence: "Ctrl+Right"; onActivated: Player.next() }
     Shortcut { sequence: "Ctrl+Left"; onActivated: Player.previous() }
-    Shortcut { sequence: StandardKey.Find; onActivated: window.navigate("search") }
+    // StandardKey.Find maps to several sequences (Ctrl+F, F3); `sequences`
+    // binds all of them, `sequence` would silently take only the first.
+    Shortcut { sequences: [StandardKey.Find]; onActivated: window.navigate("search") }
 }

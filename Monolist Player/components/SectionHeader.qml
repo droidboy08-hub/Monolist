@@ -13,9 +13,15 @@ Item {
     width: parent ? parent.width : 0
 
     Row {
+        id: headingRow
         anchors.left: parent.left
         anchors.verticalCenter: parent.verticalCenter
         spacing: Theme.space4
+
+        // Republish the heading's baseline on the Row so the action link can
+        // anchor to it. Anchoring straight at `heading` fails — it is a child
+        // of this Row, so it is neither parent nor sibling of the link.
+        baselineOffset: heading.y + heading.baselineOffset
 
         Text {
             text: root.number
@@ -41,7 +47,7 @@ Item {
         visible: root.action.length > 0
         text: root.action
         anchors.right: parent.right
-        anchors.baseline: heading.baseline
+        anchors.baseline: headingRow.baseline
         font.family: Theme.fontFamily
         font.pixelSize: 12
         font.weight: Font.Bold
