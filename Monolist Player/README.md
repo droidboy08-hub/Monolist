@@ -106,6 +106,25 @@ signals, which is exactly what a second extractor would slot into.
 Requires Qt 6.5+, CMake 3.21+, a C++17 compiler, and libmpv.
 `yt-dlp` and `ffmpeg` are runtime dependencies, not build ones.
 
+### Building without libmpv
+
+libmpv is the only dependency with no clean Windows package — the SDK ships a
+MinGW-style import library that MSVC cannot link, so it needs an extra
+`lib.exe` step. To get everything else running first:
+
+```
+cmake -S . -B build -G Ninja -DMONOLIST_NO_MPV=ON -DCMAKE_PREFIX_PATH=<qt-prefix>
+cmake --build build
+```
+
+This compiles `mpvengine_stub.cpp` in place of `mpvengine.cpp`. The header is
+identical either way, so switching back is a configure flag, not a code change.
+
+Working in this mode: the whole interface, the database, yt-dlp search, and
+downloads — yt-dlp writes files itself and never goes through mpv. Not working:
+audio output. The player bar reports "Built without libmpv" in the accent
+colour rather than appearing to play silence.
+
 **Windows** — run `scripts\setup-windows.ps1` first; it installs everything and
 prints the configure command. Then:
 
@@ -136,8 +155,9 @@ match.
 
 ## Runtime dependencies
 
-* **libmpv** — required. Without it the app runs, the interface works, and
-  `Player.engineAvailable` reports false rather than silently doing nothing.
+* **libmpv** — required for audio, or build with `-DMONOLIST_NO_MPV=ON`. Even
+  in a normal build, a libmpv that fails to initialise leaves the app running
+  with `Player.engineAvailable` false rather than silently doing nothing.
 * **yt-dlp** — required for search and downloads. Without it, search is
   disabled and playback falls through to the Piped/Invidious tiers. Found on
   PATH, next to the executable, or as `python -m yt_dlp`.

@@ -52,14 +52,22 @@ Rectangle {
                     font.weight: Theme.weightBlack
                     color: Theme.text
                 }
+                // Doubles as the status line: while a source is resolving, or
+                // when the audio engine is missing entirely, that matters more
+                // than the artist and there is nowhere else it would be seen.
                 Text {
+                    readonly property bool showStatus: !Player.engineAvailable || Player.resolving
+
                     width: parent.width
-                    text: Player.currentTrack.artist !== undefined
-                          ? Player.currentTrack.artist + " — " + Player.currentTrack.album : ""
+                    text: showStatus
+                          ? Player.statusText
+                          : (Player.currentTrack.artist !== undefined
+                             ? Player.currentTrack.artist + " — " + Player.currentTrack.album
+                             : "")
                     elide: Text.ElideRight
                     font.family: Theme.fontFamily
                     font.pixelSize: 12
-                    color: Theme.neutral700
+                    color: Player.engineAvailable ? Theme.neutral700 : Theme.accent
                 }
             }
 

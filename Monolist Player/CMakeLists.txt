@@ -9,8 +9,21 @@ if(MSVC)
   add_compile_options("/utf-8")
 endif()
 
+# libmpv is the only dependency without a clean Windows package. Turning this on
+# swaps in a null audio engine so the UI, search and downloads can be built and
+# tested before wrestling with it. Playback is the only thing lost.
+option(MONOLIST_NO_MPV "Build without libmpv; audio playback is disabled." OFF)
+
 find_package(Qt6 6.5 REQUIRED COMPONENTS Core Gui Quick QuickControls2 Sql Svg Network)
-find_package(Mpv REQUIRED)
+
+if(MONOLIST_NO_MPV)
+    set(MONOLIST_MPV_SOURCES src/mpvengine.h src/mpvengine_stub.cpp)
+    message(STATUS "Monolist: building WITHOUT libmpv - playback disabled (MONOLIST_NO_MPV=ON)")
+else()
+    find_package(Mpv REQUIRED)
+    set(MONOLIST_MPV_SOURCES src/mpvengine.h src/mpvengine.cpp)
+    message(STATUS "Monolist: building with libmpv at ${MPV_LIBRARY}")
+endif()
 
 qt_standard_project_setup(REQUIRES 6.5)
 
@@ -24,7 +37,7 @@ qt_add_executable(monolist
     src/playbackcontroller.h       src/playbackcontroller.cpp
     src/mediaextractor.h           src/mediaextractor.cpp
     # — backend merged in from the Melody player —
-    src/mpvengine.h                src/mpvengine.cpp
+    ${MONOLIST_MPV_SOURCES}
     src/ytdlp.h                    src/ytdlp.cpp
     src/streamresolver.h           src/streamresolver.cpp
     src/downloadmanager.h          src/downloadmanager.cpp
@@ -71,8 +84,13 @@ target_link_libraries(monolist PRIVATE
     Qt6::QuickControls2
     Qt6::Sql
     Qt6::Network
-    Mpv::Mpv
 )
+
+if(MONOLIST_NO_MPV)
+    target_compile_definitions(monolist PRIVATE MONOLIST_NO_MPV)
+else()
+    target_link_libraries(monolist PRIVATE Mpv::Mpv)
+endif()
 
 # On Windows the app is a GUI binary; keep the console attached in debug builds
 # so qWarning output about a missing yt-dlp or libmpv is visible.

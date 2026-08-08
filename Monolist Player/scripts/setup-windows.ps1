@@ -76,7 +76,13 @@ if (Test-Path (Join-Path $qtPrefix 'bin\qmake.exe')) {
 
 $mpvRoot = Join-Path $InstallRoot 'libmpv'
 
+$mpvOk = $true
+
 Write-Step 'Installing libmpv SDK'
+# Deliberately non-fatal: this is the step most likely to break, and a failure
+# here should still leave a usable -DMONOLIST_NO_MPV=ON build rather than
+# aborting the whole setup.
+try {
 if (Test-Path (Join-Path $mpvRoot 'include\mpv\client.h')) {
     Write-Skip $mpvRoot
 } else {
@@ -115,6 +121,11 @@ if ($mpvDll -and -not $mpvLib) {
         Write-Warning 'No .def file or vcvars64.bat found; link against the provided library manually.'
     }
 }
+} catch {
+    $mpvOk = $false
+    Write-Warning "libmpv setup failed: $($_.Exception.Message)"
+    Write-Warning 'Continuing — build with -DMONOLIST_NO_MPV=ON for now.'
+}
 
 # ------------------------------------------------------------------------ mpv / ffmpeg runtime
 
@@ -130,7 +141,15 @@ Write-Host @"
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 
-Write-Step 'Done — configure and build with'
+# Lead with whichever build is actually achievable right now.
+if ($mpvOk) {
+    Write-Step 'Done — configure and build with'
+    $primaryColour = 'Yellow'; $fallbackColour = 'DarkGray'
+} else {
+    Write-Step 'Done, but libmpv is missing — use the second command'
+    $primaryColour = 'DarkGray'; $fallbackColour = 'Yellow'
+}
+
 Write-Host @"
 
     cmake -S "$projectRoot" -B "$projectRoot\build" ``
@@ -144,4 +163,16 @@ Write-Host @"
     # Copy the Qt and mpv runtime next to the binary before running:
     & "$qtPrefix\bin\windeployqt.exe" --qmldir "$projectRoot" "$projectRoot\build\monolist.exe"
 
-"@ -ForegroundColor Yellow
+"@ -ForegroundColor $primaryColour
+
+Write-Host @"
+    If the libmpv step above failed or you want a build now, drop it:
+
+    cmake -S "$projectRoot" -B "$projectRoot\build-nompv" ``
+          -G Ninja -DCMAKE_BUILD_TYPE=Release ``
+          -DCMAKE_PREFIX_PATH="$qtPrefix" ``
+          -DMONOLIST_NO_MPV=ON
+
+    Everything except audio output works in that mode.
+
+"@ -ForegroundColor $fallbackColour
