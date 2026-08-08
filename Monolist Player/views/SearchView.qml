@@ -100,7 +100,8 @@ Flickable {
             activeIndex: -1
             onTrackActivated: function(index) {
                 var item = Extractor.results.get(index)
-                Player.playSource(item.sourceId, item.title, item.artist)
+                Player.playSource(item.sourceId, item.title, item.artist,
+                                  item.artwork, item.durationMs)
             }
         }
     }

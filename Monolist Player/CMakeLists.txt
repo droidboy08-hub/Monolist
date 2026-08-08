@@ -14,7 +14,9 @@ endif()
 # tested before wrestling with it. Playback is the only thing lost.
 option(MONOLIST_NO_MPV "Build without libmpv; audio playback is disabled." OFF)
 
-find_package(Qt6 6.5 REQUIRED COMPONENTS Core Gui Quick QuickControls2 Sql Svg Network)
+# 6.6 is the floor because Icon.qml uses Shape.CurveRenderer, which is what
+# keeps the glyph outlines sharp at fractional scales.
+find_package(Qt6 6.6 REQUIRED COMPONENTS Core Gui Quick QuickControls2 Sql Svg Network)
 
 if(MONOLIST_NO_MPV)
     set(MONOLIST_MPV_SOURCES src/mpvengine.h src/mpvengine_stub.cpp)

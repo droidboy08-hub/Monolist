@@ -144,9 +144,20 @@ void PlaybackController::playIndex(int index)
     beginTrack(m_queue->get(index), /*autoPlay=*/true);
 }
 
+QString PlaybackController::artworkForSource(const QString &videoId)
+{
+    if (videoId.isEmpty())
+        return {};
+    // hqdefault exists for every video; maxresdefault often 404s on older or
+    // low-resolution uploads, so it is not worth the failed request.
+    return QStringLiteral("https://i.ytimg.com/vi/%1/hqdefault.jpg").arg(videoId);
+}
+
 void PlaybackController::playSource(const QString &videoId,
                                     const QString &title,
-                                    const QString &artist)
+                                    const QString &artist,
+                                    const QString &artwork,
+                                    qint64 durationMs)
 {
     if (videoId.isEmpty())
         return;
@@ -158,9 +169,11 @@ void PlaybackController::playSource(const QString &videoId,
                    { QStringLiteral("title"),      title },
                    { QStringLiteral("artist"),     artist },
                    { QStringLiteral("album"),      QString() },
-                   { QStringLiteral("durationMs"), 0 },
+                   { QStringLiteral("durationMs"), durationMs },
                    { QStringLiteral("sourceUrl"),  QString() },
-                   { QStringLiteral("artwork"),    QString() }
+                   { QStringLiteral("artwork"),    artwork.isEmpty()
+                                                       ? artworkForSource(videoId)
+                                                       : artwork }
                },
                /*autoPlay=*/true);
 }
@@ -174,6 +187,16 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
     m_pendingVideoId.clear();
 
     m_currentTrack = track;
+
+    // Library rows written before artwork was captured still have a source id;
+    // derive the thumbnail rather than showing an empty plate.
+    if (m_currentTrack.value(QStringLiteral("artwork")).toString().isEmpty()) {
+        const QString derived = artworkForSource(
+            m_currentTrack.value(QStringLiteral("sourceId")).toString());
+        if (!derived.isEmpty())
+            m_currentTrack.insert(QStringLiteral("artwork"), derived);
+    }
+
     m_favourite = track.value(QStringLiteral("favourite")).toBool();
     m_position = 0;
     m_autoPlayAfterResolve = autoPlay;

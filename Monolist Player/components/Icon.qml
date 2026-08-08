@@ -19,13 +19,24 @@ Item {
         width: 24
         height: 24
         anchors.centerIn: parent
+
+        // The glyphs are drawn on Lucide's 24x24 grid and scaled to the
+        // requested size. With CurveRenderer this stays a geometry transform,
+        // so the curves are still evaluated at final device resolution.
         scale: Math.min(root.width, root.height) / 24
 
         Shape {
             anchors.fill: parent
-            antialiasing: true
-            layer.enabled: true
-            layer.samples: 4
+
+            // CurveRenderer evaluates curve coverage per fragment, which keeps
+            // the outlines sharp at fractional scales and fractional DPI.
+            //
+            // The previous `layer.enabled: true` + `layer.samples: 4` did the
+            // opposite of what it looked like: it rasterised each glyph into a
+            // 24x24 offscreen texture, which `scale` then resampled. Every icon
+            // was effectively a small bitmap being stretched, so the vectors
+            // bought nothing. Requires Qt 6.6+.
+            preferredRendererType: Shape.CurveRenderer
 
             ShapePath {
                 strokeColor: Glyphs.isFilled(root.name, 0) ? "transparent" : root.color

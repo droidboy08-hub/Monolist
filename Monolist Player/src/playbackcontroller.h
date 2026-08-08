@@ -90,7 +90,16 @@ public Q_SLOTS:
     void toggleFavourite();
 
     // Plays an ad-hoc search result that is not in the library yet.
-    void playSource(const QString &videoId, const QString &title, const QString &artist);
+    void playSource(const QString &videoId,
+                    const QString &title,
+                    const QString &artist,
+                    const QString &artwork = QString(),
+                    qint64 durationMs = 0);
+
+    // Every YouTube video has a thumbnail at a predictable URL, so a track with
+    // a source id never has to show a blank plate even when no artwork field
+    // was stored. Exposed to QML so lists can use it for their own rows.
+    Q_INVOKABLE static QString artworkForSource(const QString &videoId);
 
 Q_SIGNALS:
     void playingChanged();
