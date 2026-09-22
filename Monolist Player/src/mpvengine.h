@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QObject>
+#include <QSize>
 #include <QString>
 
 struct mpv_handle;
@@ -26,14 +27,25 @@ public:
     QString lastError() const { return m_lastError; }
 
     // Accepts a local file path or a direct stream URL. Playback starts paused
-    // or playing according to `startPlaying`.
-    void load(const QString &urlOrPath, bool startPlaying = true);
+    // or playing according to `startPlaying`. YouTube keeps picture and sound
+    // apart above 720p, so a second URL can be played alongside the first.
+    // `startAt` begins the file part-way in, which is how switching between
+    // the sound and the picture of the same track keeps its place: a seek sent
+    // after loadfile would arrive before the file is open and be dropped.
+    void load(const QString &urlOrPath, bool startPlaying = true,
+              const QString &audioUrl = QString(), qint64 startAt = 0);
     void stop();
     void setPaused(bool paused);
     void seekAbsolute(qint64 ms);
     void setVolume(qreal volume);        // 0.0 – 1.0
     void setSpeed(qreal speed);
     void setReplayGainEnabled(bool enabled);
+
+    // Decoding the picture costs, so it is off until something shows it.
+    // Whatever draws the video renders from this handle (see VideoSurface).
+    void setVideoEnabled(bool enabled);
+    bool videoEnabled() const { return m_video; }
+    mpv_handle *handle() const { return m_mpv; }
 
 Q_SIGNALS:
     void positionChanged(qint64 ms);
@@ -43,6 +55,8 @@ Q_SIGNALS:
     void endOfFile();                    // natural end, not a manual stop
     void loadFailed(const QString &reason);
     void metadataChanged(const QString &title, const QString &artist);
+    // Empty until the file being played turns out to have a picture.
+    void videoSizeChanged(const QSize &size);
 
 private Q_SLOTS:
     void drainEvents();
@@ -57,5 +71,7 @@ private:
     QString m_lastError;
     bool m_paused = true;
     bool m_buffering = false;
+    bool m_video = false;
+    QSize m_videoSize;
     qint64 m_duration = 0;
 };

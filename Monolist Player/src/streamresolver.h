@@ -46,6 +46,12 @@ public:
     // current one starts without waiting. A resolve() for the same id while it
     // runs takes it over.
     void prefetch(const QString &videoId);
+    // The same track with its picture, for the video view. yt-dlp only: the
+    // fallback instances answer with sound. Two URLs when YouTube keeps the
+    // picture and the sound apart, one when it does not.
+    void resolveVideo(const QString &videoId, int maxHeight = 720);
+    void cancelVideo(const QString &videoId);
+
     // Forgets a cached URL, for when the player could not open it.
     void invalidate(const QString &videoId);
     void cancel(const QString &videoId);
@@ -65,6 +71,8 @@ Q_SIGNALS:
     void resolved(const QString &videoId, const QString &url, int tier, bool fromCache);
     void failed(const QString &videoId, const QString &reason);
     void tierChanged(const QString &videoId, int tier);
+    void videoResolved(const QString &videoId, const QString &videoUrl, const QString &audioUrl);
+    void videoFailed(const QString &videoId, const QString &reason);
 
 private:
     struct Job {
@@ -100,9 +108,19 @@ private:
     void abortPending(Job *job);
     void discard(Job *job);
 
+    // The picture's links, kept apart from the sound's: the same track can be
+    // remembered both ways.
+    struct VideoLinks {
+        QString video;
+        QString audio;      // empty when the one stream carries both
+        QDateTime expires;
+    };
+
     QNetworkAccessManager *m_network;
     QHash<QString, Job *> m_jobs;
     QHash<QString, CacheEntry> m_cache;
+    QHash<QString, VideoLinks> m_videoCache;
+    QHash<QString, QPointer<YtDlpRequest>> m_videoJobs;
     QStringList m_piped;
     QStringList m_invidious;
 };

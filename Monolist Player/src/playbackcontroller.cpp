@@ -110,6 +110,18 @@ PlaybackController::PlaybackController(MpvEngine *engine,
     if (m_resolver) {
         connect(m_resolver, &StreamResolver::resolved, this, &PlaybackController::handleResolved);
         connect(m_resolver, &StreamResolver::failed, this, &PlaybackController::handleResolveFailed);
+        connect(m_resolver, &StreamResolver::videoResolved, this, &PlaybackController::handleVideoResolved);
+        connect(m_resolver, &StreamResolver::videoFailed, this,
+                [this](const QString &videoId, const QString &reason) {
+                    if (videoId != m_videoPendingId)
+                        return;
+                    m_videoPendingId.clear();
+                    // Back to sound alone, where it never stopped.
+                    m_videoWanted = false;
+                    setStatus(QStringLiteral("Streaming"), m_sourceLabel, false);
+                    Q_EMIT videoChanged();
+                    Q_EMIT playbackError(reason);
+                });
     }
 
     // Rows inserted before the current one move it; the index QML reads
@@ -478,6 +490,19 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
         m_resolver->cancel(m_pendingVideoId);
     m_pendingVideoId.clear();
     m_streamTier = -1;
+    m_resumeAt = 0;
+
+    // Every track starts as sound: the picture is asked for, never assumed.
+    if (!m_videoPendingId.isEmpty() && m_resolver)
+        m_resolver->cancelVideo(m_videoPendingId);
+    m_videoPendingId.clear();
+    if (m_videoWanted || m_videoPlaying) {
+        m_videoWanted = false;
+        m_videoPlaying = false;
+        if (m_engine)
+            m_engine->setVideoEnabled(false);
+        Q_EMIT videoChanged();
+    }
 
     m_currentTrack = track;
 
@@ -569,7 +594,8 @@ void PlaybackController::handleResolved(const QString &videoId, const QString &u
     m_streamTier = tier;
     m_streamFromCache = fromCache;
     if (m_engine)
-        m_engine->load(url, m_autoPlayAfterResolve);
+        m_engine->load(url, m_autoPlayAfterResolve, QString(), m_resumeAt);
+    m_resumeAt = 0;
     prefetchUpcoming();
 }
 
@@ -706,6 +732,89 @@ void PlaybackController::cycleRepeat()
 {
     m_repeatMode = (m_repeatMode + 1) % 3;
     Q_EMIT repeatModeChanged();
+}
+
+// ------------------------------------------------------------------- video
+
+// YouTube Music's own songs are a still picture with the cover on it, so
+// only what it calls a video has one worth showing.
+bool PlaybackController::videoAvailable() const
+{
+    return !currentSourceId().isEmpty()
+           && m_currentTrack.value(QStringLiteral("isVideo")).toBool();
+}
+
+void PlaybackController::setVideoHeight(int height)
+{
+    const int wanted = qBound(240, height, 2160);
+    if (wanted == m_videoHeight)
+        return;
+    m_videoHeight = wanted;
+    Q_EMIT videoChanged();
+    // The picture on screen keeps the size it was opened with; the next one
+    // gets the new one.
+}
+
+void PlaybackController::setVideoWanted(bool wanted)
+{
+    if (wanted == m_videoWanted)
+        return;
+    if (wanted && !videoAvailable())
+        return;
+    m_videoWanted = wanted;
+    Q_EMIT videoChanged();
+    playWithVideo(wanted);
+}
+
+// Swaps the stream under the same track, resuming where it was.
+void PlaybackController::playWithVideo(bool video)
+{
+    const QString videoId = currentSourceId();
+    if (videoId.isEmpty() || !m_resolver)
+        return;
+
+    if (video) {
+        m_videoPendingId = videoId;
+        setStatus(QStringLiteral("Loading the video…"), m_sourceLabel, true);
+        m_resolver->resolveVideo(videoId, m_videoHeight);
+        return;
+    }
+
+    m_resolver->cancelVideo(videoId);
+    m_videoPendingId.clear();
+    const bool wasShowing = m_videoPlaying;
+    if (m_videoPlaying) {
+        m_videoPlaying = false;
+        Q_EMIT videoChanged();
+    }
+    if (m_engine)
+        m_engine->setVideoEnabled(false);
+    if (!wasShowing)
+        return;   // nothing was loaded with a picture; the sound plays on
+    // Straight back to the sound, from the same second.
+    m_resumeAt = m_position;
+    m_autoPlayAfterResolve = m_playing || m_resolving;
+    m_pendingVideoId = videoId;
+    setStatus(QStringLiteral("Resolving source…"), QString(), true);
+    m_resolver->resolve(videoId);
+}
+
+void PlaybackController::handleVideoResolved(const QString &videoId, const QString &videoUrl,
+                                             const QString &audioUrl)
+{
+    if (videoId != m_videoPendingId)
+        return;   // another track, or the switch went off again
+    m_videoPendingId.clear();
+    if (!m_engine)
+        return;
+
+    m_engine->setVideoEnabled(true);
+    setStatus(QStringLiteral("Streaming"), QStringLiteral("yt-dlp · video"), false);
+    m_engine->load(videoUrl, m_playing || m_autoPlayAfterResolve, audioUrl, m_position);
+    if (!m_videoPlaying) {
+        m_videoPlaying = true;
+        Q_EMIT videoChanged();
+    }
 }
 
 void PlaybackController::setAutoplay(bool autoplay)

@@ -43,6 +43,7 @@ qt_add_executable(monolist
     src/catalog.h                  src/catalog.cpp
     src/lyrics.h                   src/lyrics.cpp
     src/windowchrome.h             src/windowchrome.cpp
+    src/videosurface.h             src/videosurface.cpp
     # — backend merged in from the Melody player —
     ${MONOLIST_MPV_SOURCES}
     src/ytdlp.h                    src/ytdlp.cpp

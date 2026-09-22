@@ -58,6 +58,9 @@ Q_SIGNALS:
     void pageChanged();
 
 private:
+    // The two requests Home is made of. refresh() resets the retry count and
+    // calls this; a failed load calls it again by itself, twice.
+    void load();
     void finishHome();
     static QVariantMap cardToMap(const InnerTube::Card &card);
     static QList<SearchResultModel::Item> toItems(const QList<InnerTube::Track> &tracks);
@@ -68,6 +71,7 @@ private:
     SearchResultModel m_pageTracks;
 
     int m_pendingHome = 0;
+    int m_retries = 0;
     QString m_error;
     QString m_quickPicksTitle;
     QVariantList m_homeShelves;       // from the home feed

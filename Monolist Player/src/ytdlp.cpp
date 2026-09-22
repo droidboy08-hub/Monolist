@@ -404,6 +404,22 @@ YtDlpRequest *YtDlp::resolveAudio(const QString &videoIdOrUrl, QObject *parent)
     return run(args, /*expectJson=*/true, parent);
 }
 
+YtDlpRequest *YtDlp::resolveVideo(const QString &videoIdOrUrl, int maxHeight, QObject *parent)
+{
+    const int cap = qBound(240, maxHeight, 2160);
+    // Preferring the muxed stream keeps it to one connection; above 720p
+    // YouTube only offers picture and sound apart, which yt-dlp reports as
+    // two "requested_formats".
+    const QString format = QStringLiteral("b[height<=?%1]/bv*[height<=?%1]+ba/b").arg(cap);
+    const QStringList args = {
+        normaliseToUrl(videoIdOrUrl),
+        QStringLiteral("--dump-single-json"),
+        QStringLiteral("--no-playlist"),
+        QStringLiteral("-f"), format
+    };
+    return run(args, /*expectJson=*/true, parent);
+}
+
 YtDlpRequest *YtDlp::download(const QString &videoIdOrUrl,
                               const QString &destinationDir,
                               const QString &fileStem,

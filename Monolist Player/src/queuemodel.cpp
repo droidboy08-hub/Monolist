@@ -27,6 +27,7 @@ QueueTrack QueueTrack::fromMap(const QVariantMap &map)
     track.durationMs = map.value(QStringLiteral("durationMs")).toLongLong();
     track.trackId = map.value(QStringLiteral("trackId")).toInt();
     track.fromRadio = map.value(QStringLiteral("fromRadio")).toBool();
+    track.isVideo = map.value(QStringLiteral("isVideo")).toBool();
     return track;
 }
 
@@ -42,7 +43,8 @@ QVariantMap QueueTrack::toMap() const
         { QStringLiteral("durationMs"), durationMs },
         { QStringLiteral("durationText"), TrackModel::formatDuration(durationMs) },
         { QStringLiteral("sourceUrl"), sourceUrl },
-        { QStringLiteral("fromRadio"), fromRadio }
+        { QStringLiteral("fromRadio"), fromRadio },
+        { QStringLiteral("isVideo"), isVideo }
     };
 }
 

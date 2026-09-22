@@ -14,7 +14,9 @@ enum ObservedProperty : uint64_t {
     PropCoreIdle,
     PropCacheBuffering,
     PropMediaTitle,
-    PropMetaArtist
+    PropMetaArtist,
+    PropVideoWidth,
+    PropVideoHeight
 };
 }
 
@@ -67,9 +69,14 @@ void MpvEngine::setOption(const char *name, const char *value)
 
 void MpvEngine::applyBaseOptions()
 {
-    // Audio only — no video decoder, no window, no cover-art render pass.
+    // Audio only until something asks for the picture (setVideoEnabled): no
+    // video decoder, no cover-art render pass.
     setOption("vid", "no");
     setOption("audio-display", "no");
+
+    // The picture is drawn by whoever holds the render context (VideoSurface),
+    // never by mpv into a window of its own.
+    setOption("vo", "libmpv");
 
     // Stream URLs are resolved by StreamResolver (yt-dlp / Piped / Invidious)
     // before they reach mpv, so mpv's own ytdl hook is redundant and would add
@@ -107,6 +114,10 @@ void MpvEngine::observeProperties()
     mpv_observe_property(m_mpv, PropCacheBuffering, "paused-for-cache",     MPV_FORMAT_FLAG);
     mpv_observe_property(m_mpv, PropMediaTitle,     "media-title",          MPV_FORMAT_STRING);
     mpv_observe_property(m_mpv, PropMetaArtist,     "metadata/by-key/Artist", MPV_FORMAT_STRING);
+    // The picture's size as it should be shown (aspect ratio applied), which
+    // is also how the surface knows a picture is there at all.
+    mpv_observe_property(m_mpv, PropVideoWidth,     "dwidth",               MPV_FORMAT_INT64);
+    mpv_observe_property(m_mpv, PropVideoHeight,    "dheight",              MPV_FORMAT_INT64);
 }
 
 // Called by libmpv from its own thread. Must not touch Qt state directly.
@@ -160,6 +171,17 @@ void MpvEngine::drainEvents()
                 }
                 break;
             }
+            case PropVideoWidth:
+            case PropVideoHeight: {
+                const qint64 value = *static_cast<qint64 *>(prop->data);
+                if (event->reply_userdata == PropVideoWidth)
+                    m_videoSize.setWidth(int(value));
+                else
+                    m_videoSize.setHeight(int(value));
+                if (m_videoSize.width() > 0 && m_videoSize.height() > 0)
+                    Q_EMIT videoSizeChanged(m_videoSize);
+                break;
+            }
             case PropMediaTitle:
             case PropMetaArtist: {
                 // Report whatever the container carries; the library row stays
@@ -207,7 +229,8 @@ void MpvEngine::drainEvents()
     }
 }
 
-void MpvEngine::load(const QString &urlOrPath, bool startPlaying)
+void MpvEngine::load(const QString &urlOrPath, bool startPlaying, const QString &audioUrl,
+                     qint64 startAt)
 {
     if (!m_mpv)
         return;
@@ -216,6 +239,19 @@ void MpvEngine::load(const QString &urlOrPath, bool startPlaying)
     // it, and reloading a file of the same length would otherwise never report
     // one, leaving the controller, which resets its own copy, stuck at 0:00.
     m_duration = 0;
+    // And its picture: nothing is showing until this file reports one.
+    if (!m_videoSize.isEmpty()) {
+        m_videoSize = QSize();
+        Q_EMIT videoSizeChanged(m_videoSize);
+    }
+
+    // A stream whose sound comes separately (YouTube's larger sizes). Always
+    // set, so the last video's sound is never carried into the next file.
+    mpv_set_option_string(m_mpv, "audio-files", audioUrl.toUtf8().constData());
+    // Likewise always set: the next file starts where it is told, or at 0.
+    mpv_set_option_string(m_mpv, "start",
+                          startAt > 0 ? QByteArray::number(startAt / 1000.0, 'f', 3).constData()
+                                      : "none");
 
     const QByteArray target = urlOrPath.toUtf8();
     // "replace" tears down the previous file; EndFile arrives with reason STOP,
@@ -235,6 +271,20 @@ void MpvEngine::stop()
         return;
     const char *args[] = { "stop", nullptr };
     mpv_command_async(m_mpv, 0, args);
+}
+
+// Off by default: with no video track selected mpv decodes nothing, which is
+// what a music player wants. Turned on, the picture goes to the render context
+// a VideoSurface holds.
+void MpvEngine::setVideoEnabled(bool enabled)
+{
+    if (!m_mpv || enabled == m_video)
+        return;
+    m_video = enabled;
+    // Hardware decoding where the driver offers it, copied back to memory
+    // because the frames are rendered by the CPU into a Qt Quick texture.
+    mpv_set_option_string(m_mpv, "hwdec", enabled ? "auto-copy-safe" : "no");
+    mpv_set_property_string(m_mpv, "vid", enabled ? "auto" : "no");
 }
 
 void MpvEngine::setPaused(bool paused)

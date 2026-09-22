@@ -26,11 +26,12 @@ public:
         QString album;
         QString artwork;
         qint64 durationMs = 0;
-        int entryId = 0;   // the row in a playlist, where a list is one
+        int entryId = 0;     // the row in a playlist, where a list is one
+        bool isVideo = false;   // has a picture worth showing
     };
 
     enum Roles { SourceIdRole = Qt::UserRole + 1, TitleRole, ArtistRole, AlbumRole,
-                 ArtworkRole, DurationRole, DurationTextRole, EntryIdRole };
+                 ArtworkRole, DurationRole, DurationTextRole, EntryIdRole, IsVideoRole };
 
     explicit SearchResultModel(QObject *parent = nullptr);
 

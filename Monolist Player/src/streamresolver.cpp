@@ -120,6 +120,70 @@ void StreamResolver::resolve(const QString &videoId, int firstTier)
     startTier(job, qBound(int(TierYtDlp), firstTier, int(TierExhausted)));
 }
 
+// The picture: yt-dlp only. The public instances answer with sound, and a
+// track's picture is asked for rarely enough that racing a dozen hosts for it
+// would be more machinery than it is worth.
+void StreamResolver::resolveVideo(const QString &videoId, int maxHeight)
+{
+    if (videoId.isEmpty())
+        return;
+
+    const auto cached = m_videoCache.constFind(videoId);
+    if (cached != m_videoCache.constEnd() && cached->expires > QDateTime::currentDateTimeUtc()) {
+        const VideoLinks links = *cached;
+        QMetaObject::invokeMethod(this, [this, videoId, links]() {
+            Q_EMIT videoResolved(videoId, links.video, links.audio);
+        }, Qt::QueuedConnection);
+        return;
+    }
+    if (m_videoJobs.contains(videoId))
+        return;   // already on its way
+    if (!YtDlp::isAvailable()) {
+        Q_EMIT videoFailed(videoId, QStringLiteral("Playing video needs yt-dlp."));
+        return;
+    }
+
+    YtDlpRequest *request = YtDlp::resolveVideo(videoId, maxHeight, this);
+    m_videoJobs.insert(videoId, request);
+
+    connect(request, &YtDlpRequest::succeededJson, this,
+            [this, videoId](const QJsonDocument &document) {
+                if (m_videoJobs.take(videoId).isNull())
+                    return;   // cancelled meanwhile
+                const QJsonObject root = document.object();
+                QString video = root.value(QStringLiteral("url")).toString();
+                QString audio;
+                // Two streams: yt-dlp lists them as it would merge them.
+                const QJsonArray parts = root.value(QStringLiteral("requested_formats")).toArray();
+                if (parts.size() >= 2) {
+                    const QJsonObject first = parts.at(0).toObject();
+                    const QJsonObject second = parts.at(1).toObject();
+                    const bool firstIsVideo = first.value(QStringLiteral("vcodec")).toString()
+                                              != QLatin1String("none");
+                    video = (firstIsVideo ? first : second).value(QStringLiteral("url")).toString();
+                    audio = (firstIsVideo ? second : first).value(QStringLiteral("url")).toString();
+                }
+                if (video.isEmpty()) {
+                    Q_EMIT videoFailed(videoId, QStringLiteral("No picture is published for this track."));
+                    return;
+                }
+                m_videoCache.insert(videoId, { video, audio, expiryOf(video) });
+                Q_EMIT videoResolved(videoId, video, audio);
+            });
+
+    connect(request, &YtDlpRequest::failed, this, [this, videoId](const QString &reason) {
+        if (m_videoJobs.take(videoId).isNull())
+            return;
+        Q_EMIT videoFailed(videoId, reason);
+    });
+}
+
+void StreamResolver::cancelVideo(const QString &videoId)
+{
+    if (QPointer<YtDlpRequest> request = m_videoJobs.take(videoId); request)
+        request->cancel();
+}
+
 void StreamResolver::prefetch(const QString &videoId)
 {
     if (videoId.isEmpty() || m_jobs.contains(videoId))
@@ -138,6 +202,7 @@ void StreamResolver::prefetch(const QString &videoId)
 void StreamResolver::invalidate(const QString &videoId)
 {
     m_cache.remove(videoId);
+    m_videoCache.remove(videoId);
 }
 
 // googlevideo links carry their own expiry ("expire=<unix time>"). Trust it

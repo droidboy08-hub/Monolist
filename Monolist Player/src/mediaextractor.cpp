@@ -32,6 +32,7 @@ QVariant SearchResultModel::data(const QModelIndex &index, int role) const
     case DurationRole:     return item.durationMs;
     case DurationTextRole: return TrackModel::formatDuration(item.durationMs);
     case EntryIdRole:      return item.entryId;
+    case IsVideoRole:      return item.isVideo;
     default:               return {};
     }
 }
@@ -46,7 +47,8 @@ QHash<int, QByteArray> SearchResultModel::roleNames() const
         { ArtworkRole, "artwork" },
         { DurationRole, "durationMs" },
         { DurationTextRole, "durationText" },
-        { EntryIdRole, "entryId" }
+        { EntryIdRole, "entryId" },
+        { IsVideoRole, "isVideo" }
     };
 }
 
@@ -76,7 +78,8 @@ QVariantMap SearchResultModel::get(int row) const
         { QStringLiteral("artwork"),      item.artwork },
         { QStringLiteral("durationMs"),   item.durationMs },
         { QStringLiteral("durationText"), TrackModel::formatDuration(item.durationMs) },
-        { QStringLiteral("entryId"),      item.entryId }
+        { QStringLiteral("entryId"),      item.entryId },
+        { QStringLiteral("isVideo"),      item.isVideo }
     };
 }
 
@@ -91,15 +94,16 @@ MediaExtractor::MediaExtractor(QObject *parent)
                     return;   // superseded by a newer search
                 if (tracks.isEmpty()) {
                     // Either nothing matched or the layout moved under the
-                    // parser; yt-dlp settles which.
-                    searchWithYtDlp(query);
+                    // parser. youtube.com is asked next: one request, about a
+                    // second, where yt-dlp costs eight.
+                    m_innerTube.searchYouTube(query);
                     return;
                 }
                 QList<SearchResultModel::Item> items;
                 items.reserve(tracks.size());
                 for (const InnerTube::Track &track : tracks)
                     items.append({ track.videoId, track.title, track.artist, track.album,
-                                   track.artwork, track.durationMs });
+                                   track.artwork, track.durationMs, 0, track.isVideo });
                 finishSearch(items, QStringLiteral("YouTube Music"));
             });
 
@@ -107,7 +111,33 @@ MediaExtractor::MediaExtractor(QObject *parent)
             [this](const QString &query, const QString &reason) {
                 if (query != m_query)
                     return;
-                qWarning("Monolist: YouTube Music search failed (%s); trying yt-dlp.", qPrintable(reason));
+                qWarning("Monolist: YouTube Music search failed (%s); trying youtube.com.", qPrintable(reason));
+                m_innerTube.searchYouTube(query);
+            });
+
+    // Second rung: youtube.com itself. Videos with their channel rather than
+    // songs with their album, but it answers in about a second.
+    connect(&m_innerTube, &InnerTube::youtubeSearchFinished, this,
+            [this](const QString &query, const QList<InnerTube::Track> &tracks) {
+                if (query != m_query)
+                    return;
+                if (tracks.isEmpty()) {
+                    searchWithYtDlp(query);
+                    return;
+                }
+                QList<SearchResultModel::Item> items;
+                items.reserve(tracks.size());
+                for (const InnerTube::Track &track : tracks)
+                    items.append({ track.videoId, track.title, YtDlp::cleanArtist(track.artist),
+                                   track.album, track.artwork, track.durationMs, 0, track.isVideo });
+                finishSearch(items, QStringLiteral("YouTube"));
+            });
+
+    connect(&m_innerTube, &InnerTube::youtubeSearchFailed, this,
+            [this](const QString &query, const QString &reason) {
+                if (query != m_query)
+                    return;
+                qWarning("Monolist: youtube.com search failed (%s); trying yt-dlp.", qPrintable(reason));
                 searchWithYtDlp(query);
             });
 
@@ -243,6 +273,9 @@ void MediaExtractor::searchWithYtDlp(const QString &query)
             if (!thumbnails.isEmpty())
                 item.artwork = thumbnails.last().toObject().value(QStringLiteral("url")).toString();
 
+            // A plain YouTube search finds videos; whether one is worth
+            // watching is not known from a flat listing, so trust the filter.
+            item.isVideo = m_filter == QLatin1String("videos");
             items.append(item);
         }
         finishSearch(items, QStringLiteral("yt-dlp"));

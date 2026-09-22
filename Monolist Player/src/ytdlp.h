@@ -103,6 +103,12 @@ public:
     // Full metadata for one video, including a direct bestaudio URL.
     static YtDlpRequest *resolveAudio(const QString &videoIdOrUrl, QObject *parent);
 
+    // The picture as well as the sound, capped so a music video does not
+    // arrive as 4K. One stream where YouTube still muxes both (up to 720p),
+    // otherwise two, which mpv plays together.
+    static YtDlpRequest *resolveVideo(const QString &videoIdOrUrl, int maxHeight,
+                                      QObject *parent = nullptr);
+
     // Downloads one track into `destinationDir` as `<fileStem>.<ext>`, or, with
     // an empty stem, as "<artist> - <title> [<id>].<ext>" from the fetched
     // metadata. Emits progress() and postProcessing() while running and

@@ -2,6 +2,7 @@
 #include "appdatabase.h"
 
 #include <QSqlQuery>
+#include <QTimer>
 #include <QVariant>
 
 Catalog::Catalog(QObject *parent)
@@ -26,13 +27,20 @@ QList<SearchResultModel::Item> Catalog::toItems(const QList<InnerTube::Track> &t
     QList<SearchResultModel::Item> items;
     items.reserve(tracks.size());
     for (const InnerTube::Track &track : tracks)
-        items.append({ track.videoId, track.title, track.artist, track.album, track.artwork, track.durationMs });
+        items.append({ track.videoId, track.title, track.artist, track.album, track.artwork,
+                       track.durationMs, 0, track.isVideo });
     return items;
 }
 
 // Home is two requests, the home feed and new releases, run side by side;
 // the view updates once both have answered.
 void Catalog::refresh()
+{
+    m_retries = 0;   // asked for, so start counting again
+    load();
+}
+
+void Catalog::load()
 {
     if (m_pendingHome > 0)
         return;
@@ -103,8 +111,15 @@ void Catalog::finishHome()
         return;
     m_shelves = m_releaseShelves + m_homeShelves;
     // One failed request out of two still leaves a page worth showing.
-    if (!m_shelves.isEmpty() || m_quickPicks.rowCount() > 0)
+    if (!m_shelves.isEmpty() || m_quickPicks.rowCount() > 0) {
         m_error.clear();
+        m_retries = 0;
+    } else if (m_retries < 2) {
+        // Nothing at all: a request that dropped, most likely. Ask again by
+        // itself rather than leaving Home empty until someone presses RETRY.
+        ++m_retries;
+        QTimer::singleShot(m_retries * 4000, this, &Catalog::load);
+    }
     Q_EMIT homeChanged();
 }
 

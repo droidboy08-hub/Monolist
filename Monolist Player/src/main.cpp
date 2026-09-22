@@ -1,6 +1,11 @@
 #include <QElapsedTimer>
 #include <QFontDatabase>
 #include <QGuiApplication>
+#include <QJsonArray>
+#include <QJsonObject>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QNetworkRequest>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQuickStyle>
@@ -21,6 +26,7 @@
 #include "playbackcontroller.h"
 #include "streamresolver.h"
 #include "trackmodel.h"
+#include "videosurface.h"
 #include "windowchrome.h"
 #include "ytdlp.h"
 
@@ -171,6 +177,9 @@ int main(int argc, char *argv[])
     qmlRegisterUncreatableType<LyricsModel>(
         "Monolist.Backend", 1, 0, "LyricsModel",
         QStringLiteral("Obtained from Lyrics.lines"));
+    // The picture, drawn inside the scene wherever a view places it.
+    VideoSurface::setEngine(&engine);
+    qmlRegisterType<VideoSurface>("Monolist.Backend", 1, 0, "VideoSurface");
 
     QQmlApplicationEngine qmlEngine;
     qmlEngine.addImageProvider(QStringLiteral("artwork"), new ArtworkCache(&artworkFetcher));
@@ -378,6 +387,104 @@ int main(int argc, char *argv[])
         QTimer::singleShot(300, &app, [&extractor, query]() { extractor.search(query); });
         QTimer::singleShot(30000, &app, []() {
             qWarning("selftest: timed out");
+            QCoreApplication::exit(2);
+        });
+    }
+
+    // --net-test
+    //
+    // What answers, and how fast: YouTube Music, youtube.com, the lyrics
+    // service and yt-dlp. When something "is not responding", this says which
+    // layer it was.
+    if (args.contains(QStringLiteral("--net-test"))) {
+        // Owned by the application: they have to outlive this block, which
+        // ends long before the answers arrive.
+        auto *music = new InnerTube(&app);
+        auto *tube = new InnerTube(&app);
+        auto *network = new QNetworkAccessManager(&app);
+        auto left = std::make_shared<int>(5);
+        const auto report = [left](const QString &what, bool ok, qint64 ms, const QString &detail) {
+            qWarning("net: %-24s %-4s %6lld ms  %s", qPrintable(what), ok ? "OK" : "FAIL",
+                     (long long)ms, qPrintable(detail));
+            if (--*left == 0)
+                QTimer::singleShot(100, qApp, []() { QCoreApplication::quit(); });
+        };
+        const auto clock = []() {
+            auto timer = std::make_shared<QElapsedTimer>();
+            timer->start();
+            return timer;
+        };
+
+        // YouTube Music: search, and the home feed.
+        auto searchClock = clock();
+        QObject::connect(music, &InnerTube::searchFinished, &app,
+                         [report, searchClock](const QString &, const QList<InnerTube::Track> &tracks) {
+                             report(QStringLiteral("YouTube Music search"), !tracks.isEmpty(),
+                                    searchClock->elapsed(), QStringLiteral("%1 songs").arg(tracks.size()));
+                         });
+        QObject::connect(music, &InnerTube::searchFailed, &app,
+                         [report, searchClock](const QString &, const QString &reason) {
+                             report(QStringLiteral("YouTube Music search"), false, searchClock->elapsed(), reason);
+                         });
+        music->search(QStringLiteral("daft punk"), InnerTube::Filter::Songs);
+
+        auto homeClock = clock();
+        music->browse(QStringLiteral("FEmusic_home"), [report, homeClock](const QJsonObject &root, const QString &error) {
+            const int shelves = int(InnerTube::parseShelves(root).size());
+            report(QStringLiteral("YouTube Music home"), error.isEmpty() && shelves > 0, homeClock->elapsed(),
+                   error.isEmpty() ? QStringLiteral("%1 shelves").arg(shelves) : error);
+        });
+
+        // youtube.com, the fallback search.
+        auto tubeClock = clock();
+        QObject::connect(tube, &InnerTube::youtubeSearchFinished, &app,
+                         [report, tubeClock](const QString &, const QList<InnerTube::Track> &tracks) {
+                             report(QStringLiteral("youtube.com search"), !tracks.isEmpty(),
+                                    tubeClock->elapsed(), QStringLiteral("%1 videos").arg(tracks.size()));
+                         });
+        QObject::connect(tube, &InnerTube::youtubeSearchFailed, &app,
+                         [report, tubeClock](const QString &, const QString &reason) {
+                             report(QStringLiteral("youtube.com search"), false, tubeClock->elapsed(), reason);
+                         });
+        tube->searchYouTube(QStringLiteral("daft punk"));
+
+        // The lyrics service.
+        auto lyricsClock = clock();
+        {
+            QNetworkRequest request(QUrl(QStringLiteral("https://lrclib.net/api/search?track_name=Get%20Lucky&artist_name=Daft%20Punk")));
+            request.setHeader(QNetworkRequest::UserAgentHeader, QByteArrayLiteral("Monolist/0.1 (desktop music player)"));
+            request.setTransferTimeout(12000);
+            QNetworkReply *reply = network->get(request);
+            QObject::connect(reply, &QNetworkReply::finished, &app, [reply, report, lyricsClock]() {
+                reply->deleteLater();
+                const bool ok = reply->error() == QNetworkReply::NoError;
+                const int found = ok ? int(QJsonDocument::fromJson(reply->readAll()).array().size()) : 0;
+                report(QStringLiteral("LRCLIB lyrics"), ok && found > 0, lyricsClock->elapsed(),
+                       ok ? QStringLiteral("%1 matches").arg(found) : reply->errorString());
+            });
+        }
+
+        // yt-dlp, which resolves what actually plays.
+        auto ytdlpClock = clock();
+        if (!YtDlp::isAvailable()) {
+            report(QStringLiteral("yt-dlp"), false, 0, QStringLiteral("not installed"));
+        } else {
+            YtDlpRequest *request = YtDlp::resolveAudio(QStringLiteral("LrM_Y39Gmhk"), &app);
+            QObject::connect(request, &YtDlpRequest::succeededJson, &app,
+                             [report, ytdlpClock](const QJsonDocument &document) {
+                                 const QString url = document.object().value(QStringLiteral("url")).toString();
+                                 report(QStringLiteral("yt-dlp stream"), !url.isEmpty(), ytdlpClock->elapsed(),
+                                        url.isEmpty() ? QStringLiteral("no url") : QStringLiteral("resolved"));
+                             });
+            QObject::connect(request, &YtDlpRequest::failed, &app,
+                             [report, ytdlpClock](const QString &reason) {
+                                 report(QStringLiteral("yt-dlp stream"), false, ytdlpClock->elapsed(), reason);
+                             });
+        }
+
+        qWarning("net: region %s, testing…", qPrintable(InnerTube::region()));
+        QTimer::singleShot(40000, &app, []() {
+            qWarning("net: timed out");
             QCoreApplication::exit(2);
         });
     }

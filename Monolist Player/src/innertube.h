@@ -35,6 +35,9 @@ public:
         QString album;
         QString artwork;
         qint64 durationMs = 0;
+        // A real video, rather than YouTube Music's own audio track (which is
+        // a still picture of the cover and not worth showing).
+        bool isVideo = false;
     };
 
     // An album, playlist, artist or video, as the home feed and charts show them.
@@ -70,6 +73,10 @@ public:
 
     enum class Filter { Songs, Videos };
 
+    // Which of YouTube's front ends to ask. Music knows songs, albums and
+    // artists; YouTube knows every video, and answers when Music does not.
+    enum class Client { Music, YouTube };
+
     explicit InnerTube(QObject *parent = nullptr);
 
     // The country every request is made from ("US", "JP", …), which decides
@@ -98,6 +105,10 @@ public:
     // are independent: a search starting must not cancel the suggestions for
     // what is being typed.
     void search(const QString &query, Filter filter);
+    // The same query against youtube.com, for when Music fails or finds
+    // nothing: videos with their channel, not songs with their album, but one
+    // request rather than yt-dlp's Python start-up.
+    void searchYouTube(const QString &query);
     void suggest(const QString &input);
     // The "radio" YouTube Music builds from one song: songs like it, the seed
     // itself first. What autoplay continues with when a queue runs out.
@@ -109,13 +120,25 @@ public:
 Q_SIGNALS:
     void searchFinished(const QString &query, const QList<InnerTube::Track> &tracks);
     void searchFailed(const QString &query, const QString &reason);
+    void youtubeSearchFinished(const QString &query, const QList<InnerTube::Track> &tracks);
+    void youtubeSearchFailed(const QString &query, const QString &reason);
     void suggestionsReady(const QString &input, const QStringList &suggestions);
     void radioReady(const QString &seedVideoId, const QList<InnerTube::Track> &tracks);
     void radioFailed(const QString &seedVideoId, const QString &reason);
 
 private:
-    QNetworkReply *post(const QString &endpoint, QJsonObject body);
+    QNetworkReply *post(Client client, const QString &endpoint, QJsonObject body, int timeoutMs);
+    // One request, its answer as JSON. A dropped connection or a timeout is
+    // ordinary on a home connection, so it is tried once more before failing;
+    // `slot`, where given, holds the reply so a newer request can cancel it,
+    // and a cancelled request is dropped silently rather than retried.
+    void send(Client client, const QString &endpoint, const QJsonObject &body, int timeoutMs,
+              QPointer<QNetworkReply> *slot,
+              std::function<void(const QJsonObject &root, const QString &error)> done,
+              int retries = 1);
+
     static QList<Track> parseSearch(const QJsonObject &root);
+    static QList<Track> parseYouTubeSearch(const QJsonObject &root);
     static QStringList parseSuggestions(const QJsonObject &root);
     static QList<Track> parseRadio(const QJsonObject &root);
 

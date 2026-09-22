@@ -53,6 +53,14 @@ class PlaybackController : public QObject
     Q_PROPERTY(QString statusText READ statusText NOTIFY statusChanged)
     Q_PROPERTY(QString sourceLabel READ sourceLabel NOTIFY statusChanged)
     Q_PROPERTY(bool engineAvailable READ engineAvailable CONSTANT)
+    // The picture. `videoAvailable` is whether this track has one at all
+    // (YouTube Music's own songs are a still image, so they do not);
+    // `videoWanted` is the switch, which lasts for this track only;
+    // `videoPlaying` is whether the picture is actually loaded.
+    Q_PROPERTY(bool videoAvailable READ videoAvailable NOTIFY currentTrackChanged)
+    Q_PROPERTY(bool videoWanted READ videoWanted WRITE setVideoWanted NOTIFY videoChanged)
+    Q_PROPERTY(bool videoPlaying READ videoPlaying NOTIFY videoChanged)
+    Q_PROPERTY(int videoHeight READ videoHeight WRITE setVideoHeight NOTIFY videoChanged)
 public:
     enum RepeatMode { RepeatOff = 0, RepeatAll = 1, RepeatOne = 2 };
     Q_ENUM(RepeatMode)
@@ -85,6 +93,11 @@ public:
     QString statusText() const { return m_statusText; }
     QString sourceLabel() const { return m_sourceLabel; }
     bool engineAvailable() const;
+    bool videoAvailable() const;
+    bool videoWanted() const { return m_videoWanted; }
+    bool videoPlaying() const { return m_videoPlaying; }
+    int videoHeight() const { return m_videoHeight; }
+    void setVideoHeight(int height);
 
 public Q_SLOTS:
     void play();
@@ -115,6 +128,9 @@ public Q_SLOTS:
     void cycleRepeat();
     void toggleFavourite();
     void setAutoplay(bool autoplay);
+    // Swaps what is playing for the same track with, or without, its picture,
+    // carrying on from the same second.
+    void setVideoWanted(bool wanted);
 
     // Plays one track on its own; autoplay carries on from it.
     void playSource(const QString &videoId,
@@ -141,6 +157,7 @@ Q_SIGNALS:
     void favouriteChanged();
     void bufferingChanged();
     void statusChanged();
+    void videoChanged();
     void playbackError(const QString &reason);
 
 private:
@@ -149,6 +166,8 @@ private:
     void beginTrack(const QVariantMap &track, bool autoPlay);
     void handleResolved(const QString &videoId, const QString &url, int tier, bool fromCache);
     void handleResolveFailed(const QString &videoId, const QString &reason);
+    void handleVideoResolved(const QString &videoId, const QString &videoUrl, const QString &audioUrl);
+    void playWithVideo(bool video);
     void handleEndOfFile();
     void prefetchUpcoming();
     bool extendWithRadio();   // false when there is nothing to seed a radio from
@@ -188,4 +207,9 @@ private:
     bool m_shuffle = false;
     int m_repeatMode = RepeatOff;
     bool m_favourite = false;
+    bool m_videoWanted = false;
+    bool m_videoPlaying = false;
+    qint64 m_resumeAt = 0;         // where the next load should begin
+    int m_videoHeight = 720;
+    QString m_videoPendingId;      // a picture being resolved for this track
 };

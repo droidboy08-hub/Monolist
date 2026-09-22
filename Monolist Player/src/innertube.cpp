@@ -9,12 +9,18 @@
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QRegularExpression>
+#include <QTimer>
 
 #include <initializer_list>
 
 namespace {
 
-const QString kEndpoint = QStringLiteral("https://music.youtube.com/youtubei/v1/");
+// Long enough for a slow connection to finish: a search is a couple of
+// hundred KB, a page can be four hundred, and a request that times out is a
+// blank screen.
+constexpr int kSearchTimeoutMs = 12000;
+constexpr int kBrowseTimeoutMs = 20000;
+constexpr int kSuggestTimeoutMs = 6000;
 
 // Search filters as YouTube Music encodes them (a base64 protobuf): the values
 // its web client sends, and ytmusicapi with it.
@@ -60,21 +66,22 @@ qint64 parseClock(const QString &text)
 QString g_region;
 
 // The web client's own locale, so results follow the user's language and the
-// region they are browsing.
-QJsonObject clientContext()
+// region they are browsing. YouTube Music and YouTube name themselves
+// differently and number their versions differently.
+QJsonObject clientContext(InnerTube::Client client)
 {
     const QLocale locale = QLocale::system();
     QString language = locale.name().section(QLatin1Char('_'), 0, 0);
     const QString region = InnerTube::region();
     if (language.isEmpty() || language == QLatin1String("C"))
         language = QStringLiteral("en");
-    // "1.<today>.01.00" is the shape the web client reports its version in.
-    const QString version = QStringLiteral("1.%1.01.00")
-                                .arg(QDate::currentDate().toString(QStringLiteral("yyyyMMdd")));
+    const QString today = QDate::currentDate().toString(QStringLiteral("yyyyMMdd"));
+    const bool music = client == InnerTube::Client::Music;
     return QJsonObject{
         { QStringLiteral("client"), QJsonObject{
-              { QStringLiteral("clientName"), QStringLiteral("WEB_REMIX") },
-              { QStringLiteral("clientVersion"), version },
+              { QStringLiteral("clientName"), music ? QStringLiteral("WEB_REMIX") : QStringLiteral("WEB") },
+              { QStringLiteral("clientVersion"), music ? QStringLiteral("1.%1.01.00").arg(today)
+                                                       : QStringLiteral("2.%1.00.00").arg(today) },
               { QStringLiteral("hl"), language },
               { QStringLiteral("gl"), region } } }
     };
@@ -155,15 +162,25 @@ const QRegularExpression &clockPattern()
 // results pack "Artist • Album • 2:05" into the second column; album and
 // playlist pages give artist and album a column each and the duration a
 // fixed column. The columns are joined with bullets so one parser reads both.
+// "MUSIC_VIDEO_TYPE_ATV" is YouTube Music's own audio track: a still picture
+// of the cover. Anything else (OMV, UGC) is a video worth showing.
+bool isRealVideo(const QJsonValue &watchEndpoint)
+{
+    const QString kind = dig(watchEndpoint, { "watchEndpointMusicSupportedConfigs",
+                                              "watchEndpointMusicConfig", "musicVideoType" }).toString();
+    return !kind.isEmpty() && kind != QLatin1String("MUSIC_VIDEO_TYPE_ATV");
+}
+
 InnerTube::Track parseListItem(const QJsonValue &item)
 {
     InnerTube::Track track;
     track.videoId = dig(item, { "playlistItemData", "videoId" }).toString();
-    if (track.videoId.isEmpty()) {
-        track.videoId = dig(item, { "overlay", "musicItemThumbnailOverlayRenderer", "content",
-                                    "musicPlayButtonRenderer", "playNavigationEndpoint",
-                                    "watchEndpoint", "videoId" }).toString();
-    }
+    const QJsonValue play = dig(item, { "overlay", "musicItemThumbnailOverlayRenderer", "content",
+                                        "musicPlayButtonRenderer", "playNavigationEndpoint",
+                                        "watchEndpoint" });
+    if (track.videoId.isEmpty())
+        track.videoId = dig(play, { "videoId" }).toString();
+    track.isVideo = isRealVideo(play);
 
     const QJsonArray columns = item.toObject().value(QLatin1String("flexColumns")).toArray();
     track.title = joinRuns(dig(columns.at(0), { "musicResponsiveListItemFlexColumnRenderer",
@@ -261,16 +278,61 @@ InnerTube::InnerTube(QObject *parent)
     m_network->connectToHostEncrypted(QStringLiteral("music.youtube.com"));
 }
 
-QNetworkReply *InnerTube::post(const QString &endpoint, QJsonObject body)
+QNetworkReply *InnerTube::post(Client client, const QString &endpoint, QJsonObject body, int timeoutMs)
 {
-    body.insert(QStringLiteral("context"), clientContext());
-    QNetworkRequest request(QUrl(kEndpoint + endpoint + QStringLiteral("?prettyPrint=false")));
+    const bool music = client == Client::Music;
+    const QString host = music ? QStringLiteral("https://music.youtube.com")
+                               : QStringLiteral("https://www.youtube.com");
+    body.insert(QStringLiteral("context"), clientContext(client));
+    QNetworkRequest request(QUrl(host + QStringLiteral("/youtubei/v1/") + endpoint
+                                 + QStringLiteral("?prettyPrint=false")));
     request.setHeader(QNetworkRequest::ContentTypeHeader, QByteArrayLiteral("application/json"));
     request.setHeader(QNetworkRequest::UserAgentHeader, kUserAgent);
-    request.setRawHeader("Origin", "https://music.youtube.com");
-    request.setRawHeader("Referer", "https://music.youtube.com/");
-    request.setTransferTimeout(8000);
+    request.setRawHeader("Origin", host.toUtf8());
+    request.setRawHeader("Referer", (host + QLatin1Char('/')).toUtf8());
+    request.setTransferTimeout(timeoutMs);
     return m_network->post(request, QJsonDocument(body).toJson(QJsonDocument::Compact));
+}
+
+void InnerTube::send(Client client, const QString &endpoint, const QJsonObject &body, int timeoutMs,
+                     QPointer<QNetworkReply> *slot,
+                     std::function<void(const QJsonObject &, const QString &)> done, int retries)
+{
+    QNetworkReply *reply = post(client, endpoint, body, timeoutMs);
+    if (slot)
+        *slot = reply;
+
+    connect(reply, &QNetworkReply::finished, this,
+            [this, reply, client, endpoint, body, timeoutMs, slot, done, retries]() {
+                reply->deleteLater();
+                // A newer request of the same kind took this one's place, or it
+                // was cancelled: whoever did that has already moved on.
+                if (slot && *slot != reply)
+                    return;
+                if (slot)
+                    *slot = nullptr;
+
+                if (reply->error() != QNetworkReply::NoError) {
+                    // A dropped connection or a timeout is ordinary on a home
+                    // connection; the second attempt usually works.
+                    if (retries > 0 && reply->error() != QNetworkReply::OperationCanceledError) {
+                        QTimer::singleShot(1200, this, [this, client, endpoint, body, timeoutMs,
+                                                        slot, done, retries]() {
+                            send(client, endpoint, body, timeoutMs, slot, done, retries - 1);
+                        });
+                        return;
+                    }
+                    done({}, reply->errorString());
+                    return;
+                }
+
+                const QJsonDocument document = QJsonDocument::fromJson(reply->readAll());
+                if (!document.isObject()) {
+                    done({}, QStringLiteral("YouTube sent a response that is not JSON."));
+                    return;
+                }
+                done(document.object(), QString());
+            });
 }
 
 void InnerTube::search(const QString &query, Filter filter)
@@ -282,30 +344,34 @@ void InnerTube::search(const QString &query, Filter filter)
         previous->abort();
     }
 
-    QNetworkReply *reply = post(QStringLiteral("search"), {
+    const QJsonObject body{
         { QStringLiteral("query"), query },
         { QStringLiteral("params"), filter == Filter::Songs ? kSongsFilter : kVideosFilter }
-    });
-    m_search = reply;
+    };
+    send(Client::Music, QStringLiteral("search"), body, kSearchTimeoutMs, &m_search,
+         [this, query](const QJsonObject &root, const QString &error) {
+             if (error.isEmpty())
+                 Q_EMIT searchFinished(query, parseSearch(root));
+             else
+                 Q_EMIT searchFailed(query, error);
+         });
+}
 
-    connect(reply, &QNetworkReply::finished, this, [this, reply, query]() {
-        reply->deleteLater();
-        if (reply != m_search)
-            return;
+void InnerTube::searchYouTube(const QString &query)
+{
+    if (QNetworkReply *previous = m_search) {
         m_search = nullptr;
+        previous->abort();
+    }
 
-        if (reply->error() != QNetworkReply::NoError) {
-            Q_EMIT searchFailed(query, reply->errorString());
-            return;
-        }
-        QJsonParseError parseError;
-        const QJsonDocument document = QJsonDocument::fromJson(reply->readAll(), &parseError);
-        if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
-            Q_EMIT searchFailed(query, QStringLiteral("YouTube Music sent a response that is not JSON."));
-            return;
-        }
-        Q_EMIT searchFinished(query, parseSearch(document.object()));
-    });
+    send(Client::YouTube, QStringLiteral("search"), { { QStringLiteral("query"), query } },
+         kSearchTimeoutMs, &m_search,
+         [this, query](const QJsonObject &root, const QString &error) {
+             if (error.isEmpty())
+                 Q_EMIT youtubeSearchFinished(query, parseYouTubeSearch(root));
+             else
+                 Q_EMIT youtubeSearchFailed(query, error);
+         });
 }
 
 void InnerTube::suggest(const QString &input)
@@ -315,20 +381,15 @@ void InnerTube::suggest(const QString &input)
         previous->abort();
     }
 
-    QNetworkReply *reply = post(QStringLiteral("music/get_search_suggestions"),
-                                { { QStringLiteral("input"), input } });
-    m_suggest = reply;
-
-    connect(reply, &QNetworkReply::finished, this, [this, reply, input]() {
-        reply->deleteLater();
-        if (reply != m_suggest)
-            return;
-        m_suggest = nullptr;
-        if (reply->error() != QNetworkReply::NoError)
-            return;   // suggestions are a nicety; a failure just shows none
-        const QJsonDocument document = QJsonDocument::fromJson(reply->readAll());
-        Q_EMIT suggestionsReady(input, parseSuggestions(document.object()));
-    });
+    // Suggestions are a nicety and are asked for while typing: no retry, and
+    // a failure simply shows none.
+    send(Client::Music, QStringLiteral("music/get_search_suggestions"),
+         { { QStringLiteral("input"), input } }, kSuggestTimeoutMs, &m_suggest,
+         [this, input](const QJsonObject &root, const QString &error) {
+             if (error.isEmpty())
+                 Q_EMIT suggestionsReady(input, parseSuggestions(root));
+         },
+         /*retries=*/0);
 }
 
 void InnerTube::radio(const QString &videoId)
@@ -337,31 +398,25 @@ void InnerTube::radio(const QString &videoId)
 
     // "RDAMVM" + id is the radio playlist YouTube Music starts from a song;
     // "wAEB" asks for it in radio mode, as its own client does.
-    QNetworkReply *reply = post(QStringLiteral("next"), {
+    const QJsonObject body{
         { QStringLiteral("videoId"), videoId },
         { QStringLiteral("playlistId"), QStringLiteral("RDAMVM") + videoId },
         { QStringLiteral("params"), QStringLiteral("wAEB") },
         { QStringLiteral("isAudioOnly"), true },
         { QStringLiteral("enablePersistentPlaylistPanel"), true }
-    });
-    m_radio = reply;
-
-    connect(reply, &QNetworkReply::finished, this, [this, reply, videoId]() {
-        reply->deleteLater();
-        if (reply != m_radio)
-            return;
-        m_radio = nullptr;
-        if (reply->error() != QNetworkReply::NoError) {
-            Q_EMIT radioFailed(videoId, reply->errorString());
-            return;
-        }
-        const QJsonDocument document = QJsonDocument::fromJson(reply->readAll());
-        const QList<Track> tracks = parseRadio(document.object());
-        if (tracks.isEmpty())
-            Q_EMIT radioFailed(videoId, QStringLiteral("YouTube Music returned no radio for this song."));
-        else
-            Q_EMIT radioReady(videoId, tracks);
-    });
+    };
+    send(Client::Music, QStringLiteral("next"), body, kSearchTimeoutMs, &m_radio,
+         [this, videoId](const QJsonObject &root, const QString &error) {
+             if (!error.isEmpty()) {
+                 Q_EMIT radioFailed(videoId, error);
+                 return;
+             }
+             const QList<Track> tracks = parseRadio(root);
+             if (tracks.isEmpty())
+                 Q_EMIT radioFailed(videoId, QStringLiteral("YouTube Music returned no radio for this song."));
+             else
+                 Q_EMIT radioReady(videoId, tracks);
+         });
 }
 
 void InnerTube::cancelRadio()
@@ -406,41 +461,61 @@ QList<InnerTube::Track> InnerTube::parseSearch(const QJsonObject &root)
     return tracks;
 }
 
+// youtube.com's own search: videos, with the channel where YouTube Music
+// would name the artist and no album at all. A fallback, not a replacement.
+QList<InnerTube::Track> InnerTube::parseYouTubeSearch(const QJsonObject &root)
+{
+    QList<Track> tracks;
+    const QJsonArray sections = dig(root, { "contents", "twoColumnSearchResultsRenderer",
+                                            "primaryContents", "sectionListRenderer",
+                                            "contents" }).toArray();
+    for (const QJsonValue &section : sections) {
+        const QJsonArray items = dig(section, { "itemSectionRenderer", "contents" }).toArray();
+        for (const QJsonValue &entry : items) {
+            const QJsonValue item = dig(entry, { "videoRenderer" });
+            if (item.isUndefined())
+                continue;   // a channel, a playlist, an advert, a shelf
+            Track track;
+            track.videoId = dig(item, { "videoId" }).toString();
+            track.title = joinRuns(dig(item, { "title", "runs" }).toArray()).trimmed();
+            track.artist = joinRuns(dig(item, { "ownerText", "runs" }).toArray()).trimmed();
+            const QString length = dig(item, { "lengthText", "simpleText" }).toString();
+            if (!length.isEmpty())
+                track.durationMs = parseClock(length);
+            const QJsonArray thumbnails = dig(item, { "thumbnail", "thumbnails" }).toArray();
+            if (!thumbnails.isEmpty())
+                track.artwork = thumbnails.last().toObject().value(QLatin1String("url")).toString();
+            // Everything here is a video; a live stream has no length.
+            track.isVideo = true;
+            if (!track.videoId.isEmpty() && !track.title.isEmpty() && track.durationMs > 0)
+                tracks.append(track);
+        }
+    }
+    return tracks;
+}
+
 void InnerTube::browse(const QString &browseId,
                        std::function<void(const QJsonObject &, const QString &)> done)
 {
-    QNetworkReply *reply = post(QStringLiteral("browse"), { { QStringLiteral("browseId"), browseId } });
-    connect(reply, &QNetworkReply::finished, this, [reply, done]() {
-        reply->deleteLater();
-        if (reply->error() != QNetworkReply::NoError) {
-            done({}, reply->errorString());
-            return;
-        }
-        const QJsonDocument document = QJsonDocument::fromJson(reply->readAll());
-        if (!document.isObject()) {
-            done({}, QStringLiteral("YouTube Music sent a response that is not JSON."));
-            return;
-        }
-        done(document.object(), QString());
-    });
+    // A page is bigger than a search (the home feed is a few hundred KB), so
+    // it is given longer before the connection is called dead.
+    send(Client::Music, QStringLiteral("browse"), { { QStringLiteral("browseId"), browseId } },
+         kBrowseTimeoutMs, nullptr, std::move(done));
 }
 
 void InnerTube::lyrics(const QString &videoId,
                        std::function<void(const QString &, const QString &, const QString &)> done)
 {
-    QNetworkReply *reply = post(QStringLiteral("next"), {
+    send(Client::Music, QStringLiteral("next"), {
         { QStringLiteral("videoId"), videoId },
         { QStringLiteral("isAudioOnly"), true }
-    });
-    connect(reply, &QNetworkReply::finished, this, [this, reply, done]() {
-        reply->deleteLater();
-        if (reply->error() != QNetworkReply::NoError) {
-            done({}, {}, reply->errorString());
+    }, kSearchTimeoutMs, nullptr, [this, done](const QJsonObject &root, const QString &error) {
+        if (!error.isEmpty()) {
+            done({}, {}, error);
             return;
         }
         // The watch page's second tab is Lyrics; without a browse id it is
         // greyed out, and the song has none.
-        const QJsonObject root = QJsonDocument::fromJson(reply->readAll()).object();
         const QJsonArray tabs = dig(root, { "contents", "singleColumnMusicWatchNextResultsRenderer",
                                             "tabbedRenderer", "watchNextTabbedResultsRenderer",
                                             "tabs" }).toArray();
@@ -587,6 +662,7 @@ QList<InnerTube::Track> InnerTube::parseRadio(const QJsonObject &root)
         track.videoId = dig(item, { "videoId" }).toString();
         if (track.videoId.isEmpty())
             continue;
+        track.isVideo = isRealVideo(dig(item, { "navigationEndpoint", "watchEndpoint" }));
         track.title = joinRuns(dig(item, { "title", "runs" }).toArray()).trimmed();
         parseSubtitle(dig(item, { "longBylineText", "runs" }).toArray(), track);
         const QString length = joinRuns(dig(item, { "lengthText", "runs" }).toArray()).trimmed();
