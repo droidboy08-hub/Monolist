@@ -123,8 +123,10 @@ if ($LASTEXITCODE -ne 0) {
 # The linter finds them now. Its "unqualified" and backend "import" notes come
 # from the C++ singletons being registered at run time, and are not errors.
 $lint = & cmake --build $buildDir --target monolist_qmllint 2>&1 | ForEach-Object { "$_" }
+# Only the message lines: the linter also echoes the offending source line,
+# which can end in something bracketed too ("artworks[index]").
 $problems = @($lint | Where-Object {
-    $_ -match '\[([a-z-]+)\]\s*$' -and $Matches[1] -notin @('unqualified', 'import', 'unused-imports')
+    $_ -match '^(Warning|Error): .*\[([a-z-]+)\]\s*$' -and $Matches[2] -notin @('unqualified', 'import', 'unused-imports')
 })
 if ($problems.Count -gt 0) {
     $problems | ForEach-Object { Write-Host $_ -ForegroundColor Red }

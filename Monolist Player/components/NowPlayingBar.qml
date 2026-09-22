@@ -79,11 +79,14 @@ Rectangle {
             IconButton {
                 visible: root.showMeta
                 anchors.verticalCenter: parent.verticalCenter
-                iconName: "heart"
+                iconName: Player.favourite ? "heart-filled" : "heart"
                 side: 30
                 iconSize: 15
                 iconColor: Player.favourite ? Theme.accent : Theme.text
                 onClicked: Player.toggleFavourite()
+                ToolTip.visible: hovered
+                ToolTip.delay: 600
+                ToolTip.text: Player.favourite ? "Remove from Liked songs" : "Add to Liked songs"
             }
 
             DownloadButton {

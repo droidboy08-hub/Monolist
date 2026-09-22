@@ -10,9 +10,10 @@
 
 class YtDlpRequest;
 
-// Search results, shaped so the existing TrackTable can render them unchanged —
-// it requires title, artist, album and durationText, and this supplies the same
-// role names the library model uses.
+// A list of songs: search results, and every other song list the interface
+// shows (Home's, an album's, a playlist's, the liked songs). TrackTable renders
+// any of them, and Player.playModel queues any of them, through the same role
+// names the library model uses.
 class SearchResultModel : public QAbstractListModel
 {
     Q_OBJECT
@@ -25,10 +26,11 @@ public:
         QString album;
         QString artwork;
         qint64 durationMs = 0;
+        int entryId = 0;   // the row in a playlist, where a list is one
     };
 
     enum Roles { SourceIdRole = Qt::UserRole + 1, TitleRole, ArtistRole, AlbumRole,
-                 ArtworkRole, DurationRole, DurationTextRole };
+                 ArtworkRole, DurationRole, DurationTextRole, EntryIdRole };
 
     explicit SearchResultModel(QObject *parent = nullptr);
 

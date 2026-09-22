@@ -1,19 +1,22 @@
 #pragma once
 
 #include <QAbstractListModel>
+#include <QStringList>
 
 struct PlaylistItem {
     int id = 0;
     QString name;
     int trackCount = 0;
+    QStringList artworks;   // up to four distinct covers, for the mosaic
 };
 
+// The user's own playlists, oldest first, so their numbers stay put.
 class PlaylistModel : public QAbstractListModel
 {
     Q_OBJECT
     Q_PROPERTY(int count READ rowCount NOTIFY countChanged)
 public:
-    enum Roles { IdRole = Qt::UserRole + 1, NameRole, TrackCountRole, NumberRole };
+    enum Roles { IdRole = Qt::UserRole + 1, NameRole, TrackCountRole, NumberRole, ArtworksRole };
 
     explicit PlaylistModel(QObject *parent = nullptr);
 
@@ -23,6 +26,10 @@ public:
 
     void reload();
     Q_INVOKABLE QVariantMap get(int row) const;
+    Q_INVOKABLE int indexOf(int playlistId) const;
+
+    // Up to four distinct covers from a playlist's songs, in playlist order.
+    static QStringList artworksFor(int playlistId);
 
 Q_SIGNALS:
     void countChanged();

@@ -26,11 +26,7 @@ Flickable {
     boundsBehavior: Flickable.StopAtBounds
     clip: true
 
-    ScrollBar.vertical: ScrollBar {
-        width: 10
-        policy: ScrollBar.AsNeeded
-        contentItem: Rectangle { color: Theme.neutral300 }
-    }
+    ScrollBar.vertical: MonoScrollBar {}
 
     Column {
         id: column

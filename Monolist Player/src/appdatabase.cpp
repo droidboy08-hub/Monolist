@@ -14,7 +14,11 @@ AppDatabase::AppDatabase() = default;
 
 QString AppDatabase::databaseFilePath()
 {
-    const QString dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    // MONOLIST_DATA_DIR keeps the database somewhere else: for trying a
+    // change, or running the self-tests, without touching the real library.
+    QString dir = qEnvironmentVariable("MONOLIST_DATA_DIR");
+    if (dir.isEmpty())
+        dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
     QDir().mkpath(dir);
     return QDir(dir).filePath(QStringLiteral("monolist.db"));
 }
@@ -122,6 +126,34 @@ void AppDatabase::createSchema()
         " file_path TEXT NOT NULL,"
         " bytes INTEGER NOT NULL DEFAULT 0,"
         " downloaded_at TEXT NOT NULL DEFAULT (datetime('now')))"));
+
+    // A playlist's songs, each a copy of what is needed to show and play it,
+    // so a playlist can hold songs that are in no other list.
+    q.exec(QStringLiteral(
+        "CREATE TABLE IF NOT EXISTS playlist_tracks ("
+        " id INTEGER PRIMARY KEY AUTOINCREMENT,"
+        " playlist_id INTEGER NOT NULL,"
+        " position INTEGER NOT NULL DEFAULT 0,"
+        " video_id TEXT NOT NULL DEFAULT '',"
+        " title TEXT NOT NULL DEFAULT '',"
+        " artist TEXT NOT NULL DEFAULT '',"
+        " album TEXT NOT NULL DEFAULT '',"
+        " artwork TEXT NOT NULL DEFAULT '',"
+        " duration_ms INTEGER NOT NULL DEFAULT 0,"
+        " added_at TEXT NOT NULL DEFAULT (datetime('now')),"
+        " FOREIGN KEY(playlist_id) REFERENCES playlists(id) ON DELETE CASCADE)"));
+    q.exec(QStringLiteral(
+        "CREATE INDEX IF NOT EXISTS idx_playlist_tracks_playlist ON playlist_tracks(playlist_id, position)"));
+
+    // Lyrics as found, so a song's lyrics are asked for once. A row with
+    // neither kind records that none were found, and when.
+    q.exec(QStringLiteral(
+        "CREATE TABLE IF NOT EXISTS lyrics ("
+        " video_id TEXT PRIMARY KEY,"
+        " synced TEXT NOT NULL DEFAULT '',"
+        " plain TEXT NOT NULL DEFAULT '',"
+        " source TEXT NOT NULL DEFAULT '',"
+        " fetched_at TEXT NOT NULL DEFAULT (datetime('now')))"));
 }
 
 bool AppDatabase::hasColumn(const QString &table, const QString &column)
@@ -148,6 +180,25 @@ void AppDatabase::migrate()
         q.exec(QStringLiteral(
             "CREATE INDEX IF NOT EXISTS idx_tracks_source_id ON tracks(source_id)"));
     }
+
+    // When a song was liked, so Liked songs can list the latest first. SQLite
+    // cannot add a column whose default is a function, hence '' and the
+    // explicit values the writes give.
+    if (!hasColumn(QStringLiteral("tracks"), QStringLiteral("liked_at")))
+        q.exec(QStringLiteral("ALTER TABLE tracks ADD COLUMN liked_at TEXT NOT NULL DEFAULT ''"));
+
+    if (!hasColumn(QStringLiteral("playlists"), QStringLiteral("created_at")))
+        q.exec(QStringLiteral("ALTER TABLE playlists ADD COLUMN created_at TEXT NOT NULL DEFAULT ''"));
+    if (!hasColumn(QStringLiteral("playlists"), QStringLiteral("updated_at")))
+        q.exec(QStringLiteral("ALTER TABLE playlists ADD COLUMN updated_at TEXT NOT NULL DEFAULT ''"));
+
+    // Saved albums and playlists open their YouTube Music page.
+    if (!hasColumn(QStringLiteral("albums"), QStringLiteral("browse_id"))) {
+        q.exec(QStringLiteral("ALTER TABLE albums ADD COLUMN browse_id TEXT NOT NULL DEFAULT ''"));
+        q.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS idx_albums_browse_id ON albums(browse_id)"));
+    }
+    if (!hasColumn(QStringLiteral("albums"), QStringLiteral("saved_at")))
+        q.exec(QStringLiteral("ALTER TABLE albums ADD COLUMN saved_at TEXT NOT NULL DEFAULT ''"));
 
     removeSampleData();
 

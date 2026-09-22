@@ -3,9 +3,9 @@
 #include <QObject>
 #include <QSqlDatabase>
 
-// Owns the local SQLite store: history, playlists, favourites, settings.
-// Everything the UI shows is read through the models in library.h, so the
-// real catalogue can later replace the seeded sample rows without UI changes.
+// Owns the local SQLite store: the library (liked and downloaded songs),
+// playlists, saved albums, what was played, lyrics found, and settings. The
+// interface reads it through Library and the models it owns.
 class AppDatabase
 {
 public:

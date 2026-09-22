@@ -25,6 +25,8 @@ ApplicationWindow {
     property string initialQuery: ""
     // The queue docks at the right, like a second sidebar.
     property bool queueOpen: false
+    // A playlist just made, whose page opens with its name ready to type.
+    property int pendingRename: 0
 
     Component.onCompleted: {
         if (initialQuery.length > 0)
@@ -32,8 +34,10 @@ ApplicationWindow {
         openCurrentPage()
     }
 
-    // An album or playlist is a view like any other ("page:<browse id>"), so
-    // back and forward step through the pages that were opened.
+    // Views are named: "home", "search", "downloads", "library[:tab]",
+    // "page:<browse id>" for an album or a YouTube Music playlist, and
+    // "playlist:<id>" or "playlist:liked" for the user's own. Back and
+    // forward step through them.
     function openPage(browseId) {
         navigate("page:" + browseId)
     }
@@ -41,7 +45,19 @@ ApplicationWindow {
     function openCurrentPage() {
         if (currentView.indexOf("page:") === 0)
             Catalog.openPage(currentView.substring(5))
+        else if (currentView.indexOf("playlist:") === 0 && currentView !== "playlist:liked")
+            Library.openPlaylist(parseInt(currentView.substring(9)))
     }
+
+    function createPlaylist() {
+        var created = Library.createPlaylist("")
+        if (created <= 0)
+            return
+        pendingRename = created
+        navigate("playlist:" + created)
+    }
+
+    readonly property string libraryTab: currentView.indexOf("library:") === 0 ? currentView.substring(8) : "playlists"
 
     onCurrentViewChanged: openCurrentPage()
 
@@ -77,6 +93,8 @@ ApplicationWindow {
                   : currentView === "search" ? "SEARCH"
                   : currentView === "downloads" ? "DOWNLOADS"
                   : currentView.indexOf("page:") === 0 ? (Catalog.page.type === "playlist" ? "PLAYLIST" : "ALBUM")
+                  : currentView === "playlist:liked" ? "YOUR LIBRARY / LIKED SONGS"
+                  : currentView.indexOf("playlist:") === 0 ? "YOUR LIBRARY / PLAYLIST"
                   : "YOUR LIBRARY";
         return label + " / " + Qt.formatDate(new Date(), "dddd d MMMM yyyy").toUpperCase();
     }
@@ -97,6 +115,7 @@ ApplicationWindow {
             anchors.left: parent.left
             currentView: window.currentView
             onViewRequested: function(view) { window.navigate(view) }
+            onNewPlaylistRequested: window.createPlaylist()
         }
 
         // The top bar spans to the window's right edge, so its window buttons
@@ -158,7 +177,21 @@ ApplicationWindow {
 
                 LibraryView {
                     anchors.fill: parent
-                    visible: window.currentView === "library"
+                    visible: window.currentView.indexOf("library") === 0
+                    tab: window.libraryTab
+                    onTabRequested: function(tab) { window.navigate(tab === "playlists" ? "library" : "library:" + tab) }
+                    onViewRequested: function(view) { window.navigate(view) }
+                    onPageRequested: function(browseId) { window.openPage(browseId) }
+                    onNewPlaylistRequested: window.createPlaylist()
+                }
+
+                PlaylistView {
+                    anchors.fill: parent
+                    visible: window.currentView.indexOf("playlist:") === 0
+                    key: visible ? window.currentView.substring(9) : ""
+                    renameOnOpen: window.pendingRename > 0 && key === String(window.pendingRename)
+                    onRenameStarted: window.pendingRename = 0
+                    onDeleted: window.goBack()
                 }
 
                 DownloadsView {
@@ -197,6 +230,21 @@ ApplicationWindow {
         showCloseButton: true
         onCloseRequested: visible = false
         onViewRequested: function(view) { window.navigate(view) }
+        onNewPlaylistRequested: window.createPlaylist()
+    }
+
+    // — confirmations —
+    Toast {
+        id: toast
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: playerBar.top
+        anchors.bottomMargin: Theme.space6
+        z: 900
+    }
+
+    Connections {
+        target: Library
+        function onNotice(text) { toast.show(text) }
     }
 
     // — resize edges —

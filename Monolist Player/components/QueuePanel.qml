@@ -67,11 +67,7 @@ Rectangle {
         boundsBehavior: Flickable.StopAtBounds
         model: Player.queue
 
-        ScrollBar.vertical: ScrollBar {
-            width: 8
-            policy: ScrollBar.AsNeeded
-            contentItem: Rectangle { color: Theme.neutral300 }
-        }
+        ScrollBar.vertical: MonoScrollBar { width: 8 }
 
         delegate: Column {
             id: entry

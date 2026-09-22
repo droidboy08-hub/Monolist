@@ -14,11 +14,7 @@ Flickable {
     boundsBehavior: Flickable.StopAtBounds
     clip: true
 
-    ScrollBar.vertical: ScrollBar {
-        width: 10
-        policy: ScrollBar.AsNeeded
-        contentItem: Rectangle { color: Theme.neutral300 }
-    }
+    ScrollBar.vertical: MonoScrollBar {}
 
     // A square check box with a label and a line of explanation.
     component Toggle: Item {

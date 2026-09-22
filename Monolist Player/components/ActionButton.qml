@@ -14,7 +14,8 @@ Button {
                                                  : (hovered || down ? Theme.bg : Theme.text)
 
     implicitHeight: 40
-    implicitWidth: label.implicitWidth + Theme.space4 * 2
+    // With no text, a square around the glyph.
+    implicitWidth: text.length > 0 ? label.implicitWidth + Theme.space4 * 2 : implicitHeight
     padding: 0
     hoverEnabled: true
     opacity: enabled ? 1 : 0.4
@@ -41,6 +42,7 @@ Button {
                 color: control.labelColour
             }
             Text {
+                visible: control.text.length > 0
                 anchors.verticalCenter: parent.verticalCenter
                 text: control.text
                 font.family: Theme.fontFamily

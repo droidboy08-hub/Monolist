@@ -9,6 +9,7 @@ Rectangle {
     property string currentView: "home"
     property bool showCloseButton: false
     signal viewRequested(string view)
+    signal newPlaylistRequested()
     signal closeRequested()
 
     color: Theme.bg
@@ -61,7 +62,7 @@ Rectangle {
 
         Text {
             visible: !root.showCloseButton
-            text: "V.2.6"
+            text: "V." + Qt.application.version
             anchors.right: parent.right
             anchors.rightMargin: Theme.space6
             anchors.verticalCenter: parent.verticalCenter
@@ -119,7 +120,7 @@ Rectangle {
             NavItem {
                 iconName: "library"
                 label: "Your Library"
-                active: root.currentView === "library"
+                active: root.currentView.indexOf("library") === 0
                 onClicked: root.viewRequested("library")
             }
             NavItem {
@@ -166,11 +167,14 @@ Rectangle {
             iconName: "plus"
             side: 28
             iconSize: 16
-            onClicked: root.viewRequested("library")
+            onClicked: root.newPlaylistRequested()
+            ToolTip.visible: hovered
+            ToolTip.delay: 600
+            ToolTip.text: "New playlist"
         }
     }
 
-    // — playlists —
+    // — playlists: Liked songs first, then the user's own —
     ListView {
         id: playlistList
         anchors.top: playlistHeader.bottom
@@ -183,22 +187,31 @@ Rectangle {
         boundsBehavior: Flickable.StopAtBounds
         bottomMargin: Theme.space6
 
+        header: PlaylistRow {
+            width: ListView.view ? ListView.view.width : 0
+            iconName: "heart-filled"
+            name: "Liked songs"
+            trackCount: Library.liked.count
+            active: root.currentView === "playlist:liked"
+            onActivated: root.viewRequested("playlist:liked")
+        }
+
+        // Roles through `model`: the row's own properties share their names.
         delegate: PlaylistRow {
-            width: ListView.view.width
+            width: ListView.view ? ListView.view.width : 0
             number: model.number
             name: model.name
             trackCount: model.trackCount
-            onActivated: root.viewRequested("library")
+            active: root.currentView === "playlist:" + model.playlistId
+            onActivated: root.viewRequested("playlist:" + model.playlistId)
         }
 
-        ScrollBar.vertical: ScrollBar {
-            width: 10
-            policy: ScrollBar.AsNeeded
-            contentItem: Rectangle { color: Theme.neutral300 }
-        }
+        ScrollBar.vertical: MonoScrollBar {}
     }
 
-    // — account —
+    // — the user —
+    // The name the system knows them by, and what they keep here. The name
+    // can be changed in place: the pencil, then Enter.
     Item {
         id: userStrip
         anchors.bottom: parent.bottom
@@ -207,6 +220,20 @@ Rectangle {
         anchors.rightMargin: Theme.ruleWidth
         height: 68
 
+        property bool editing: false
+
+        function commit() {
+            if (!editing)
+                return
+            editing = false
+            Library.setUserName(nameField.text)
+        }
+
+        Rectangle {
+            anchors.fill: parent
+            color: userHover.hovered && !userStrip.editing ? Theme.surface : "transparent"
+        }
+
         Rectangle {
             anchors.top: parent.top
             width: parent.width
@@ -214,47 +241,114 @@ Rectangle {
             color: Theme.divider
         }
 
-        Row {
+        HoverHandler { id: userHover; cursorShape: userStrip.editing ? Qt.ArrowCursor : Qt.PointingHandCursor }
+        TapHandler {
+            enabled: !userStrip.editing
+            onTapped: root.viewRequested("library")
+        }
+
+        Rectangle {
+            id: initials
             anchors.left: parent.left
             anchors.leftMargin: Theme.space6
             anchors.verticalCenter: parent.verticalCenter
-            spacing: Theme.space3
+            width: 32
+            height: 32
+            color: Theme.text
 
-            Rectangle {
-                width: 32
-                height: 32
-                color: Theme.text
-                anchors.verticalCenter: parent.verticalCenter
-
-                Text {
-                    anchors.centerIn: parent
-                    text: Library.userInitials
-                    color: Theme.bg
-                    font.family: Theme.fontFamily
-                    font.pixelSize: 13
-                    font.weight: Theme.weightBlack
-                }
+            Text {
+                anchors.centerIn: parent
+                text: Library.userInitials
+                color: Theme.bg
+                font.family: Theme.fontFamily
+                font.pixelSize: 13
+                font.weight: Theme.weightBlack
             }
+        }
 
-            Column {
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: 0
+        Column {
+            anchors.left: initials.right
+            anchors.leftMargin: Theme.space3
+            anchors.right: editButton.left
+            anchors.rightMargin: Theme.space2
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 0
+
+            Item {
+                width: parent.width
+                height: 18
 
                 Text {
+                    visible: !userStrip.editing
+                    width: parent.width
+                    anchors.verticalCenter: parent.verticalCenter
                     text: Library.userName
+                    elide: Text.ElideRight
                     font.family: Theme.fontFamily
                     font.pixelSize: 13
                     font.weight: Font.Bold
                     color: Theme.text
                 }
-                Text {
-                    text: Library.userPlan
+
+                TextInput {
+                    id: nameField
+                    visible: userStrip.editing
+                    width: parent.width
+                    anchors.verticalCenter: parent.verticalCenter
                     font.family: Theme.fontFamily
-                    font.pixelSize: 11
-                    font.letterSpacing: Theme.tracking(11, 0.08)
-                    color: Theme.neutral600
+                    font.pixelSize: 13
+                    font.weight: Font.Bold
+                    color: Theme.text
+                    selectionColor: Theme.accent
+                    selectedTextColor: Theme.accentForeground
+                    maximumLength: 40
+                    clip: true
+                    onAccepted: userStrip.commit()
+                    onActiveFocusChanged: if (!activeFocus) userStrip.commit()
+                    Keys.onEscapePressed: {
+                        userStrip.editing = false
+                        focus = false
+                    }
+
+                    Rectangle {
+                        anchors.top: parent.bottom
+                        width: parent.width
+                        height: Theme.ruleWidth
+                        color: Theme.accent
+                    }
                 }
             }
+
+            Text {
+                width: parent.width
+                text: Library.liked.count + " LIKED · " + Downloads.storedCount + " DOWNLOADED"
+                elide: Text.ElideRight
+                font.family: Theme.fontFamily
+                font.pixelSize: 11
+                font.letterSpacing: Theme.tracking(11, 0.08)
+                color: Theme.neutral600
+            }
+        }
+
+        IconButton {
+            id: editButton
+            anchors.right: parent.right
+            anchors.rightMargin: Theme.space6 - Theme.space1
+            anchors.verticalCenter: parent.verticalCenter
+            visible: userHover.hovered && !userStrip.editing
+            side: 28
+            iconName: "pencil"
+            iconSize: 14
+            iconColor: Theme.text
+            onClicked: {
+                nameField.text = Library.userName
+                userStrip.editing = true
+                nameField.forceActiveFocus()
+                nameField.selectAll()
+            }
+            ToolTip.visible: hovered
+            ToolTip.delay: 600
+            ToolTip.text: "Change the name shown here"
         }
     }
 }

@@ -18,17 +18,34 @@ Flickable {
     boundsBehavior: Flickable.StopAtBounds
     clip: true
 
-    ScrollBar.vertical: ScrollBar {
-        width: 10
-        policy: ScrollBar.AsNeeded
-        contentItem: Rectangle { color: Theme.neutral300 }
-    }
+    ScrollBar.vertical: MonoScrollBar {}
 
     function downloadAll() {
         var tracks = Catalog.pageTrackList()
         for (var i = 0; i < tracks.length; ++i) {
             var track = tracks[i]
             Downloads.enqueue(track.sourceId, track.title, track.artist, track.artwork, track.durationMs)
+        }
+    }
+
+    readonly property bool saved: Library.revision >= 0 && Library.isSaved(page.browseId !== undefined ? page.browseId : "")
+
+    MonoMenu {
+        id: pageMenu
+
+        Action {
+            text: "Add all to queue"
+            enabled: Catalog.pageTracks.count > 0
+            onTriggered: {
+                var tracks = Catalog.pageTrackList()
+                for (var i = 0; i < tracks.length; ++i)
+                    Player.addToQueue(tracks[i])
+            }
+        }
+        PlaylistSubmenu {
+            title: "Add all to playlist"
+            enabled: Catalog.pageTracks.count > 0
+            onPicked: function(playlistId) { Library.addAllToPlaylist(playlistId, Catalog.pageTrackList()) }
         }
     }
 
@@ -128,11 +145,23 @@ Flickable {
                         }
                     }
                     ActionButton {
+                        iconName: root.saved ? "check" : "plus"
+                        text: root.saved ? "Saved" : "Save"
+                        enabled: root.page.title !== undefined && root.page.error === undefined
+                        onClicked: Library.setSaved(root.page, !root.saved)
+                    }
+                    ActionButton {
                         visible: Downloads.available
                         iconName: "download"
                         text: "Download all"
                         enabled: Catalog.pageTracks.count > 0
                         onClicked: root.downloadAll()
+                    }
+                    ActionButton {
+                        id: moreButton
+                        iconName: "dots"
+                        enabled: Catalog.pageTracks.count > 0
+                        onClicked: pageMenu.popup(moreButton, 0, moreButton.height + Theme.space1)
                     }
                 }
             }

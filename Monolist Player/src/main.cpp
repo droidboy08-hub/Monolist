@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
     DownloadManager downloads;
 
     PlaybackController player(&engine, &resolver, &downloads);
-    player.setLibrary(library.tracks());
+    player.setLibrary(&library);
     // Open with the library queued and its first song ready, not playing.
     player.loadModel(library.tracks(), 0);
 
@@ -98,6 +98,8 @@ int main(int argc, char *argv[])
     catalog.refresh();
     catalog.reloadRecent();
     QObject::connect(&player, &PlaybackController::currentTrackChanged, &catalog, &Catalog::reloadRecent);
+    QObject::connect(&player, &PlaybackController::currentTrackChanged, &library, &Library::reloadHistory);
+    QObject::connect(&library, &Library::historyCleared, &catalog, &Catalog::reloadRecent);
 
     // A completed download becomes a library row; reload so it is playable
     // straight away rather than after a restart.
@@ -134,6 +136,15 @@ int main(int argc, char *argv[])
     qmlRegisterUncreatableType<DownloadLibraryModel>(
         "Monolist.Backend", 1, 0, "DownloadLibraryModel",
         QStringLiteral("Obtained from Downloads.library"));
+    qmlRegisterUncreatableType<PlaylistModel>(
+        "Monolist.Backend", 1, 0, "PlaylistModel",
+        QStringLiteral("Obtained from Library.playlists"));
+    qmlRegisterUncreatableType<AlbumModel>(
+        "Monolist.Backend", 1, 0, "AlbumModel",
+        QStringLiteral("Obtained from Library.albums"));
+    qmlRegisterUncreatableType<TrackModel>(
+        "Monolist.Backend", 1, 0, "TrackModel",
+        QStringLiteral("Obtained from Library.tracks"));
 
     QQmlApplicationEngine qmlEngine;
     qmlEngine.addImageProvider(QStringLiteral("artwork"), new ArtworkCache(&artworkFetcher));
@@ -235,7 +246,8 @@ int main(int argc, char *argv[])
     // change end to end. Quits straight away.
     if (args.contains(QStringLiteral("--diag"))) {
         QSqlQuery count(AppDatabase::connection());
-        for (const char *table : { "tracks", "downloads", "recent", "history", "settings" }) {
+        for (const char *table : { "tracks", "downloads", "recent", "history", "settings",
+                                   "playlists", "playlist_tracks", "albums", "lyrics" }) {
             const QString name = QString::fromLatin1(table);
             const bool ok = count.exec(QStringLiteral("SELECT COUNT(*) FROM %1").arg(name)) && count.next();
             qWarning("diag: %-9s %s", table, ok ? qPrintable(count.value(0).toString())
@@ -243,7 +255,78 @@ int main(int argc, char *argv[])
         }
         qWarning("diag: database %s", qPrintable(AppDatabase::databaseFilePath()));
         qWarning("diag: recently played in the catalog: %d", catalog.recent()->rowCount());
+        qWarning("diag: user \"%s\" (%s), %d liked, %d playlists, %d saved albums, %d saved playlists",
+                 qPrintable(library.userName()), qPrintable(library.userInitials()),
+                 library.liked()->rowCount(), library.playlists()->rowCount(),
+                 library.albums()->rowCount(), library.savedPlaylists()->rowCount());
         QTimer::singleShot(0, &app, []() { QCoreApplication::quit(); });
+    }
+
+    // --library-test "<query>"
+    //
+    // The library end to end, on real songs: searches, makes a playlist of the
+    // results, adds one twice, likes three, saves Home's newest album, then
+    // removes, renames and reports. Meant for a scratch database
+    // (MONOLIST_DATA_DIR), which it leaves filled for a look at the views.
+    const int libraryFlag = args.indexOf(QStringLiteral("--library-test"));
+    if (libraryFlag >= 0 && libraryFlag + 1 < args.size()) {
+        const QString query = args.at(libraryFlag + 1);
+        auto done = std::make_shared<int>(0);   // the search and Home, both needed
+
+        QObject::connect(&library, &Library::notice, &app, [](const QString &text) {
+            qWarning("selftest: notice \"%s\"", qPrintable(text));
+        });
+        const auto report = [&library]() {
+            const QVariantMap open = library.playlist();
+            qWarning("selftest: playlist %d \"%s\": %d songs, %s; %d playlists, %d liked, %d saved albums",
+                     open.value(QStringLiteral("playlistId")).toInt(),
+                     qPrintable(open.value(QStringLiteral("name")).toString()),
+                     open.value(QStringLiteral("trackCount")).toInt(),
+                     qPrintable(open.value(QStringLiteral("durationText")).toString()),
+                     library.playlists()->rowCount(), library.liked()->rowCount(),
+                     library.albums()->rowCount());
+        };
+        const auto finish = [&library, &catalog, report, done]() {
+            if (++*done < 2)
+                return;
+            const QVariantMap featured = catalog.featured();
+            if (!featured.isEmpty()) {
+                library.setSaved(featured, true);
+                qWarning("selftest: saved \"%s\": %s", qPrintable(featured.value(QStringLiteral("title")).toString()),
+                         library.isSaved(featured.value(QStringLiteral("browseId")).toString()) ? "yes" : "NO");
+            }
+            report();
+            QTimer::singleShot(600, qApp, []() { QCoreApplication::quit(); });
+        };
+
+        QObject::connect(&catalog, &Catalog::homeChanged, &app, [&catalog, finish]() {
+            if (!catalog.loading())
+                finish();
+        });
+        QObject::connect(&extractor, &MediaExtractor::searchFinished, &app,
+                         [&library, report, finish](const QVariantList &results) {
+                             const int id = library.createPlaylist(QStringLiteral("Selftest mix"));
+                             library.openPlaylist(id);
+                             library.addAllToPlaylist(id, results.mid(0, 8));
+                             const bool again = library.addToPlaylist(id, results.value(0).toMap());
+                             qWarning("selftest: adding the first song again %s", again ? "ADDED A DUPLICATE" : "was refused");
+                             for (int i = 0; i < 3 && i < results.size(); ++i)
+                                 library.setLiked(results.at(i).toMap(), true);
+                             qWarning("selftest: first song liked: %s", library.isLiked(results.value(0).toMap()
+                                      .value(QStringLiteral("sourceId")).toString()) ? "yes" : "NO");
+                             report();
+                             const int second = library.playlistTracks()->get(1).value(QStringLiteral("entryId")).toInt();
+                             library.removeFromPlaylist(id, second);
+                             library.renamePlaylist(id, QStringLiteral("Night Drive"));
+                             library.setLiked(results.value(2).toMap(), false);
+                             report();
+                             finish();
+                         });
+        QTimer::singleShot(300, &app, [&extractor, query]() { extractor.search(query); });
+        QTimer::singleShot(30000, &app, []() {
+            qWarning("selftest: timed out");
+            QCoreApplication::exit(2);
+        });
     }
 
     // --search "<query>"

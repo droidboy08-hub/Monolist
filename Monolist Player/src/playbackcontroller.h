@@ -8,7 +8,7 @@
 #include "queuemodel.h"
 
 class QAbstractItemModel;
-class TrackModel;
+class Library;
 class MpvEngine;
 class StreamResolver;
 class DownloadManager;
@@ -62,9 +62,8 @@ public:
                                 DownloadManager *downloads,
                                 QObject *parent = nullptr);
 
-    // The library, for likes: a liked track is a library row with the
-    // favourite flag, and liking a track that is not in the library adds it.
-    void setLibrary(TrackModel *library);
+    // The library, for likes and for recording plays against library rows.
+    void setLibrary(Library *library);
 
     bool playing() const { return m_playing; }
     QVariantMap currentTrack() const { return m_currentTrack; }
@@ -154,7 +153,6 @@ private:
     void prefetchUpcoming();
     bool extendWithRadio();   // false when there is nothing to seed a radio from
     void refreshFavourite();
-    int libraryRow() const;
     void setStatus(const QString &text, const QString &source, bool resolving);
     void setDuration(qint64 ms);
     void setPlayingFlag(bool playing);
@@ -163,7 +161,7 @@ private:
     MpvEngine *m_engine = nullptr;
     StreamResolver *m_resolver = nullptr;
     DownloadManager *m_downloads = nullptr;
-    TrackModel *m_library = nullptr;
+    Library *m_library = nullptr;
 
     QueueModel m_queue;
     InnerTube m_innerTube;   // for the radio

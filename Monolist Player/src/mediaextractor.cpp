@@ -31,6 +31,7 @@ QVariant SearchResultModel::data(const QModelIndex &index, int role) const
     case ArtworkRole:      return item.artwork;
     case DurationRole:     return item.durationMs;
     case DurationTextRole: return TrackModel::formatDuration(item.durationMs);
+    case EntryIdRole:      return item.entryId;
     default:               return {};
     }
 }
@@ -44,7 +45,8 @@ QHash<int, QByteArray> SearchResultModel::roleNames() const
         { AlbumRole, "album" },
         { ArtworkRole, "artwork" },
         { DurationRole, "durationMs" },
-        { DurationTextRole, "durationText" }
+        { DurationTextRole, "durationText" },
+        { EntryIdRole, "entryId" }
     };
 }
 
@@ -73,7 +75,8 @@ QVariantMap SearchResultModel::get(int row) const
         { QStringLiteral("album"),        item.album },
         { QStringLiteral("artwork"),      item.artwork },
         { QStringLiteral("durationMs"),   item.durationMs },
-        { QStringLiteral("durationText"), TrackModel::formatDuration(item.durationMs) }
+        { QStringLiteral("durationText"), TrackModel::formatDuration(item.durationMs) },
+        { QStringLiteral("entryId"),      item.entryId }
     };
 }
 

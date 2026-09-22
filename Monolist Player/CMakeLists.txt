@@ -90,11 +90,19 @@ qt_add_qml_module(monolist
         components/ActionButton.qml
         components/WindowButtons.qml
         components/WindowDragArea.qml
+        components/CollectionCover.qml
+        components/Toast.qml
+        components/MonoMenu.qml
+        components/MonoMenuItem.qml
+        components/MonoMenuRule.qml
+        components/PlaylistSubmenu.qml
+        components/MonoScrollBar.qml
         views/HomeView.qml
         views/SearchView.qml
         views/LibraryView.qml
         views/DownloadsView.qml
         views/PageView.qml
+        views/PlaylistView.qml
     RESOURCES
         Icons.js
         # Bundled so the design renders identically on Windows, macOS and Linux
@@ -125,7 +133,8 @@ endif()
 
 if(WIN32)
     # WindowChrome: the drop shadow and square corners of the caption-less frame.
-    target_link_libraries(monolist PRIVATE dwmapi)
+    # netapi32: the account's full name, for the sidebar (Library).
+    target_link_libraries(monolist PRIVATE dwmapi netapi32)
 endif()
 
 # On Windows the app is a GUI binary; keep the console attached in debug builds

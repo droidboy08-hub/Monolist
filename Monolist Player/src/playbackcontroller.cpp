@@ -1,6 +1,7 @@
 #include "playbackcontroller.h"
 #include "appdatabase.h"
 #include "downloadmanager.h"
+#include "library.h"
 #include "mpvengine.h"
 #include "streamresolver.h"
 #include "trackmodel.h"
@@ -171,15 +172,13 @@ bool PlaybackController::engineAvailable() const
     return m_engine && m_engine->isValid();
 }
 
-void PlaybackController::setLibrary(TrackModel *library)
+void PlaybackController::setLibrary(Library *library)
 {
     if (m_library)
         disconnect(m_library, nullptr, this, nullptr);
     m_library = library;
-    if (m_library) {
-        connect(m_library, &QAbstractItemModel::modelReset, this, &PlaybackController::refreshFavourite);
-        connect(m_library, &QAbstractItemModel::dataChanged, this, &PlaybackController::refreshFavourite);
-    }
+    if (m_library)
+        connect(m_library, &Library::likesChanged, this, &PlaybackController::refreshFavourite);
     refreshFavourite();
 }
 
@@ -242,19 +241,9 @@ QString PlaybackController::artworkForSource(const QString &videoId)
 
 // ------------------------------------------------------------------ likes
 
-int PlaybackController::libraryRow() const
-{
-    if (!m_library || m_currentTrack.isEmpty())
-        return -1;
-    const int trackId = m_currentTrack.value(QStringLiteral("trackId")).toInt();
-    const int row = trackId > 0 ? m_library->indexOfTrack(trackId) : -1;
-    return row >= 0 ? row : m_library->indexOfSource(currentSourceId());
-}
-
 void PlaybackController::refreshFavourite()
 {
-    const int row = libraryRow();
-    const bool favourite = row >= 0 && m_library->get(row).value(QStringLiteral("favourite")).toBool();
+    const bool favourite = m_library && m_library->isLiked(currentSourceId());
     if (favourite == m_favourite)
         return;
     m_favourite = favourite;
@@ -265,13 +254,8 @@ void PlaybackController::toggleFavourite()
 {
     if (!m_library || m_currentTrack.isEmpty())
         return;
-    const int row = libraryRow();
-    if (row >= 0)
-        m_library->toggleFavourite(row);   // dataChanged refreshes the flag
-    else
-        // Liking a song that is not in the library saves it there, the way a
-        // like saves a song in any streaming app.
-        m_library->addTrack(m_currentTrack, /*favourite=*/true);
+    // likesChanged refreshes the flag.
+    m_library->setLiked(m_currentTrack, !m_favourite);
 }
 
 // ------------------------------------------------------------------ queue
@@ -454,9 +438,9 @@ void PlaybackController::recordHistory(const QVariantMap &track)
     int trackId = track.value(QStringLiteral("trackId")).toInt();
     const QString videoId = track.value(QStringLiteral("sourceId")).toString();
     if (trackId <= 0 && m_library && !videoId.isEmpty()) {
-        const int row = m_library->indexOfSource(videoId);
+        const int row = m_library->tracks()->indexOfSource(videoId);
         if (row >= 0)
-            trackId = m_library->get(row).value(QStringLiteral("trackId")).toInt();
+            trackId = m_library->tracks()->get(row).value(QStringLiteral("trackId")).toInt();
     }
     if (trackId > 0) {
         QSqlQuery history(AppDatabase::connection());

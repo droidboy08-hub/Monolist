@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls.Basic
 import Monolist
 import Monolist.Backend
 
@@ -11,6 +12,8 @@ Column {
     property int activeIndex: -1
     // A download control per row, for rows that have a source id to fetch.
     property bool showDownloads: false
+    // The playlist this list is, so a row's menu can take it out; 0 otherwise.
+    property int playlistId: 0
     signal trackActivated(int index)
 
     // Column visibility follows the window: metadata drops before the title does.
@@ -19,14 +22,15 @@ Column {
     readonly property int timeWidth: 64
     readonly property int indexWidth: 48
     readonly property int moreWidth: 36
+    readonly property int likeWidth: 36
     readonly property int downloadWidth: showDownloads && Downloads.available ? 40 : 0
-    readonly property int freeWidth: width - indexWidth - timeWidth - downloadWidth - moreWidth
+    readonly property int freeWidth: width - indexWidth - timeWidth - likeWidth - downloadWidth - moreWidth
     readonly property int albumColumnWidth: showAlbum ? Math.round(freeWidth * 0.30) : 0
     readonly property int artistColumnWidth: showArtist ? Math.round(freeWidth * 0.28) : 0
     readonly property int titleColumnWidth: freeWidth - albumColumnWidth - artistColumnWidth
 
-    function openMenu(row) {
-        trackMenu.track = {
+    function trackOf(row) {
+        return {
             sourceId: row.sourceId,
             title: row.title,
             artist: row.artist,
@@ -34,6 +38,12 @@ Column {
             artwork: row.artwork,
             durationMs: row.durationMs
         }
+    }
+
+    function openMenu(row) {
+        trackMenu.track = trackOf(row)
+        trackMenu.playlistId = root.playlistId
+        trackMenu.entryId = row.entryId
         trackMenu.popup()
     }
 
@@ -118,11 +128,13 @@ Column {
             required property string sourceId
             required property string artwork
             required property real durationMs
+            required property int entryId
 
             width: root.width
             height: 40
             readonly property bool isActive: sourceId.length > 0 ? sourceId === Player.currentSourceId
                                                                  : index === root.activeIndex
+            readonly property bool liked: Library.revision >= 0 && Library.isLiked(sourceId)
 
             Rectangle {
                 anchors.fill: parent
@@ -177,6 +189,22 @@ Column {
             }
 
             // Buttons, so their clicks are not also taken as a tap on the row.
+            // The heart stays when the song is liked, and shows on hover.
+            IconButton {
+                visible: row.sourceId.length > 0 && (row.liked || rowHover.hovered)
+                x: root.width - root.moreWidth - root.timeWidth - root.downloadWidth - root.likeWidth
+                   + (root.likeWidth - width) / 2
+                anchors.verticalCenter: parent.verticalCenter
+                side: 30
+                iconName: row.liked ? "heart-filled" : "heart"
+                iconSize: 15
+                iconColor: row.liked ? Theme.accent : Theme.neutral700
+                onClicked: Library.setLiked(root.trackOf(row), !row.liked)
+                ToolTip.visible: hovered
+                ToolTip.delay: 600
+                ToolTip.text: row.liked ? "Remove from Liked songs" : "Add to Liked songs"
+            }
+
             DownloadButton {
                 visible: root.downloadWidth > 0 && row.sourceId.length > 0
                 x: root.width - root.moreWidth - root.timeWidth - root.downloadWidth

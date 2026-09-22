@@ -15,9 +15,13 @@ constexpr DWORD kCornerPreference = 33;   // DWMWA_WINDOW_CORNER_PREFERENCE
 constexpr DWORD kBorderColour = 34;       // DWMWA_BORDER_COLOR
 constexpr DWORD kDoNotRound = 1;          // DWMWCP_DONOTROUND
 
+// The window's native handle, or none when it has none. handle() comes first
+// because winId() creates a native window that is not there: at shutdown, when
+// the native window is already gone, that meant a failed attempt to create it
+// again for every message that passed through the filter.
 HWND handleOf(QWindow *window)
 {
-    return window ? reinterpret_cast<HWND>(window->winId()) : nullptr;
+    return window && window->handle() ? reinterpret_cast<HWND>(window->winId()) : nullptr;
 }
 
 // How deep, in physical pixels, the invisible resize edge reaches into the
@@ -71,7 +75,8 @@ void WindowChrome::attach(QWindow *window)
         return;
 
 #if defined(Q_OS_WIN)
-    const HWND hwnd = handleOf(window);   // creates the native window, unshown
+    window->create();                     // the native window, still unshown
+    const HWND hwnd = handleOf(window);
 
     // A one-pixel extension of the frame into the client area keeps the DWM
     // drawing the drop shadow once the caption is gone.
@@ -132,7 +137,8 @@ bool WindowChrome::nativeEventFilter(const QByteArray &eventType, void *message,
     if (eventType != "windows_generic_MSG" || !m_window)
         return false;
     MSG *msg = static_cast<MSG *>(message);
-    if (msg->hwnd != handleOf(m_window))
+    const HWND hwnd = handleOf(m_window);
+    if (!hwnd || msg->hwnd != hwnd)
         return false;
 
     switch (msg->message) {

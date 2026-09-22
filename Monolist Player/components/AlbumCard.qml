@@ -1,6 +1,8 @@
 import QtQuick
 import Monolist
 
+// A card: the cover, a title, a line under it, and a footer label with the
+// play mark. The cover blooms into colour under the pointer.
 Rectangle {
     id: root
 
@@ -8,7 +10,13 @@ Rectangle {
     property string artist: ""
     property string year: ""
     property string format: "LP"
+    // Overrides the year and format in the footer when set.
+    property string footer: ""
     property string artwork: ""
+    // A playlist's mosaic; takes the place of `artwork` when it has any.
+    property var artworks: []
+    // "liked" or "new": see CollectionCover.
+    property string plate: ""
     signal playRequested()
 
     color: hover.hovered ? Theme.surface : Theme.bg
@@ -23,10 +31,12 @@ Rectangle {
         anchors.margins: Theme.space3
         spacing: Theme.space3
 
-        Artwork {
+        CollectionCover {
             width: parent.width
             height: width
-            source: root.artwork
+            artworks: root.artworks && root.artworks.length > 0 ? root.artworks
+                    : root.artwork.length > 0 ? [root.artwork] : []
+            plate: root.plate
             colour: hover.hovered
         }
 
@@ -69,8 +79,12 @@ Rectangle {
 
         Text {
             anchors.left: parent.left
+            anchors.right: playMark.left
+            anchors.rightMargin: Theme.space2
             anchors.bottom: parent.bottom
-            text: [root.year, root.format].filter(function(part) { return part.length > 0 }).join(" · ")
+            text: root.footer.length > 0 ? root.footer
+                  : [root.year, root.format].filter(function(part) { return part.length > 0 }).join(" · ")
+            elide: Text.ElideRight
             font.family: Theme.fontFamily
             font.pixelSize: 11
             font.letterSpacing: Theme.tracking(11, 0.1)
@@ -78,10 +92,11 @@ Rectangle {
         }
 
         Icon {
+            id: playMark
             anchors.right: parent.right
             anchors.bottom: parent.bottom
             anchors.bottomMargin: 1
-            name: "play"
+            name: root.plate === "new" ? "plus" : "play"
             width: 14
             height: 14
             color: Theme.accent

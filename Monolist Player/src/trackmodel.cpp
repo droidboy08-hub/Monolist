@@ -109,35 +109,3 @@ int TrackModel::indexOfSource(const QString &sourceId) const
     }
     return -1;
 }
-
-void TrackModel::addTrack(const QVariantMap &track, bool favourite)
-{
-    QSqlQuery q(AppDatabase::connection());
-    q.prepare(QStringLiteral(
-        "INSERT INTO tracks (position, title, artist, album, duration_ms, source_url, source_id, artwork, favourite)"
-        " SELECT (SELECT COALESCE(MAX(position) + 1, 0) FROM tracks), ?, ?, ?, ?, '', ?, ?, ?"));
-    q.addBindValue(AppDatabase::text(track.value(QStringLiteral("title")).toString()));
-    q.addBindValue(AppDatabase::text(track.value(QStringLiteral("artist")).toString()));
-    q.addBindValue(AppDatabase::text(track.value(QStringLiteral("album")).toString()));
-    q.addBindValue(track.value(QStringLiteral("durationMs")).toLongLong());
-    q.addBindValue(AppDatabase::text(track.value(QStringLiteral("sourceId")).toString()));
-    q.addBindValue(AppDatabase::text(track.value(QStringLiteral("artwork")).toString()));
-    q.addBindValue(favourite ? 1 : 0);
-    q.exec();
-    reload();
-}
-
-void TrackModel::toggleFavourite(int row)
-{
-    if (row < 0 || row >= m_items.size())
-        return;
-    TrackItem &item = m_items[row];
-    item.favourite = !item.favourite;
-    QSqlQuery q(AppDatabase::connection());
-    q.prepare(QStringLiteral("UPDATE tracks SET favourite = ? WHERE id = ?"));
-    q.addBindValue(item.favourite ? 1 : 0);
-    q.addBindValue(item.id);
-    q.exec();
-    const QModelIndex idx = index(row, 0);
-    Q_EMIT dataChanged(idx, idx, { FavouriteRole });
-}

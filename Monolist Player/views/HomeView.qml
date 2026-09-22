@@ -18,11 +18,7 @@ Flickable {
     boundsBehavior: Flickable.StopAtBounds
     clip: true
 
-    ScrollBar.vertical: ScrollBar {
-        width: 10
-        policy: ScrollBar.AsNeeded
-        contentItem: Rectangle { color: Theme.neutral300 }
-    }
+    ScrollBar.vertical: MonoScrollBar {}
 
     // Sections are numbered in reading order, whichever of them have content.
     readonly property bool hasPicks: Catalog.quickPicks.count > 0
