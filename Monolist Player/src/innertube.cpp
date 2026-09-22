@@ -55,16 +55,19 @@ qint64 parseClock(const QString &text)
     return seconds * 1000;
 }
 
-// The web client's own locale, so results follow the user's region.
+// The country to ask from; empty follows the system. Set once at startup and
+// whenever the user picks another in Settings.
+QString g_region;
+
+// The web client's own locale, so results follow the user's language and the
+// region they are browsing.
 QJsonObject clientContext()
 {
     const QLocale locale = QLocale::system();
     QString language = locale.name().section(QLatin1Char('_'), 0, 0);
-    QString region = QLocale::territoryToCode(locale.territory());
+    const QString region = InnerTube::region();
     if (language.isEmpty() || language == QLatin1String("C"))
         language = QStringLiteral("en");
-    if (region.isEmpty())
-        region = QStringLiteral("US");
     // "1.<today>.01.00" is the shape the web client reports its version in.
     const QString version = QStringLiteral("1.%1.01.00")
                                 .arg(QDate::currentDate().toString(QStringLiteral("yyyyMMdd")));
@@ -232,6 +235,22 @@ InnerTube::Card parseCard(const QJsonValue &item)
 }
 
 } // namespace
+
+void InnerTube::setRegion(const QString &code)
+{
+    g_region = code.trimmed().toUpper();
+}
+
+QString InnerTube::systemRegion()
+{
+    const QString code = QLocale::territoryToCode(QLocale::system().territory());
+    return code.size() == 2 ? code : QStringLiteral("US");
+}
+
+QString InnerTube::region()
+{
+    return g_region.isEmpty() ? systemRegion() : g_region;
+}
 
 InnerTube::InnerTube(QObject *parent)
     : QObject(parent)

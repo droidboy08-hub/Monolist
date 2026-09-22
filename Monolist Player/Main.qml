@@ -94,6 +94,7 @@ ApplicationWindow {
         var label = currentView === "home" ? "HOME"
                   : currentView === "search" ? "SEARCH"
                   : currentView === "downloads" ? "DOWNLOADS"
+                  : currentView === "settings" ? "SETTINGS"
                   : currentView.indexOf("page:") === 0 ? (Catalog.page.type === "playlist" ? "PLAYLIST" : "ALBUM")
                   : currentView === "playlist:liked" ? "YOUR LIBRARY / LIKED SONGS"
                   : currentView.indexOf("playlist:") === 0 ? "YOUR LIBRARY / PLAYLIST"
@@ -199,6 +200,11 @@ ApplicationWindow {
                 DownloadsView {
                     anchors.fill: parent
                     visible: window.currentView === "downloads"
+                }
+
+                SettingsView {
+                    anchors.fill: parent
+                    visible: window.currentView === "settings"
                 }
             }
         }

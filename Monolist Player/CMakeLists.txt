@@ -99,6 +99,8 @@ qt_add_qml_module(monolist
         components/PlaylistSubmenu.qml
         components/MonoScrollBar.qml
         components/LyricsPane.qml
+        components/ToggleRow.qml
+        components/DownloadOptions.qml
         views/HomeView.qml
         views/SearchView.qml
         views/LibraryView.qml
@@ -106,6 +108,7 @@ qt_add_qml_module(monolist
         views/PageView.qml
         views/PlaylistView.qml
         views/NowPlayingView.qml
+        views/SettingsView.qml
     RESOURCES
         Icons.js
         # Bundled so the design renders identically on Windows, macOS and Linux

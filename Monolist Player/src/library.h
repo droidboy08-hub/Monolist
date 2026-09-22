@@ -37,6 +37,11 @@ class Library : public QObject
     Q_PROPERTY(int revision READ revision NOTIFY revisionChanged)
     Q_PROPERTY(QString userName READ userName NOTIFY userChanged)
     Q_PROPERTY(QString userInitials READ userInitials NOTIFY userChanged)
+    // The country YouTube Music is asked from; empty follows the system.
+    Q_PROPERTY(QString region READ region WRITE setRegion NOTIFY regionChanged)
+    Q_PROPERTY(QString regionInUse READ regionInUse NOTIFY regionChanged)
+    Q_PROPERTY(QString regionInUseName READ regionInUseName NOTIFY regionChanged)
+    Q_PROPERTY(QString systemRegionName READ systemRegionName CONSTANT)
 public:
     explicit Library(QObject *parent = nullptr);
 
@@ -90,6 +95,15 @@ public:
     // An empty name goes back to the one the system knows the user by.
     Q_INVOKABLE void setUserName(const QString &name);
 
+    QString region() const;
+    void setRegion(const QString &code);
+    QString regionInUse() const;
+    QString regionInUseName() const;
+    QString systemRegionName() const;
+    // Every country, as [{ code, name }], by name. For the picker.
+    Q_INVOKABLE QVariantList countries() const;
+    Q_INVOKABLE QString countryName(const QString &code) const;
+
 Q_SIGNALS:
     // A short confirmation of what just happened, for the toast.
     void notice(const QString &text);
@@ -98,6 +112,7 @@ Q_SIGNALS:
     void playlistChanged();
     void historyCleared();
     void userChanged();
+    void regionChanged();
 
 private:
     void reloadLiked();

@@ -1,6 +1,8 @@
 #include "library.h"
 #include "appdatabase.h"
+#include "innertube.h"
 
+#include <QLocale>
 #include <QRegularExpression>
 #include <QSqlError>
 #include <QSqlQuery>
@@ -18,6 +20,8 @@ namespace {
 
 // The settings key for a name the user typed; empty means the system's.
 const QString kNameKey = QStringLiteral("profile.name");
+// Likewise the country to browse; empty means the system's.
+const QString kRegionKey = QStringLiteral("region");
 
 // "48 min", "1 hr 12 min": a playlist's length, as its header gives it.
 QString lengthLabel(qint64 ms)
@@ -176,6 +180,73 @@ void Library::setUserName(const QString &name)
     // Typing the system's own name back in is the same as clearing it.
     setSetting(kNameKey, trimmed == systemUserName() ? QString() : trimmed);
     Q_EMIT userChanged();
+}
+
+// ------------------------------------------------------------------- region
+
+QString Library::region() const
+{
+    return settingValue(kRegionKey);
+}
+
+void Library::setRegion(const QString &code)
+{
+    const QString wanted = code.trimmed().toUpper();
+    if (wanted == region())
+        return;
+    setSetting(kRegionKey, wanted);
+    InnerTube::setRegion(wanted);
+    Q_EMIT regionChanged();
+    Q_EMIT notice(wanted.isEmpty()
+                      ? QStringLiteral("Following the system: %1").arg(systemRegionName())
+                      : QStringLiteral("Browsing %1").arg(countryName(wanted)));
+}
+
+QString Library::regionInUse() const
+{
+    return InnerTube::region();
+}
+
+QString Library::regionInUseName() const
+{
+    return countryName(InnerTube::region());
+}
+
+QString Library::systemRegionName() const
+{
+    return countryName(InnerTube::systemRegion());
+}
+
+QString Library::countryName(const QString &code) const
+{
+    const QLocale::Territory territory = QLocale::codeToTerritory(code);
+    return territory == QLocale::AnyTerritory ? code : QLocale::territoryToString(territory);
+}
+
+// Every country CLDR knows, by name. Codes of three characters or digits are
+// regions rather than countries ("419", Latin America) and are left out.
+QVariantList Library::countries() const
+{
+    QList<std::pair<QString, QString>> found;   // name, code
+    QSet<QString> seen;
+    const QList<QLocale> locales = QLocale::matchingLocales(QLocale::AnyLanguage, QLocale::AnyScript,
+                                                            QLocale::AnyTerritory);
+    for (const QLocale &locale : locales) {
+        const QString code = QLocale::territoryToCode(locale.territory());
+        if (code.size() != 2 || seen.contains(code))
+            continue;
+        seen.insert(code);
+        found.append({ QLocale::territoryToString(locale.territory()), code });
+    }
+    std::sort(found.begin(), found.end(), [](const auto &a, const auto &b) {
+        return a.first.localeAwareCompare(b.first) < 0;
+    });
+
+    QVariantList list;
+    list.reserve(found.size());
+    for (const auto &[name, code] : std::as_const(found))
+        list.append(QVariantMap{ { QStringLiteral("code"), code }, { QStringLiteral("name"), name } });
+    return list;
 }
 
 QString Library::settingValue(const QString &key, const QString &fallback) const

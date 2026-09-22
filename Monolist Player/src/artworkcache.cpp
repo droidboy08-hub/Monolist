@@ -11,6 +11,7 @@
 #include <QNetworkRequest>
 #include <QPointer>
 #include <QQuickTextureFactory>
+#include <QRegularExpression>
 #include <QStandardPaths>
 #include <QUrl>
 
@@ -22,6 +23,24 @@ namespace {
 // 16:9 frame letterboxed in black; cropped square for a cover, the bars stay.
 // Rows that are black all the way across, at the top and the bottom, are cut
 // off. Only for video thumbnails: an album cover may well be black at the edge.
+// A video's thumbnail comes in fixed sizes under fixed names: hqdefault is
+// 480x360, maxresdefault 1280x720 where YouTube made one (older and smaller
+// uploads have none, and answer 404 — hence the fallback to what was asked
+// for). Album covers are not affected: those carry their size in the address.
+QUrl largestThumbnail(const QUrl &url)
+{
+    if (!url.host().endsWith(QLatin1String("i.ytimg.com")))
+        return {};
+    const QString path = url.path();
+    static const QRegularExpression name(QStringLiteral(R"(^/vi/[^/]+/(\w+)\.jpg$)"));
+    const QRegularExpressionMatch match = name.match(path);
+    if (!match.hasMatch() || match.captured(1) == QLatin1String("maxresdefault"))
+        return {};
+    QUrl best = url;
+    best.setPath(path.left(match.capturedStart(1)) + QStringLiteral("maxresdefault.jpg"));
+    return best;
+}
+
 QImage withoutLetterbox(const QImage &image, const QString &source)
 {
     if (image.isNull() || !source.contains(QLatin1String("i.ytimg.com")))
@@ -160,6 +179,26 @@ void ArtworkFetcher::fetch(ArtworkResponse *response,
         return;
     }
 
+    // Shown larger than the small thumbnail holds: ask for the big one, and
+    // keep the small one in hand for the videos that have no big one.
+    QUrl wanted = url;
+    QUrl fallback;
+    if (qMax(requestedSize.width(), requestedSize.height()) > 480) {
+        const QUrl larger = largestThumbnail(url);
+        if (!larger.isEmpty()) {
+            wanted = larger;
+            fallback = url;
+        }
+    }
+    download(response, wanted, fallback, source, scaled);
+}
+
+void ArtworkFetcher::download(ArtworkResponse *response,
+                              const QUrl &url,
+                              const QUrl &fallback,
+                              const QString &source,
+                              const std::function<QImage(QImage)> &scaled)
+{
     QNetworkRequest request(url);
     request.setAttribute(QNetworkRequest::CacheLoadControlAttribute,
                          QNetworkRequest::PreferCache);
@@ -180,12 +219,25 @@ void ArtworkFetcher::fetch(ArtworkResponse *response,
     // still appending, produced a garbage internal length, and QByteArray::resize
     // then threw std::bad_alloc. Everything that touches the reply has to stay
     // here; only the finished QImage crosses threads.
-    QObject::connect(reply, &QNetworkReply::finished, this, [reply, response, scaled, source]() {
+    QObject::connect(reply, &QNetworkReply::finished, this,
+                     [this, reply, response, scaled, source, fallback]() {
         reply->deleteLater();
         response->detachReply();
 
+        // A size YouTube never made answers 404; the smaller one is there.
+        // A cancelled request is never retried: QML cancels when the picture
+        // is no longer wanted and waits for this one answer, so anything else
+        // would leave it waiting on a reply for a response it has dropped.
+        const auto giveUp = [this, response, scaled, source, fallback](const QString &reason,
+                                                                       bool mayRetry = true) {
+            if (fallback.isEmpty() || !mayRetry)
+                response->fail(reason);
+            else
+                download(response, fallback, {}, source, scaled);
+        };
+
         if (reply->error() != QNetworkReply::NoError) {
-            response->fail(reply->errorString());
+            giveUp(reply->errorString(), reply->error() != QNetworkReply::OperationCanceledError);
             return;
         }
 
@@ -194,14 +246,14 @@ void ArtworkFetcher::fetch(ArtworkResponse *response,
         // decoding it.
         constexpr qint64 kMaxArtworkBytes = 24LL * 1024 * 1024;
         if (reply->bytesAvailable() > kMaxArtworkBytes) {
-            response->fail(QStringLiteral("Artwork response too large (%1 bytes).")
-                               .arg(reply->bytesAvailable()));
+            giveUp(QStringLiteral("Artwork response too large (%1 bytes).")
+                       .arg(reply->bytesAvailable()));
             return;
         }
 
         QImage image;
         if (!image.loadFromData(reply->readAll())) {
-            response->fail(QStringLiteral("Artwork data was not a readable image."));
+            giveUp(QStringLiteral("Artwork data was not a readable image."));
             return;
         }
         response->succeed(scaled(withoutLetterbox(image, source)));

@@ -3,10 +3,13 @@
 #include <QColor>
 #include <QHash>
 #include <QImage>
+#include <QUrl>
 #include <QObject>
 #include <QQuickAsyncImageProvider>
 #include <QSize>
 #include <QString>
+
+#include <functional>
 
 class QNetworkAccessManager;
 
@@ -40,6 +43,14 @@ public Q_SLOTS:
     void fetch(ArtworkResponse *response, const QString &source, const QSize &requestedSize);
 
 private:
+    // One attempt, with the address to try instead when it fails (a video
+    // thumbnail asked for in a size that does not exist).
+    void download(ArtworkResponse *response,
+                  const QUrl &url,
+                  const QUrl &fallback,
+                  const QString &source,
+                  const std::function<QImage(QImage)> &scaled);
+
     QNetworkAccessManager *m_network;
 };
 

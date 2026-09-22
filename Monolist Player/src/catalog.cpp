@@ -83,9 +83,11 @@ void Catalog::refresh()
                     items.append(cardToMap(card));
                 if (m_featured.isEmpty())
                     m_featured = items.first().toMap();
+                // The country is part of what this shelf is: another one
+                // lists different records. Settings picks it.
                 m_releaseShelves.append(QVariantMap{
                     { QStringLiteral("title"), QStringLiteral("New releases") },
-                    { QStringLiteral("strapline"), QStringLiteral("ALBUMS & SINGLES") },
+                    { QStringLiteral("strapline"), QStringLiteral("ALBUMS & SINGLES · %1").arg(InnerTube::region()) },
                     { QStringLiteral("items"), items } });
             }
         } else if (m_error.isEmpty()) {

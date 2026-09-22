@@ -72,6 +72,14 @@ public:
 
     explicit InnerTube(QObject *parent = nullptr);
 
+    // The country every request is made from ("US", "JP", …), which decides
+    // what YouTube Music offers: new releases, charts and the ranking of
+    // search results. Empty means the one the system is set to. YouTube also
+    // reads the connection's own location, so this steers rather than decides.
+    static void setRegion(const QString &code);
+    static QString region();          // the code actually sent
+    static QString systemRegion();    // what the system is set to
+
     // One browse request (the home feed, charts, new releases, an album or a
     // playlist); `done` gets the response, or an error. Any number can run.
     void browse(const QString &browseId,

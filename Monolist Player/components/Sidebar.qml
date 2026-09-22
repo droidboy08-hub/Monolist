@@ -129,6 +129,12 @@ Rectangle {
                 active: root.currentView === "downloads"
                 onClicked: root.viewRequested("downloads")
             }
+            NavItem {
+                iconName: "settings"
+                label: "Settings"
+                active: root.currentView === "settings"
+                onClicked: root.viewRequested("settings")
+            }
         }
 
         Rectangle {

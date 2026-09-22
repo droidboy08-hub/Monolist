@@ -17,7 +17,7 @@ Rectangle {
 
     readonly property var track: Player.currentTrack
     readonly property bool hasTrack: track.title !== undefined
-    readonly property string artwork: track.artwork !== undefined ? largeArtwork(track.artwork) : ""
+    readonly property string artwork: track.artwork !== undefined ? track.artwork : ""
     readonly property bool wide: width >= 980
 
     // The cover's colour as the field, signal red until it is known.
@@ -30,10 +30,6 @@ Rectangle {
 
     color: Theme.bg
 
-    // YouTube Music serves covers at any size; this one is shown large.
-    function largeArtwork(url) {
-        return url.indexOf("googleusercontent.com") >= 0 ? url.replace(/=w\d+-h\d+/, "=w1200-h1200") : url
-    }
     // Relative luminance and contrast ratio, as WCAG defines them.
     function luminance(c) {
         function linear(v) { return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4) }

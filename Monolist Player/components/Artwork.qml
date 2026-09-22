@@ -16,6 +16,30 @@ Rectangle {
     color: Theme.neutral300
     clip: true
 
+    // How many pixels this plate really covers on this screen.
+    readonly property int wanted: Math.ceil(Math.max(width, height) * Screen.devicePixelRatio)
+
+    // YouTube Music serves a cover at any size, its address saying which
+    // ("=w544-h544"), so each plate asks for what it draws and no more: a
+    // 40px row does not fetch a 1200px picture, and a full-size cover is not
+    // a 544px one stretched. Buckets, so the same cover is not fetched at a
+    // dozen sizes that differ by a pixel.
+    readonly property string address: {
+        if (source.length === 0 || wanted <= 0)
+            return ""
+        if (source.indexOf("googleusercontent.com") < 0)
+            return source
+        const buckets = [120, 240, 360, 544, 800, 1200, 1600]
+        let size = buckets[buckets.length - 1]
+        for (let i = 0; i < buckets.length; ++i) {
+            if (wanted <= buckets[i]) {
+                size = buckets[i]
+                break
+            }
+        }
+        return source.replace(/=w\d+-h\d+/, "=w" + size + "-h" + size)
+    }
+
     // Routed through the "artwork" image provider rather than loading the URL
     // directly: that gives an off-thread decode, a 256 MB disk cache that
     // survives restarts, and downsampling to the displayed size instead of
@@ -26,11 +50,12 @@ Rectangle {
         // Percent-encoded: the provider id goes through URL parsing, which
         // collapses the "//" in "https://" and hands the provider a broken
         // address. The provider decodes it back.
-        source: root.source.length > 0
-                ? "image://artwork/" + encodeURIComponent(root.source)
+        source: root.address.length > 0
+                ? "image://artwork/" + encodeURIComponent(root.address)
                 : ""
-        sourceSize.width: Math.max(1, Math.ceil(root.width))
-        sourceSize.height: Math.max(1, Math.ceil(root.height))
+        // In device pixels, so a cover is decoded at the size it is drawn.
+        sourceSize.width: Math.max(1, root.wanted)
+        sourceSize.height: Math.max(1, root.wanted)
         fillMode: Image.PreserveAspectCrop
         asynchronous: true
         cache: true

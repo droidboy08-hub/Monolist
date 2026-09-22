@@ -13,6 +13,7 @@
 #include "artworkcache.h"
 #include "catalog.h"
 #include "downloadmanager.h"
+#include "innertube.h"
 #include "library.h"
 #include "lyrics.h"
 #include "mediaextractor.h"
@@ -68,6 +69,8 @@ int main(int argc, char *argv[])
 
     Library library;
     library.load();
+    // The country to browse, before anything asks YouTube Music.
+    InnerTube::setRegion(library.settingValue(QStringLiteral("region")));
 
     // --set <key> <value>: writes one setting (piped_instances,
     // invidious_instances, lrclib_url) before anything reads it.
@@ -116,6 +119,8 @@ int main(int argc, char *argv[])
     QObject::connect(&player, &PlaybackController::currentTrackChanged, &catalog, &Catalog::reloadRecent);
     QObject::connect(&player, &PlaybackController::currentTrackChanged, &library, &Library::reloadHistory);
     QObject::connect(&library, &Library::historyCleared, &catalog, &Catalog::reloadRecent);
+    // Another country's music is a different feed.
+    QObject::connect(&library, &Library::regionChanged, &catalog, &Catalog::refresh);
 
     // A completed download becomes a library row; reload so it is playable
     // straight away rather than after a restart.

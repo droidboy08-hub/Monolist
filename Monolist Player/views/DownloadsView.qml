@@ -16,67 +16,6 @@ Flickable {
 
     ScrollBar.vertical: MonoScrollBar {}
 
-    // A square check box with a label and a line of explanation.
-    component Toggle: Item {
-        id: toggle
-
-        property string label: ""
-        property string hint: ""
-        property bool checked: false
-        signal toggled()
-
-        implicitHeight: Math.max(18, toggleText.implicitHeight)
-
-        Rectangle {
-            id: box
-            y: 1
-            width: 18
-            height: 18
-            color: toggle.checked ? Theme.accent : "transparent"
-            border.width: Theme.ruleWidth
-            border.color: toggle.checked ? Theme.accent : Theme.text
-
-            Icon {
-                anchors.centerIn: parent
-                width: 12
-                height: 12
-                name: "check"
-                thickness: 3
-                visible: toggle.checked
-                color: Theme.accentForeground
-            }
-        }
-
-        Column {
-            id: toggleText
-            anchors.left: box.right
-            anchors.leftMargin: Theme.space3
-            anchors.right: parent.right
-            spacing: 2
-
-            Text {
-                width: parent.width
-                text: toggle.label
-                wrapMode: Text.WordWrap
-                font.family: Theme.fontFamily
-                font.pixelSize: 14
-                color: Theme.text
-            }
-            Text {
-                visible: text.length > 0
-                width: parent.width
-                text: toggle.hint
-                wrapMode: Text.WordWrap
-                font.family: Theme.fontFamily
-                font.pixelSize: 12
-                color: Theme.neutral700
-            }
-        }
-
-        HoverHandler { cursorShape: Qt.PointingHandCursor }
-        TapHandler { onTapped: toggle.toggled() }
-    }
-
     component Caption: Text {
         font.family: Theme.fontFamily
         font.pixelSize: 11
@@ -149,58 +88,8 @@ Flickable {
         }
 
         // — how files are saved —
-        Column {
-            visible: Downloads.available
+        DownloadOptions {
             width: parent.width
-            spacing: Theme.space3
-
-            Caption { text: "FORMAT" }
-
-            // Negative spacing lets neighbouring segments share one 2px rule.
-            Row {
-                spacing: -Theme.ruleWidth
-                enabled: Downloads.canConvert
-                opacity: enabled ? 1 : 0.4
-
-                ChoiceChip {
-                    label: "ORIGINAL · BEST"
-                    selected: Downloads.format === "original"
-                    onPicked: Downloads.format = "original"
-                }
-                ChoiceChip {
-                    label: "M4A"
-                    selected: Downloads.format === "m4a"
-                    onPicked: Downloads.format = "m4a"
-                }
-                ChoiceChip {
-                    label: "MP3"
-                    selected: Downloads.format === "mp3"
-                    onPicked: Downloads.format = "mp3"
-                }
-            }
-
-            Text {
-                width: parent.width
-                text: Downloads.format === "m4a"
-                      ? "AAC in an .m4a file, about 128 kbps. Plays on Apple devices and older players."
-                      : Downloads.format === "mp3"
-                        ? "Re-encoded to MP3 at the highest VBR setting. Plays anywhere, at a small cost in quality."
-                        : "The stream exactly as YouTube publishes it, usually Opus at 130–160 kbps. Nothing is re-encoded."
-                wrapMode: Text.WordWrap
-                font.family: Theme.fontFamily
-                font.pixelSize: 12
-                color: Theme.neutral700
-            }
-
-            Toggle {
-                width: parent.width
-                enabled: Downloads.canConvert
-                opacity: enabled ? 1 : 0.4
-                label: "Cut non-music parts"
-                hint: "Removes intros, outros and skits that SponsorBlock users have marked in music videos."
-                checked: Downloads.skipNonMusic
-                onToggled: Downloads.skipNonMusic = !Downloads.skipNonMusic
-            }
         }
 
         // — 02 in progress —
