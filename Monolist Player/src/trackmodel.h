@@ -37,6 +37,11 @@ public:
     Q_INVOKABLE int indexOfTrack(int trackId) const;
     Q_INVOKABLE int indexOfSource(const QString &sourceId) const;
 
+    // Saves a track (title, artist, album, artwork, durationMs, sourceId) as a
+    // new library row at the end, then reloads. Used when a song that is not
+    // in the library is liked.
+    void addTrack(const QVariantMap &track, bool favourite);
+
     static QString formatDuration(qint64 ms);
 
 Q_SIGNALS:

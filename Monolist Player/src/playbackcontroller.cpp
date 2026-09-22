@@ -5,10 +5,39 @@
 #include "streamresolver.h"
 #include "trackmodel.h"
 
+#include <QAbstractItemModel>
 #include <QFileInfo>
-#include <QRandomGenerator>
 #include <QSqlQuery>
 #include <QVariant>
+
+namespace {
+
+// Autoplay asks for more once fewer songs than this are left, so the next one
+// can be prefetched before it is needed.
+constexpr int kRadioLowWater = 2;
+// Radio songs added at a time: enough to run for a while, few enough that the
+// queue stays readable.
+constexpr int kRadioBatch = 25;
+
+QList<QueueTrack> tracksFromModel(QAbstractItemModel *model)
+{
+    QList<QueueTrack> tracks;
+    if (!model)
+        return tracks;
+    const QHash<int, QByteArray> roles = model->roleNames();
+    const int rows = model->rowCount();
+    tracks.reserve(rows);
+    for (int row = 0; row < rows; ++row) {
+        const QModelIndex index = model->index(row, 0);
+        QVariantMap map;
+        for (auto it = roles.cbegin(); it != roles.cend(); ++it)
+            map.insert(QString::fromUtf8(it.value()), model->data(index, it.key()));
+        tracks.append(QueueTrack::fromMap(map));
+    }
+    return tracks;
+}
+
+} // namespace
 
 PlaybackController::PlaybackController(MpvEngine *engine,
                                        StreamResolver *resolver,
@@ -45,9 +74,9 @@ PlaybackController::PlaybackController(MpvEngine *engine,
         connect(m_engine, &MpvEngine::loadFailed, this, [this](const QString &reason) {
             // A URL can resolve and still be refused when mpv opens it: a link
             // the CDN rejects now and then, or an instance serving an error
-            // page. Ask the next tier before giving up.
-            // A remembered link that no longer opens is simply stale: fetch a
-            // fresh one from the same tier before trying a worse one.
+            // page. A remembered link that no longer opens is simply stale, so
+            // fetch a fresh one from the same tier; anything else goes to the
+            // next tier before giving up.
             if (m_streamTier >= 0 && m_resolver && m_streamFromCache) {
                 const int sameTier = m_streamTier;
                 m_streamTier = -1;
@@ -80,6 +109,60 @@ PlaybackController::PlaybackController(MpvEngine *engine,
         connect(m_resolver, &StreamResolver::resolved, this, &PlaybackController::handleResolved);
         connect(m_resolver, &StreamResolver::failed, this, &PlaybackController::handleResolveFailed);
     }
+
+    // Rows inserted before the current one move it; the index QML reads
+    // follows.
+    connect(&m_queue, &QueueModel::currentIndexChanged, this, &PlaybackController::currentTrackChanged);
+
+    connect(&m_innerTube, &InnerTube::radioReady, this,
+            [this](const QString &seed, const QList<InnerTube::Track> &found) {
+                if (seed != m_radioSeed)
+                    return;   // a newer context replaced the queue meanwhile
+                m_radioSeed.clear();
+
+                QList<QueueTrack> additions;
+                for (const InnerTube::Track &song : found) {
+                    if (song.videoId.isEmpty() || m_queue.containsVideo(song.videoId))
+                        continue;   // the seed itself comes first, and no repeats
+                    QueueTrack track;
+                    track.videoId = song.videoId;
+                    track.title = song.title;
+                    track.artist = song.artist;
+                    track.album = song.album;
+                    track.artwork = song.artwork;
+                    track.durationMs = song.durationMs;
+                    track.fromRadio = true;
+                    additions.append(track);
+                    if (additions.size() >= kRadioBatch)
+                        break;
+                }
+                m_queue.insert(m_queue.rowCount(), additions);
+
+                if (m_waitingForRadio) {
+                    m_waitingForRadio = false;
+                    if (m_queue.upcomingCount() > 0) {
+                        playIndex(m_queue.currentIndex() + 1);
+                    } else {
+                        setPlayingFlag(false);
+                        setStatus(QStringLiteral("End of the queue"), QString(), false);
+                    }
+                } else {
+                    prefetchUpcoming();
+                }
+            });
+
+    connect(&m_innerTube, &InnerTube::radioFailed, this,
+            [this](const QString &seed, const QString &reason) {
+                if (seed != m_radioSeed)
+                    return;
+                m_radioSeed.clear();
+                qWarning("Monolist: autoplay has nothing to continue with: %s", qPrintable(reason));
+                if (m_waitingForRadio) {
+                    m_waitingForRadio = false;
+                    setPlayingFlag(false);
+                    setStatus(QStringLiteral("End of the queue"), QString(), false);
+                }
+            });
 }
 
 bool PlaybackController::engineAvailable() const
@@ -87,32 +170,21 @@ bool PlaybackController::engineAvailable() const
     return m_engine && m_engine->isValid();
 }
 
-void PlaybackController::setQueue(TrackModel *model)
+void PlaybackController::setLibrary(TrackModel *library)
 {
-    if (m_queue)
-        disconnect(m_queue, nullptr, this, nullptr);
-    m_queue = model;
-    if (m_queue)
-        connect(m_queue, &QAbstractItemModel::modelReset, this, &PlaybackController::resyncIndex);
+    if (m_library)
+        disconnect(m_library, nullptr, this, nullptr);
+    m_library = library;
+    if (m_library) {
+        connect(m_library, &QAbstractItemModel::modelReset, this, &PlaybackController::refreshFavourite);
+        connect(m_library, &QAbstractItemModel::dataChanged, this, &PlaybackController::refreshFavourite);
+    }
+    refreshFavourite();
 }
 
-// The library reloads whenever a download lands or is removed, so the row the
-// player is on may have moved — and a search result that has just been saved
-// now has a row of its own. Find the current track again by its identity.
-void PlaybackController::resyncIndex()
+QString PlaybackController::currentSourceId() const
 {
-    if (!m_queue || m_currentTrack.isEmpty())
-        return;
-    int row = -1;
-    const int trackId = m_currentTrack.value(QStringLiteral("trackId")).toInt();
-    if (trackId > 0)
-        row = m_queue->indexOfTrack(trackId);
-    if (row < 0)
-        row = m_queue->indexOfSource(m_currentTrack.value(QStringLiteral("sourceId")).toString());
-    if (row == m_index)
-        return;
-    m_index = row;
-    Q_EMIT currentTrackChanged();
+    return m_currentTrack.value(QStringLiteral("sourceId")).toString();
 }
 
 qreal PlaybackController::progress() const
@@ -158,40 +230,6 @@ void PlaybackController::setDuration(qint64 ms)
     Q_EMIT durationChanged();
 }
 
-void PlaybackController::recordHistory(int trackId)
-{
-    if (trackId <= 0)
-        return;
-    QSqlQuery history(AppDatabase::connection());
-    history.prepare(QStringLiteral("INSERT INTO history (track_id) VALUES (?)"));
-    history.addBindValue(trackId);
-    history.exec();
-}
-
-void PlaybackController::loadIndex(int index)
-{
-    if (!m_queue)
-        return;
-    const int count = m_queue->rowCount();
-    if (count == 0 || index < 0 || index >= count)
-        return;
-
-    m_index = index;
-    beginTrack(m_queue->get(index), /*autoPlay=*/false);
-}
-
-void PlaybackController::playIndex(int index)
-{
-    if (!m_queue)
-        return;
-    const int count = m_queue->rowCount();
-    if (count == 0 || index < 0 || index >= count)
-        return;
-
-    m_index = index;
-    beginTrack(m_queue->get(index), /*autoPlay=*/true);
-}
-
 QString PlaybackController::artworkForSource(const QString &videoId)
 {
     if (videoId.isEmpty())
@@ -199,6 +237,129 @@ QString PlaybackController::artworkForSource(const QString &videoId)
     // hqdefault exists for every video; maxresdefault often 404s on older or
     // low-resolution uploads, so it is not worth the failed request.
     return QStringLiteral("https://i.ytimg.com/vi/%1/hqdefault.jpg").arg(videoId);
+}
+
+// ------------------------------------------------------------------ likes
+
+int PlaybackController::libraryRow() const
+{
+    if (!m_library || m_currentTrack.isEmpty())
+        return -1;
+    const int trackId = m_currentTrack.value(QStringLiteral("trackId")).toInt();
+    const int row = trackId > 0 ? m_library->indexOfTrack(trackId) : -1;
+    return row >= 0 ? row : m_library->indexOfSource(currentSourceId());
+}
+
+void PlaybackController::refreshFavourite()
+{
+    const int row = libraryRow();
+    const bool favourite = row >= 0 && m_library->get(row).value(QStringLiteral("favourite")).toBool();
+    if (favourite == m_favourite)
+        return;
+    m_favourite = favourite;
+    Q_EMIT favouriteChanged();
+}
+
+void PlaybackController::toggleFavourite()
+{
+    if (!m_library || m_currentTrack.isEmpty())
+        return;
+    const int row = libraryRow();
+    if (row >= 0)
+        m_library->toggleFavourite(row);   // dataChanged refreshes the flag
+    else
+        // Liking a song that is not in the library saves it there, the way a
+        // like saves a song in any streaming app.
+        m_library->addTrack(m_currentTrack, /*favourite=*/true);
+}
+
+// ------------------------------------------------------------------ queue
+
+void PlaybackController::startQueue(QList<QueueTrack> tracks, int start, bool autoPlay)
+{
+    // A new context: whatever the radio was fetching belonged to the old one.
+    m_innerTube.cancelRadio();
+    m_radioSeed.clear();
+    m_waitingForRadio = false;
+
+    if (tracks.isEmpty())
+        return;
+    start = qBound(0, start, int(tracks.size()) - 1);
+
+    if (m_shuffle) {
+        // Shuffling a list starts with the song that was picked and plays the
+        // rest of the list, before it and after it, in random order.
+        tracks.prepend(tracks.takeAt(start));
+        start = 0;
+        m_queue.replace(tracks, start);
+        m_queue.shuffleUpcoming();
+    } else {
+        m_queue.replace(tracks, start);
+    }
+    beginCurrent(autoPlay);
+}
+
+void PlaybackController::beginCurrent(bool autoPlay)
+{
+    const QueueTrack *track = m_queue.current();
+    if (!track)
+        return;
+    beginTrack(track->toMap(), autoPlay);
+    if (autoPlay && m_autoplay && m_repeatMode != RepeatAll
+        && m_queue.upcomingCount() < kRadioLowWater)
+        extendWithRadio();
+}
+
+bool PlaybackController::extendWithRadio()
+{
+    if (!m_radioSeed.isEmpty())
+        return true;   // already on its way
+    // Seed from the last song, so the radio carries on from where the queue
+    // ends rather than from where it began.
+    for (int row = m_queue.rowCount() - 1; row >= 0; --row) {
+        const QueueTrack *track = m_queue.at(row);
+        if (track && !track->videoId.isEmpty()) {
+            m_radioSeed = track->videoId;
+            m_innerTube.radio(m_radioSeed);
+            return true;
+        }
+    }
+    return false;
+}
+
+void PlaybackController::loadIndex(int index)
+{
+    if (!m_queue.at(index))
+        return;
+    m_queue.setCurrentIndex(index);
+    beginCurrent(/*autoPlay=*/false);
+}
+
+void PlaybackController::playIndex(int index)
+{
+    if (!m_queue.at(index))
+        return;
+    m_queue.setCurrentIndex(index);
+    beginCurrent(/*autoPlay=*/true);
+}
+
+void PlaybackController::playModel(QAbstractItemModel *model, int row)
+{
+    startQueue(tracksFromModel(model), row, /*autoPlay=*/true);
+}
+
+void PlaybackController::loadModel(QAbstractItemModel *model, int row)
+{
+    startQueue(tracksFromModel(model), row, /*autoPlay=*/false);
+}
+
+void PlaybackController::playTracks(const QVariantList &tracks, int start)
+{
+    QList<QueueTrack> queue;
+    queue.reserve(tracks.size());
+    for (const QVariant &track : tracks)
+        queue.append(QueueTrack::fromMap(track.toMap()));
+    startQueue(queue, start, /*autoPlay=*/true);
 }
 
 void PlaybackController::playSource(const QString &videoId,
@@ -210,25 +371,121 @@ void PlaybackController::playSource(const QString &videoId,
 {
     if (videoId.isEmpty())
         return;
-
-    m_index = -1;
-    beginTrack(QVariantMap{
-                   { QStringLiteral("trackId"),    0 },
-                   { QStringLiteral("sourceId"),   videoId },
-                   { QStringLiteral("title"),      title },
-                   { QStringLiteral("artist"),     artist },
-                   { QStringLiteral("album"),      album },
-                   { QStringLiteral("durationMs"), durationMs },
-                   { QStringLiteral("sourceUrl"),  QString() },
-                   { QStringLiteral("artwork"),    artwork.isEmpty()
-                                                       ? artworkForSource(videoId)
-                                                       : artwork }
-               },
-               /*autoPlay=*/true);
+    QueueTrack track;
+    track.videoId = videoId;
+    track.title = title;
+    track.artist = artist;
+    track.album = album;
+    track.durationMs = durationMs;
+    track.artwork = artwork.isEmpty() ? artworkForSource(videoId) : artwork;
+    startQueue({ track }, 0, /*autoPlay=*/true);
 }
 
-// The source ladder. Everything that decides *where* audio comes from lives
-// here; the rest of the class only cares that something is playing.
+void PlaybackController::playNext(const QVariantMap &map)
+{
+    const QueueTrack track = QueueTrack::fromMap(map);
+    if (track.videoId.isEmpty() && track.sourceUrl.isEmpty())
+        return;
+    if (m_queue.rowCount() == 0) {
+        startQueue({ track }, 0, /*autoPlay=*/true);
+        return;
+    }
+    m_queue.insert(m_queue.currentIndex() + 1, { track });
+    prefetchUpcoming();
+}
+
+void PlaybackController::addToQueue(const QVariantMap &map)
+{
+    const QueueTrack track = QueueTrack::fromMap(map);
+    if (track.videoId.isEmpty() && track.sourceUrl.isEmpty())
+        return;
+    if (m_queue.rowCount() == 0) {
+        startQueue({ track }, 0, /*autoPlay=*/false);
+        return;
+    }
+    // What you queue goes ahead of what autoplay found.
+    int row = m_queue.rowCount();
+    for (int candidate = m_queue.currentIndex() + 1; candidate < m_queue.rowCount(); ++candidate) {
+        if (m_queue.at(candidate)->fromRadio) {
+            row = candidate;
+            break;
+        }
+    }
+    m_queue.insert(row, { track });
+    prefetchUpcoming();
+}
+
+void PlaybackController::removeFromQueue(int index)
+{
+    m_queue.removeAt(index);
+    prefetchUpcoming();
+}
+
+void PlaybackController::clearUpcoming()
+{
+    m_innerTube.cancelRadio();
+    m_radioSeed.clear();
+    m_waitingForRadio = false;
+    m_queue.clearUpcoming();
+}
+
+// While one song plays, resolve the next, so skipping to it does not wait on
+// yt-dlp. Downloaded songs need nothing. Shuffle has already put the upcoming
+// songs in their played order, so "next" is known either way.
+void PlaybackController::prefetchUpcoming()
+{
+    if (!m_resolver)
+        return;
+    const QueueTrack *upcoming = m_queue.at(m_queue.currentIndex() + 1);
+    if (!upcoming && m_repeatMode == RepeatAll)
+        upcoming = m_queue.at(0);
+    if (!upcoming || upcoming->videoId.isEmpty())
+        return;
+    if (m_downloads && !m_downloads->localPathFor(upcoming->videoId).isEmpty())
+        return;
+    m_resolver->prefetch(upcoming->videoId);
+}
+
+// ------------------------------------------------------------ source ladder
+
+void PlaybackController::recordHistory(const QVariantMap &track)
+{
+    int trackId = track.value(QStringLiteral("trackId")).toInt();
+    const QString videoId = track.value(QStringLiteral("sourceId")).toString();
+    if (trackId <= 0 && m_library && !videoId.isEmpty()) {
+        const int row = m_library->indexOfSource(videoId);
+        if (row >= 0)
+            trackId = m_library->get(row).value(QStringLiteral("trackId")).toInt();
+    }
+    if (trackId > 0) {
+        QSqlQuery history(AppDatabase::connection());
+        history.prepare(QStringLiteral("INSERT INTO history (track_id) VALUES (?)"));
+        history.addBindValue(trackId);
+        history.exec();
+    }
+
+    // Every song played, in the library or not, for Home's "Recently played".
+    if (videoId.isEmpty())
+        return;
+    QSqlQuery recent(AppDatabase::connection());
+    recent.prepare(QStringLiteral(
+        "INSERT INTO recent (video_id, title, artist, album, artwork, duration_ms)"
+        " VALUES (?, ?, ?, ?, ?, ?)"
+        " ON CONFLICT(video_id) DO UPDATE SET"
+        "   title = excluded.title, artist = excluded.artist, album = excluded.album,"
+        "   artwork = excluded.artwork, duration_ms = excluded.duration_ms,"
+        "   played_at = datetime('now'), play_count = play_count + 1"));
+    recent.addBindValue(videoId);
+    recent.addBindValue(track.value(QStringLiteral("title")).toString());
+    recent.addBindValue(track.value(QStringLiteral("artist")).toString());
+    recent.addBindValue(track.value(QStringLiteral("album")).toString());
+    recent.addBindValue(track.value(QStringLiteral("artwork")).toString());
+    recent.addBindValue(track.value(QStringLiteral("durationMs")).toLongLong());
+    recent.exec();
+}
+
+// Everything that decides *where* audio comes from lives here; the rest of the
+// class only cares that something is playing.
 void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
 {
     if (m_resolver && !m_pendingVideoId.isEmpty())
@@ -241,22 +498,21 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
     // Library rows written before artwork was captured still have a source id;
     // derive the thumbnail rather than showing an empty plate.
     if (m_currentTrack.value(QStringLiteral("artwork")).toString().isEmpty()) {
-        const QString derived = artworkForSource(
-            m_currentTrack.value(QStringLiteral("sourceId")).toString());
+        const QString derived = artworkForSource(currentSourceId());
         if (!derived.isEmpty())
             m_currentTrack.insert(QStringLiteral("artwork"), derived);
     }
 
-    m_favourite = track.value(QStringLiteral("favourite")).toBool();
     m_position = 0;
     m_autoPlayAfterResolve = autoPlay;
     setDuration(track.value(QStringLiteral("durationMs")).toLongLong());
 
     Q_EMIT currentTrackChanged();
-    Q_EMIT favouriteChanged();
     Q_EMIT positionChanged();
+    refreshFavourite();
 
-    recordHistory(track.value(QStringLiteral("trackId")).toInt());
+    if (autoPlay)
+        recordHistory(m_currentTrack);
 
     if (!engineAvailable()) {
         setStatus(QStringLiteral("Audio engine unavailable"), QString(), false);
@@ -265,7 +521,7 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
         return;
     }
 
-    const QString videoId = track.value(QStringLiteral("sourceId")).toString();
+    const QString videoId = currentSourceId();
 
     // 1 — a downloaded copy, or any source that is already a local file.
     QString localPath;
@@ -329,26 +585,6 @@ void PlaybackController::handleResolved(const QString &videoId, const QString &u
     prefetchUpcoming();
 }
 
-// While one track plays, resolve the next, so skipping to it does not wait on
-// yt-dlp. Downloaded tracks need nothing, and under shuffle there is no
-// telling which track is next.
-void PlaybackController::prefetchUpcoming()
-{
-    if (!m_resolver || !m_queue || m_shuffle || m_index < 0)
-        return;
-    const int count = m_queue->rowCount();
-    int upcoming = m_index + 1;
-    if (upcoming >= count) {
-        if (m_repeatMode != RepeatAll || count < 2)
-            return;
-        upcoming = 0;
-    }
-    const QString videoId = m_queue->get(upcoming).value(QStringLiteral("sourceId")).toString();
-    if (videoId.isEmpty() || (m_downloads && !m_downloads->localPathFor(videoId).isEmpty()))
-        return;
-    m_resolver->prefetch(videoId);
-}
-
 void PlaybackController::handleResolveFailed(const QString &videoId, const QString &reason)
 {
     if (videoId != m_pendingVideoId)
@@ -365,19 +601,21 @@ void PlaybackController::handleEndOfFile()
     if (m_repeatMode == RepeatOne) {
         m_position = 0;
         Q_EMIT positionChanged();
-        if (m_index >= 0)
-            playIndex(m_index);
+        beginCurrent(/*autoPlay=*/true);
         return;
     }
     next();
 }
 
+// -------------------------------------------------------------- transport
+
 void PlaybackController::play()
 {
     if (!engineAvailable())
         return;
-    if (m_index < 0 && m_currentTrack.isEmpty()) {
-        playIndex(0);
+    if (m_currentTrack.isEmpty()) {
+        if (m_queue.rowCount() > 0)
+            playIndex(qMax(0, m_queue.currentIndex()));
         return;
     }
     m_engine->setPaused(false);
@@ -396,24 +634,25 @@ void PlaybackController::togglePlay()
 
 void PlaybackController::next()
 {
-    if (!m_queue || m_queue->rowCount() == 0)
+    if (m_queue.rowCount() == 0)
         return;
-    const int count = m_queue->rowCount();
+    const bool wasPlaying = m_playing || m_resolving;
 
-    int target = m_index + 1;
-    if (m_shuffle && count > 1) {
-        do {
-            target = QRandomGenerator::global()->bounded(count);
-        } while (target == m_index);
-    } else if (target >= count) {
-        if (m_repeatMode == RepeatOff) {
-            pause();
-            return;                   // end of queue — stop rather than restart
+    int target = m_queue.currentIndex() + 1;
+    if (target >= m_queue.rowCount()) {
+        if (m_repeatMode == RepeatAll) {
+            target = 0;
+        } else if (m_autoplay && extendWithRadio()) {
+            // Out of songs: carry on with the radio as soon as it answers.
+            m_waitingForRadio = true;
+            setStatus(QStringLiteral("Finding more songs…"), QString(), true);
+            return;
+        } else {
+            pause();                  // end of the queue: stop rather than restart
+            return;
         }
-        target = 0;
     }
 
-    const bool wasPlaying = m_playing || m_resolving;
     if (wasPlaying)
         playIndex(target);
     else
@@ -422,17 +661,14 @@ void PlaybackController::next()
 
 void PlaybackController::previous()
 {
-    if (!m_queue)
-        return;
-
-    // Restart the current track first, the way every other player behaves.
-    if (m_position > 3000) {
+    // Restart the current song first, the way every other player behaves.
+    if (m_position > 3000 || m_queue.currentIndex() <= 0) {
         setPosition(0);
         return;
     }
 
     const bool wasPlaying = m_playing || m_resolving;
-    const int target = m_index > 0 ? m_index - 1 : 0;
+    const int target = m_queue.currentIndex() - 1;
     if (wasPlaying)
         playIndex(target);
     else
@@ -470,7 +706,12 @@ void PlaybackController::setShuffle(bool shuffle)
     if (shuffle == m_shuffle)
         return;
     m_shuffle = shuffle;
+    if (shuffle)
+        m_queue.shuffleUpcoming();
+    else
+        m_queue.restoreOrder();
     Q_EMIT shuffleChanged();
+    prefetchUpcoming();
 }
 
 void PlaybackController::cycleRepeat()
@@ -479,10 +720,14 @@ void PlaybackController::cycleRepeat()
     Q_EMIT repeatModeChanged();
 }
 
-void PlaybackController::toggleFavourite()
+void PlaybackController::setAutoplay(bool autoplay)
 {
-    m_favourite = !m_favourite;
-    if (m_queue && m_index >= 0)
-        m_queue->toggleFavourite(m_index);
-    Q_EMIT favouriteChanged();
+    if (autoplay == m_autoplay)
+        return;
+    m_autoplay = autoplay;
+    if (!autoplay) {
+        m_innerTube.cancelRadio();
+        m_radioSeed.clear();
+    }
+    Q_EMIT autoplayChanged();
 }

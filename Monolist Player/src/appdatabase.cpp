@@ -96,6 +96,19 @@ void AppDatabase::createSchema()
         " key TEXT PRIMARY KEY,"
         " value TEXT NOT NULL)"));
 
+    // Every song played, library or not, newest first, for "Recently played".
+    // Keyed by video id, so replaying a song moves it up instead of repeating it.
+    q.exec(QStringLiteral(
+        "CREATE TABLE IF NOT EXISTS recent ("
+        " video_id TEXT PRIMARY KEY,"
+        " title TEXT NOT NULL DEFAULT '',"
+        " artist TEXT NOT NULL DEFAULT '',"
+        " album TEXT NOT NULL DEFAULT '',"
+        " artwork TEXT NOT NULL DEFAULT '',"
+        " duration_ms INTEGER NOT NULL DEFAULT 0,"
+        " played_at TEXT NOT NULL DEFAULT (datetime('now')),"
+        " play_count INTEGER NOT NULL DEFAULT 1)"));
+
     // Offline set. Keyed by the upstream video id rather than the track row, so
     // a download survives the library being rebuilt and can be matched back to
     // a search result that was never in the library to begin with.

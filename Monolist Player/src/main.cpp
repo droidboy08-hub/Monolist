@@ -81,8 +81,9 @@ int main(int argc, char *argv[])
     DownloadManager downloads;
 
     PlaybackController player(&engine, &resolver, &downloads);
-    player.setQueue(library.tracks());
-    player.loadIndex(0);
+    player.setLibrary(library.tracks());
+    // Open with the library queued and its first song ready, not playing.
+    player.loadModel(library.tracks(), 0);
 
     MediaExtractor extractor;
 
@@ -109,6 +110,9 @@ int main(int argc, char *argv[])
     qmlRegisterUncreatableType<SearchResultModel>(
         "Monolist.Backend", 1, 0, "SearchResultModel",
         QStringLiteral("Obtained from Extractor.results"));
+    qmlRegisterUncreatableType<QueueModel>(
+        "Monolist.Backend", 1, 0, "QueueModel",
+        QStringLiteral("Obtained from Player.queue"));
     qmlRegisterUncreatableType<DownloadQueueModel>(
         "Monolist.Backend", 1, 0, "DownloadQueueModel",
         QStringLiteral("Obtained from Downloads.queue"));
@@ -137,6 +141,8 @@ int main(int argc, char *argv[])
             initial.insert(QStringLiteral("currentView"), QStringLiteral("search"));
             initial.insert(QStringLiteral("initialQuery"), arguments.at(queryFlag + 1));
         }
+        if (arguments.contains(QStringLiteral("--open-queue")))
+            initial.insert(QStringLiteral("queueOpen"), true);
         if (!initial.isEmpty())
             qmlEngine.setInitialProperties(initial);
     }
@@ -185,6 +191,19 @@ int main(int argc, char *argv[])
             qWarning("selftest: position %s of %s, %s",
                      qPrintable(player.positionText()), qPrintable(player.durationText()),
                      player.playing() ? "playing" : "not playing");
+            QueueModel *queue = player.queue();
+            QStringList upcoming;
+            int fromRadio = 0;
+            for (int row = queue->currentIndex() + 1; row < queue->rowCount(); ++row) {
+                const QVariantMap track = queue->get(row);
+                if (track.value(QStringLiteral("fromRadio")).toBool())
+                    ++fromRadio;
+                if (upcoming.size() < 4)
+                    upcoming << track.value(QStringLiteral("title")).toString() + QStringLiteral(" (")
+                                    + track.value(QStringLiteral("artist")).toString() + QLatin1Char(')');
+            }
+            qWarning("selftest: queue %d, %d up next, %d from autoplay: %s", queue->rowCount(),
+                     queue->upcomingCount(), fromRadio, qPrintable(upcoming.join(QStringLiteral(" / "))));
             qWarning("selftest: done, quitting");
             QCoreApplication::quit();
         });

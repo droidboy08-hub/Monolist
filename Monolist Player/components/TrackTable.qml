@@ -6,6 +6,8 @@ Column {
     id: root
 
     property var model: null
+    // Highlights a row by position, for rows without a source id. Rows with
+    // one are matched to the playing song by identity.
     property int activeIndex: -1
     // A download control per row, for rows that have a source id to fetch.
     property bool showDownloads: false
@@ -16,13 +18,29 @@ Column {
     readonly property bool showArtist: width >= 700
     readonly property int timeWidth: 64
     readonly property int indexWidth: 48
+    readonly property int moreWidth: 36
     readonly property int downloadWidth: showDownloads && Downloads.available ? 40 : 0
-    readonly property int freeWidth: width - indexWidth - timeWidth - downloadWidth
+    readonly property int freeWidth: width - indexWidth - timeWidth - downloadWidth - moreWidth
     readonly property int albumColumnWidth: showAlbum ? Math.round(freeWidth * 0.30) : 0
     readonly property int artistColumnWidth: showArtist ? Math.round(freeWidth * 0.28) : 0
     readonly property int titleColumnWidth: freeWidth - albumColumnWidth - artistColumnWidth
 
+    function openMenu(row) {
+        trackMenu.track = {
+            sourceId: row.sourceId,
+            title: row.title,
+            artist: row.artist,
+            album: row.album,
+            artwork: row.artwork,
+            durationMs: row.durationMs
+        }
+        trackMenu.popup()
+    }
+
     spacing: 0
+
+    // One menu for the whole list; each row fills it in before opening it.
+    TrackMenu { id: trackMenu }
 
     // — head —
     Item {
@@ -72,6 +90,7 @@ Column {
             width: 14
             height: 14
             anchors.right: parent.right
+            anchors.rightMargin: root.moreWidth
             anchors.verticalCenter: parent.verticalCenter
             color: Theme.neutral700
         }
@@ -102,7 +121,8 @@ Column {
 
             width: root.width
             height: 40
-            readonly property bool isActive: index === root.activeIndex
+            readonly property bool isActive: sourceId.length > 0 ? sourceId === Player.currentSourceId
+                                                                 : index === root.activeIndex
 
             Rectangle {
                 anchors.fill: parent
@@ -156,10 +176,11 @@ Column {
                 color: Theme.neutral700
             }
 
-            // A Button, so its click is not also taken as a tap on the row.
+            // Buttons, so their clicks are not also taken as a tap on the row.
             DownloadButton {
                 visible: root.downloadWidth > 0 && row.sourceId.length > 0
-                x: root.width - root.timeWidth - root.downloadWidth + (root.downloadWidth - width) / 2
+                x: root.width - root.moreWidth - root.timeWidth - root.downloadWidth
+                   + (root.downloadWidth - width) / 2
                 anchors.verticalCenter: parent.verticalCenter
                 side: 30
                 iconSize: 15
@@ -172,11 +193,23 @@ Column {
 
             Text {
                 anchors.right: parent.right
+                anchors.rightMargin: root.moreWidth
                 anchors.verticalCenter: parent.verticalCenter
                 text: row.durationText
                 font.family: Theme.fontFamily
                 font.pixelSize: 14
                 color: row.isActive ? Theme.accent700 : Theme.text
+            }
+
+            IconButton {
+                visible: rowHover.hovered
+                x: root.width - root.moreWidth + (root.moreWidth - width) / 2
+                anchors.verticalCenter: parent.verticalCenter
+                side: 30
+                iconName: "dots"
+                iconSize: 16
+                iconColor: Theme.text
+                onClicked: root.openMenu(row)
             }
 
             Rectangle {
@@ -188,6 +221,10 @@ Column {
 
             HoverHandler { id: rowHover; cursorShape: Qt.PointingHandCursor }
             TapHandler { onTapped: root.trackActivated(row.index) }
+            TapHandler {
+                acceptedButtons: Qt.RightButton
+                onTapped: root.openMenu(row)
+            }
         }
     }
 }

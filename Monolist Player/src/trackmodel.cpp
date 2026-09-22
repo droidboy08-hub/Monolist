@@ -110,6 +110,23 @@ int TrackModel::indexOfSource(const QString &sourceId) const
     return -1;
 }
 
+void TrackModel::addTrack(const QVariantMap &track, bool favourite)
+{
+    QSqlQuery q(AppDatabase::connection());
+    q.prepare(QStringLiteral(
+        "INSERT INTO tracks (position, title, artist, album, duration_ms, source_url, source_id, artwork, favourite)"
+        " SELECT (SELECT COALESCE(MAX(position) + 1, 0) FROM tracks), ?, ?, ?, ?, '', ?, ?, ?"));
+    q.addBindValue(track.value(QStringLiteral("title")).toString());
+    q.addBindValue(track.value(QStringLiteral("artist")).toString());
+    q.addBindValue(track.value(QStringLiteral("album")).toString());
+    q.addBindValue(track.value(QStringLiteral("durationMs")).toLongLong());
+    q.addBindValue(track.value(QStringLiteral("sourceId")).toString());
+    q.addBindValue(track.value(QStringLiteral("artwork")).toString());
+    q.addBindValue(favourite ? 1 : 0);
+    q.exec();
+    reload();
+}
+
 void TrackModel::toggleFavourite(int row)
 {
     if (row < 0 || row >= m_items.size())

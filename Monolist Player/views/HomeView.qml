@@ -32,7 +32,7 @@ Flickable {
             titleLine1: Library.featured.titleLine1 !== undefined ? Library.featured.titleLine1 : ""
             titleLine2: Library.featured.titleLine2 !== undefined ? Library.featured.titleLine2 : ""
             meta: Library.featured.meta !== undefined ? Library.featured.meta : ""
-            onPlayRequested: Player.playIndex(0)
+            onPlayRequested: Player.playModel(Library.tracks, 0)
         }
 
         // — 01 recently played —
@@ -72,7 +72,7 @@ Flickable {
                             year: model.year
                             format: model.format
                             artwork: model.artwork
-                            onPlayRequested: Player.playIndex(Math.min(model.index, Library.tracks.count - 1))
+                            onPlayRequested: Player.playModel(Library.tracks, Math.min(model.index, Library.tracks.count - 1))
                         }
                     }
                 }
@@ -105,9 +105,8 @@ Flickable {
                 TrackTable {
                     width: parent.width
                     model: Library.tracks
-                    activeIndex: Player.currentIndex
                     showDownloads: true
-                    onTrackActivated: function(index) { Player.playIndex(index) }
+                    onTrackActivated: function(index) { Player.playModel(Library.tracks, index) }
                 }
             }
         }

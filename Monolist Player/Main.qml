@@ -21,6 +21,8 @@ ApplicationWindow {
     property var viewFuture: []
     // Set from the command line (--query), to open with a search typed in.
     property string initialQuery: ""
+    // The queue docks at the right, like a second sidebar.
+    property bool queueOpen: false
 
     Component.onCompleted: {
         if (initialQuery.length > 0)
@@ -79,10 +81,20 @@ ApplicationWindow {
             onViewRequested: function(view) { window.navigate(view) }
         }
 
+        QueuePanel {
+            id: queuePanel
+            visible: window.queueOpen
+            width: visible ? Math.min(380, Math.max(300, window.width * 0.26)) : 0
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            anchors.right: parent.right
+            onCloseRequested: window.queueOpen = false
+        }
+
         Item {
             id: mainArea
             anchors.left: dockedSidebar.right
-            anchors.right: parent.right
+            anchors.right: queuePanel.visible ? queuePanel.left : parent.right
             anchors.top: parent.top
             anchors.bottom: parent.bottom
 
@@ -136,6 +148,8 @@ ApplicationWindow {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
+        queueOpen: window.queueOpen
+        onQueueToggled: window.queueOpen = !window.queueOpen
     }
 
     // — narrow-window sidebar —

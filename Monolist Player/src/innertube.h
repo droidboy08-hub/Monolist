@@ -39,25 +39,33 @@ public:
 
     explicit InnerTube(QObject *parent = nullptr);
 
-    // A newer call of the same kind cancels the one still in flight. The two
-    // kinds are independent: a search starting must not cancel the
-    // suggestions for what is being typed.
+    // A newer call of the same kind cancels the one still in flight. The kinds
+    // are independent: a search starting must not cancel the suggestions for
+    // what is being typed.
     void search(const QString &query, Filter filter);
     void suggest(const QString &input);
+    // The "radio" YouTube Music builds from one song: songs like it, the seed
+    // itself first. What autoplay continues with when a queue runs out.
+    void radio(const QString &videoId);
     void cancelSearch();
     void cancelSuggestions();
+    void cancelRadio();
 
 Q_SIGNALS:
     void searchFinished(const QString &query, const QList<InnerTube::Track> &tracks);
     void searchFailed(const QString &query, const QString &reason);
     void suggestionsReady(const QString &input, const QStringList &suggestions);
+    void radioReady(const QString &seedVideoId, const QList<InnerTube::Track> &tracks);
+    void radioFailed(const QString &seedVideoId, const QString &reason);
 
 private:
     QNetworkReply *post(const QString &endpoint, QJsonObject body);
     static QList<Track> parseSearch(const QJsonObject &root);
     static QStringList parseSuggestions(const QJsonObject &root);
+    static QList<Track> parseRadio(const QJsonObject &root);
 
     QNetworkAccessManager *m_network;
     QPointer<QNetworkReply> m_search;
     QPointer<QNetworkReply> m_suggest;
+    QPointer<QNetworkReply> m_radio;
 };

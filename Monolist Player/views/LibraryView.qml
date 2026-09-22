@@ -49,7 +49,7 @@ Flickable {
                     year: model.year
                     format: model.format
                     artwork: model.artwork
-                    onPlayRequested: Player.playIndex(Math.min(model.index, Library.tracks.count - 1))
+                    onPlayRequested: Player.playModel(Library.tracks, Math.min(model.index, Library.tracks.count - 1))
                 }
             }
         }

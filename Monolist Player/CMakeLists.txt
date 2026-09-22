@@ -37,6 +37,7 @@ qt_add_executable(monolist
     src/albummodel.h               src/albummodel.cpp
     src/trackmodel.h               src/trackmodel.cpp
     src/playbackcontroller.h       src/playbackcontroller.cpp
+    src/queuemodel.h               src/queuemodel.cpp
     src/mediaextractor.h           src/mediaextractor.cpp
     src/innertube.h                src/innertube.cpp
     # — backend merged in from the Melody player —
@@ -81,6 +82,8 @@ qt_add_qml_module(monolist
         components/PosterButton.qml
         components/DownloadButton.qml
         components/ChoiceChip.qml
+        components/TrackMenu.qml
+        components/QueuePanel.qml
         views/HomeView.qml
         views/SearchView.qml
         views/LibraryView.qml

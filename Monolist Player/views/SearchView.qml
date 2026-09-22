@@ -126,11 +126,8 @@ Flickable {
             model: Extractor.results
             activeIndex: -1
             showDownloads: true
-            onTrackActivated: function(index) {
-                var item = Extractor.results.get(index)
-                Player.playSource(item.sourceId, item.title, item.artist,
-                                  item.artwork, item.durationMs, item.album)
-            }
+            // The results become the queue, starting from the one picked.
+            onTrackActivated: function(index) { Player.playModel(Extractor.results, index) }
         }
     }
 }

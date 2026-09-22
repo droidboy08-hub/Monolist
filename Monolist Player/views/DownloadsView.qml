@@ -20,16 +20,6 @@ Flickable {
         contentItem: Rectangle { color: Theme.neutral300 }
     }
 
-    function playSaved(videoId, title, artist, artwork) {
-        // Downloads are library rows too; playing the row keeps next and
-        // previous working through the library.
-        var row = Library.tracks.indexOfSource(videoId)
-        if (row >= 0)
-            Player.playIndex(row)
-        else
-            Player.playSource(videoId, title, artist, artwork)
-    }
-
     // A square check box with a label and a line of explanation.
     component Toggle: Item {
         id: toggle
@@ -356,6 +346,7 @@ Flickable {
                 delegate: Item {
                     id: saved
 
+                    required property int index
                     required property string videoId
                     required property string title
                     required property string artist
@@ -485,7 +476,8 @@ Flickable {
                     }
 
                     HoverHandler { id: savedHover; cursorShape: Qt.PointingHandCursor }
-                    TapHandler { onTapped: root.playSaved(saved.videoId, saved.title, saved.artist, saved.artwork) }
+                    // The offline set becomes the queue, starting here.
+                    TapHandler { onTapped: Player.playModel(Downloads.library, saved.index) }
                 }
             }
         }

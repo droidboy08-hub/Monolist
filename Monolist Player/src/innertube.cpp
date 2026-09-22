@@ -223,6 +223,47 @@ void InnerTube::suggest(const QString &input)
     });
 }
 
+void InnerTube::radio(const QString &videoId)
+{
+    cancelRadio();
+
+    // "RDAMVM" + id is the radio playlist YouTube Music starts from a song;
+    // "wAEB" asks for it in radio mode, as its own client does.
+    QNetworkReply *reply = post(QStringLiteral("next"), {
+        { QStringLiteral("videoId"), videoId },
+        { QStringLiteral("playlistId"), QStringLiteral("RDAMVM") + videoId },
+        { QStringLiteral("params"), QStringLiteral("wAEB") },
+        { QStringLiteral("isAudioOnly"), true },
+        { QStringLiteral("enablePersistentPlaylistPanel"), true }
+    });
+    m_radio = reply;
+
+    connect(reply, &QNetworkReply::finished, this, [this, reply, videoId]() {
+        reply->deleteLater();
+        if (reply != m_radio)
+            return;
+        m_radio = nullptr;
+        if (reply->error() != QNetworkReply::NoError) {
+            Q_EMIT radioFailed(videoId, reply->errorString());
+            return;
+        }
+        const QJsonDocument document = QJsonDocument::fromJson(reply->readAll());
+        const QList<Track> tracks = parseRadio(document.object());
+        if (tracks.isEmpty())
+            Q_EMIT radioFailed(videoId, QStringLiteral("YouTube Music returned no radio for this song."));
+        else
+            Q_EMIT radioReady(videoId, tracks);
+    });
+}
+
+void InnerTube::cancelRadio()
+{
+    if (QNetworkReply *reply = m_radio) {
+        m_radio = nullptr;
+        reply->abort();
+    }
+}
+
 void InnerTube::cancelSearch()
 {
     if (QNetworkReply *reply = m_search) {
@@ -274,6 +315,38 @@ QList<InnerTube::Track> InnerTube::parseSearch(const QJsonObject &root)
             if (!track.title.isEmpty())
                 tracks.append(track);
         }
+    }
+    return tracks;
+}
+
+QList<InnerTube::Track> InnerTube::parseRadio(const QJsonObject &root)
+{
+    QList<Track> tracks;
+    const QJsonArray entries = dig(root, { "contents", "singleColumnMusicWatchNextResultsRenderer",
+                                           "tabbedRenderer", "watchNextTabbedResultsRenderer", "tabs", "#0",
+                                           "tabRenderer", "content", "musicQueueRenderer", "content",
+                                           "playlistPanelRenderer", "contents" }).toArray();
+    for (const QJsonValue &entry : entries) {
+        // A song with a music-video counterpart comes wrapped, the audio
+        // version as the primary.
+        QJsonValue item = dig(entry, { "playlistPanelVideoRenderer" });
+        if (item.isUndefined())
+            item = dig(entry, { "playlistPanelVideoWrapperRenderer", "primaryRenderer",
+                                "playlistPanelVideoRenderer" });
+
+        Track track;
+        track.videoId = dig(item, { "videoId" }).toString();
+        if (track.videoId.isEmpty())
+            continue;
+        track.title = joinRuns(dig(item, { "title", "runs" }).toArray()).trimmed();
+        parseSubtitle(dig(item, { "longBylineText", "runs" }).toArray(), track);
+        const QString length = joinRuns(dig(item, { "lengthText", "runs" }).toArray()).trimmed();
+        if (!length.isEmpty())
+            track.durationMs = parseClock(length);
+        const QJsonArray thumbnails = dig(item, { "thumbnail", "thumbnails" }).toArray();
+        if (!thumbnails.isEmpty())
+            track.artwork = largerArtwork(thumbnails.last().toObject().value(QLatin1String("url")).toString());
+        tracks.append(track);
     }
     return tracks;
 }

@@ -4,6 +4,10 @@
 #include <QString>
 #include <QVariantMap>
 
+#include "innertube.h"
+#include "queuemodel.h"
+
+class QAbstractItemModel;
 class TrackModel;
 class MpvEngine;
 class StreamResolver;
@@ -11,11 +15,13 @@ class DownloadManager;
 
 // Playback facade for the UI.
 //
-// The QML-visible API is unchanged from the interface prototype — every
-// property and slot the components bind to still exists with the same name and
-// meaning. What changed is underneath: position and duration now come from
-// libmpv instead of a QTimer, and loading a track runs the source ladder that
-// Melody called its playback protocol.
+// It owns the play queue. Playing from any list — the library, search results,
+// downloads, an album — queues that list; Play next and Add to queue edit it;
+// and when it runs out, autoplay continues with YouTube Music's radio for the
+// last song, the way YouTube Music itself does.
+//
+// Where the audio for a track comes from is the source ladder Melody called
+// its playback protocol:
 //
 //   local file present  -> play from disk                      (Melody: LOCAL)
 //   otherwise           -> StreamResolver, then play that URL   (Melody: STEALTH)
@@ -29,7 +35,10 @@ class PlaybackController : public QObject
     Q_OBJECT
     Q_PROPERTY(bool playing READ playing NOTIFY playingChanged)
     Q_PROPERTY(QVariantMap currentTrack READ currentTrack NOTIFY currentTrackChanged)
-    Q_PROPERTY(int currentIndex READ currentIndex NOTIFY currentTrackChanged)
+    Q_PROPERTY(QString currentSourceId READ currentSourceId NOTIFY currentTrackChanged)
+    Q_PROPERTY(int currentIndex READ currentIndex NOTIFY currentTrackChanged)   // in the queue
+    Q_PROPERTY(QueueModel *queue READ queue CONSTANT)
+    Q_PROPERTY(bool autoplay READ autoplay WRITE setAutoplay NOTIFY autoplayChanged)
     Q_PROPERTY(qint64 position READ position WRITE setPosition NOTIFY positionChanged)
     Q_PROPERTY(qint64 duration READ duration NOTIFY durationChanged)
     Q_PROPERTY(qreal progress READ progress NOTIFY positionChanged)
@@ -39,7 +48,6 @@ class PlaybackController : public QObject
     Q_PROPERTY(bool shuffle READ shuffle WRITE setShuffle NOTIFY shuffleChanged)
     Q_PROPERTY(int repeatMode READ repeatMode NOTIFY repeatModeChanged)
     Q_PROPERTY(bool favourite READ favourite NOTIFY favouriteChanged)
-    // — added for the real backend —
     Q_PROPERTY(bool buffering READ buffering NOTIFY bufferingChanged)
     Q_PROPERTY(bool resolving READ resolving NOTIFY statusChanged)
     Q_PROPERTY(QString statusText READ statusText NOTIFY statusChanged)
@@ -54,11 +62,16 @@ public:
                                 DownloadManager *downloads,
                                 QObject *parent = nullptr);
 
-    void setQueue(TrackModel *model);
+    // The library, for likes: a liked track is a library row with the
+    // favourite flag, and liking a track that is not in the library adds it.
+    void setLibrary(TrackModel *library);
 
     bool playing() const { return m_playing; }
     QVariantMap currentTrack() const { return m_currentTrack; }
-    int currentIndex() const { return m_index; }
+    QString currentSourceId() const;
+    int currentIndex() const { return m_queue.currentIndex(); }
+    QueueModel *queue() { return &m_queue; }
+    bool autoplay() const { return m_autoplay; }
     qint64 position() const { return m_position; }
     qint64 duration() const { return m_duration; }
     qreal progress() const;
@@ -80,16 +93,31 @@ public Q_SLOTS:
     void togglePlay();
     void next();
     void previous();
+
+    // Queue positions.
     void loadIndex(int index);
     void playIndex(int index);
+
+    // Queue every row of a list model that uses the app's track roles and
+    // start at `row`: the library, search results, downloads, an album.
+    void playModel(QAbstractItemModel *model, int row);
+    void loadModel(QAbstractItemModel *model, int row);
+    void playTracks(const QVariantList &tracks, int start);
+
+    void playNext(const QVariantMap &track);
+    void addToQueue(const QVariantMap &track);
+    void removeFromQueue(int index);
+    void clearUpcoming();
+
     void setPosition(qint64 ms);
     void seekFraction(qreal fraction);
     void setVolume(qreal volume);
     void setShuffle(bool shuffle);
     void cycleRepeat();
     void toggleFavourite();
+    void setAutoplay(bool autoplay);
 
-    // Plays an ad-hoc search result that is not in the library yet.
+    // Plays one track on its own; autoplay carries on from it.
     void playSource(const QString &videoId,
                     const QString &title,
                     const QString &artist,
@@ -105,6 +133,7 @@ public Q_SLOTS:
 Q_SIGNALS:
     void playingChanged();
     void currentTrackChanged();
+    void autoplayChanged();
     void positionChanged();
     void durationChanged();
     void volumeChanged();
@@ -116,35 +145,45 @@ Q_SIGNALS:
     void playbackError(const QString &reason);
 
 private:
-    void resyncIndex();
-    void prefetchUpcoming();
+    void startQueue(QList<QueueTrack> tracks, int start, bool autoPlay);
+    void beginCurrent(bool autoPlay);
     void beginTrack(const QVariantMap &track, bool autoPlay);
     void handleResolved(const QString &videoId, const QString &url, int tier, bool fromCache);
     void handleResolveFailed(const QString &videoId, const QString &reason);
     void handleEndOfFile();
+    void prefetchUpcoming();
+    bool extendWithRadio();   // false when there is nothing to seed a radio from
+    void refreshFavourite();
+    int libraryRow() const;
     void setStatus(const QString &text, const QString &source, bool resolving);
     void setDuration(qint64 ms);
     void setPlayingFlag(bool playing);
-    void recordHistory(int trackId);
+    void recordHistory(const QVariantMap &track);
 
     MpvEngine *m_engine = nullptr;
     StreamResolver *m_resolver = nullptr;
     DownloadManager *m_downloads = nullptr;
-    TrackModel *m_queue = nullptr;
+    TrackModel *m_library = nullptr;
+
+    QueueModel m_queue;
+    InnerTube m_innerTube;   // for the radio
 
     QVariantMap m_currentTrack;
-    QString m_pendingVideoId;      // resolution in flight for this id
-    QString m_streamVideoId;       // the resolved stream now loaded, if any,
-    int m_streamTier = -1;         // the tier it came from (-1 for files),
-    bool m_streamFromCache = false; // and whether it was a remembered link
+    QString m_pendingVideoId;        // resolution in flight for this id
+    QString m_streamVideoId;         // the resolved stream now loaded, if any,
+    int m_streamTier = -1;           // the tier it came from (-1 for files),
+    bool m_streamFromCache = false;  // and whether it was a remembered link
     QString m_statusText;
     QString m_sourceLabel;
 
-    int m_index = -1;
+    QString m_radioSeed;             // the song the radio request in flight is for
+    bool m_waitingForRadio = false;  // the queue ran out and is waiting on it
+
     bool m_playing = false;
     bool m_buffering = false;
     bool m_resolving = false;
     bool m_autoPlayAfterResolve = true;
+    bool m_autoplay = true;
     qint64 m_position = 0;
     qint64 m_duration = 0;
     qreal m_volume = 0.65;

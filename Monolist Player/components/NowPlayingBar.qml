@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls.Basic
 import Monolist
 import Monolist.Backend
 
@@ -7,6 +8,8 @@ Rectangle {
 
     readonly property bool showVolume: width >= 1040
     readonly property bool showMeta: width >= 760
+    property bool queueOpen: false
+    signal queueToggled()
 
     color: Theme.bg
     implicitHeight: Theme.playerBarHeight
@@ -205,9 +208,13 @@ Rectangle {
 
         IconButton {
             iconName: "list-music"
-            iconColor: Theme.text
+            iconColor: root.queueOpen ? Theme.accent : Theme.text
             iconSize: 15
             anchors.verticalCenter: parent.verticalCenter
+            onClicked: root.queueToggled()
+            ToolTip.visible: hovered
+            ToolTip.delay: 600
+            ToolTip.text: root.queueOpen ? "Hide queue" : "Queue"
         }
         IconButton {
             iconName: "monitor-speaker"
