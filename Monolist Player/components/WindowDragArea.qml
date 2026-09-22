@@ -6,24 +6,33 @@ import Monolist.Backend
 // restore, right-click for the window menu. Put it under the bar's buttons
 // and fields, which take their own clicks first.
 Item {
+    id: root
+
+    // Read here, on an Item: the attached property is only offered to Items,
+    // and a handler asking for it gets null.
+    readonly property var hostWindow: Window.window
+
     function toggleMaximized() {
-        var window = Window.window
-        if (window.visibility === Window.Maximized)
-            window.showNormal()
+        if (!hostWindow)
+            return
+        if (hostWindow.visibility === Window.Maximized)
+            hostWindow.showNormal()
         else
-            window.showMaximized()
+            hostWindow.showMaximized()
     }
 
     DragHandler {
         target: null
         onActiveChanged: {
-            if (active)
-                Window.window.startSystemMove()
+            // Past the drag threshold the window goes to the system's own
+            // move loop, which follows the pointer until it is released.
+            if (active && root.hostWindow)
+                root.hostWindow.startSystemMove()
         }
     }
 
     TapHandler {
-        onDoubleTapped: parent.toggleMaximized()
+        onDoubleTapped: root.toggleMaximized()
     }
 
     TapHandler {

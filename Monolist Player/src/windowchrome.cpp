@@ -13,7 +13,7 @@ namespace {
 // Windows 11 attributes, spelt out so older SDK headers are enough.
 constexpr DWORD kCornerPreference = 33;   // DWMWA_WINDOW_CORNER_PREFERENCE
 constexpr DWORD kBorderColour = 34;       // DWMWA_BORDER_COLOR
-constexpr DWORD kDoNotRound = 1;          // DWMWCP_DONOTROUND
+constexpr DWORD kRoundAsUsual = 0;        // DWMWCP_DEFAULT
 
 // The window's native handle, or none when it has none. handle() comes first
 // because winId() creates a native window that is not there: at shutdown, when
@@ -83,9 +83,11 @@ void WindowChrome::attach(QWindow *window)
     const MARGINS margins = { 1, 1, 1, 1 };
     DwmExtendFrameIntoClientArea(hwnd, &margins);
 
-    // Square corners, and on Windows 11 a hairline in the ink colour instead
-    // of the accent-tinted frame border. Both are ignored where unsupported.
-    const DWORD corners = kDoNotRound;
+    // The window's corners are the system's to round — every other corner in
+    // the design is square, but the window is the system's object, not the
+    // design's. On Windows 11 the border is a hairline in the ink colour
+    // instead of the accent-tinted default. Both are ignored where unsupported.
+    const DWORD corners = kRoundAsUsual;
     DwmSetWindowAttribute(hwnd, kCornerPreference, &corners, sizeof corners);
     const COLORREF ink = RGB(0x20, 0x1e, 0x1d);
     DwmSetWindowAttribute(hwnd, kBorderColour, &ink, sizeof ink);
