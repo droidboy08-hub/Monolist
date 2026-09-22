@@ -10,7 +10,8 @@
         Qt\<version>\mingw_64   Qt for MinGW 64-bit, plus qtimageformats (WebP artwork)
         Qt\Tools\               MinGW 13.1, CMake, Ninja
         libmpv\                 libmpv SDK, x86_64 (matches the app, not the host)
-        bin\                    yt-dlp, ffmpeg, ffprobe, deno
+        yt-dlp\                 yt-dlp, unpacked (starts far faster than the single file)
+        bin\                    ffmpeg, ffprobe, deno
         git\                    PortableGit (skip with -SkipGit)
         downloads\              the archives, kept so a re-run need not fetch them again
 
@@ -264,15 +265,30 @@ if (Test-Path -LiteralPath (Join-Path $mpvRoot 'include\mpv\client.h')) {
 
 # ------------------------------------------------------------- runtime tools
 
-Write-Step 'yt-dlp (search, stream resolution, downloads)'
-$ytdlpExe = Join-Path $binDir 'yt-dlp.exe'
+Write-Step 'yt-dlp (stream resolution, downloads, search fallback)'
+# The unpacked ("onedir") build. The single-file exe re-extracts its whole
+# Python runtime to a temp folder on every call, which alone cost seconds
+# before each song could start.
+$ytdlpDir = Join-Path $InstallRoot 'yt-dlp'
+$ytdlpExe = Join-Path $ytdlpDir 'yt-dlp.exe'
 if ((Test-Path -LiteralPath $ytdlpExe) -and -not $Update) {
     Write-Skip $ytdlpExe
 } else {
     $release = Get-Release 'yt-dlp/yt-dlp'
-    $name = if ($isArm64) { 'yt-dlp_arm64.exe' } else { 'yt-dlp.exe' }
-    $asset = Get-Asset $release ('^' + [regex]::Escape($name) + '$')
-    Copy-Item -LiteralPath (Save-Asset $asset (Get-ReleaseHash $release $name)) -Destination $ytdlpExe -Force
+    $name = if ($isArm64) { 'yt-dlp_win_arm64.zip' } else { 'yt-dlp_win.zip' }
+    $archive = Save-Asset (Get-Asset $release ('^' + [regex]::Escape($name) + '$')) (Get-ReleaseHash $release $name)
+    $staging = Join-Path $cacheDir 'yt-dlp-staging'
+    if (Test-Path -LiteralPath $staging) { Remove-Item -LiteralPath $staging -Recurse -Force }
+    Expand-To $archive $staging
+    $found = Get-ChildItem -LiteralPath $staging -Recurse -Filter 'yt-dlp*.exe' | Select-Object -First 1
+    if (-not $found) { throw "No yt-dlp executable in $name" }
+    if (Test-Path -LiteralPath $ytdlpDir) { Remove-Item -LiteralPath $ytdlpDir -Recurse -Force }
+    Move-Item -LiteralPath $found.DirectoryName -Destination $ytdlpDir
+    if ($found.Name -ne 'yt-dlp.exe') { Rename-Item -LiteralPath (Join-Path $ytdlpDir $found.Name) -NewName 'yt-dlp.exe' }
+    if (Test-Path -LiteralPath $staging) { Remove-Item -LiteralPath $staging -Recurse -Force }
+    # A single-file copy from an earlier setup would be found first.
+    $singleFile = Join-Path $binDir 'yt-dlp.exe'
+    if (Test-Path -LiteralPath $singleFile) { Remove-Item -LiteralPath $singleFile -Force }
     Write-Ok "$ytdlpExe ($($release.tag_name))"
 }
 

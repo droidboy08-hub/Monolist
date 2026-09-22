@@ -253,7 +253,11 @@ QStringList YtDlp::toolDirectories()
     const QString fromEnvironment = qEnvironmentVariable("MONOLIST_TOOLS_DIR");
     if (!fromEnvironment.isEmpty())
         directories.append(fromEnvironment);
-    directories << appDir.filePath(QStringLiteral("tools")) << appDir.absolutePath();
+    // tools/yt-dlp holds the unpacked yt-dlp: its exe beside its _internal
+    // runtime, which starts far faster than the single-file build.
+    directories << appDir.filePath(QStringLiteral("tools"))
+                << appDir.filePath(QStringLiteral("tools/yt-dlp"))
+                << appDir.absolutePath();
     return directories;
 }
 

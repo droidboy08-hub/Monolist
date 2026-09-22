@@ -83,9 +83,9 @@ private:
 //   Deno    runs YouTube's player challenges. Without a JavaScript runtime
 //           yt-dlp loses most formats, the high-quality audio ones included.
 //
-// All three are looked for in <app>/tools, next to the executable, in
-// MONOLIST_TOOLS_DIR, and finally on PATH. Bundled copies win, so a packaged
-// app runs the versions it shipped with.
+// All three are looked for in MONOLIST_TOOLS_DIR, <app>/tools, <app>/tools/yt-dlp
+// (the unpacked yt-dlp), next to the executable, and finally on PATH. Bundled
+// copies win, so a packaged app runs the versions it shipped with.
 class YtDlp
 {
 public:

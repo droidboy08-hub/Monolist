@@ -106,7 +106,19 @@ if (-not $NoMpv) {
 # the build is on another volume.
 $toolsOut = Join-Path $buildDir 'tools'
 New-Item -ItemType Directory -Force -Path $toolsOut | Out-Null
-foreach ($tool in 'yt-dlp.exe', 'ffmpeg.exe', 'ffprobe.exe', 'deno.exe') {
+
+# yt-dlp is a folder (the exe and its _internal runtime), so it is joined in as
+# a directory junction. Removing a junction removes only the link.
+$ytdlpDir = Join-Path $InstallRoot 'yt-dlp'
+$ytdlpLink = Join-Path $toolsOut 'yt-dlp'
+$staleSingleFile = Join-Path $toolsOut 'yt-dlp.exe'   # from builds before the unpacked yt-dlp
+if (Test-Path -LiteralPath $staleSingleFile) { Remove-Item -LiteralPath $staleSingleFile -Force }
+if (Test-Path -LiteralPath $ytdlpLink) { [IO.Directory]::Delete($ytdlpLink, $false) }
+if (Test-Path -LiteralPath (Join-Path $ytdlpDir 'yt-dlp.exe')) {
+    New-Item -ItemType Junction -Path $ytdlpLink -Target $ytdlpDir | Out-Null
+}
+
+foreach ($tool in 'ffmpeg.exe', 'ffprobe.exe', 'deno.exe') {
     $from = Join-Path $binDir $tool
     if (-not (Test-Path -LiteralPath $from)) { continue }
     $to = Join-Path $toolsOut $tool
