@@ -40,6 +40,8 @@ qt_add_executable(monolist
     src/queuemodel.h               src/queuemodel.cpp
     src/mediaextractor.h           src/mediaextractor.cpp
     src/innertube.h                src/innertube.cpp
+    src/catalog.h                  src/catalog.cpp
+    src/windowchrome.h             src/windowchrome.cpp
     # — backend merged in from the Melody player —
     ${MONOLIST_MPV_SOURCES}
     src/ytdlp.h                    src/ytdlp.cpp
@@ -84,10 +86,15 @@ qt_add_qml_module(monolist
         components/ChoiceChip.qml
         components/TrackMenu.qml
         components/QueuePanel.qml
+        components/CardShelf.qml
+        components/ActionButton.qml
+        components/WindowButtons.qml
+        components/WindowDragArea.qml
         views/HomeView.qml
         views/SearchView.qml
         views/LibraryView.qml
         views/DownloadsView.qml
+        views/PageView.qml
     RESOURCES
         Icons.js
         # Bundled so the design renders identically on Windows, macOS and Linux
@@ -114,6 +121,11 @@ if(MONOLIST_NO_MPV)
     target_compile_definitions(monolist PRIVATE MONOLIST_NO_MPV)
 else()
     target_link_libraries(monolist PRIVATE Mpv::Mpv)
+endif()
+
+if(WIN32)
+    # WindowChrome: the drop shadow and square corners of the caption-less frame.
+    target_link_libraries(monolist PRIVATE dwmapi)
 endif()
 
 # On Windows the app is a GUI binary; keep the console attached in debug builds

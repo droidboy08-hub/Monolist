@@ -27,6 +27,7 @@ Rectangle {
             width: parent.width
             height: width
             source: root.artwork
+            colour: hover.hovered
         }
 
         Column {
@@ -69,7 +70,7 @@ Rectangle {
         Text {
             anchors.left: parent.left
             anchors.bottom: parent.bottom
-            text: root.year + " · " + root.format
+            text: [root.year, root.format].filter(function(part) { return part.length > 0 }).join(" · ")
             font.family: Theme.fontFamily
             font.pixelSize: 11
             font.letterSpacing: Theme.tracking(11, 0.1)

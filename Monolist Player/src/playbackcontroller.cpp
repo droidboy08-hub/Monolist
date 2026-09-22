@@ -7,6 +7,7 @@
 
 #include <QAbstractItemModel>
 #include <QFileInfo>
+#include <QSqlError>
 #include <QSqlQuery>
 #include <QVariant>
 
@@ -476,12 +477,13 @@ void PlaybackController::recordHistory(const QVariantMap &track)
         "   artwork = excluded.artwork, duration_ms = excluded.duration_ms,"
         "   played_at = datetime('now'), play_count = play_count + 1"));
     recent.addBindValue(videoId);
-    recent.addBindValue(track.value(QStringLiteral("title")).toString());
-    recent.addBindValue(track.value(QStringLiteral("artist")).toString());
-    recent.addBindValue(track.value(QStringLiteral("album")).toString());
-    recent.addBindValue(track.value(QStringLiteral("artwork")).toString());
+    recent.addBindValue(AppDatabase::text(track.value(QStringLiteral("title")).toString()));
+    recent.addBindValue(AppDatabase::text(track.value(QStringLiteral("artist")).toString()));
+    recent.addBindValue(AppDatabase::text(track.value(QStringLiteral("album")).toString()));
+    recent.addBindValue(AppDatabase::text(track.value(QStringLiteral("artwork")).toString()));
     recent.addBindValue(track.value(QStringLiteral("durationMs")).toLongLong());
-    recent.exec();
+    if (!recent.exec())
+        qWarning("Monolist: could not record a play: %s", qPrintable(recent.lastError().text()));
 }
 
 // Everything that decides *where* audio comes from lives here; the rest of the
@@ -507,12 +509,14 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
     m_autoPlayAfterResolve = autoPlay;
     setDuration(track.value(QStringLiteral("durationMs")).toLongLong());
 
+    // Before announcing the track, so anything that reloads history on the
+    // announcement already finds it there.
+    if (autoPlay)
+        recordHistory(m_currentTrack);
+
     Q_EMIT currentTrackChanged();
     Q_EMIT positionChanged();
     refreshFavourite();
-
-    if (autoPlay)
-        recordHistory(m_currentTrack);
 
     if (!engineAvailable()) {
         setStatus(QStringLiteral("Audio engine unavailable"), QString(), false);

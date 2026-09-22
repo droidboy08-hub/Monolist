@@ -22,17 +22,23 @@ Rectangle {
     }
 
     // — brand —
+    // Level with the top bar, and like it a part of the window's title bar.
     Item {
         id: brand
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.rightMargin: Theme.ruleWidth
-        height: 76
+        height: Theme.titleBarHeight
+
+        WindowDragArea {
+            anchors.fill: parent
+        }
 
         Row {
             anchors.left: parent.left
-            anchors.leftMargin: Theme.space6
+            // macOS keeps its traffic lights here.
+            anchors.leftMargin: Theme.space6 + Chrome.nativeButtonsInset
             anchors.verticalCenter: parent.verticalCenter
             spacing: Theme.space2
 

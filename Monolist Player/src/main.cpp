@@ -4,10 +4,14 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQuickStyle>
+#include <QSqlError>
+#include <QSqlQuery>
 #include <QTimer>
+#include <QWindow>
 
 #include "appdatabase.h"
 #include "artworkcache.h"
+#include "catalog.h"
 #include "downloadmanager.h"
 #include "library.h"
 #include "mediaextractor.h"
@@ -15,6 +19,7 @@
 #include "playbackcontroller.h"
 #include "streamresolver.h"
 #include "trackmodel.h"
+#include "windowchrome.h"
 #include "ytdlp.h"
 
 #include <memory>
@@ -87,6 +92,13 @@ int main(int argc, char *argv[])
 
     MediaExtractor extractor;
 
+    // Home's content: YouTube Music's feed and new releases, fetched once at
+    // start, and the songs played lately, refreshed whenever one starts.
+    Catalog catalog;
+    catalog.refresh();
+    catalog.reloadRecent();
+    QObject::connect(&player, &PlaybackController::currentTrackChanged, &catalog, &Catalog::reloadRecent);
+
     // A completed download becomes a library row; reload so it is playable
     // straight away rather than after a restart.
     QObject::connect(&downloads, &DownloadManager::libraryChanged,
@@ -107,6 +119,9 @@ int main(int argc, char *argv[])
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Extractor", &extractor);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Downloads", &downloads);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Palette",   &palette);
+    qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Catalog",   &catalog);
+    WindowChrome chrome;
+    qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Chrome",    &chrome);
     qmlRegisterUncreatableType<SearchResultModel>(
         "Monolist.Backend", 1, 0, "SearchResultModel",
         QStringLiteral("Obtained from Extractor.results"));
@@ -148,6 +163,13 @@ int main(int argc, char *argv[])
     }
 
     qmlEngine.loadFromModule("Monolist", "Main");
+
+    // The window is created hidden, so that it loses the system title bar
+    // before it is ever drawn with one.
+    if (auto *window = qobject_cast<QWindow *>(qmlEngine.rootObjects().value(0))) {
+        chrome.attach(window);
+        window->show();
+    }
 
     // --play <videoId> [seconds]
     //
@@ -207,6 +229,21 @@ int main(int argc, char *argv[])
             qWarning("selftest: done, quitting");
             QCoreApplication::quit();
         });
+    }
+
+    // --diag: what the local database holds, for support and for checking a
+    // change end to end. Quits straight away.
+    if (args.contains(QStringLiteral("--diag"))) {
+        QSqlQuery count(AppDatabase::connection());
+        for (const char *table : { "tracks", "downloads", "recent", "history", "settings" }) {
+            const QString name = QString::fromLatin1(table);
+            const bool ok = count.exec(QStringLiteral("SELECT COUNT(*) FROM %1").arg(name)) && count.next();
+            qWarning("diag: %-9s %s", table, ok ? qPrintable(count.value(0).toString())
+                                               : qPrintable(count.lastError().text()));
+        }
+        qWarning("diag: database %s", qPrintable(AppDatabase::databaseFilePath()));
+        qWarning("diag: recently played in the catalog: %d", catalog.recent()->rowCount());
+        QTimer::singleShot(0, &app, []() { QCoreApplication::quit(); });
     }
 
     // --search "<query>"

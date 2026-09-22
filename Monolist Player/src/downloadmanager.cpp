@@ -7,6 +7,7 @@
 #include <QFileInfo>
 #include <QProcess>
 #include <QRegularExpression>
+#include <QSqlError>
 #include <QSqlQuery>
 #include <QStandardPaths>
 #include <QUrl>
@@ -521,13 +522,14 @@ void DownloadManager::recordStored(const DownloadQueueModel::Item &item, const Q
         "   bytes = excluded.bytes,"
         "   downloaded_at = datetime('now')"));
     query.addBindValue(item.videoId);
-    query.addBindValue(item.title);
-    query.addBindValue(item.artist);
-    query.addBindValue(item.artwork);
+    query.addBindValue(AppDatabase::text(item.title));
+    query.addBindValue(AppDatabase::text(item.artist));
+    query.addBindValue(AppDatabase::text(item.artwork));
     query.addBindValue(item.durationMs);
     query.addBindValue(path);
     query.addBindValue(QFileInfo(path).size());
-    query.exec();
+    if (!query.exec())
+        qWarning("Monolist: could not record a download: %s", qPrintable(query.lastError().text()));
 
     // Keep the main track list in step so a downloaded item is playable from
     // the library without a restart: an existing row now points at the file,
@@ -546,12 +548,13 @@ void DownloadManager::recordStored(const DownloadQueueModel::Item &item, const Q
         "INSERT INTO tracks (position, title, artist, album, duration_ms, source_url, source_id, artwork, favourite)"
         " SELECT (SELECT COALESCE(MAX(position) + 1, 0) FROM tracks), ?, ?, '', ?, ?, ?, ?, 0"
         " WHERE NOT EXISTS (SELECT 1 FROM tracks WHERE source_id = ?)"));
-    track.addBindValue(item.title);
-    track.addBindValue(item.artist);
+    track.addBindValue(AppDatabase::text(item.title));
+    track.addBindValue(AppDatabase::text(item.artist));
     track.addBindValue(item.durationMs);
     track.addBindValue(path);
     track.addBindValue(item.videoId);
-    track.addBindValue(item.artwork);
+    track.addBindValue(AppDatabase::text(item.artwork));
     track.addBindValue(item.videoId);
-    track.exec();
+    if (!track.exec())
+        qWarning("Monolist: could not add a download to the library: %s", qPrintable(track.lastError().text()));
 }

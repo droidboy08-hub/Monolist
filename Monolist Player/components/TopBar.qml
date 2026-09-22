@@ -24,7 +24,7 @@ Rectangle {
     signal searchActivated(string term)
 
     color: Theme.bg
-    implicitHeight: 64
+    implicitHeight: Theme.titleBarHeight
 
     function pickSuggestion(text) {
         searchField.text = text
@@ -44,6 +44,12 @@ Rectangle {
 
     onShowSuggestionsChanged: showSuggestions ? suggestionPopup.open() : suggestionPopup.close()
 
+    // The bar is the window's title bar: its empty parts move the window.
+    // First, so the buttons and the search field sit above it.
+    WindowDragArea {
+        anchors.fill: parent
+    }
+
     Rectangle {
         anchors.bottom: parent.bottom
         width: parent.width
@@ -51,10 +57,20 @@ Rectangle {
         color: Theme.divider
     }
 
+    WindowButtons {
+        id: windowButtons
+        visible: !Chrome.nativeButtons
+        anchors.top: parent.top
+        anchors.right: parent.right
+        height: parent.height - Theme.ruleWidth
+    }
+
     Row {
         id: leftGroup
         anchors.left: parent.left
-        anchors.leftMargin: Theme.space8
+        // With the sidebar folded away this bar starts at the window's edge,
+        // where macOS keeps its traffic lights.
+        anchors.leftMargin: Theme.space8 + (root.showMenuButton ? Chrome.nativeButtonsInset : 0)
         anchors.verticalCenter: parent.verticalCenter
         spacing: Theme.space2
 
@@ -92,8 +108,8 @@ Rectangle {
 
     Rectangle {
         id: searchBox
-        anchors.right: parent.right
-        anchors.rightMargin: Theme.space8
+        anchors.right: windowButtons.visible ? windowButtons.left : parent.right
+        anchors.rightMargin: windowButtons.visible ? Theme.space6 : Theme.space8
         anchors.verticalCenter: parent.verticalCenter
         width: Math.min(360, Math.max(200, root.width * 0.28))
         height: 36

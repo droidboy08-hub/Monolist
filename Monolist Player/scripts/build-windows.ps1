@@ -83,29 +83,98 @@ if ($NoMpv) {
 }
 
 Write-Host "Source: $source`nBuild:  $buildDir" -ForegroundColor Cyan
+
+# The app may be open while it is rebuilt, being tried out. Windows will not
+# let the linker overwrite a running exe, but it will rename one: the running
+# copy is moved aside and keeps playing, and the next start gets the new build.
+# Copies moved aside earlier are removed once nothing is running them.
+$exe = Join-Path $buildDir 'monolist.exe'
+if (Test-Path -LiteralPath $buildDir) {
+    Get-ChildItem -LiteralPath $buildDir -Filter 'monolist.*.running.exe' | ForEach-Object {
+        try { Remove-Item -LiteralPath $_.FullName -Force -ErrorAction Stop } catch { }
+    }
+}
+
+function Move-RunningExeAside {
+    if (-not (Test-Path -LiteralPath $exe)) { return $false }
+    try {
+        [IO.File]::Open($exe, 'Open', 'ReadWrite', 'None').Dispose()
+        return $false
+    } catch {
+        $aside = 'monolist.{0}.running.exe' -f (Get-Date -Format 'yyyyMMdd-HHmmss')
+        Rename-Item -LiteralPath $exe -NewName $aside
+        Write-Host "monolist.exe is running; moved it aside as $aside so it can keep playing." -ForegroundColor Yellow
+        return $true
+    }
+}
+$null = Move-RunningExeAside
+
 & cmake @configure
 if ($LASTEXITCODE -ne 0) { throw 'CMake configure failed.' }
 & cmake --build $buildDir --parallel
-if ($LASTEXITCODE -ne 0) { throw 'Build failed.' }
+if ($LASTEXITCODE -ne 0) {
+    # Started while this build compiled: move it aside now and link again.
+    if (Move-RunningExeAside) { & cmake --build $buildDir --parallel }
+    if ($LASTEXITCODE -ne 0) { throw 'Build failed.' }
+}
+
+# A QML mistake — a property that does not exist, a missing type, a required
+# property left unset — only surfaces when its view loads, as a blank window.
+# The linter finds them now. Its "unqualified" and backend "import" notes come
+# from the C++ singletons being registered at run time, and are not errors.
+$lint = & cmake --build $buildDir --target monolist_qmllint 2>&1 | ForEach-Object { "$_" }
+$problems = @($lint | Where-Object {
+    $_ -match '\[([a-z-]+)\]\s*$' -and $Matches[1] -notin @('unqualified', 'import', 'unused-imports')
+})
+if ($problems.Count -gt 0) {
+    $problems | ForEach-Object { Write-Host $_ -ForegroundColor Red }
+    throw "QML lint found $($problems.Count) problem(s)."
+}
 
 # --------------------------------------------------------------------- deploy
 
-$exe = Join-Path $buildDir 'monolist.exe'
+# Puts `from` at `to`, leaving an identical file alone — the usual case, and the
+# only safe one while the app is open with it loaded. A changed file that is in
+# use is moved aside first, as the exe is above.
+function Install-File([string] $from, [string] $to, [switch] $HardLink) {
+    if (Test-Path -LiteralPath $to) {
+        $source = Get-Item -LiteralPath $from
+        $target = Get-Item -LiteralPath $to
+        if ($source.Length -eq $target.Length -and $source.LastWriteTimeUtc -eq $target.LastWriteTimeUtc) { return }
+        try {
+            Remove-Item -LiteralPath $to -Force -ErrorAction Stop
+        } catch {
+            $aside = '{0}.{1}.running{2}' -f [IO.Path]::GetFileNameWithoutExtension($to),
+                     (Get-Date -Format 'yyyyMMdd-HHmmss'), [IO.Path]::GetExtension($to)
+            Rename-Item -LiteralPath $to -NewName $aside
+        }
+    }
+    if ($HardLink) {
+        try {
+            New-Item -ItemType HardLink -Path $to -Target $from -ErrorAction Stop | Out-Null
+            return
+        } catch { }   # another volume: copy instead
+    }
+    Copy-Item -LiteralPath $from -Destination $to
+}
+
 # windeployqt reads the build type from the binary; MinGW Qt has one set of DLLs.
 & windeployqt --qmldir $source --no-translations $exe
 if ($LASTEXITCODE -ne 0) { throw 'windeployqt failed.' }
 if (-not $NoMpv) {
     $mpvDll = Get-ChildItem -LiteralPath $mpvRoot -Recurse -Filter 'libmpv*.dll' | Select-Object -First 1
     if (-not $mpvDll) { throw "No libmpv DLL under $mpvRoot." }
-    Copy-Item -LiteralPath $mpvDll.FullName -Destination $buildDir -Force
+    Install-File $mpvDll.FullName (Join-Path $buildDir $mpvDll.Name)
 }
 
 # The runtime tools go in tools\ beside the exe, where the app looks first, so
 # the build also runs when started directly rather than through -Run. Hard links
-# cost no space and are refreshed on every build; a copy is the fallback when
-# the build is on another volume.
+# cost no space; a copy is the fallback when the build is on another volume.
 $toolsOut = Join-Path $buildDir 'tools'
 New-Item -ItemType Directory -Force -Path $toolsOut | Out-Null
+Get-ChildItem -LiteralPath $toolsOut -Filter '*.running.*' | ForEach-Object {
+    try { Remove-Item -LiteralPath $_.FullName -Force -ErrorAction Stop } catch { }
+}
 
 # yt-dlp is a folder (the exe and its _internal runtime), so it is joined in as
 # a directory junction. Removing a junction removes only the link.
@@ -113,21 +182,16 @@ $ytdlpDir = Join-Path $InstallRoot 'yt-dlp'
 $ytdlpLink = Join-Path $toolsOut 'yt-dlp'
 $staleSingleFile = Join-Path $toolsOut 'yt-dlp.exe'   # from builds before the unpacked yt-dlp
 if (Test-Path -LiteralPath $staleSingleFile) { Remove-Item -LiteralPath $staleSingleFile -Force }
-if (Test-Path -LiteralPath $ytdlpLink) { [IO.Directory]::Delete($ytdlpLink, $false) }
-if (Test-Path -LiteralPath (Join-Path $ytdlpDir 'yt-dlp.exe')) {
+$ytdlpExists = Test-Path -LiteralPath (Join-Path $ytdlpDir 'yt-dlp.exe')
+$linkIsCurrent = (Test-Path -LiteralPath $ytdlpLink) -and ((Get-Item -LiteralPath $ytdlpLink).Target -contains $ytdlpDir)
+if ($ytdlpExists -and -not $linkIsCurrent) {
+    if (Test-Path -LiteralPath $ytdlpLink) { [IO.Directory]::Delete($ytdlpLink, $false) }
     New-Item -ItemType Junction -Path $ytdlpLink -Target $ytdlpDir | Out-Null
 }
 
 foreach ($tool in 'ffmpeg.exe', 'ffprobe.exe', 'deno.exe') {
     $from = Join-Path $binDir $tool
-    if (-not (Test-Path -LiteralPath $from)) { continue }
-    $to = Join-Path $toolsOut $tool
-    if (Test-Path -LiteralPath $to) { Remove-Item -LiteralPath $to -Force }
-    try {
-        New-Item -ItemType HardLink -Path $to -Target $from -ErrorAction Stop | Out-Null
-    } catch {
-        Copy-Item -LiteralPath $from -Destination $to
-    }
+    if (Test-Path -LiteralPath $from) { Install-File $from (Join-Path $toolsOut $tool) -HardLink }
 }
 Write-Host "`nBuilt $exe" -ForegroundColor Green
 

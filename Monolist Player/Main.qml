@@ -12,7 +12,9 @@ ApplicationWindow {
     height: 945
     minimumWidth: 480
     minimumHeight: 560
-    visible: true
+    // Shown from C++ once WindowChrome has replaced the system title bar, so
+    // the window is never drawn with one.
+    visible: false
     title: "Monolist"
     color: Theme.bg
 
@@ -27,7 +29,21 @@ ApplicationWindow {
     Component.onCompleted: {
         if (initialQuery.length > 0)
             topBar.searchText = initialQuery
+        openCurrentPage()
     }
+
+    // An album or playlist is a view like any other ("page:<browse id>"), so
+    // back and forward step through the pages that were opened.
+    function openPage(browseId) {
+        navigate("page:" + browseId)
+    }
+
+    function openCurrentPage() {
+        if (currentView.indexOf("page:") === 0)
+            Catalog.openPage(currentView.substring(5))
+    }
+
+    onCurrentViewChanged: openCurrentPage()
 
     // Below this width the sidebar leaves the layout and becomes an overlay —
     // the only concession the design makes to narrow windows.
@@ -59,7 +75,9 @@ ApplicationWindow {
     function breadcrumbText() {
         var label = currentView === "home" ? "HOME"
                   : currentView === "search" ? "SEARCH"
-                  : currentView === "downloads" ? "DOWNLOADS" : "YOUR LIBRARY";
+                  : currentView === "downloads" ? "DOWNLOADS"
+                  : currentView.indexOf("page:") === 0 ? (Catalog.page.type === "playlist" ? "PLAYLIST" : "ALBUM")
+                  : "YOUR LIBRARY";
         return label + " / " + Qt.formatDate(new Date(), "dddd d MMMM yyyy").toUpperCase();
     }
 
@@ -81,11 +99,26 @@ ApplicationWindow {
             onViewRequested: function(view) { window.navigate(view) }
         }
 
+        // The top bar spans to the window's right edge, so its window buttons
+        // keep the top-right corner whether or not the queue is open.
+        TopBar {
+            id: topBar
+            anchors.top: parent.top
+            anchors.left: dockedSidebar.right
+            anchors.right: parent.right
+            breadcrumb: window.breadcrumbText()
+            showMenuButton: !window.sidebarDocked
+            onMenuRequested: overlaySidebar.visible = true
+            onBackRequested: window.goBack()
+            onForwardRequested: window.goForward()
+            onSearchActivated: function(term) { window.navigate("search") }
+        }
+
         QueuePanel {
             id: queuePanel
             visible: window.queueOpen
             width: visible ? Math.min(380, Math.max(300, window.width * 0.26)) : 0
-            anchors.top: parent.top
+            anchors.top: topBar.bottom
             anchors.bottom: parent.bottom
             anchors.right: parent.right
             onCloseRequested: window.queueOpen = false
@@ -95,33 +128,26 @@ ApplicationWindow {
             id: mainArea
             anchors.left: dockedSidebar.right
             anchors.right: queuePanel.visible ? queuePanel.left : parent.right
-            anchors.top: parent.top
+            anchors.top: topBar.bottom
             anchors.bottom: parent.bottom
-
-            TopBar {
-                id: topBar
-                anchors.top: parent.top
-                anchors.left: parent.left
-                anchors.right: parent.right
-                breadcrumb: window.breadcrumbText()
-                showMenuButton: !window.sidebarDocked
-                onMenuRequested: overlaySidebar.visible = true
-                onBackRequested: window.goBack()
-                onForwardRequested: window.goForward()
-                onSearchActivated: function(term) { window.navigate("search") }
-            }
 
             Item {
                 id: viewStack
-                anchors.top: topBar.bottom
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.bottom: parent.bottom
+                anchors.fill: parent
 
                 HomeView {
                     anchors.fill: parent
                     visible: window.currentView === "home"
-                    onViewRequested: function(view) { window.navigate(view) }
+                    onPageRequested: function(browseId) { window.openPage(browseId) }
+                    onSearchRequested: function(term) {
+                        topBar.searchText = term
+                        window.navigate("search")
+                    }
+                }
+
+                PageView {
+                    anchors.fill: parent
+                    visible: window.currentView.indexOf("page:") === 0
                 }
 
                 SearchView {
@@ -171,6 +197,46 @@ ApplicationWindow {
         showCloseButton: true
         onCloseRequested: visible = false
         onViewRequested: function(view) { window.navigate(view) }
+    }
+
+    // — resize edges —
+    // Only where the platform frame is gone entirely (Linux): the edges resize
+    // through the compositor, as a frame would. Windows and macOS keep their
+    // own.
+    Loader {
+        anchors.fill: parent
+        z: 1000
+        active: Chrome.drawsResizeEdges && window.visibility !== Window.Maximized
+                && window.visibility !== Window.FullScreen
+        sourceComponent: Item {
+            id: edges
+
+            readonly property int grip: 6
+
+            component Edge: MouseArea {
+                property int edges: 0
+                hoverEnabled: true
+                acceptedButtons: Qt.LeftButton
+                onPressed: window.startSystemResize(edges)
+            }
+
+            Edge { edges: Qt.LeftEdge; cursorShape: Qt.SizeHorCursor
+                   x: 0; y: edges.grip; width: edges.grip; height: parent.height - edges.grip * 2 }
+            Edge { edges: Qt.RightEdge; cursorShape: Qt.SizeHorCursor
+                   x: parent.width - edges.grip; y: edges.grip; width: edges.grip; height: parent.height - edges.grip * 2 }
+            Edge { edges: Qt.TopEdge; cursorShape: Qt.SizeVerCursor
+                   x: edges.grip; y: 0; width: parent.width - edges.grip * 2; height: edges.grip }
+            Edge { edges: Qt.BottomEdge; cursorShape: Qt.SizeVerCursor
+                   x: edges.grip; y: parent.height - edges.grip; width: parent.width - edges.grip * 2; height: edges.grip }
+            Edge { edges: Qt.TopEdge | Qt.LeftEdge; cursorShape: Qt.SizeFDiagCursor
+                   x: 0; y: 0; width: edges.grip; height: edges.grip }
+            Edge { edges: Qt.BottomEdge | Qt.RightEdge; cursorShape: Qt.SizeFDiagCursor
+                   x: parent.width - edges.grip; y: parent.height - edges.grip; width: edges.grip; height: edges.grip }
+            Edge { edges: Qt.TopEdge | Qt.RightEdge; cursorShape: Qt.SizeBDiagCursor
+                   x: parent.width - edges.grip; y: 0; width: edges.grip; height: edges.grip }
+            Edge { edges: Qt.BottomEdge | Qt.LeftEdge; cursorShape: Qt.SizeBDiagCursor
+                   x: 0; y: parent.height - edges.grip; width: edges.grip; height: edges.grip }
+        }
     }
 
     // — keyboard —

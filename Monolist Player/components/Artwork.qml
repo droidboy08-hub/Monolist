@@ -4,11 +4,14 @@ import Monolist
 
 // Cover slot. Photographs print black and white in this system, so any
 // supplied artwork is desaturated; with no source it stays a flat plate.
+// `colour` lets a cover bloom into colour: under the pointer, or when it is
+// the cover a whole page is about.
 Rectangle {
     id: root
 
     property string source: ""
     property string placeholder: "Album art"
+    property bool colour: false
 
     color: Theme.neutral300
     clip: true
@@ -37,8 +40,12 @@ Rectangle {
     MultiEffect {
         anchors.fill: parent
         source: image
-        saturation: -1.0
+        saturation: root.colour ? 0.0 : -1.0
         visible: image.status === Image.Ready
+
+        Behavior on saturation {
+            NumberAnimation { duration: 240; easing.type: Easing.OutCubic }
+        }
     }
 
     Text {

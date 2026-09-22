@@ -44,6 +44,9 @@ QtObject {
     // — layout —
     readonly property int sidebarWidth: 296
     readonly property int playerBarHeight: 84
+    // The top strip — the sidebar's brand and the top bar — is the title bar.
+    readonly property int titleBarHeight: 64
+    readonly property int captionButtonWidth: 46
     readonly property int sidebarBreakpoint: 900
     readonly property int wideBreakpoint: 1180
 

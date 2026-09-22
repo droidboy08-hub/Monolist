@@ -4,10 +4,14 @@ import Monolist
 import Monolist.Backend
 import "../components"
 
+// Home: what is new, what to play next, and what you played. The content is
+// YouTube Music's own feed, set in the system's type — the newest release on
+// the red poster, then numbered sections in reading order.
 Flickable {
     id: root
 
-    signal viewRequested(string view)
+    signal pageRequested(string browseId)
+    signal searchRequested(string term)
 
     contentWidth: width
     contentHeight: column.implicitHeight
@@ -20,6 +24,48 @@ Flickable {
         contentItem: Rectangle { color: Theme.neutral300 }
     }
 
+    // Sections are numbered in reading order, whichever of them have content.
+    readonly property bool hasPicks: Catalog.quickPicks.count > 0
+    readonly property bool hasRecent: Catalog.recent.count > 0
+    readonly property int shelfBase: (hasPicks ? 1 : 0) + (hasRecent ? 1 : 0)
+
+    function pad(n) { return n < 10 ? "0" + n : String(n) }
+
+    function openCard(card) {
+        if (card.type === "album" || card.type === "playlist")
+            pageRequested(card.browseId)
+        else if (card.type === "artist")
+            searchRequested(card.title)
+        else if (card.videoId)
+            Player.playSource(card.videoId, card.title, card.subtitle, card.artwork)
+    }
+
+    // The number, the title and the table, with the rule under it.
+    component TrackSection: Column {
+        property string number: ""
+        property string title: ""
+        property var model: null
+
+        x: Theme.space8
+        width: root.width - Theme.space8 * 2
+        topPadding: Theme.space8
+        bottomPadding: Theme.space8
+        spacing: Theme.space6
+
+        SectionHeader {
+            width: parent.width
+            number: parent.number
+            title: parent.title
+        }
+
+        TrackTable {
+            width: parent.width
+            model: parent.model
+            showDownloads: true
+            onTrackActivated: function(index) { Player.playModel(model, index) }
+        }
+    }
+
     Column {
         id: column
         width: root.width
@@ -27,88 +73,107 @@ Flickable {
 
         PosterHero {
             width: parent.width
-            visible: Library.featured.titleLine1 !== undefined
-            kicker: Library.featured.kicker !== undefined ? Library.featured.kicker : ""
-            titleLine1: Library.featured.titleLine1 !== undefined ? Library.featured.titleLine1 : ""
-            titleLine2: Library.featured.titleLine2 !== undefined ? Library.featured.titleLine2 : ""
-            meta: Library.featured.meta !== undefined ? Library.featured.meta : ""
-            onPlayRequested: Player.playModel(Library.tracks, 0)
+            visible: Catalog.featured.title !== undefined
+            kicker: "NEW RELEASE"
+            titleLine1: Catalog.featured.title !== undefined ? Catalog.featured.title : ""
+            meta: Catalog.featured.subtitle !== undefined ? Catalog.featured.subtitle : ""
+            artwork: Catalog.featured.artwork !== undefined ? Catalog.featured.artwork : ""
+            buttonText: "Open album"
+            onPlayRequested: root.pageRequested(Catalog.featured.browseId)
         }
 
-        // — 01 recently played —
-        Item {
-            width: parent.width
-            height: albumSection.height + Theme.space8 * 2
+        // — while the feed loads, or when it cannot —
+        Text {
+            visible: Catalog.loading && Catalog.shelves.length === 0 && !root.hasPicks
+            x: Theme.space8
+            topPadding: Theme.space8
+            text: "Loading YouTube Music…"
+            font.family: Theme.fontFamily
+            font.pixelSize: 14
+            color: Theme.neutral700
+        }
 
-            Column {
-                id: albumSection
-                x: Theme.space8
-                y: Theme.space8
-                width: parent.width - Theme.space8 * 2
-                spacing: Theme.space6
+        Row {
+            visible: !Catalog.loading && Catalog.error.length > 0
+            x: Theme.space8
+            topPadding: Theme.space8
+            spacing: Theme.space4
 
-                SectionHeader {
-                    width: parent.width
-                    number: "01"
-                    title: "Recently played"
-                    action: "SHOW ALL →"
-                    onActionTriggered: root.viewRequested("library")
-                }
+            Text {
+                width: Math.min(implicitWidth, root.width - Theme.space8 * 2 - 80)
+                text: "YouTube Music did not answer: " + Catalog.error
+                wrapMode: Text.WordWrap
+                font.family: Theme.fontFamily
+                font.pixelSize: 13
+                color: Theme.accent700
+            }
+            Text {
+                text: "RETRY"
+                font.family: Theme.fontFamily
+                font.pixelSize: 12
+                font.weight: Font.Bold
+                font.letterSpacing: Theme.tracking(12, 0.12)
+                color: retryHover.hovered ? Theme.accent700 : Theme.text
 
-                Grid {
-                    id: albumGrid
-                    width: parent.width
-                    columns: Math.max(1, Math.min(4, Math.floor((width + Theme.space6) / (200 + Theme.space6))))
-                    columnSpacing: Theme.space6
-                    rowSpacing: Theme.space6
-
-                    Repeater {
-                        model: Library.albums
-
-                        delegate: AlbumCard {
-                            width: (albumGrid.width - (albumGrid.columns - 1) * Theme.space6) / albumGrid.columns
-                            title: model.title
-                            artist: model.artist
-                            year: model.year
-                            format: model.format
-                            artwork: model.artwork
-                            onPlayRequested: Player.playModel(Library.tracks, Math.min(model.index, Library.tracks.count - 1))
-                        }
-                    }
-                }
+                HoverHandler { id: retryHover; cursorShape: Qt.PointingHandCursor }
+                TapHandler { onTapped: Catalog.refresh() }
             }
         }
 
+        // — quick picks —
+        TrackSection {
+            visible: root.hasPicks
+            number: "01"
+            title: Catalog.quickPicksTitle.length > 0 ? Catalog.quickPicksTitle : "Quick picks"
+            model: Catalog.quickPicks
+        }
+
         HRule {
+            visible: root.hasPicks && root.hasRecent
             x: Theme.space8
             width: parent.width - Theme.space8 * 2
         }
 
-        // — 02 in rotation —
-        Item {
-            width: parent.width
-            height: trackSection.height + Theme.space8 * 2 + 64
+        // — recently played —
+        TrackSection {
+            visible: root.hasRecent
+            number: root.pad(root.hasPicks ? 2 : 1)
+            title: "Recently played"
+            model: Catalog.recent
+        }
 
-            Column {
-                id: trackSection
-                x: Theme.space8
-                y: Theme.space8
-                width: parent.width - Theme.space8 * 2
-                spacing: Theme.space6
+        // — shelves: new releases, then the feed's own —
+        Repeater {
+            model: Catalog.shelves
 
-                SectionHeader {
-                    width: parent.width
-                    number: "02"
-                    title: "In rotation this week"
+            delegate: Column {
+                required property int index
+                required property var modelData
+
+                width: column.width
+
+                HRule {
+                    visible: parent.index > 0 || root.shelfBase > 0
+                    x: Theme.space8
+                    width: parent.width - Theme.space8 * 2
                 }
 
-                TrackTable {
-                    width: parent.width
-                    model: Library.tracks
-                    showDownloads: true
-                    onTrackActivated: function(index) { Player.playModel(Library.tracks, index) }
+                Item { width: 1; height: Theme.space8 }
+
+                CardShelf {
+                    x: Theme.space8
+                    width: parent.width - Theme.space8 * 2
+                    number: root.pad(root.shelfBase + parent.index + 1)
+                    title: parent.modelData.title
+                    strapline: parent.modelData.strapline
+                    items: parent.modelData.items
+                    onCardActivated: function(card) { root.openCard(card) }
                 }
+
+                Item { width: 1; height: Theme.space8 }
             }
         }
+
+        Item { width: 1; height: 64 }
     }
 }

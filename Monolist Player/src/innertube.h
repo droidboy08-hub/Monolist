@@ -6,6 +6,8 @@
 #include <QPointer>
 #include <QStringList>
 
+#include <functional>
+
 class QNetworkAccessManager;
 class QNetworkReply;
 
@@ -35,9 +37,47 @@ public:
         qint64 durationMs = 0;
     };
 
+    // An album, playlist, artist or video, as the home feed and charts show them.
+    struct Card {
+        QString type;       // "album", "playlist", "artist", "song" or "video"
+        QString browseId;   // albums, playlists, artists
+        QString videoId;    // songs, videos
+        QString title;
+        QString subtitle;   // "Album • Seth Ballad", "Nirvana, Radiohead, ..."
+        QString artwork;
+    };
+
+    // One row of a browse page: a run of songs (Quick picks) or of cards.
+    struct Shelf {
+        QString title;
+        QString strapline;  // the small line above the title
+        QList<Track> songs;
+        QList<Card> cards;
+    };
+
+    // An album or playlist page.
+    struct Collection {
+        QString browseId;
+        QString type;         // "album" or "playlist"
+        QString title;
+        QString subtitle;     // "Album • 2026"
+        QString artist;       // an album's artist line
+        QString details;      // "20 songs • 1 hour, 38 minutes"
+        QString description;
+        QString artwork;
+        QList<Track> tracks;
+    };
+
     enum class Filter { Songs, Videos };
 
     explicit InnerTube(QObject *parent = nullptr);
+
+    // One browse request (the home feed, charts, new releases, an album or a
+    // playlist); `done` gets the response, or an error. Any number can run.
+    void browse(const QString &browseId,
+                std::function<void(const QJsonObject &root, const QString &error)> done);
+    static QList<Shelf> parseShelves(const QJsonObject &root);
+    static Collection parseCollection(const QString &browseId, const QJsonObject &root);
 
     // A newer call of the same kind cancels the one still in flight. The kinds
     // are independent: a search starting must not cancel the suggestions for
