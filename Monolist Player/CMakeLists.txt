@@ -41,6 +41,7 @@ qt_add_executable(monolist
     src/mediaextractor.h           src/mediaextractor.cpp
     src/innertube.h                src/innertube.cpp
     src/catalog.h                  src/catalog.cpp
+    src/lyrics.h                   src/lyrics.cpp
     src/windowchrome.h             src/windowchrome.cpp
     # — backend merged in from the Melody player —
     ${MONOLIST_MPV_SOURCES}
@@ -97,12 +98,14 @@ qt_add_qml_module(monolist
         components/MonoMenuRule.qml
         components/PlaylistSubmenu.qml
         components/MonoScrollBar.qml
+        components/LyricsPane.qml
         views/HomeView.qml
         views/SearchView.qml
         views/LibraryView.qml
         views/DownloadsView.qml
         views/PageView.qml
         views/PlaylistView.qml
+        views/NowPlayingView.qml
     RESOURCES
         Icons.js
         # Bundled so the design renders identically on Windows, macOS and Linux

@@ -3,13 +3,14 @@
 The Phono interface design, driven by the Melody playback and extraction
 backend, rewritten in C++ against libmpv, yt-dlp and YouTube Music's own API.
 
-The interface is still the prototype's: every component, view, spacing token
-and breakpoint came from the Phono design, with the module renamed from `Phono`
-to `Monolist`. What was added on top of it is only what the backend needs to be
-usable — download controls on every track, a real Downloads page, search
-suggestions and a Songs / Videos switch. What changed underneath is everything:
-the simulated clock is gone, the mock extractor is gone, and the source ladder
-that Melody worked out in TypeScript now runs natively.
+The interface grew out of the Phono prototype and keeps its language: paper
+and ink, one signal red, 2px rules, square corners, Archivo, photographs in
+black and white except where a page is about one. On top of the prototype's
+empty screens it now has YouTube Music's home feed, album and playlist pages,
+a play queue with autoplay, the user's own playlists and likes, downloads, and
+a full-size Now Playing view with synced lyrics, in a window whose title bar is
+its own. Underneath, the simulated clock and the mock extractor are gone, and
+the source ladder that Melody worked out in TypeScript runs natively.
 
 ## What "merging the backend" actually meant
 
@@ -63,7 +64,7 @@ tier fails only when every host in it fails. The tier that won is surfaced to
 the UI as `Player.sourceLabel`.
 
 Resolved links are cached until the expiry YouTube signs into them, and the
-next track in the library is resolved in the background while the current one
+next song in the queue is resolved in the background while the current one
 plays, so replaying or skipping forward rarely waits on yt-dlp. A link that
 resolves but will not open in mpv is retried: a stale cached link is fetched
 fresh, anything else moves on to the next tier.
@@ -86,6 +87,44 @@ A finished download becomes a library row, so it plays offline straight away.
 Queue state, progress and the offline set are in `Downloads.queue` and
 `Downloads.library`; every track row asks `Downloads.stateFor(id)`.
 
+### Your library
+
+Kept in the local database and exposed as `Library`:
+
+* **Playlists** hold songs by video id, so any song can go in one, from any
+  song's menu (Add to playlist) or an album's (Add all to playlist). A playlist
+  page is an album page with a mosaic of its songs' covers; the name is renamed
+  in place and deleting is confirmed in place.
+* **Likes** are library rows with the favourite flag. Liking a song that is not
+  in the library adds it; unliking one that only the like put there takes it
+  out again. Liked songs lists them, the latest first.
+* **Saved albums and playlists** from YouTube Music, with Save on their pages.
+* **History**: every song played, the latest first, clearable.
+
+The sidebar shows Liked songs and the playlists, and the name the operating
+system knows the user by (the account's full name, else the login name),
+which the pencil there changes.
+
+### Lyrics
+
+`Lyrics` looks up the song playing while the Now Playing view shows them:
+
+1. **LRCLIB** (lrclib.net), an open database of time-synced lyrics, searched by
+   title and lead artist, the entry closest in length winning. Only an entry
+   within 3 s of the recording's length is trusted for timing; one within 20 s
+   is kept as plain text in case nothing better turns up.
+2. **YouTube Music's own lyrics**, plain text from its partners (Musixmatch,
+   LyricFind), credited as such.
+
+What was found, or that nothing was, is stored per video id; "none" is asked
+again after three days. Synced lines follow the playing position (a line lights
+150 ms early, as it starts), and clicking one plays from there. LRCLIB can be
+self-hosted; the `lrclib_url` setting points elsewhere.
+
+The Now Playing view prints the cover on a field of its own dominant colour
+(`CoverPalette`, measured from the cached artwork), with ink or paper type,
+whichever contrasts better.
+
 ## Layout
 
     CMakeLists.txt             build; finds Qt 6 and libmpv
@@ -97,30 +136,37 @@ Queue state, progress and the offline set are in `Downloads.queue` and
     Main.qml                 window, view switching, breakpoints, shortcuts
     Theme.qml                design tokens
     Icons.js                 Lucide glyph outlines as path data
-    components/              UI components: the prototype's, plus
-                             DownloadButton and ChoiceChip
-    views/                   HomeView, SearchView, LibraryView, DownloadsView
+    components/              UI components: the prototype's, and the menus,
+                             cards, queue panel, lyrics pane, title bar parts
+    views/                   Home, Search, Library, Downloads, Page (album or
+                             YouTube Music playlist), Playlist, Now Playing
 
     src/
       main.cpp               wiring; registers the QML singletons; self-tests
       appdatabase.*          SQLite schema, migrations
-      library.*              read models exposed to QML
+      library.*              the user's playlists, likes, saved albums, history
       playlistmodel.*  albummodel.*  trackmodel.*
 
       playbackcontroller.*   the facade QML binds to — driven by mpv
+      queuemodel.*           the play queue
       mpvengine.*            libmpv wrapper, audio-only
       mediaextractor.*       search: InnerTube first, yt-dlp as fallback
-      innertube.*            YouTube Music's API: search and suggestions
+      innertube.*            YouTube Music's API: search, suggestions, radio,
+                             browse pages, lyrics
+      catalog.*              Home's feed and album pages
+      lyrics.*               LRCLIB and YouTube Music lyrics, synced to playback
       ytdlp.*                QProcess wrapper around yt-dlp; finds FFmpeg and Deno
       streamresolver.*       the tiered source ladder and its link cache
       downloadmanager.*      offline library: queue, options, files, DB rows
       downloadmodels.*       the queue and offline-set models for QML
-      artworkcache.*         async disk-cached image provider + palette tool
+      artworkcache.*         async disk-cached image provider + cover colours
+      windowchrome.*         the window without the system title bar
 
 ### QML singletons
 
-`Library`, `Player`, `Extractor`, `Downloads` and `Palette`. The image provider
-registers as `image://artwork/<url>`.
+`Library`, `Player`, `Extractor`, `Downloads`, `Catalog`, `Lyrics`,
+`CoverPalette` and `Chrome`. The image provider registers as
+`image://artwork/<url>`.
 
 ## Build
 
@@ -218,18 +264,32 @@ The debug build keeps its console. Start it with `QT_FORCE_STDERR_LOGGING=1` to
 see the log there, and with `MONOLIST_MPV_LOG=warn` (or `info`, `v`) to add
 mpv's own messages.
 
-    monolist --play <videoId> [seconds] [--again]   resolve and play; --again replays from the cache
+    monolist --play <videoId> [seconds] [--again] [--at <s>]
+                                                    resolve and play; --again replays from the cache,
+                                                    --at jumps into the song
     monolist --download <videoId> [seconds]         one download through yt-dlp and FFmpeg
     monolist --search "<query>"                     one timed search, with suggestions
-    monolist --view downloads                       open on a view (home, search, library, downloads)
-    monolist --query "<text>"                       open on search with the text typed in
+    monolist --lyrics "<query>"                     lyrics for the first three results, then one from the store
+    monolist --library-test "<query>"               a playlist, likes and a saved album from a real search
+    monolist --diag                                 what the database holds
 
-Each quits by itself and reports on stderr.
+Each quits by itself and reports on stderr. These open the window as it would
+be, for a look at a state:
+
+    monolist --view <view>                          home, search, downloads, library[:albums|:history],
+                                                    page:<browse id>, playlist:<id>, playlist:liked
+    monolist --query "<text>"                       search, with the text typed in
+    monolist --open-queue  /  --now-playing         with the queue, or Now Playing, open
+    monolist --set <key> <value>                    write a setting first (lrclib_url, piped_instances,
+                                                    invidious_instances)
+
+`MONOLIST_DATA_DIR` keeps the database somewhere else, so a test never touches
+the real library.
 
 ## Storage
 
     downloads   <Music>/Monolist/<artist> - <title> [<id>].<ext>
-    database    <AppData>/monolist.db
+    database    <AppData>/monolist.db  (library, playlists, history, lyrics, settings)
     artwork     <Cache>/artwork  (256 MB cap)
 
 Downloads live in the user's real Music folder, the convention Melody settled
@@ -239,17 +299,16 @@ on, so they survive reinstalls and other players can see them.
 
 Builds and runs on Windows 11 (ARM64, through x64 emulation) with Qt 6.11.2 and
 MinGW 13.1. Verified end to end: InnerTube search and suggestions, streaming
-through yt-dlp, the link cache, downloads with tags and cover art, and offline
-playback.
+through yt-dlp, the link cache, downloads with tags and cover art, offline
+playback, the queue and autoplay radio, Home and album pages, playlists, likes
+and saved albums, and synced and plain lyrics.
 
-Known gaps, all on the interface side:
+Known gaps:
 
-* The play queue is the library. Playing a search result does not make the
-  results a queue, so Next moves on through the library.
-* Queue and device buttons in the player bar are still styled but unwired.
-* `PaletteTool` is registered and working but nothing tints itself from it yet.
-* The sidebar's account block and playlist list are prototype placeholders, and
-  the Library view shows albums only.
+* Artist pages: an artist card searches for the name instead.
+* The device button in the player bar is styled but unwired.
+* Songs in a playlist cannot yet be reordered.
+* macOS and Linux build from the same code but have not been run.
 
 ## About the Swift libraries
 

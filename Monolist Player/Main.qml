@@ -27,6 +27,8 @@ ApplicationWindow {
     property bool queueOpen: false
     // A playlist just made, whose page opens with its name ready to type.
     property int pendingRename: 0
+    // Now Playing covers everything above the player bar.
+    property bool nowPlayingOpen: false
 
     Component.onCompleted: {
         if (initialQuery.length > 0)
@@ -208,7 +210,31 @@ ApplicationWindow {
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         queueOpen: window.queueOpen
+        nowPlayingOpen: window.nowPlayingOpen
         onQueueToggled: window.queueOpen = !window.queueOpen
+        onNowPlayingToggled: window.nowPlayingOpen = !window.nowPlayingOpen
+    }
+
+    // — Now Playing: rises over everything above the player bar —
+    NowPlayingView {
+        id: nowPlaying
+        width: parent.width
+        height: playerBar.y
+        y: window.nowPlayingOpen ? 0 : height
+        visible: y < height
+        z: 800
+        onCloseRequested: window.nowPlayingOpen = false
+
+        Behavior on y {
+            NumberAnimation { duration: 320; easing.type: Easing.OutCubic }
+        }
+    }
+
+    // Lyrics are looked up only while they are on screen.
+    Binding {
+        target: Lyrics
+        property: "active"
+        value: window.nowPlayingOpen && nowPlaying.pane === "lyrics"
     }
 
     // — narrow-window sidebar —
@@ -297,5 +323,16 @@ ApplicationWindow {
     Shortcut { sequence: "Ctrl+Left"; onActivated: Player.previous() }
     // StandardKey.Find maps to several sequences (Ctrl+F, F3); `sequences`
     // binds all of them, `sequence` would silently take only the first.
-    Shortcut { sequences: [StandardKey.Find]; onActivated: window.navigate("search") }
+    Shortcut {
+        sequences: [StandardKey.Find]
+        onActivated: {
+            window.nowPlayingOpen = false
+            window.navigate("search")
+        }
+    }
+    Shortcut {
+        sequence: "Esc"
+        enabled: window.nowPlayingOpen
+        onActivated: window.nowPlayingOpen = false
+    }
 }

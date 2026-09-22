@@ -9,6 +9,9 @@ import Monolist.Backend
 Rectangle {
     id: root
 
+    // Off where the panel sits inside another view that has its own.
+    property bool showHead: true
+    property bool showRule: true
     signal closeRequested()
 
     color: Theme.bg
@@ -24,8 +27,9 @@ Rectangle {
     // — head, level with the top bar —
     Item {
         id: head
+        visible: root.showHead
         width: parent.width
-        height: 64
+        height: visible ? 64 : 0
 
         Text {
             anchors.left: parent.left
@@ -274,6 +278,7 @@ Rectangle {
 
     // The system's divider: a 2px rule down the left edge.
     Rectangle {
+        visible: root.showRule
         width: Theme.ruleWidth
         height: parent.height
         color: Theme.divider

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QColor>
+#include <QHash>
 #include <QImage>
 #include <QObject>
 #include <QQuickAsyncImageProvider>
@@ -32,6 +33,9 @@ class ArtworkFetcher : public QObject
 public:
     explicit ArtworkFetcher(QObject *parent = nullptr);
 
+    // With the artwork disk cache, for anything else that reads covers.
+    QNetworkAccessManager *network() const { return m_network; }
+
 public Q_SLOTS:
     void fetch(ArtworkResponse *response, const QString &source, const QSize &requestedSize);
 
@@ -61,11 +65,26 @@ class PaletteTool : public QObject
 {
     Q_OBJECT
 public:
-    explicit PaletteTool(QObject *parent = nullptr);
+    // `fetcher` supplies the network, and with it the artwork disk cache, so
+    // a cover already on screen is not downloaded again to be measured.
+    explicit PaletteTool(ArtworkFetcher *fetcher = nullptr, QObject *parent = nullptr);
 
-    // Accepts a local path, a file:// URL, or an already-cached artwork source.
-    // Returns an invalid colour when the image cannot be read.
+    // A local path or a file:// URL. Returns an invalid colour when the image
+    // cannot be read.
     Q_INVOKABLE QColor dominantColour(const QString &source) const;
 
+    // Any artwork, local or remote; the answer comes as colourReady, and not
+    // at all when the image cannot be read. Answers are remembered.
+    Q_INVOKABLE void request(const QString &source);
+
     static QColor dominantColour(const QImage &image);
+
+Q_SIGNALS:
+    void colourReady(const QString &source, const QColor &colour);
+
+private:
+    void answer(const QString &source, const QColor &colour);
+
+    ArtworkFetcher *m_fetcher;
+    QHash<QString, QColor> m_known;
 };

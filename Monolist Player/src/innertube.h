@@ -79,6 +79,13 @@ public:
     static QList<Shelf> parseShelves(const QJsonObject &root);
     static Collection parseCollection(const QString &browseId, const QJsonObject &root);
 
+    // A song's lyrics as YouTube Music shows them: plain text, from a partner
+    // it names ("Source: Musixmatch"). Two requests: the watch page says
+    // where the lyrics are, a browse fetches them. `done` gets empty text
+    // when the song has none, and an error only when a request failed.
+    void lyrics(const QString &videoId,
+                std::function<void(const QString &text, const QString &source, const QString &error)> done);
+
     // A newer call of the same kind cancels the one still in flight. The kinds
     // are independent: a search starting must not cancel the suggestions for
     // what is being typed.

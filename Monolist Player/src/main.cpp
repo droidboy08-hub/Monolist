@@ -14,6 +14,7 @@
 #include "catalog.h"
 #include "downloadmanager.h"
 #include "library.h"
+#include "lyrics.h"
 #include "mediaextractor.h"
 #include "mpvengine.h"
 #include "playbackcontroller.h"
@@ -68,6 +69,17 @@ int main(int argc, char *argv[])
     Library library;
     library.load();
 
+    // --set <key> <value>: writes one setting (piped_instances,
+    // invidious_instances, lrclib_url) before anything reads it.
+    {
+        const QStringList arguments = app.arguments();
+        for (int i = arguments.indexOf(QStringLiteral("--set")); i >= 0 && i + 2 < arguments.size();
+             i = arguments.indexOf(QStringLiteral("--set"), i + 1)) {
+            library.setSetting(arguments.at(i + 1), arguments.at(i + 2));
+            qWarning("Monolist: setting %s = %s", qPrintable(arguments.at(i + 1)), qPrintable(arguments.at(i + 2)));
+        }
+    }
+
     // — engines —
     MpvEngine engine;
     if (!engine.isValid())
@@ -92,6 +104,10 @@ int main(int argc, char *argv[])
 
     MediaExtractor extractor;
 
+    // Lyrics for the song playing, looked up while the Now Playing view shows.
+    Lyrics lyrics(&player);
+    lyrics.setLrclibUrl(library.settingValue(QStringLiteral("lrclib_url")));
+
     // Home's content: YouTube Music's feed and new releases, fetched once at
     // start, and the songs played lately, refreshed whenever one starts.
     Catalog catalog;
@@ -114,14 +130,16 @@ int main(int argc, char *argv[])
 
     // — QML —
     ArtworkFetcher artworkFetcher;
-    PaletteTool palette;
+    PaletteTool palette(&artworkFetcher);
 
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Library",   &library);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Player",    &player);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Extractor", &extractor);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Downloads", &downloads);
-    qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Palette",   &palette);
+    // Not "Palette": QtQuick has a type of that name, which would win.
+    qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "CoverPalette", &palette);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Catalog",   &catalog);
+    qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Lyrics",    &lyrics);
     WindowChrome chrome;
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Chrome",    &chrome);
     qmlRegisterUncreatableType<SearchResultModel>(
@@ -145,6 +163,9 @@ int main(int argc, char *argv[])
     qmlRegisterUncreatableType<TrackModel>(
         "Monolist.Backend", 1, 0, "TrackModel",
         QStringLiteral("Obtained from Library.tracks"));
+    qmlRegisterUncreatableType<LyricsModel>(
+        "Monolist.Backend", 1, 0, "LyricsModel",
+        QStringLiteral("Obtained from Lyrics.lines"));
 
     QQmlApplicationEngine qmlEngine;
     qmlEngine.addImageProvider(QStringLiteral("artwork"), new ArtworkCache(&artworkFetcher));
@@ -169,6 +190,8 @@ int main(int argc, char *argv[])
         }
         if (arguments.contains(QStringLiteral("--open-queue")))
             initial.insert(QStringLiteral("queueOpen"), true);
+        if (arguments.contains(QStringLiteral("--now-playing")))
+            initial.insert(QStringLiteral("nowPlayingOpen"), true);
         if (!initial.isEmpty())
             qmlEngine.setInitialProperties(initial);
     }
@@ -197,6 +220,26 @@ int main(int argc, char *argv[])
         // should start from the resolver's cache instead of from yt-dlp.
         const bool again = args.contains(QStringLiteral("--again"));
         auto clock = std::make_shared<QElapsedTimer>();
+        // A library song plays under its own name, so the lyrics can be found.
+        QVariantMap known;
+        if (const int row = library.tracks()->indexOfSource(videoId); row >= 0)
+            known = library.tracks()->get(row);
+        const QString title = known.value(QStringLiteral("title"), QStringLiteral("Selftest")).toString();
+        const QString artist = known.value(QStringLiteral("artist"), QStringLiteral("Selftest")).toString();
+        // --at <seconds> jumps there once the audio starts.
+        const int atFlag = args.indexOf(QStringLiteral("--at"));
+        const qint64 startAt = atFlag >= 0 && atFlag + 1 < args.size() ? args.at(atFlag + 1).toLongLong() * 1000 : 0;
+        if (startAt > 0) {
+            // Once the position moves: a seek sent before the stream is open
+            // is dropped.
+            auto jumped = std::make_shared<bool>(false);
+            QObject::connect(&player, &PlaybackController::positionChanged, &app, [&player, startAt, jumped]() {
+                if (*jumped || player.position() < 500)
+                    return;
+                *jumped = true;
+                player.setPosition(startAt);
+            });
+        }
 
         QObject::connect(&player, &PlaybackController::playbackError, &app,
                          [](const QString &reason) {
@@ -207,16 +250,21 @@ int main(int argc, char *argv[])
                      qPrintable(player.statusText()), qPrintable(player.sourceLabel()));
         });
 
-        QTimer::singleShot(500, &app, [&player, videoId, clock]() {
+        const auto start = [&player, videoId, title, artist, known]() {
+            player.playSource(videoId, title, artist, known.value(QStringLiteral("artwork")).toString(),
+                              known.value(QStringLiteral("durationMs")).toLongLong(),
+                              known.value(QStringLiteral("album")).toString());
+        };
+        QTimer::singleShot(500, &app, [videoId, clock, start]() {
             qWarning("selftest: playing %s", qPrintable(videoId));
             clock->start();
-            player.playSource(videoId, QStringLiteral("Selftest"), QStringLiteral("Selftest"));
+            start();
         });
         if (again) {
-            QTimer::singleShot(500 + seconds * 500, &app, [&player, videoId, clock]() {
+            QTimer::singleShot(500 + seconds * 500, &app, [videoId, clock, start]() {
                 qWarning("selftest: playing %s again", qPrintable(videoId));
                 clock->start();
-                player.playSource(videoId, QStringLiteral("Selftest"), QStringLiteral("Selftest"));
+                start();
             });
         }
         QTimer::singleShot(seconds * 1000, &app, [&player]() {
@@ -324,6 +372,65 @@ int main(int argc, char *argv[])
                          });
         QTimer::singleShot(300, &app, [&extractor, query]() { extractor.search(query); });
         QTimer::singleShot(30000, &app, []() {
+            qWarning("selftest: timed out");
+            QCoreApplication::exit(2);
+        });
+    }
+
+    // --lyrics "<query>"
+    //
+    // Lyrics for the first three songs a search finds, as the Now Playing view
+    // gets them, timed; then the first once more, which should come from the
+    // database without a request.
+    const int lyricsFlag = args.indexOf(QStringLiteral("--lyrics"));
+    if (lyricsFlag >= 0 && lyricsFlag + 1 < args.size()) {
+        const QString query = args.at(lyricsFlag + 1);
+        auto songs = std::make_shared<QVariantList>();
+        auto step = std::make_shared<int>(0);
+        auto clock = std::make_shared<QElapsedTimer>();
+
+        const auto next = [&lyrics, songs, step, clock]() {
+            const int count = int(qMin<qsizetype>(3, songs->size()));
+            if (*step > count) {
+                QCoreApplication::quit();
+                return;
+            }
+            const QVariantMap song = songs->at(*step < count ? *step : 0).toMap();
+            ++*step;
+            qWarning("selftest: lyrics for \"%s\" by %s, %s",
+                     qPrintable(song.value(QStringLiteral("title")).toString()),
+                     qPrintable(song.value(QStringLiteral("artist")).toString()),
+                     qPrintable(TrackModel::formatDuration(song.value(QStringLiteral("durationMs")).toLongLong())));
+            clock->start();
+            lyrics.lookup(song);
+        };
+        QObject::connect(&lyrics, &Lyrics::stateChanged, &app, [&lyrics, next, clock]() {
+            if (lyrics.state() == QLatin1String("loading"))
+                return;
+            const QList<LyricsModel::Line> &lines = lyrics.lines()->lines();
+            qWarning("selftest:   %s in %lld ms, %lld lines, from %s%s", qPrintable(lyrics.state()),
+                     (long long)clock->elapsed(), (long long)lines.size(),
+                     qPrintable(lyrics.source().isEmpty() ? QStringLiteral("-") : lyrics.source()),
+                     qPrintable(lyrics.error().isEmpty() ? QString() : QStringLiteral(" (") + lyrics.error() + QLatin1Char(')')));
+            int shown = 0;
+            for (const LyricsModel::Line &line : lines) {
+                if (line.text.isEmpty())
+                    continue;
+                qWarning("selftest:     %s %s", qPrintable(line.timeMs >= 0 ? TrackModel::formatDuration(line.timeMs)
+                                                                           : QStringLiteral("  -  ")),
+                         qPrintable(line.text));
+                if (++shown == 3)
+                    break;
+            }
+            QTimer::singleShot(0, qApp, next);
+        });
+        QObject::connect(&extractor, &MediaExtractor::searchFinished, &app,
+                         [songs, next](const QVariantList &results) {
+                             *songs = results;
+                             next();
+                         });
+        QTimer::singleShot(300, &app, [&extractor, query]() { extractor.search(query); });
+        QTimer::singleShot(60000, &app, []() {
             qWarning("selftest: timed out");
             QCoreApplication::exit(2);
         });

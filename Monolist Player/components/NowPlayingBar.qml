@@ -9,7 +9,9 @@ Rectangle {
     readonly property bool showVolume: width >= 1040
     readonly property bool showMeta: width >= 760
     property bool queueOpen: false
+    property bool nowPlayingOpen: false
     signal queueToggled()
+    signal nowPlayingToggled()
 
     color: Theme.bg
     implicitHeight: Theme.playerBarHeight
@@ -33,11 +35,15 @@ Rectangle {
             anchors.fill: parent
             spacing: Theme.space3
 
+            // The cover and the title open Now Playing.
             Artwork {
                 width: 52
                 height: 52
                 placeholder: "Art"
                 source: Player.currentTrack.artwork !== undefined ? Player.currentTrack.artwork : ""
+
+                HoverHandler { cursorShape: Qt.PointingHandCursor }
+                TapHandler { onTapped: root.nowPlayingToggled() }
             }
 
             Column {
@@ -46,6 +52,9 @@ Rectangle {
                 // artwork, then the heart and the download control beside the text
                 width: parent.width - 52 - 30 * 2 - Theme.space3 * 3
                 spacing: 1
+
+                HoverHandler { cursorShape: Qt.PointingHandCursor }
+                TapHandler { onTapped: root.nowPlayingToggled() }
 
                 Text {
                     width: parent.width
@@ -209,6 +218,16 @@ Rectangle {
         anchors.verticalCenter: parent.verticalCenter
         spacing: Theme.space2
 
+        IconButton {
+            iconName: "maximize-2"
+            iconColor: root.nowPlayingOpen ? Theme.accent : Theme.text
+            iconSize: 15
+            anchors.verticalCenter: parent.verticalCenter
+            onClicked: root.nowPlayingToggled()
+            ToolTip.visible: hovered
+            ToolTip.delay: 600
+            ToolTip.text: root.nowPlayingOpen ? "Close Now Playing" : "Now Playing and lyrics"
+        }
         IconButton {
             iconName: "list-music"
             iconColor: root.queueOpen ? Theme.accent : Theme.text

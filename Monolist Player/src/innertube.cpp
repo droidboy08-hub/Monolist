@@ -406,6 +406,54 @@ void InnerTube::browse(const QString &browseId,
     });
 }
 
+void InnerTube::lyrics(const QString &videoId,
+                       std::function<void(const QString &, const QString &, const QString &)> done)
+{
+    QNetworkReply *reply = post(QStringLiteral("next"), {
+        { QStringLiteral("videoId"), videoId },
+        { QStringLiteral("isAudioOnly"), true }
+    });
+    connect(reply, &QNetworkReply::finished, this, [this, reply, done]() {
+        reply->deleteLater();
+        if (reply->error() != QNetworkReply::NoError) {
+            done({}, {}, reply->errorString());
+            return;
+        }
+        // The watch page's second tab is Lyrics; without a browse id it is
+        // greyed out, and the song has none.
+        const QJsonObject root = QJsonDocument::fromJson(reply->readAll()).object();
+        const QJsonArray tabs = dig(root, { "contents", "singleColumnMusicWatchNextResultsRenderer",
+                                            "tabbedRenderer", "watchNextTabbedResultsRenderer",
+                                            "tabs" }).toArray();
+        QString browseId;
+        for (const QJsonValue &tab : tabs) {
+            const QString id = dig(tab, { "tabRenderer", "endpoint", "browseEndpoint", "browseId" }).toString();
+            if (id.startsWith(QLatin1String("MPLYt"))) {
+                browseId = id;
+                break;
+            }
+        }
+        if (browseId.isEmpty()) {
+            done({}, {}, {});
+            return;
+        }
+        browse(browseId, [done](const QJsonObject &page, const QString &error) {
+            if (!error.isEmpty()) {
+                done({}, {}, error);
+                return;
+            }
+            const QJsonValue shelf = dig(page, { "contents", "sectionListRenderer", "contents", "#0",
+                                                 "musicDescriptionShelfRenderer" });
+            const QString text = joinRuns(dig(shelf, { "description", "runs" }).toArray()).trimmed();
+            // "Source: Musixmatch"
+            QString source = joinRuns(dig(shelf, { "footer", "runs" }).toArray()).trimmed();
+            source.remove(QRegularExpression(QStringLiteral(R"(^\s*Source:\s*)"),
+                                             QRegularExpression::CaseInsensitiveOption));
+            done(text, source, {});
+        });
+    });
+}
+
 QList<InnerTube::Shelf> InnerTube::parseShelves(const QJsonObject &root)
 {
     QList<Shelf> shelves;
