@@ -106,6 +106,7 @@ Flickable {
                     width: parent.width
                     model: Library.tracks
                     activeIndex: Player.currentIndex
+                    showDownloads: true
                     onTrackActivated: function(index) { Player.playIndex(index) }
                 }
             }

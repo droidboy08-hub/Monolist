@@ -7,6 +7,8 @@ Column {
 
     property var model: null
     property int activeIndex: -1
+    // A download control per row, for rows that have a source id to fetch.
+    property bool showDownloads: false
     signal trackActivated(int index)
 
     // Column visibility follows the window: metadata drops before the title does.
@@ -14,7 +16,8 @@ Column {
     readonly property bool showArtist: width >= 700
     readonly property int timeWidth: 64
     readonly property int indexWidth: 48
-    readonly property int freeWidth: width - indexWidth - timeWidth
+    readonly property int downloadWidth: showDownloads && Downloads.available ? 40 : 0
+    readonly property int freeWidth: width - indexWidth - timeWidth - downloadWidth
     readonly property int albumColumnWidth: showAlbum ? Math.round(freeWidth * 0.30) : 0
     readonly property int artistColumnWidth: showArtist ? Math.round(freeWidth * 0.28) : 0
     readonly property int titleColumnWidth: freeWidth - albumColumnWidth - artistColumnWidth
@@ -93,6 +96,9 @@ Column {
             required property string artist
             required property string album
             required property string durationText
+            required property string sourceId
+            required property string artwork
+            required property real durationMs
 
             width: root.width
             height: 40
@@ -148,6 +154,20 @@ Column {
                 font.family: Theme.fontFamily
                 font.pixelSize: 14
                 color: Theme.neutral700
+            }
+
+            // A Button, so its click is not also taken as a tap on the row.
+            DownloadButton {
+                visible: root.downloadWidth > 0 && row.sourceId.length > 0
+                x: root.width - root.timeWidth - root.downloadWidth + (root.downloadWidth - width) / 2
+                anchors.verticalCenter: parent.verticalCenter
+                side: 30
+                iconSize: 15
+                videoId: row.sourceId
+                title: row.title
+                artist: row.artist
+                artwork: row.artwork
+                durationMs: row.durationMs
             }
 
             Text {

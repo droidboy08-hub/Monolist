@@ -94,7 +94,8 @@ public Q_SLOTS:
                     const QString &title,
                     const QString &artist,
                     const QString &artwork = QString(),
-                    qint64 durationMs = 0);
+                    qint64 durationMs = 0,
+                    const QString &album = QString());
 
     // Every YouTube video has a thumbnail at a predictable URL, so a track with
     // a source id never has to show a blank plate even when no artwork field
@@ -115,8 +116,10 @@ Q_SIGNALS:
     void playbackError(const QString &reason);
 
 private:
+    void resyncIndex();
+    void prefetchUpcoming();
     void beginTrack(const QVariantMap &track, bool autoPlay);
-    void handleResolved(const QString &videoId, const QString &url, int tier);
+    void handleResolved(const QString &videoId, const QString &url, int tier, bool fromCache);
     void handleResolveFailed(const QString &videoId, const QString &reason);
     void handleEndOfFile();
     void setStatus(const QString &text, const QString &source, bool resolving);
@@ -131,6 +134,9 @@ private:
 
     QVariantMap m_currentTrack;
     QString m_pendingVideoId;      // resolution in flight for this id
+    QString m_streamVideoId;       // the resolved stream now loaded, if any,
+    int m_streamTier = -1;         // the tier it came from (-1 for files),
+    bool m_streamFromCache = false; // and whether it was a remembered link
     QString m_statusText;
     QString m_sourceLabel;
 

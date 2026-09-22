@@ -1,13 +1,15 @@
 # Monolist — Qt 6 / QML music player
 
 The Phono interface design, driven by the Melody playback and extraction
-backend, rewritten in C++ against libmpv and yt-dlp.
+backend, rewritten in C++ against libmpv, yt-dlp and YouTube Music's own API.
 
-Nothing in the interface changed. Every QML component, view, spacing token and
-breakpoint is byte-for-byte the prototype's, with the module renamed from
-`Phono` to `Monolist`. What changed is everything underneath: the simulated
-clock is gone, the mock extractor is gone, and the source ladder that Melody
-worked out in TypeScript now runs natively.
+The interface is still the prototype's: every component, view, spacing token
+and breakpoint came from the Phono design, with the module renamed from `Phono`
+to `Monolist`. What was added on top of it is only what the backend needs to be
+usable — download controls on every track, a real Downloads page, search
+suggestions and a Songs / Videos switch. What changed underneath is everything:
+the simulated clock is gone, the mock extractor is gone, and the source ladder
+that Melody worked out in TypeScript now runs natively.
 
 ## What "merging the backend" actually meant
 
@@ -17,11 +19,11 @@ workarounds for running in a browser:
 
 | Melody did this | Why | In Monolist |
 | :--- | :--- | :--- |
-| Scraped `ytInitialData` out of search HTML with a regex | No API key, no Node in the renderer | `yt-dlp ytsearch` — same data, no parser to break |
+| Scraped `ytInitialData` out of search HTML with a regex | No API key, no Node in the renderer | YouTube Music's InnerTube API, with `yt-dlp ytsearch` as the fallback |
 | Tunnelled every request through `api.codetabs.com` | Browser CORS | Deleted. A native app has no origin policy |
 | Raced 5 Piped + 13 Invidious instances | Public instances fail constantly | **Kept** — as a fallback tier, not the primary |
 | Fell back to a hidden YouTube iframe | A browser cannot play a URL that fails CORS | Deleted. mpv plays any URL that resolves |
-| Downloaded bytes → base64 → IndexedDB → Blob → ObjectURL | Browsers cannot write files | yt-dlp writes to disk directly |
+| Downloaded bytes → base64 → IndexedDB → Blob → ObjectURL | Browsers cannot write files | yt-dlp writes to disk, FFmpeg tags it |
 | `<audio>` element for playback | Only option available | libmpv |
 
 The instance racing was worth carrying over and is the one piece kept close to
@@ -29,7 +31,18 @@ the original. "Ask twelve hosts, take the first answer" degrades far better than
 any single endpoint, and `StreamResolver` is a direct translation of Melody's
 `Promise.any` approach into `QNetworkAccessManager`.
 
-Everything else in the table above existed only to fight the browser.
+### Search
+
+`MediaExtractor` sends every search to YouTube Music's InnerTube API — the one
+music.youtube.com itself calls — through `InnerTube`. It is one HTTPS request:
+about 0.3 s on a warm connection, and the results are songs with their artists,
+album and square cover art. Suggestions come from the same API while typing.
+
+A yt-dlp search spends most of its ~8 s just starting (it unpacks a Python
+runtime every time), so it is only the fallback: when InnerTube fails or comes
+back empty, the same query runs through yt-dlp. The API is unofficial and
+changes without notice; the parsers are written to degrade to "nothing found"
+rather than crash, and the fallback covers the gap.
 
 ### The source ladder
 
@@ -38,6 +51,7 @@ Everything else in the table above existed only to fight the browser.
 ```
 1. downloaded file on disk       →  play it              (Melody: LOCAL)
 2. source id present             →  StreamResolver       (Melody: STEALTH)
+     cached link, still valid       instant
      tier 0   yt-dlp
      tier 1   Piped instance race
      tier 2   Invidious instance race
@@ -48,103 +62,123 @@ Each resolver tier is tried only when the one before it fails outright, and a
 tier fails only when every host in it fails. The tier that won is surfaced to
 the UI as `Player.sourceLabel`.
 
+Resolved links are cached until the expiry YouTube signs into them, and the
+next track in the library is resolved in the background while the current one
+plays, so replaying or skipping forward rarely waits on yt-dlp. A link that
+resolves but will not open in mpv is retried: a stale cached link is fetched
+fresh, anything else moves on to the next tier.
+
+### Downloads
+
+`DownloadManager` runs up to three yt-dlp downloads at a time into
+`<Music>/Monolist`, with FFmpeg doing the post-processing:
+
+* **Format.** *Original* (the default) keeps the best stream exactly as
+  published — usually Opus at 130–160 kb/s, unwrapped from its container but
+  never re-encoded. *M4A* takes YouTube's AAC stream; *MP3* re-encodes (V0) for
+  players that take nothing else.
+* **Tags and cover art.** Title, artist, album and date are written into the
+  file, and the thumbnail is cropped square and embedded as the cover.
+* **Non-music parts.** With the option on, segments SponsorBlock users have
+  marked as non-music (intros, skits) are cut out.
+
+A finished download becomes a library row, so it plays offline straight away.
+Queue state, progress and the offline set are in `Downloads.queue` and
+`Downloads.library`; every track row asks `Downloads.stateFor(id)`.
+
 ## Layout
 
-    CMakeLists.txt           build; finds Qt 6 and libmpv
-    cmake/FindMpv.cmake      libmpv locator (pkg-config, or -DMPV_ROOT)
-    scripts/setup-windows.ps1  installs Qt, CMake, Ninja, libmpv, yt-dlp
+    CMakeLists.txt             build; finds Qt 6 and libmpv
+    cmake/FindMpv.cmake        libmpv locator (pkg-config, or -DMPV_ROOT)
+    scripts/setup-windows.ps1  installs Qt, MinGW, CMake, Ninja, libmpv, yt-dlp,
+                               FFmpeg, Deno and Git into C:\dev\monolist-deps
+    scripts/build-windows.ps1  configures, builds and deploys a runnable build
 
     Main.qml                 window, view switching, breakpoints, shortcuts
     Theme.qml                design tokens
     Icons.js                 Lucide glyph outlines as path data
-    components/              16 UI components, unchanged from the prototype
+    components/              UI components: the prototype's, plus
+                             DownloadButton and ChoiceChip
     views/                   HomeView, SearchView, LibraryView, DownloadsView
 
     src/
-      main.cpp               wiring; registers the QML singletons
-      appdatabase.*          SQLite schema, migrations, seeding
+      main.cpp               wiring; registers the QML singletons; self-tests
+      appdatabase.*          SQLite schema, migrations
       library.*              read models exposed to QML
       playlistmodel.*  albummodel.*  trackmodel.*
 
-      playbackcontroller.*   the facade QML binds to — now driven by mpv
+      playbackcontroller.*   the facade QML binds to — driven by mpv
       mpvengine.*            libmpv wrapper, audio-only
-      mediaextractor.*       search, backed by yt-dlp; owns SearchResultModel
-      ytdlp.*                QProcess + JSON wrapper around the yt-dlp binary
-      streamresolver.*       the tiered source ladder
-      downloadmanager.*      offline library, queue, progress, DB rows
+      mediaextractor.*       search: InnerTube first, yt-dlp as fallback
+      innertube.*            YouTube Music's API: search and suggestions
+      ytdlp.*                QProcess wrapper around yt-dlp; finds FFmpeg and Deno
+      streamresolver.*       the tiered source ladder and its link cache
+      downloadmanager.*      offline library: queue, options, files, DB rows
+      downloadmodels.*       the queue and offline-set models for QML
       artworkcache.*         async disk-cached image provider + palette tool
 
 ### QML singletons
 
-`Library`, `Player`, `Extractor` were already there. Added: `Downloads` and
-`Palette`. The image provider registers as `image://artwork/<url>`.
-
-## About the Swift libraries
-
-Kingfisher, SwiftyJSON, SwiftSoup, SwifterSwift, ColorThiefSwift and
-SwiftUI-Introspect are Swift/iOS libraries. They cannot be linked into a
-Qt/C++ application on Windows or Linux — there is no binding path, and
-Introspect has no meaning outside SwiftUI. Each one's *job* is covered:
-
-| Wanted | Used instead | Where |
-| :--- | :--- | :--- |
-| Kingfisher — async image load + cache | `QQuickAsyncImageProvider` + `QNetworkDiskCache` | `artworkcache.*` |
-| ColorThiefSwift — dominant colour | Weighted RGB histogram over a downsampled image | `PaletteTool` |
-| SwiftyJSON — JSON parsing | `QJsonDocument` (built into Qt) | throughout |
-| SwiftSoup — HTML parsing | Not needed; yt-dlp removed the scraping | — |
-| SwifterSwift — utility extensions | Qt's own containers and algorithms | — |
-| SwiftUI-Introspect | Not applicable outside SwiftUI | — |
-
-NewPipeExtractor is a **Java** library. Calling it from C++ means shipping a JVM
-alongside the app on all three platforms, for metadata yt-dlp already returns in
-the same call that resolves the stream. It is not wired in. If it is ever
-wanted, `MediaExtractor` is the seam — it already isolates search behind
-signals, which is exactly what a second extractor would slot into.
+`Library`, `Player`, `Extractor`, `Downloads` and `Palette`. The image provider
+registers as `image://artwork/<url>`.
 
 ## Build
 
-Requires Qt 6.5+, CMake 3.21+, a C++17 compiler, and libmpv.
-`yt-dlp` and `ffmpeg` are runtime dependencies, not build ones.
+Requires Qt 6.6+, CMake 3.21+, a C++17 compiler and libmpv. yt-dlp, FFmpeg and
+Deno are runtime dependencies, not build ones.
 
-### Building without libmpv
-
-libmpv is the only dependency with no clean Windows package — the SDK ships a
-MinGW-style import library that MSVC cannot link, so it needs an extra
-`lib.exe` step. To get everything else running first:
+### Windows
 
 ```
-cmake -S . -B build -G Ninja -DMONOLIST_NO_MPV=ON -DCMAKE_PREFIX_PATH=<qt-prefix>
-cmake --build build
+scripts\setup-windows.ps1
+scripts\build-windows.ps1 -Run
 ```
 
-This compiles `mpvengine_stub.cpp` in place of `mpvengine.cpp`. The header is
-identical either way, so switching back is a configure flag, not a code change.
+`setup-windows.ps1` installs everything under `C:\dev\monolist-deps` —
+nothing system-wide, no installers, PATH untouched — and checks every download
+against the checksum its project publishes. Qt and its tools come straight from
+Qt's online repository (no account needed). Re-running skips what is already
+there; `-Update` refreshes yt-dlp, FFmpeg and Deno, which should follow their
+latest releases because YouTube keeps changing.
 
-Working in this mode: the whole interface, the database, yt-dlp search, and
-downloads — yt-dlp writes files itself and never goes through mpv. Not working:
-audio output. The player bar reports "Built without libmpv" in the accent
-colour rather than appearing to play silence.
+The kit is Qt 6.11 with MinGW 13.1, 64-bit x86. On ARM64 Windows (including
+Parallels on Apple Silicon) it runs under Windows' x64 emulation, since Qt only
+ships native ARM64 builds for MSVC; the runtime tools run as separate processes
+and use native ARM64 builds.
 
-**Windows** — run `scripts\setup-windows.ps1` first; it installs everything and
-prints the configure command. Then:
+`build-windows.ps1` builds out of the source tree into `C:\dev\monolist-build`
+(a network share is slow, and cmd.exe cannot run Qt's generators from a UNC
+path), runs `windeployqt`, copies libmpv, and links the runtime tools into
+`tools\` beside the executable, where the app looks first. `-Config Release`,
+`-NoMpv` and `-Run` do what they say.
+
+To configure by hand instead:
 
 ```
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release ^
-      -DCMAKE_PREFIX_PATH=<qt-prefix> -DMPV_ROOT=<libmpv-root>
+      -DCMAKE_PREFIX_PATH=C:\dev\monolist-deps\Qt\6.11.2\mingw_64 ^
+      -DMPV_ROOT=C:\dev\monolist-deps\libmpv
 cmake --build build
 ```
 
-**Arch Linux**
+### Building without libmpv
+
+`-DMONOLIST_NO_MPV=ON` compiles `mpvengine_stub.cpp` in place of
+`mpvengine.cpp`. The header is identical either way, so switching back is a
+configure flag, not a code change. Everything works except audio output; the
+player bar reports "Built without libmpv" rather than appearing to play silence.
+
+### Arch Linux
 
 ```
-sudo pacman -S qt6-base qt6-declarative qt6-svg mpv yt-dlp ffmpeg cmake ninja ttf-archivo
+sudo pacman -S qt6-base qt6-declarative qt6-svg qt6-imageformats mpv yt-dlp ffmpeg deno cmake ninja
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build && ./build/monolist
 ```
 
-**macOS**
+### macOS
 
 ```
-brew install qt mpv yt-dlp ffmpeg cmake ninja
+brew install qt mpv yt-dlp ffmpeg deno cmake ninja
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$(brew --prefix qt)
 cmake --build build
 ```
@@ -164,35 +198,77 @@ a fallback sans does not merely look different — the tracking is wrong for it.
 
 ## Runtime dependencies
 
-* **libmpv** — required for audio, or build with `-DMONOLIST_NO_MPV=ON`. Even
-  in a normal build, a libmpv that fails to initialise leaves the app running
-  with `Player.engineAvailable` false rather than silently doing nothing.
-* **yt-dlp** — required for search and downloads. Without it, search is
-  disabled and playback falls through to the Piped/Invidious tiers. Found on
-  PATH, next to the executable, or as `python -m yt_dlp`.
-* **ffmpeg** — only for download remuxing to m4a.
+* **libmpv** — required for audio, or build with `-DMONOLIST_NO_MPV=ON`. A
+  libmpv that fails to initialise leaves the app running with
+  `Player.engineAvailable` false rather than silently doing nothing.
+* **yt-dlp** — stream resolution and downloads, and the search fallback.
+  Without it, playback falls through to the Piped/Invidious tiers.
+* **Deno** — the JavaScript runtime yt-dlp uses to solve YouTube's player
+  challenges. Without one, YouTube hides most formats, the good audio ones
+  included.
+* **FFmpeg** — download post-processing: extraction, tags, cover art, trimming.
+  Without it, downloads are saved as the raw stream.
+
+All three tools are looked for in `tools\` next to the executable, next to the
+executable itself, in `MONOLIST_TOOLS_DIR`, and then on PATH; bundled copies win.
+
+## Self-tests and diagnostics
+
+The debug build keeps its console. Start it with `QT_FORCE_STDERR_LOGGING=1` to
+see the log there, and with `MONOLIST_MPV_LOG=warn` (or `info`, `v`) to add
+mpv's own messages.
+
+    monolist --play <videoId> [seconds] [--again]   resolve and play; --again replays from the cache
+    monolist --download <videoId> [seconds]         one download through yt-dlp and FFmpeg
+    monolist --search "<query>"                     one timed search, with suggestions
+    monolist --view downloads                       open on a view (home, search, library, downloads)
+    monolist --query "<text>"                       open on search with the text typed in
+
+Each quits by itself and reports on stderr.
 
 ## Storage
 
-    downloads   <Music>/Monolist/<title> [<id>].m4a
+    downloads   <Music>/Monolist/<artist> - <title> [<id>].<ext>
     database    <AppData>/monolist.db
     artwork     <Cache>/artwork  (256 MB cap)
 
 Downloads live in the user's real Music folder, the convention Melody settled
 on, so they survive reinstalls and other players can see them.
 
-## State of the merge
+## State
 
-Written but **not yet compiled** — Qt, CMake and libmpv are not installed on
-this machine, so none of the C++ has been through a compiler. Expect the
-ordinary first-build fixes. Run `scripts\setup-windows.ps1`, then build, and
-the errors that surface will be real ones.
+Builds and runs on Windows 11 (ARM64, through x64 emulation) with Qt 6.11.2 and
+MinGW 13.1. Verified end to end: InnerTube search and suggestions, streaming
+through yt-dlp, the link cache, downloads with tags and cover art, and offline
+playback.
 
-Known gaps, all UI-side rather than backend:
+Known gaps, all on the interface side:
 
-* `DownloadsView` lists the library rather than filtering to downloaded rows;
-  the manager exposes `storedTracks()` for a dedicated model.
-* No download button in `TrackTable` yet — `Downloads.enqueue(...)` is
-  callable, nothing calls it.
+* The play queue is the library. Playing a search result does not make the
+  results a queue, so Next moves on through the library.
 * Queue and device buttons in the player bar are still styled but unwired.
 * `PaletteTool` is registered and working but nothing tints itself from it yet.
+* The sidebar's account block and playlist list are prototype placeholders, and
+  the Library view shows albums only.
+
+## About the Swift libraries
+
+Kingfisher, SwiftyJSON, SwiftSoup, SwifterSwift, ColorThiefSwift and
+SwiftUI-Introspect are Swift/iOS libraries. They cannot be linked into a
+Qt/C++ application on Windows or Linux — there is no binding path, and
+Introspect has no meaning outside SwiftUI. Each one's *job* is covered:
+
+| Wanted | Used instead | Where |
+| :--- | :--- | :--- |
+| Kingfisher — async image load + cache | `QQuickAsyncImageProvider` + `QNetworkDiskCache` | `artworkcache.*` |
+| ColorThiefSwift — dominant colour | Weighted RGB histogram over a downsampled image | `PaletteTool` |
+| SwiftyJSON — JSON parsing | `QJsonDocument` (built into Qt) | throughout |
+| SwiftSoup — HTML parsing | Not needed; InnerTube and yt-dlp removed the scraping | — |
+| SwifterSwift — utility extensions | Qt's own containers and algorithms | — |
+| SwiftUI-Introspect | Not applicable outside SwiftUI | — |
+
+NewPipeExtractor is a **Java** library. Calling it from C++ means shipping a JVM
+alongside the app on all three platforms, for metadata InnerTube and yt-dlp
+already return. It is not wired in. If it is ever wanted, `MediaExtractor` is
+the seam — it already isolates search behind signals, which is exactly what a
+second extractor would slot into.

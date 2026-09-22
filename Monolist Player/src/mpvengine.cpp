@@ -39,6 +39,14 @@ MpvEngine::MpvEngine(QObject *parent)
     }
 
     observeProperties();
+
+    // mpv's own log is off (msg-level above). MONOLIST_MPV_LOG=warn, info, v or
+    // debug routes it to the app's log instead, for diagnosing a stream that
+    // will not open.
+    const QByteArray logLevel = qgetenv("MONOLIST_MPV_LOG");
+    if (!logLevel.isEmpty())
+        mpv_request_log_messages(m_mpv, logLevel.constData());
+
     mpv_set_wakeup_callback(m_mpv, &MpvEngine::onWakeup, this);
 }
 
@@ -183,6 +191,13 @@ void MpvEngine::drainEvents()
             break;
         }
 
+        case MPV_EVENT_LOG_MESSAGE: {
+            const auto *message = static_cast<mpv_event_log_message *>(event->data);
+            qWarning("mpv[%s] %s: %s", message->level, message->prefix,
+                     QByteArray(message->text).trimmed().constData());
+            break;
+        }
+
         case MPV_EVENT_SHUTDOWN:
             return;
 
@@ -196,6 +211,11 @@ void MpvEngine::load(const QString &urlOrPath, bool startPlaying)
 {
     if (!m_mpv)
         return;
+
+    // Forget the previous file's duration. Change events are compared against
+    // it, and reloading a file of the same length would otherwise never report
+    // one, leaving the controller, which resets its own copy, stuck at 0:00.
+    m_duration = 0;
 
     const QByteArray target = urlOrPath.toUtf8();
     // "replace" tears down the previous file; EndFile arrives with reason STOP,

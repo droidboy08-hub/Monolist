@@ -4,6 +4,8 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QTimeZone>
+#include <QUrlQuery>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
@@ -85,11 +87,29 @@ void StreamResolver::setInvidiousInstances(const QStringList &hosts)
         m_invidious = hosts;
 }
 
-void StreamResolver::resolve(const QString &videoId)
+void StreamResolver::resolve(const QString &videoId, int firstTier)
 {
     if (videoId.isEmpty()) {
         Q_EMIT failed(videoId, QStringLiteral("Empty video id."));
         return;
+    }
+
+    if (firstTier <= TierYtDlp) {
+        // Still-valid link from earlier or from a prefetch: answer at once,
+        // but queued, so the caller sees the same order of events as always.
+        const auto cached = m_cache.constFind(videoId);
+        if (cached != m_cache.constEnd() && cached->expires > QDateTime::currentDateTimeUtc()) {
+            const CacheEntry entry = *cached;
+            QMetaObject::invokeMethod(this, [this, videoId, entry]() {
+                Q_EMIT resolved(videoId, entry.url, entry.tier, /*fromCache=*/true);
+            }, Qt::QueuedConnection);
+            return;
+        }
+        // A prefetch already on its way: let it finish, and report this time.
+        if (Job *running = m_jobs.value(videoId); running && running->prefetch) {
+            running->prefetch = false;
+            return;
+        }
     }
 
     cancel(videoId);
@@ -97,7 +117,39 @@ void StreamResolver::resolve(const QString &videoId)
     auto *job = new Job;
     job->videoId = videoId;
     m_jobs.insert(videoId, job);
+    startTier(job, qBound(int(TierYtDlp), firstTier, int(TierExhausted)));
+}
+
+void StreamResolver::prefetch(const QString &videoId)
+{
+    if (videoId.isEmpty() || m_jobs.contains(videoId))
+        return;
+    const auto cached = m_cache.constFind(videoId);
+    if (cached != m_cache.constEnd() && cached->expires > QDateTime::currentDateTimeUtc())
+        return;
+
+    auto *job = new Job;
+    job->videoId = videoId;
+    job->prefetch = true;
+    m_jobs.insert(videoId, job);
     startTier(job, TierYtDlp);
+}
+
+void StreamResolver::invalidate(const QString &videoId)
+{
+    m_cache.remove(videoId);
+}
+
+// googlevideo links carry their own expiry ("expire=<unix time>"). Trust it
+// with a margin, and give instance links, which carry none, half an hour.
+QDateTime StreamResolver::expiryOf(const QString &url)
+{
+    const QDateTime now = QDateTime::currentDateTimeUtc();
+    bool ok = false;
+    const qint64 expire = QUrlQuery(QUrl(url)).queryItemValue(QStringLiteral("expire")).toLongLong(&ok);
+    if (!ok || expire <= 0)
+        return now.addSecs(30 * 60);
+    return qMin(QDateTime::fromSecsSinceEpoch(expire, QTimeZone::UTC).addSecs(-10 * 60), now.addSecs(5 * 3600));
 }
 
 void StreamResolver::startTier(Job *job, int tier)
@@ -115,8 +167,10 @@ void StreamResolver::startTier(Job *job, int tier)
             ? QStringLiteral("No source could resolve this track.")
             : job->errors.join(QStringLiteral(" | "));
         const QString id = job->videoId;
+        const bool silent = job->prefetch;
         discard(job);
-        Q_EMIT failed(id, reason);
+        if (!silent)
+            Q_EMIT failed(id, reason);
         break;
     }
     }
@@ -279,11 +333,14 @@ void StreamResolver::succeed(Job *job, const QString &url)
 
     const QString videoId = job->videoId;
     const int tier = job->tier;
+    const bool silent = job->prefetch;
+    m_cache.insert(videoId, { url, tier, expiryOf(url) });
 
     abortPending(job);
     discard(job);
 
-    Q_EMIT resolved(videoId, url, tier);
+    if (!silent)
+        Q_EMIT resolved(videoId, url, tier, /*fromCache=*/false);
 }
 
 void StreamResolver::tierExhausted(Job *job, const QString &reason)

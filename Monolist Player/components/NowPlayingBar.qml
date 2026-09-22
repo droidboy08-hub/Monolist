@@ -40,7 +40,8 @@ Rectangle {
             Column {
                 visible: root.showMeta
                 anchors.verticalCenter: parent.verticalCenter
-                width: parent.width - 52 - Theme.space3 - 38
+                // artwork, then the heart and the download control beside the text
+                width: parent.width - 52 - 30 * 2 - Theme.space3 * 3
                 spacing: 1
 
                 Text {
@@ -62,7 +63,8 @@ Rectangle {
                     text: showStatus
                           ? Player.statusText
                           : (Player.currentTrack.artist !== undefined
-                             ? Player.currentTrack.artist + " — " + Player.currentTrack.album
+                             ? Player.currentTrack.artist
+                               + (Player.currentTrack.album ? " — " + Player.currentTrack.album : "")
                              : "")
                     elide: Text.ElideRight
                     font.family: Theme.fontFamily
@@ -79,6 +81,20 @@ Rectangle {
                 iconSize: 15
                 iconColor: Player.favourite ? Theme.accent : Theme.text
                 onClicked: Player.toggleFavourite()
+            }
+
+            DownloadButton {
+                readonly property string sourceId: Player.currentTrack.sourceId !== undefined
+                                                   ? Player.currentTrack.sourceId : ""
+                visible: root.showMeta && sourceId.length > 0 && Downloads.available
+                anchors.verticalCenter: parent.verticalCenter
+                side: 30
+                iconSize: 15
+                videoId: sourceId
+                title: Player.currentTrack.title !== undefined ? Player.currentTrack.title : ""
+                artist: Player.currentTrack.artist !== undefined ? Player.currentTrack.artist : ""
+                artwork: Player.currentTrack.artwork !== undefined ? Player.currentTrack.artwork : ""
+                durationMs: Player.duration
             }
         }
     }

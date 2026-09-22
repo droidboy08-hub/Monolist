@@ -38,11 +38,13 @@ qt_add_executable(monolist
     src/trackmodel.h               src/trackmodel.cpp
     src/playbackcontroller.h       src/playbackcontroller.cpp
     src/mediaextractor.h           src/mediaextractor.cpp
+    src/innertube.h                src/innertube.cpp
     # — backend merged in from the Melody player —
     ${MONOLIST_MPV_SOURCES}
     src/ytdlp.h                    src/ytdlp.cpp
     src/streamresolver.h           src/streamresolver.cpp
     src/downloadmanager.h          src/downloadmanager.cpp
+    src/downloadmodels.h           src/downloadmodels.cpp
     src/artworkcache.h             src/artworkcache.cpp
 )
 
@@ -77,6 +79,8 @@ qt_add_qml_module(monolist
         components/ProgressSlider.qml
         components/HRule.qml
         components/PosterButton.qml
+        components/DownloadButton.qml
+        components/ChoiceChip.qml
         views/HomeView.qml
         views/SearchView.qml
         views/LibraryView.qml

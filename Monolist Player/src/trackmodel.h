@@ -33,6 +33,10 @@ public:
     Q_INVOKABLE QVariantMap get(int row) const;
     Q_INVOKABLE void toggleFavourite(int row);
 
+    // Row of the track with this database id or upstream video id; -1 if absent.
+    Q_INVOKABLE int indexOfTrack(int trackId) const;
+    Q_INVOKABLE int indexOfSource(const QString &sourceId) const;
+
     static QString formatDuration(qint64 ms);
 
 Q_SIGNALS:

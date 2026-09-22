@@ -3,7 +3,10 @@
 #include <QAbstractListModel>
 #include <QObject>
 #include <QPointer>
+#include <QStringList>
 #include <QVariantMap>
+
+#include "innertube.h"
 
 class YtDlpRequest;
 
@@ -45,12 +48,16 @@ private:
     QList<Item> m_items;
 };
 
-// Search and metadata, backed by yt-dlp.
+// Search and metadata.
+//
+// Searches go to YouTube Music's own API first (InnerTube): one HTTPS request,
+// a few hundred milliseconds, and results that are songs with artists, albums
+// and cover art. If that fails, for any reason, the same query runs through
+// yt-dlp, which is slower (it starts a Python runtime each time) but tracks
+// YouTube's changes on its own.
 //
 // The prototype returned a mock result after a timer; the React app scraped
-// ytInitialData out of YouTube's search HTML through a CORS proxy and parsed it
-// with a regex. Both are replaced by a single `yt-dlp ytsearch` call, which is
-// the same data without the parser that breaks whenever the page markup shifts.
+// ytInitialData out of YouTube's search HTML through a CORS proxy.
 class MediaExtractor : public QObject
 {
     Q_OBJECT
@@ -58,6 +65,11 @@ class MediaExtractor : public QObject
     Q_PROPERTY(bool available READ available NOTIFY availableChanged)
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
     Q_PROPERTY(SearchResultModel *results READ results CONSTANT)
+    // "songs" or "videos": which YouTube Music section to search.
+    Q_PROPERTY(QString filter READ filter WRITE setFilter NOTIFY filterChanged)
+    // Where the current results came from: "YouTube Music" or "yt-dlp".
+    Q_PROPERTY(QString source READ source NOTIFY resultsSourceChanged)
+    Q_PROPERTY(QStringList suggestions READ suggestions NOTIFY suggestionsChanged)
 public:
     explicit MediaExtractor(QObject *parent = nullptr);
 
@@ -65,9 +77,15 @@ public:
     bool available() const;
     QString lastError() const { return m_lastError; }
     SearchResultModel *results() { return &m_results; }
+    QString filter() const { return m_filter; }
+    void setFilter(const QString &filter);
+    QString source() const { return m_source; }
+    QStringList suggestions() const { return m_suggestions; }
 
 public Q_SLOTS:
     void search(const QString &query);
+    void suggest(const QString &input);
+    void clearSuggestions();
     void resolve(const QString &videoIdOrUrl);
     void cancel();
 
@@ -75,16 +93,28 @@ Q_SIGNALS:
     void busyChanged();
     void availableChanged();
     void lastErrorChanged();
+    void filterChanged();
+    void resultsSourceChanged();
+    void suggestionsChanged();
     void searchFinished(const QVariantList &results);
     void resolved(const QVariantMap &stream);
     void failed(const QString &reason);
 
 private:
+    void searchWithYtDlp(const QString &query);
+    void finishSearch(const QList<SearchResultModel::Item> &items, const QString &source);
     void setBusy(bool busy);
     void setLastError(const QString &error);
+    void setSource(const QString &source);
 
     SearchResultModel m_results;
+    InnerTube m_innerTube;
     QPointer<YtDlpRequest> m_request;
+    QString m_query;                 // the search whose answer is still wanted
+    QString m_suggestFor;            // likewise for suggestions
+    QString m_filter = QStringLiteral("songs");
+    QString m_source;
     QString m_lastError;
+    QStringList m_suggestions;
     bool m_busy = false;
 };

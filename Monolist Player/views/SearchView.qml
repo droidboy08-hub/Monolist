@@ -4,25 +4,21 @@ import Monolist
 import Monolist.Backend
 import "../components"
 
-// Same vocabulary as Home: a section header and the track table. Results now
-// come from the extractor (yt-dlp) rather than standing in for it with the
-// local library.
+// Same vocabulary as Home: a section header and the track table. Results come
+// from YouTube Music's own API, with yt-dlp as the fallback.
 Flickable {
     id: root
 
     property string term: ""
 
-    // A yt-dlp search spawns a process, so wait for typing to settle rather
-    // than firing one per keystroke.
+    // YouTube Music answers in a few hundred milliseconds, so results can
+    // follow the typing; the pause only keeps one request per word or so.
     onTermChanged: debounce.restart()
 
     Timer {
         id: debounce
-        interval: 350
-        onTriggered: {
-            if (root.term.trim().length > 0)
-                Extractor.search(root.term)
-        }
+        interval: 250
+        onTriggered: Extractor.search(root.term)
     }
 
     contentWidth: width
@@ -50,12 +46,43 @@ Flickable {
             title: root.term.length > 0 ? "Results for " + root.term : "Search"
         }
 
+        Row {
+            spacing: Theme.space4
+
+            // Negative spacing lets neighbouring segments share one 2px rule.
+            Row {
+                spacing: -Theme.ruleWidth
+
+                ChoiceChip {
+                    label: "SONGS"
+                    selected: Extractor.filter === "songs"
+                    onPicked: Extractor.filter = "songs"
+                }
+                ChoiceChip {
+                    label: "VIDEOS"
+                    selected: Extractor.filter === "videos"
+                    onPicked: Extractor.filter = "videos"
+                }
+            }
+
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                visible: root.term.length > 0 && !Extractor.busy && Extractor.results.count > 0
+                text: Extractor.source === "yt-dlp"
+                      ? "FROM YT-DLP · YOUTUBE MUSIC DID NOT ANSWER"
+                      : "FROM " + Extractor.source.toUpperCase()
+                font.family: Theme.fontFamily
+                font.pixelSize: 11
+                font.weight: Font.Bold
+                font.letterSpacing: Theme.tracking(11, 0.08)
+                color: Theme.neutral700
+            }
+        }
+
         Text {
             visible: root.term.length === 0
             width: parent.width
-            text: Extractor.available
-                  ? "Type in the field above to search."
-                  : "Search needs yt-dlp on the system path. Install it with: pip install yt-dlp"
+            text: "Type in the field above to search YouTube Music."
             wrapMode: Text.WordWrap
             font.family: Theme.fontFamily
             font.pixelSize: 14
@@ -98,10 +125,11 @@ Flickable {
             width: parent.width
             model: Extractor.results
             activeIndex: -1
+            showDownloads: true
             onTrackActivated: function(index) {
                 var item = Extractor.results.get(index)
                 Player.playSource(item.sourceId, item.title, item.artist,
-                                  item.artwork, item.durationMs)
+                                  item.artwork, item.durationMs, item.album)
             }
         }
     }

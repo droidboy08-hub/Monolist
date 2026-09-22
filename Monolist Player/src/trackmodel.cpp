@@ -90,6 +90,26 @@ QVariantMap TrackModel::get(int row) const
     };
 }
 
+int TrackModel::indexOfTrack(int trackId) const
+{
+    for (int row = 0; row < m_items.size(); ++row) {
+        if (m_items.at(row).id == trackId)
+            return row;
+    }
+    return -1;
+}
+
+int TrackModel::indexOfSource(const QString &sourceId) const
+{
+    if (sourceId.isEmpty())
+        return -1;
+    for (int row = 0; row < m_items.size(); ++row) {
+        if (m_items.at(row).sourceId == sourceId)
+            return row;
+    }
+    return -1;
+}
+
 void TrackModel::toggleFavourite(int row)
 {
     if (row < 0 || row >= m_items.size())

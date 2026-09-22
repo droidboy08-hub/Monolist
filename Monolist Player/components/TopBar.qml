@@ -1,5 +1,7 @@
 import QtQuick
+import QtQuick.Controls.Basic
 import Monolist
+import Monolist.Backend
 
 Rectangle {
     id: root
@@ -10,6 +12,12 @@ Rectangle {
     property bool showMenuButton: false
     readonly property bool compact: width < 720
 
+    // Search suggestions: shown while typing, highlighted with the arrow keys.
+    property bool suggesting: false
+    property int highlighted: -1
+    readonly property bool showSuggestions: suggesting && searchField.text.trim().length > 0
+                                            && Extractor.suggestions.length > 0
+
     signal menuRequested()
     signal backRequested()
     signal forwardRequested()
@@ -17,6 +25,24 @@ Rectangle {
 
     color: Theme.bg
     implicitHeight: 64
+
+    function pickSuggestion(text) {
+        searchField.text = text
+        suggesting = false
+        searchActivated(text)
+    }
+
+    // The typed part stays regular and the completion goes bold, the way
+    // YouTube Music sets its own suggestions.
+    function suggestionMarkup(suggestion) {
+        function escape(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") }
+        var typed = searchField.text.trim()
+        if (typed.length > 0 && suggestion.toLowerCase().indexOf(typed.toLowerCase()) === 0)
+            return escape(suggestion.substring(0, typed.length)) + "<b>" + escape(suggestion.substring(typed.length)) + "</b>"
+        return escape(suggestion)
+    }
+
+    onShowSuggestionsChanged: showSuggestions ? suggestionPopup.open() : suggestionPopup.close()
 
     Rectangle {
         anchors.bottom: parent.bottom
@@ -57,6 +83,13 @@ Rectangle {
         color: Theme.neutral600
     }
 
+    // Suggestions are cheap (one small request), but not one per keystroke.
+    Timer {
+        id: suggestTimer
+        interval: 120
+        onTriggered: Extractor.suggest(searchField.text)
+    }
+
     Rectangle {
         id: searchBox
         anchors.right: parent.right
@@ -92,7 +125,40 @@ Rectangle {
             selectionColor: Theme.accent
             selectedTextColor: Theme.accentForeground
             clip: true
-            onAccepted: root.searchActivated(text)
+
+            onTextEdited: {
+                const typed = text.trim().length > 0
+                root.suggesting = typed
+                root.highlighted = -1
+                if (typed) {
+                    suggestTimer.restart()
+                    // Results follow the typing, so go to them straight away.
+                    root.searchActivated(text)
+                } else {
+                    suggestTimer.stop()
+                    Extractor.clearSuggestions()
+                }
+            }
+
+            onAccepted: {
+                if (root.showSuggestions && root.highlighted >= 0
+                        && root.highlighted < Extractor.suggestions.length) {
+                    root.pickSuggestion(Extractor.suggestions[root.highlighted])
+                } else {
+                    root.suggesting = false
+                    root.searchActivated(text)
+                }
+            }
+
+            Keys.onDownPressed: {
+                if (root.showSuggestions)
+                    root.highlighted = Math.min(root.highlighted + 1, Extractor.suggestions.length - 1)
+            }
+            Keys.onUpPressed: {
+                if (root.showSuggestions)
+                    root.highlighted = Math.max(root.highlighted - 1, -1)
+            }
+            Keys.onEscapePressed: root.suggesting = false
 
             Text {
                 anchors.verticalCenter: parent.verticalCenter
@@ -100,6 +166,71 @@ Rectangle {
                 text: "Artists, albums, tracks…"
                 font: searchField.font
                 color: Theme.neutral500
+            }
+        }
+
+        // Hangs from the field and shares its bottom rule. A Popup, so it
+        // draws above the view underneath without anything changing z-order.
+        Popup {
+            id: suggestionPopup
+            y: searchBox.height - Theme.ruleWidth
+            width: searchBox.width
+            topPadding: 0
+            bottomPadding: Theme.ruleWidth
+            leftPadding: Theme.ruleWidth
+            rightPadding: Theme.ruleWidth
+            focus: false
+            closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutsideParent
+            onClosed: root.suggesting = false
+
+            background: Rectangle {
+                color: Theme.bg
+                border.width: Theme.ruleWidth
+                border.color: Theme.text
+            }
+
+            contentItem: Column {
+                Repeater {
+                    model: Extractor.suggestions
+
+                    delegate: Rectangle {
+                        id: suggestionRow
+
+                        required property int index
+                        required property string modelData
+
+                        width: suggestionPopup.availableWidth
+                        height: 34
+                        color: index === root.highlighted || rowHover.hovered ? Theme.rowHover : "transparent"
+
+                        Icon {
+                            id: rowIcon
+                            name: "search"
+                            width: 13
+                            height: 13
+                            x: Theme.space3
+                            anchors.verticalCenter: parent.verticalCenter
+                            color: Theme.neutral600
+                        }
+
+                        Text {
+                            anchors.left: rowIcon.right
+                            anchors.leftMargin: Theme.space2
+                            anchors.right: parent.right
+                            anchors.rightMargin: Theme.space3
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: root.suggestionMarkup(suggestionRow.modelData)
+                            textFormat: Text.StyledText
+                            elide: Text.ElideRight
+                            font.family: Theme.fontFamily
+                            font.pixelSize: 13
+                            color: Theme.text
+                        }
+
+                        HoverHandler { id: rowHover; cursorShape: Qt.PointingHandCursor }
+                        TapHandler { onTapped: root.pickSuggestion(suggestionRow.modelData) }
+                    }
+                }
             }
         }
     }

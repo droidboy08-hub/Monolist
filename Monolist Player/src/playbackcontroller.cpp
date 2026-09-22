@@ -43,6 +43,31 @@ PlaybackController::PlaybackController(MpvEngine *engine,
         connect(m_engine, &MpvEngine::endOfFile, this, &PlaybackController::handleEndOfFile);
 
         connect(m_engine, &MpvEngine::loadFailed, this, [this](const QString &reason) {
+            // A URL can resolve and still be refused when mpv opens it: a link
+            // the CDN rejects now and then, or an instance serving an error
+            // page. Ask the next tier before giving up.
+            // A remembered link that no longer opens is simply stale: fetch a
+            // fresh one from the same tier before trying a worse one.
+            if (m_streamTier >= 0 && m_resolver && m_streamFromCache) {
+                const int sameTier = m_streamTier;
+                m_streamTier = -1;
+                m_resolver->invalidate(m_streamVideoId);
+                m_pendingVideoId = m_streamVideoId;
+                setStatus(QStringLiteral("Refreshing the source…"), QString(), true);
+                m_resolver->resolve(m_pendingVideoId, sameTier);
+                return;
+            }
+            if (m_streamTier >= 0 && m_resolver
+                && m_streamTier + 1 < StreamResolver::TierExhausted) {
+                const int nextTier = m_streamTier + 1;
+                m_streamTier = -1;
+                m_resolver->invalidate(m_streamVideoId);
+                m_pendingVideoId = m_streamVideoId;
+                setStatus(QStringLiteral("Trying another source…"), QString(), true);
+                m_resolver->resolve(m_pendingVideoId, nextTier);
+                return;
+            }
+            m_streamTier = -1;
             setPlayingFlag(false);
             setStatus(QStringLiteral("Playback failed"), QString(), false);
             Q_EMIT playbackError(reason);
@@ -64,7 +89,30 @@ bool PlaybackController::engineAvailable() const
 
 void PlaybackController::setQueue(TrackModel *model)
 {
+    if (m_queue)
+        disconnect(m_queue, nullptr, this, nullptr);
     m_queue = model;
+    if (m_queue)
+        connect(m_queue, &QAbstractItemModel::modelReset, this, &PlaybackController::resyncIndex);
+}
+
+// The library reloads whenever a download lands or is removed, so the row the
+// player is on may have moved — and a search result that has just been saved
+// now has a row of its own. Find the current track again by its identity.
+void PlaybackController::resyncIndex()
+{
+    if (!m_queue || m_currentTrack.isEmpty())
+        return;
+    int row = -1;
+    const int trackId = m_currentTrack.value(QStringLiteral("trackId")).toInt();
+    if (trackId > 0)
+        row = m_queue->indexOfTrack(trackId);
+    if (row < 0)
+        row = m_queue->indexOfSource(m_currentTrack.value(QStringLiteral("sourceId")).toString());
+    if (row == m_index)
+        return;
+    m_index = row;
+    Q_EMIT currentTrackChanged();
 }
 
 qreal PlaybackController::progress() const
@@ -157,7 +205,8 @@ void PlaybackController::playSource(const QString &videoId,
                                     const QString &title,
                                     const QString &artist,
                                     const QString &artwork,
-                                    qint64 durationMs)
+                                    qint64 durationMs,
+                                    const QString &album)
 {
     if (videoId.isEmpty())
         return;
@@ -168,7 +217,7 @@ void PlaybackController::playSource(const QString &videoId,
                    { QStringLiteral("sourceId"),   videoId },
                    { QStringLiteral("title"),      title },
                    { QStringLiteral("artist"),     artist },
-                   { QStringLiteral("album"),      QString() },
+                   { QStringLiteral("album"),      album },
                    { QStringLiteral("durationMs"), durationMs },
                    { QStringLiteral("sourceUrl"),  QString() },
                    { QStringLiteral("artwork"),    artwork.isEmpty()
@@ -185,6 +234,7 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
     if (m_resolver && !m_pendingVideoId.isEmpty())
         m_resolver->cancel(m_pendingVideoId);
     m_pendingVideoId.clear();
+    m_streamTier = -1;
 
     m_currentTrack = track;
 
@@ -230,6 +280,8 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
     if (!localPath.isEmpty()) {
         setStatus(QStringLiteral("Offline"), QStringLiteral("Local file"), false);
         m_engine->load(localPath, autoPlay);
+        if (autoPlay)
+            prefetchUpcoming();
         return;
     }
 
@@ -253,7 +305,8 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
     Q_EMIT playbackError(QStringLiteral("This track has no local file and no source id."));
 }
 
-void PlaybackController::handleResolved(const QString &videoId, const QString &url, int tier)
+void PlaybackController::handleResolved(const QString &videoId, const QString &url, int tier,
+                                        bool fromCache)
 {
     if (videoId != m_pendingVideoId)
         return;                       // a later track superseded this one
@@ -268,8 +321,32 @@ void PlaybackController::handleResolved(const QString &videoId, const QString &u
     }
 
     setStatus(QStringLiteral("Streaming"), label, false);
+    m_streamVideoId = videoId;
+    m_streamTier = tier;
+    m_streamFromCache = fromCache;
     if (m_engine)
         m_engine->load(url, m_autoPlayAfterResolve);
+    prefetchUpcoming();
+}
+
+// While one track plays, resolve the next, so skipping to it does not wait on
+// yt-dlp. Downloaded tracks need nothing, and under shuffle there is no
+// telling which track is next.
+void PlaybackController::prefetchUpcoming()
+{
+    if (!m_resolver || !m_queue || m_shuffle || m_index < 0)
+        return;
+    const int count = m_queue->rowCount();
+    int upcoming = m_index + 1;
+    if (upcoming >= count) {
+        if (m_repeatMode != RepeatAll || count < 2)
+            return;
+        upcoming = 0;
+    }
+    const QString videoId = m_queue->get(upcoming).value(QStringLiteral("sourceId")).toString();
+    if (videoId.isEmpty() || (m_downloads && !m_downloads->localPathFor(videoId).isEmpty()))
+        return;
+    m_resolver->prefetch(videoId);
 }
 
 void PlaybackController::handleResolveFailed(const QString &videoId, const QString &reason)

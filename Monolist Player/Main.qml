@@ -19,6 +19,13 @@ ApplicationWindow {
     property string currentView: "home"
     property var viewHistory: []
     property var viewFuture: []
+    // Set from the command line (--query), to open with a search typed in.
+    property string initialQuery: ""
+
+    Component.onCompleted: {
+        if (initialQuery.length > 0)
+            topBar.searchText = initialQuery
+    }
 
     // Below this width the sidebar leaves the layout and becomes an overlay —
     // the only concession the design makes to narrow windows.

@@ -5,6 +5,22 @@
 #include <QProcess>
 #include <QString>
 #include <QStringList>
+#include <QVariantMap>
+
+// How a download is written to disk.
+struct DownloadOptions
+{
+    enum class Format {
+        Original,   // the best stream as published: unwrapped, never re-encoded
+        M4a,        // AAC in .m4a, YouTube's own AAC stream when there is one
+        Mp3         // re-encoded, for players and car stereos that take nothing else
+    };
+
+    Format format = Format::Original;
+    bool embedMetadata = true;   // title, artist, album, date
+    bool embedArtwork = true;    // the thumbnail, cropped square, as cover art
+    bool skipNonMusic = true;    // cut SponsorBlock's "music_offtopic" segments
+};
 
 // One yt-dlp invocation. Owns its QProcess and reports back through signals;
 // deleteLater()s itself once a terminal signal has been emitted, so callers may
@@ -24,8 +40,14 @@ public:
 
 Q_SIGNALS:
     void succeededJson(const QJsonDocument &document);
-    void progress(qint64 received, qint64 total);   // total < 0 when unknown
-    void finishedFile(const QString &path);
+    // Download progress. total is < 0 when unknown; speed (bytes/s) and eta
+    // (seconds) are < 0 until yt-dlp can estimate them.
+    void progress(qint64 received, qint64 total, double speed, int etaSeconds);
+    // A post-processing step has started: "ExtractAudio", "EmbedThumbnail", ...
+    void postProcessing(const QString &step);
+    // The final path, and what yt-dlp knows about the track: title, artist,
+    // uploader, channel, album, duration (seconds), thumbnail.
+    void finishedFile(const QString &path, const QVariantMap &metadata);
     void failed(const QString &reason);
 
 private:
@@ -34,30 +56,46 @@ private:
 
     void start(const QString &program, const QStringList &arguments, bool expectJson);
     void handleStdout();
+    void handleStderr();
+    void handleLine(const QString &line);
     void handleFinished(int exitCode, QProcess::ExitStatus status);
 
     QProcess *m_process = nullptr;
     QByteArray m_stdout;
     QByteArray m_stderr;
+    QByteArray m_stderrLine;
     QString m_destinationPath;
+    QVariantMap m_metadata;
     bool m_expectJson = true;
     bool m_settled = false;
 };
 
-// Locates and drives the yt-dlp binary.
+// Locates and drives the yt-dlp binary and the tools it depends on.
 //
 // yt-dlp is the primary extraction path because it tracks YouTube's signature
 // and throttling changes far faster than any hand-written scraper. The HTML
 // scraping and public-instance racing the previous player relied on live on in
 // StreamResolver as a fallback tier, not as the first choice.
+//
+// Two companions matter:
+//   FFmpeg  extracts the audio track, writes tags and embeds cover art. Without
+//           it a download is saved as the raw stream, untagged.
+//   Deno    runs YouTube's player challenges. Without a JavaScript runtime
+//           yt-dlp loses most formats, the high-quality audio ones included.
+//
+// All three are looked for in <app>/tools, next to the executable, in
+// MONOLIST_TOOLS_DIR, and finally on PATH. Bundled copies win, so a packaged
+// app runs the versions it shipped with.
 class YtDlp
 {
 public:
-    // Search order: explicit override, PATH, the directory next to the running
-    // executable (for a bundled copy), then `python -m yt_dlp`.
     static bool isAvailable();
     static QString resolvedDescription();
     static void setExecutableOverride(const QString &path);
+
+    // Full paths, or empty when the tool is missing.
+    static QString ffmpegPath();
+    static QString denoPath();
 
     // `ytsearchN:` query against YouTube; flat, so it stays fast.
     static YtDlpRequest *search(const QString &query, int limit, QObject *parent);
@@ -65,14 +103,21 @@ public:
     // Full metadata for one video, including a direct bestaudio URL.
     static YtDlpRequest *resolveAudio(const QString &videoIdOrUrl, QObject *parent);
 
-    // Downloads bestaudio to `destinationDir`, remuxing to m4a via ffmpeg when
-    // available. Emits progress() while running and finishedFile() at the end.
+    // Downloads one track into `destinationDir` as `<fileStem>.<ext>`, or, with
+    // an empty stem, as "<artist> - <title> [<id>].<ext>" from the fetched
+    // metadata. Emits progress() and postProcessing() while running and
+    // finishedFile() with the final path at the end.
     static YtDlpRequest *download(const QString &videoIdOrUrl,
                                   const QString &destinationDir,
                                   const QString &fileStem,
+                                  const DownloadOptions &options,
                                   QObject *parent);
 
     static QString normaliseToUrl(const QString &videoIdOrUrl);
+
+    // Channel names are not artist names: "Adele - Topic" and "AdeleVEVO" are
+    // both Adele.
+    static QString cleanArtist(const QString &channel);
 
 private:
     struct Invocation {
@@ -80,6 +125,9 @@ private:
         QStringList prefixArgs;
         bool valid = false;
     };
+    static QStringList toolDirectories();
+    static QString findTool(const QString &name);
     static Invocation locate();
+    static QStringList commonArguments();
     static YtDlpRequest *run(const QStringList &args, bool expectJson, QObject *parent);
 };
