@@ -1,7 +1,0 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources>
-    <string name="app_name">youtube-music-player</string>
-    <string name="title_activity_main">youtube-music-player</string>
-    <string name="package_name">com.droid.musicplayer</string>
-    <string name="custom_url_scheme">com.droid.musicplayer</string>
-</resources>
