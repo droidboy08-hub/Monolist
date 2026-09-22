@@ -64,6 +64,8 @@ qint64 parseClock(const QString &text)
 // The country to ask from; empty follows the system. Set once at startup and
 // whenever the user picks another in Settings.
 QString g_region;
+// Told when YouTube Music refuses that country.
+std::function<void(const QString &)> g_regionRejected;
 
 // The web client's own locale, so results follow the user's language and the
 // region they are browsing. YouTube Music and YouTube name themselves
@@ -258,15 +260,64 @@ void InnerTube::setRegion(const QString &code)
     g_region = code.trimmed().toUpper();
 }
 
+// YouTube Music is not offered everywhere: a country it does not serve is
+// refused with 400 Bad Request for every call — search, home, radio, lyrics —
+// which from the inside looks exactly like being offline. This list was
+// measured by asking the API from each country in turn.
+const QSet<QString> &InnerTube::servedRegions()
+{
+    static const QSet<QString> served = {
+        QStringLiteral("AE"), QStringLiteral("AM"), QStringLiteral("AR"), QStringLiteral("AT"),
+        QStringLiteral("AU"), QStringLiteral("AZ"), QStringLiteral("BA"), QStringLiteral("BD"),
+        QStringLiteral("BE"), QStringLiteral("BG"), QStringLiteral("BH"), QStringLiteral("BO"),
+        QStringLiteral("BR"), QStringLiteral("BY"), QStringLiteral("CA"), QStringLiteral("CH"),
+        QStringLiteral("CL"), QStringLiteral("CO"), QStringLiteral("CR"), QStringLiteral("CY"),
+        QStringLiteral("CZ"), QStringLiteral("DE"), QStringLiteral("DK"), QStringLiteral("DO"),
+        QStringLiteral("DZ"), QStringLiteral("EC"), QStringLiteral("EE"), QStringLiteral("EG"),
+        QStringLiteral("ES"), QStringLiteral("FI"), QStringLiteral("FR"), QStringLiteral("GB"),
+        QStringLiteral("GE"), QStringLiteral("GH"), QStringLiteral("GR"), QStringLiteral("GT"),
+        QStringLiteral("HK"), QStringLiteral("HN"), QStringLiteral("HR"), QStringLiteral("HU"),
+        QStringLiteral("ID"), QStringLiteral("IE"), QStringLiteral("IL"), QStringLiteral("IN"),
+        QStringLiteral("IQ"), QStringLiteral("IS"), QStringLiteral("IT"), QStringLiteral("JM"),
+        QStringLiteral("JO"), QStringLiteral("JP"), QStringLiteral("KE"), QStringLiteral("KH"),
+        QStringLiteral("KR"), QStringLiteral("KW"), QStringLiteral("KZ"), QStringLiteral("LA"),
+        QStringLiteral("LB"), QStringLiteral("LI"), QStringLiteral("LK"), QStringLiteral("LT"),
+        QStringLiteral("LU"), QStringLiteral("LV"), QStringLiteral("LY"), QStringLiteral("MA"),
+        QStringLiteral("MD"), QStringLiteral("ME"), QStringLiteral("MK"), QStringLiteral("MT"),
+        QStringLiteral("MX"), QStringLiteral("MY"), QStringLiteral("NG"), QStringLiteral("NI"),
+        QStringLiteral("NL"), QStringLiteral("NO"), QStringLiteral("NP"), QStringLiteral("NZ"),
+        QStringLiteral("OM"), QStringLiteral("PA"), QStringLiteral("PE"), QStringLiteral("PG"),
+        QStringLiteral("PH"), QStringLiteral("PK"), QStringLiteral("PL"), QStringLiteral("PR"),
+        QStringLiteral("PT"), QStringLiteral("PY"), QStringLiteral("QA"), QStringLiteral("RO"),
+        QStringLiteral("RS"), QStringLiteral("RU"), QStringLiteral("SA"), QStringLiteral("SE"),
+        QStringLiteral("SG"), QStringLiteral("SI"), QStringLiteral("SK"), QStringLiteral("SN"),
+        QStringLiteral("SV"), QStringLiteral("TH"), QStringLiteral("TN"), QStringLiteral("TR"),
+        QStringLiteral("TW"), QStringLiteral("TZ"), QStringLiteral("UA"), QStringLiteral("UG"),
+        QStringLiteral("US"), QStringLiteral("UY"), QStringLiteral("VE"), QStringLiteral("VN"),
+        QStringLiteral("YE"), QStringLiteral("ZA"), QStringLiteral("ZW")
+    };
+    return served;
+}
+
+// The system's own country, unless YouTube Music does not serve it — in which
+// case asking as the system would fail every call, so the nearest thing to a
+// neutral choice is used instead.
 QString InnerTube::systemRegion()
 {
     const QString code = QLocale::territoryToCode(QLocale::system().territory());
-    return code.size() == 2 ? code : QStringLiteral("US");
+    if (code.size() == 2 && servedRegions().contains(code))
+        return code;
+    return QStringLiteral("US");
 }
 
 QString InnerTube::region()
 {
     return g_region.isEmpty() ? systemRegion() : g_region;
+}
+
+void InnerTube::setRegionRejectedHandler(std::function<void(const QString &)> handler)
+{
+    g_regionRejected = std::move(handler);
 }
 
 InnerTube::InnerTube(QObject *parent)
@@ -313,6 +364,18 @@ void InnerTube::send(Client client, const QString &endpoint, const QJsonObject &
                     *slot = nullptr;
 
                 if (reply->error() != QNetworkReply::NoError) {
+                    // A country YouTube Music does not serve is refused with
+                    // 400, every time, for everything. Rather than look
+                    // broken, drop the country and ask again as the system.
+                    const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+                    if (status == 400 && !g_region.isEmpty()) {
+                        const QString refused = g_region;
+                        g_region.clear();
+                        if (g_regionRejected)
+                            g_regionRejected(refused);
+                        send(client, endpoint, body, timeoutMs, slot, done, retries);
+                        return;
+                    }
                     // A dropped connection or a timeout is ordinary on a home
                     // connection; the second attempt usually works.
                     if (retries > 0 && reply->error() != QNetworkReply::OperationCanceledError) {

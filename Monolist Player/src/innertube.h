@@ -4,9 +4,11 @@
 #include <QList>
 #include <QObject>
 #include <QPointer>
+#include <QSet>
 #include <QStringList>
 
 #include <functional>
+#include <utility>
 
 class QNetworkAccessManager;
 class QNetworkReply;
@@ -86,6 +88,17 @@ public:
     static void setRegion(const QString &code);
     static QString region();          // the code actually sent
     static QString systemRegion();    // what the system is set to
+
+    // YouTube Music serves some countries and refuses the rest outright (400
+    // Bad Request for every call, which looks exactly like being offline). A
+    // refused country is dropped here and the request is made again from the
+    // system's own; the handler is told, so the choice can be forgotten and
+    // the user told why.
+    static void setRegionRejectedHandler(std::function<void(const QString &code)> handler);
+
+    // The countries it serves, by their ISO code. Asked of the API itself,
+    // country by country, rather than taken from a page that goes stale.
+    static const QSet<QString> &servedRegions();
 
     // One browse request (the home feed, charts, new releases, an album or a
     // playlist); `done` gets the response, or an error. Any number can run.

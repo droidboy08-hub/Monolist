@@ -75,11 +75,9 @@ int main(int argc, char *argv[])
 
     Library library;
     library.load();
-    // The country to browse, before anything asks YouTube Music.
-    InnerTube::setRegion(library.settingValue(QStringLiteral("region")));
 
-    // --set <key> <value>: writes one setting (piped_instances,
-    // invidious_instances, lrclib_url) before anything reads it.
+    // --set <key> <value>: writes one setting (region, lrclib_url,
+    // piped_instances, invidious_instances) before anything reads it.
     {
         const QStringList arguments = app.arguments();
         for (int i = arguments.indexOf(QStringLiteral("--set")); i >= 0 && i + 2 < arguments.size();
@@ -88,6 +86,14 @@ int main(int argc, char *argv[])
             qWarning("Monolist: setting %s = %s", qPrintable(arguments.at(i + 1)), qPrintable(arguments.at(i + 2)));
         }
     }
+
+    // The country to browse, before anything asks YouTube Music. One it does
+    // not serve is dropped as soon as it answers 400, rather than leaving
+    // every request failing.
+    InnerTube::setRegion(library.settingValue(QStringLiteral("region")));
+    InnerTube::setRegionRejectedHandler([&library](const QString &code) {
+        library.dropRegion(code);
+    });
 
     // — engines —
     MpvEngine engine;

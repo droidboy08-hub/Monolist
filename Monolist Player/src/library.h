@@ -100,9 +100,11 @@ public:
     QString regionInUse() const;
     QString regionInUseName() const;
     QString systemRegionName() const;
-    // Every country, as [{ code, name }], by name. For the picker.
+    // The countries YouTube Music serves, as [{ code, name }], by name.
     Q_INVOKABLE QVariantList countries() const;
     Q_INVOKABLE QString countryName(const QString &code) const;
+    // YouTube Music refused this country: forget it and say so.
+    void dropRegion(const QString &code);
 
 Q_SIGNALS:
     // A short confirmation of what just happened, for the toast.

@@ -202,6 +202,16 @@ void Library::setRegion(const QString &code)
                       : QStringLiteral("Browsing %1").arg(countryName(wanted)));
 }
 
+void Library::dropRegion(const QString &code)
+{
+    if (region().isEmpty())
+        return;   // already following the system
+    setSetting(kRegionKey, QString());
+    Q_EMIT regionChanged();
+    Q_EMIT notice(QStringLiteral("YouTube Music has no %1 — back to %2")
+                      .arg(countryName(code), systemRegionName()));
+}
+
 QString Library::regionInUse() const
 {
     return InnerTube::region();
@@ -223,8 +233,8 @@ QString Library::countryName(const QString &code) const
     return territory == QLocale::AnyTerritory ? code : QLocale::territoryToString(territory);
 }
 
-// Every country CLDR knows, by name. Codes of three characters or digits are
-// regions rather than countries ("419", Latin America) and are left out.
+// The countries YouTube Music serves, by name. Offering the rest would only
+// break the app: it refuses them outright.
 QVariantList Library::countries() const
 {
     QList<std::pair<QString, QString>> found;   // name, code
@@ -233,7 +243,7 @@ QVariantList Library::countries() const
                                                             QLocale::AnyTerritory);
     for (const QLocale &locale : locales) {
         const QString code = QLocale::territoryToCode(locale.territory());
-        if (code.size() != 2 || seen.contains(code))
+        if (code.size() != 2 || seen.contains(code) || !InnerTube::servedRegions().contains(code))
             continue;
         seen.insert(code);
         found.append({ QLocale::territoryToString(locale.territory()), code });
