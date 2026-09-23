@@ -365,6 +365,10 @@ ApplicationWindow {
     Connections {
         target: Player
         function onNotice(text) { toast.show(text) }
+        // A track that will not play used to fail in complete silence: the
+        // status line is only shown while a track is resolving, and failing is
+        // the moment that stops. Say it out loud.
+        function onPlaybackError(reason) { toast.show(reason) }
     }
 
     // — resize edges —

@@ -70,6 +70,7 @@ Rectangle {
                 // than the artist and there is nowhere else it would be seen.
                 Text {
                     readonly property bool showStatus: !Player.engineAvailable || Player.resolving
+                                                       || Player.statusError
 
                     width: parent.width
                     text: showStatus
@@ -81,7 +82,8 @@ Rectangle {
                     elide: Text.ElideRight
                     font.family: Theme.fontFamily
                     font.pixelSize: 12
-                    color: Player.engineAvailable ? Theme.neutral700 : Theme.accent
+                    color: Player.engineAvailable && !Player.statusError ? Theme.neutral700
+                                                                        : Theme.accent
                 }
             }
 

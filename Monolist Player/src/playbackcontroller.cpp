@@ -20,6 +20,10 @@ constexpr int kRadioLowWater = 2;
 // Radio songs added at a time: enough to run for a while, few enough that the
 // queue stays readable.
 constexpr int kRadioBatch = 25;
+// Tracks that may fail to resolve in a row before the queue stops walking
+// itself. Three is enough to step over a patch of unavailable songs and few
+// enough that a machine with no network gives up almost at once.
+constexpr int kMaxConsecutiveFailures = 3;
 
 QList<QueueTrack> tracksFromModel(QAbstractItemModel *model)
 {
@@ -110,7 +114,7 @@ PlaybackController::PlaybackController(MpvEngine *engine,
             }
             m_streamTier = -1;
             setPlayingFlag(false);
-            setStatus(QStringLiteral("Playback failed"), QString(), false);
+            setStatus(QStringLiteral("Playback failed"), QString(), false, /*error=*/true);
             Q_EMIT playbackError(reason);
         });
 
@@ -224,14 +228,17 @@ QString PlaybackController::durationText() const
     return TrackModel::formatDuration(m_duration);
 }
 
-void PlaybackController::setStatus(const QString &text, const QString &source, bool resolving)
+void PlaybackController::setStatus(const QString &text, const QString &source, bool resolving,
+                                   bool error)
 {
     const bool changed = text != m_statusText
                       || source != m_sourceLabel
-                      || resolving != m_resolving;
+                      || resolving != m_resolving
+                      || error != m_statusError;
     m_statusText = text;
     m_sourceLabel = source;
     m_resolving = resolving;
+    m_statusError = error;
     if (changed)
         Q_EMIT statusChanged();
 }
@@ -288,6 +295,8 @@ void PlaybackController::startQueue(QList<QueueTrack> tracks, int start, bool au
     m_innerTube.cancelRadio();
     m_radioSeed.clear();
     m_waitingForRadio = false;
+    // Someone has just asked for something: give the queue its three tries back.
+    m_consecutiveFailures = 0;
 
     if (tracks.isEmpty())
         return;
@@ -583,7 +592,7 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
         return;
     }
 
-    setStatus(QStringLiteral("No playable source"), QString(), false);
+    setStatus(QStringLiteral("No playable source"), QString(), false, /*error=*/true);
     Q_EMIT playbackError(QStringLiteral("This track has no local file and no source id."));
 }
 
@@ -603,6 +612,7 @@ void PlaybackController::handleResolved(const QString &videoId, const QString &u
     }
 
     setStatus(QStringLiteral("Streaming"), label, false);
+    m_consecutiveFailures = 0;
     m_streamVideoId = videoId;
     m_streamTier = tier;
     m_streamFromCache = fromCache;
@@ -618,8 +628,39 @@ void PlaybackController::handleResolveFailed(const QString &videoId, const QStri
         return;
     m_pendingVideoId.clear();
 
+    // One track that will not play should not end the listening: say which one
+    // it was and carry on down the queue. But stop after a few in a row — a
+    // machine that has lost the network fails every one of them, and would
+    // otherwise run the whole queue in seconds, resolving as it went.
+    //
+    // `m_autoPlayAfterResolve` is what says the listener was expecting sound;
+    // it has to be read before anything below clears state.
+    const bool wasGoingToPlay = m_autoPlayAfterResolve;
+    const bool giveUp = ++m_consecutiveFailures >= kMaxConsecutiveFailures;
+    const bool skip = wasGoingToPlay && !giveUp && m_queue.upcomingCount() > 0;
+
+    // Always in the log, whichever way this goes: it is the only place the
+    // real cause is written down.
+    qWarning("resolve failed for %s: %s", qPrintable(videoId), qPrintable(reason));
+
+    if (skip) {
+        // The playing flag is deliberately left alone. It follows mpv's pause
+        // property, and mpv is not paused here — it simply has nothing loaded.
+        // Clearing it and then loading the next track would never set it back,
+        // because no pause change ever happens, and the player bar would show
+        // a play button over music that is playing.
+        const QString title = m_currentTrack.value(QStringLiteral("title")).toString();
+        Q_EMIT notice(title.isEmpty()
+                          ? QStringLiteral("Couldn't play that one — skipping")
+                          : QStringLiteral("Couldn't play “%1” — skipping").arg(title));
+        advance(/*keepPlaying=*/true);
+        return;
+    }
+
     setPlayingFlag(false);
-    setStatus(QStringLiteral("Source unavailable"), QString(), false);
+    setStatus(giveUp ? QStringLiteral("Nothing here will play")
+                     : QStringLiteral("Source unavailable"),
+              QString(), false, /*error=*/true);
     Q_EMIT playbackError(reason);
 }
 
@@ -692,9 +733,19 @@ void PlaybackController::togglePlay()
 
 void PlaybackController::next()
 {
+    advance(m_playing || m_resolving);
+}
+
+// `keepPlaying` is separate from m_playing because of one caller: a track that
+// failed to resolve has already had the playing flag cleared by the time the
+// queue steps past it, and reading the flag there would leave the replacement
+// sitting paused — the listener asked for music, not for a track that fails
+// quietly and a player that stops.
+void PlaybackController::advance(bool keepPlaying)
+{
     if (m_queue.rowCount() == 0)
         return;
-    const bool wasPlaying = m_playing || m_resolving;
+    const bool wasPlaying = keepPlaying;
 
     int target = m_queue.currentIndex() + 1;
     if (target >= m_queue.rowCount()) {

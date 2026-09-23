@@ -205,6 +205,12 @@ void YtDlpRequest::handleFinished(int exitCode, QProcess::ExitStatus status)
 
     m_settled = true;
 
+    // Said even on success: a resolve that worked while complaining about a
+    // missing JavaScript runtime or a skipped PO token is the warning before
+    // the failure, and it is the only notice we get.
+    if (!m_stderr.isEmpty())
+        qWarning("yt-dlp: %s", QString::fromUtf8(m_stderr).trimmed().toUtf8().constData());
+
     if (m_expectJson) {
         QJsonParseError parseError;
         const QJsonDocument document = QJsonDocument::fromJson(m_stdout, &parseError);
@@ -347,9 +353,18 @@ QStringList YtDlp::commonArguments()
 {
     QStringList args = {
         QStringLiteral("--ignore-config"),
-        QStringLiteral("--no-warnings"),
+        // Warnings are kept deliberately. yt-dlp says why it is about to fail
+        // in a warning, not an error — "PO Token … will be skipped", "ensure
+        // you have a supported JavaScript runtime" — and with --no-warnings on
+        // those never reached us, which is most of why a track that would not
+        // play was so hard to diagnose.
         QStringLiteral("--encoding"), QStringLiteral("utf-8"),
-        QStringLiteral("--socket-timeout"), QStringLiteral("15")
+        QStringLiteral("--socket-timeout"), QStringLiteral("15"),
+        // Bounded. The defaults retry enough to outlast any patience, and the
+        // resolver now gives up at 12s anyway; failing fast leaves time for
+        // the tier below.
+        QStringLiteral("--retries"), QStringLiteral("2"),
+        QStringLiteral("--extractor-retries"), QStringLiteral("1")
     };
     const QString deno = denoPath();
     if (!deno.isEmpty())

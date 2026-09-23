@@ -51,6 +51,11 @@ class PlaybackController : public QObject
     Q_PROPERTY(bool buffering READ buffering NOTIFY bufferingChanged)
     Q_PROPERTY(bool resolving READ resolving NOTIFY statusChanged)
     Q_PROPERTY(QString statusText READ statusText NOTIFY statusChanged)
+    // Whether `statusText` is reporting a failure rather than progress. The
+    // player bar shows the status line while a track is resolving; without
+    // this it has no reason to keep showing it once resolving stops, which is
+    // exactly when a failure has something to say.
+    Q_PROPERTY(bool statusError READ statusError NOTIFY statusChanged)
     Q_PROPERTY(QString sourceLabel READ sourceLabel NOTIFY statusChanged)
     Q_PROPERTY(bool engineAvailable READ engineAvailable CONSTANT)
     // The picture. `videoAvailable` is whether this track has one at all
@@ -91,6 +96,7 @@ public:
     bool buffering() const { return m_buffering; }
     bool resolving() const { return m_resolving; }
     QString statusText() const { return m_statusText; }
+    bool statusError() const { return m_statusError; }
     QString sourceLabel() const { return m_sourceLabel; }
     bool engineAvailable() const;
     bool videoAvailable() const;
@@ -177,9 +183,10 @@ private:
     bool abandonVideo(const QString &reason);
     void handleEndOfFile();
     void prefetchUpcoming();
+    void advance(bool keepPlaying);
     bool extendWithRadio();   // false when there is nothing to seed a radio from
     void refreshFavourite();
-    void setStatus(const QString &text, const QString &source, bool resolving);
+    void setStatus(const QString &text, const QString &source, bool resolving, bool error = false);
     void setDuration(qint64 ms);
     void setPlayingFlag(bool playing);
     void recordHistory(const QVariantMap &track);
@@ -199,6 +206,11 @@ private:
     bool m_streamFromCache = false;  // and whether it was a remembered link
     QString m_statusText;
     QString m_sourceLabel;
+    bool m_statusError = false;
+    // Consecutive tracks that would not resolve. A queue is skipped past one
+    // bad track, but a machine that is offline — or a YouTube-wide block —
+    // must not race the whole queue, spawning a resolve for every row.
+    int m_consecutiveFailures = 0;
 
     QString m_radioSeed;             // the song the radio request in flight is for
     bool m_waitingForRadio = false;  // the queue ran out and is waiting on it

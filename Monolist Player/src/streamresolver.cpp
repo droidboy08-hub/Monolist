@@ -18,6 +18,9 @@ namespace {
 
 constexpr int kPipedTimeoutMs = 8000;
 constexpr int kInvidiousTimeoutMs = 6000;
+// Roughly three times a healthy resolve on the slowest machine this is known
+// to run on. Past this, something is wrong and waiting longer helps nobody.
+constexpr int kYtDlpTimeoutMs = 12000;
 
 QNetworkRequest makeRequest(const QUrl &url)
 {
@@ -32,34 +35,40 @@ QNetworkRequest makeRequest(const QUrl &url)
 
 } // namespace
 
+// Both lists ship empty, and both tiers survive.
+//
+// The public instances were probed host by host: of the 15 documented Piped
+// API hosts, 11 no longer answer at all and the two that do return an empty
+// `audioStreams` list or a 500 — the extraction is broken upstream, so no
+// refreshed list repairs this. Of the Invidious hosts, one still advertises an
+// API and none serve /latest_version as media. What the tiers bought was a
+// ~7.5s walk through hosts that cannot answer, paid at the exact moment
+// something had already gone wrong.
+//
+// This is instance rot, not the projects ending: both are still developed. So
+// the racing code stays, the `piped_instances` and `invidious_instances`
+// settings rows still feed setPipedInstances()/setInvidiousInstances(), and a
+// live host list revives either tier without a rebuild. With the list empty,
+// startPipedRace()/startInvidiousRace() call tierExhausted() at once and the
+// ladder walks past in no measurable time.
+//
+// The last known-good lists, for whoever repopulates them:
+//   Piped      pipedapi.kavin.rocks, pipedapi.moomoo.me,
+//              piped-api.garudalinux.org, api.piped.projectsegfau.lt,
+//              piped.privacydev.net
+//   Invidious  yewtu.be, invidious.projectsegfau.lt, iv.ggtyler.dev,
+//              inv.nadeko.net, invidious.nerdvpn.de, invidious.privacydev.net,
+//              yt.artemislena.eu, invidious.fdn.fr, invidious.slipfox.xyz,
+//              invidious.lunar.icu, invidious.vps.sh, inv.tux.pizza,
+//              invidious.io.lol
 QStringList StreamResolver::defaultPipedInstances()
 {
-    return {
-        QStringLiteral("pipedapi.kavin.rocks"),
-        QStringLiteral("pipedapi.moomoo.me"),
-        QStringLiteral("piped-api.garudalinux.org"),
-        QStringLiteral("api.piped.projectsegfau.lt"),
-        QStringLiteral("piped.privacydev.net")
-    };
+    return {};
 }
 
 QStringList StreamResolver::defaultInvidiousInstances()
 {
-    return {
-        QStringLiteral("yewtu.be"),
-        QStringLiteral("invidious.projectsegfau.lt"),
-        QStringLiteral("iv.ggtyler.dev"),
-        QStringLiteral("inv.nadeko.net"),
-        QStringLiteral("invidious.nerdvpn.de"),
-        QStringLiteral("invidious.privacydev.net"),
-        QStringLiteral("yt.artemislena.eu"),
-        QStringLiteral("invidious.fdn.fr"),
-        QStringLiteral("invidious.slipfox.xyz"),
-        QStringLiteral("invidious.lunar.icu"),
-        QStringLiteral("invidious.vps.sh"),
-        QStringLiteral("inv.tux.pizza"),
-        QStringLiteral("invidious.io.lol")
-    };
+    return {};
 }
 
 StreamResolver::StreamResolver(QObject *parent)
@@ -260,6 +269,17 @@ void StreamResolver::startYtDlp(Job *job)
     job->ytdlp = request;
     const QString videoId = job->videoId;
     const int generation = job->generation;
+
+    // Nothing else bounds this. --socket-timeout is per socket operation, and
+    // yt-dlp's own retry budget lets one resolve legitimately run for minutes
+    // while the app sits on "Resolving source…" with no way out. The guard is
+    // the same shape as the lambdas below, so a job that has already settled
+    // or moved on ignores it; tierExhausted -> abortPending kills the process.
+    QTimer::singleShot(kYtDlpTimeoutMs, this, [this, videoId, generation]() {
+        Job *job = m_jobs.value(videoId);
+        if (job && !job->settled && job->generation == generation && job->tier == TierYtDlp)
+            tierExhausted(job, QStringLiteral("yt-dlp timed out"));
+    });
 
     connect(request, &YtDlpRequest::succeededJson, this,
             [this, videoId, generation](const QJsonDocument &document) {
