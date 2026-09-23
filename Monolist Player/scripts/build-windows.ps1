@@ -66,8 +66,11 @@ $binDir   = Join-Path $InstallRoot 'bin'
 foreach ($path in $qtPrefix, $mingwBin, $cmakeBin, $ninjaDir, $binDir) {
     if (-not (Test-Path -LiteralPath $path)) { throw "Missing $path. Run setup-windows.ps1 first." }
 }
-# Only this process and its children see the change.
-$env:PATH = @($mingwBin, $cmakeBin, $ninjaDir, (Join-Path $qtPrefix 'bin'), $binDir, $env:PATH) -join ';'
+# Only this process and its children see the change. PortableGit goes on too,
+# so the build can stamp itself with the commit it was made from; it is not
+# required, and a build without it simply says so.
+$gitBin = Join-Path $InstallRoot 'git\cmd'
+$env:PATH = @($mingwBin, $cmakeBin, $ninjaDir, (Join-Path $qtPrefix 'bin'), $binDir, $gitBin, $env:PATH) -join ';'
 
 $suffix   = if ($NoMpv) { '-nompv' } else { '' }
 $buildDir = Join-Path $BuildRoot ($Config.ToLowerInvariant() + $suffix)

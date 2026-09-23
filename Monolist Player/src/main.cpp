@@ -28,6 +28,7 @@
 #include "trackmodel.h"
 #include "videosurface.h"
 #include "windowchrome.h"
+#include "appinfo.h"
 #include "ytdlp.h"
 
 #include <memory>
@@ -38,7 +39,9 @@ int main(int argc, char *argv[])
     app.setOrganizationName(QStringLiteral("Monolist"));
     app.setApplicationName(QStringLiteral("Monolist"));
     app.setApplicationDisplayName(QStringLiteral("Monolist"));
-    app.setApplicationVersion(QStringLiteral("0.1"));
+    // One source for the version, generated from the repository at build time
+    // rather than typed in two places that drift apart.
+    app.setApplicationVersion(AppInfo().version());
 
     // Neutral control style: the design is drawn entirely by the QML components,
     // platform styles would override paddings and colors.
@@ -163,6 +166,8 @@ int main(int argc, char *argv[])
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Lyrics",    &lyrics);
     WindowChrome chrome;
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Chrome",    &chrome);
+    AppInfo appInfo;
+    qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "About",     &appInfo);
     qmlRegisterUncreatableType<SearchResultModel>(
         "Monolist.Backend", 1, 0, "SearchResultModel",
         QStringLiteral("Obtained from Extractor.results"));

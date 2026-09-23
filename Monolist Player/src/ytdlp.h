@@ -96,6 +96,12 @@ public:
     // Full paths, or empty when the tool is missing.
     static QString ffmpegPath();
     static QString denoPath();
+    // The command that runs yt-dlp: the program first, then any arguments that
+    // have to precede its own (a pip install needs "-m yt_dlp"). Empty when it
+    // is not installed. For asking it its version, which is worth showing
+    // because a yt-dlp six months old is the usual reason a track will not
+    // play.
+    static QStringList invocationCommand();
 
     // `ytsearchN:` query against YouTube; flat, so it stays fast.
     static YtDlpRequest *search(const QString &query, int limit, QObject *parent);

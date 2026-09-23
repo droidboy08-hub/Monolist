@@ -1,0 +1,22 @@
+#pragma once
+
+// Generated at build time by cmake/buildinfo.cmake — do not edit.
+//
+// Only appinfo.cpp includes this, so the fact that it changes with every
+// commit costs one file's compile rather than the whole application's.
+
+#define MONOLIST_VERSION      "@MONOLIST_VERSION@"
+// How many commits this build was made from: a number that only ever goes up,
+// which is what a build number has to be for "is mine newer than yours" to
+// mean anything.
+#define MONOLIST_BUILD_NUMBER "@MONOLIST_BUILD_NUMBER@"
+#define MONOLIST_COMMIT       "@MONOLIST_COMMIT@"
+#define MONOLIST_BUILD_DATE   "@MONOLIST_BUILD_DATE@"
+// Whether the tree had uncommitted changes when this was built. A build that
+// says it is commit abc1234 while containing something else is worse than no
+// build number at all.
+#define MONOLIST_DIRTY        @MONOLIST_DIRTY@
+// Where it was built from, so a development build can find the setup script
+// that maintains the bundled tools. Empty, or simply missing, in a build
+// installed anywhere else — which is the normal case and not an error.
+#define MONOLIST_SOURCE_DIR   "@MONOLIST_SOURCE_DIR@"

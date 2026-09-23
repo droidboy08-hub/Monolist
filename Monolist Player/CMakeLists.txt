@@ -43,6 +43,7 @@ qt_add_executable(monolist
     src/catalog.h                  src/catalog.cpp
     src/lyrics.h                   src/lyrics.cpp
     src/windowchrome.h             src/windowchrome.cpp
+    src/appinfo.h                  src/appinfo.cpp
     # — backend merged in from the Melody player —
     ${MONOLIST_MPV_SOURCES}
     src/ytdlp.h                    src/ytdlp.cpp
@@ -51,6 +52,33 @@ qt_add_executable(monolist
     src/downloadmodels.h           src/downloadmodels.cpp
     src/artworkcache.h             src/artworkcache.cpp
 )
+
+# The build's own identity: version, build number, commit, date. Regenerated
+# before every build rather than at configure time, so the build number follows
+# the commits; the script rewrites the header only when something changed, so
+# an unchanged tree does not recompile.
+set(MONOLIST_BUILDINFO "${CMAKE_CURRENT_BINARY_DIR}/generated/buildinfo.h")
+add_custom_target(monolist_buildinfo
+    BYPRODUCTS "${MONOLIST_BUILDINFO}"
+    COMMAND ${CMAKE_COMMAND}
+            -DSOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
+            -DTEMPLATE=${CMAKE_CURRENT_SOURCE_DIR}/src/buildinfo.h.in
+            -DOUTPUT=${MONOLIST_BUILDINFO}
+            -DAPP_VERSION=${PROJECT_VERSION}
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/buildinfo.cmake
+    COMMENT "Stamping the build number"
+    VERBATIM)
+add_dependencies(monolist monolist_buildinfo)
+target_include_directories(monolist PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
+
+# Written once now as well, because the first configure happens before any
+# build runs and appinfo.cpp has to have something to include.
+execute_process(COMMAND ${CMAKE_COMMAND}
+    -DSOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
+    -DTEMPLATE=${CMAKE_CURRENT_SOURCE_DIR}/src/buildinfo.h.in
+    -DOUTPUT=${MONOLIST_BUILDINFO}
+    -DAPP_VERSION=${PROJECT_VERSION}
+    -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/buildinfo.cmake)
 
 # components/ and views/ hold .qml files outside the module root. Qt 6.8+ wants
 # a qmldir in each so the directory imports in Main.qml and the views resolve
@@ -107,6 +135,7 @@ qt_add_qml_module(monolist
         components/LyricsPane.qml
         components/ToggleRow.qml
         components/DownloadOptions.qml
+        components/ServiceRow.qml
         views/HomeView.qml
         views/SearchView.qml
         views/LibraryView.qml

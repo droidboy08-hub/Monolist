@@ -20,7 +20,13 @@ Flickable {
     boundsBehavior: Flickable.StopAtBounds
     clip: true
 
-    Component.onCompleted: allCountries = Library.countries()
+    Component.onCompleted: {
+        allCountries = Library.countries()
+        // Versions cost a process each to read, so they are asked for when
+        // this page opens rather than while the app is starting.
+        if (!About.componentsKnown)
+            About.refreshComponents()
+    }
 
     ScrollBar.vertical: MonoScrollBar {}
 
@@ -297,22 +303,232 @@ Flickable {
 
         HRule { width: parent.width }
 
-        // — about —
+        // — connections —
+        //
+        // Designed, not built. The app works entirely without any of these and
+        // is meant to keep working that way; what an account buys is your own
+        // library and your own history, not a better player.
         SectionHeader {
             width: parent.width
             number: "04"
+            title: "Connections"
+        }
+
+        Note {
+            text: "Nothing is signed in. Monolist plays without an account, and keeps your library "
+                  + "on this computer. Connecting one would add what only an account can know."
+        }
+
+        ServiceRow {
+            width: parent.width
+            name: "Last.fm"
+            detail: "Scrobble what you play, and see what you have been listening to."
+            steps: [
+                "Monolist opens Last.fm in your browser, where you approve it. Your password is never typed into this app.",
+                "Last.fm hands back a session key, which is stored on this computer and can be revoked from your Last.fm account at any time.",
+                "From then on, a track counts as played once you have heard half of it, and scrobbles go out in the background. Nothing else is sent."
+            ]
+        }
+
+        ServiceRow {
+            width: parent.width
+            name: "YouTube Music"
+            detail: "Your own playlists, likes and listening history, instead of this computer's."
+            caution: "Use an account you can afford to lose. Google restricts accounts used by outside players, and that would take the account with it."
+            steps: [
+                "Sign in to YouTube Music in your own browser, in a private window, and export the cookies for that tab to a file.",
+                "Point Monolist at that file. It is read once, kept in this computer's keychain, and never written to the music database or to any log.",
+                "Your library, likes and history then come from your account. Sign out here and the file and the key are both deleted.",
+                "It buys none of the speed: playback is exactly as fast signed out, and signing in never becomes required for anything."
+            ]
+        }
+
+        HRule { width: parent.width }
+
+        // — updates —
+        SectionHeader {
+            width: parent.width
+            number: "05"
+            title: "Updates"
+        }
+
+        Item {
+            width: parent.width
+            height: Math.max(appUpdate.implicitHeight, checkButton.implicitHeight)
+
+            Column {
+                id: appUpdate
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                width: parent.width - checkButton.width - Theme.space4
+                spacing: 2
+
+                Text {
+                    text: "Monolist " + About.fullVersion
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 15
+                    font.weight: Theme.weightBlack
+                    color: Theme.text
+                }
+                Text {
+                    width: parent.width
+                    text: About.updateMessage.length > 0 ? About.updateMessage
+                                                         : "Not checked yet."
+                    wrapMode: Text.WordWrap
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 13
+                    // A found update is the one thing here worth the accent.
+                    color: About.updateAvailable ? Theme.accent : Theme.neutral700
+                }
+            }
+
+            ActionButton {
+                id: checkButton
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                text: About.updateAvailable ? "GET IT" : "CHECK"
+                primary: About.updateAvailable
+                enabled: !About.checking
+                onClicked: About.updateAvailable ? About.openUpdatePage()
+                                                   : About.checkForUpdate()
+            }
+        }
+
+        // — the advanced update —
+        //
+        // Its own control because it fixes a different problem. What goes out
+        // of date in a player like this is not usually the player: it is
+        // yt-dlp, and a copy six months old is the ordinary reason a track
+        // stops playing. This updates those without touching the app.
+        Text {
+            text: "COMPONENTS"
+            font.family: Theme.fontFamily
+            font.pixelSize: 11
+            font.weight: Font.Bold
+            font.letterSpacing: Theme.tracking(11, 0.08)
+            color: Theme.neutral700
+            topPadding: Theme.space2
+        }
+
+        Column {
+            id: componentList
+            width: parent.width
+            spacing: Theme.space2
+
+            Repeater {
+                model: About.components
+
+                Item {
+                    required property var modelData
+
+                    width: componentList.width
+                    height: 34
+
+                    Text {
+                        anchors.left: parent.left
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 110
+                        text: modelData.name
+                        elide: Text.ElideRight
+                        font.family: Theme.fontFamily
+                        font.pixelSize: 13
+                        font.weight: Theme.weightBlack
+                        color: Theme.text
+                    }
+                    Text {
+                        x: 110
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 150
+                        text: modelData.version.length > 0 ? modelData.version : "not installed"
+                        elide: Text.ElideRight
+                        font.family: Theme.fontFamily
+                        font.pixelSize: 13
+                        // Missing is the only state worth marking: it is why
+                        // something else in the app is not working.
+                        color: modelData.version.length > 0 ? Theme.neutral700 : Theme.accent
+                    }
+                    Text {
+                        x: 260
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: parent.width - 260
+                        text: modelData.role
+                        elide: Text.ElideRight
+                        font.family: Theme.fontFamily
+                        font.pixelSize: 13
+                        color: Theme.neutral700
+                    }
+
+                    Rectangle {
+                        width: parent.width
+                        height: Theme.ruleWidth
+                        anchors.bottom: parent.bottom
+                        color: Theme.neutral300
+                    }
+                }
+            }
+
+            Text {
+                visible: !About.componentsKnown
+                text: "Reading versions…"
+                font.family: Theme.fontFamily
+                font.pixelSize: 13
+                color: Theme.neutral700
+            }
+        }
+
+        Item {
+            width: parent.width
+            height: Math.max(toolsNote.implicitHeight, toolsButton.implicitHeight)
+
+            Note {
+                id: toolsNote
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                width: parent.width - toolsButton.width - Theme.space4
+                text: About.toolsMessage.length > 0
+                      ? About.toolsMessage
+                      : (About.canUpdateTools
+                         ? "Fetches the newest yt-dlp, FFmpeg and Deno, and leaves the app itself alone."
+                         : "These came with this build and are updated by whatever installed it.")
+            }
+
+            ActionButton {
+                id: toolsButton
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                text: About.toolsBusy ? "UPDATING…" : "UPDATE COMPONENTS"
+                enabled: About.canUpdateTools && !About.toolsBusy
+                onClicked: About.updateTools()
+            }
+        }
+
+        HRule { width: parent.width }
+
+        // — about —
+        SectionHeader {
+            width: parent.width
+            number: "06"
             title: "About"
+            action: "COPY FOR A BUG REPORT →"
+            onActionTriggered: About.copyReport()
         }
 
         Column {
             width: parent.width
             spacing: 4
 
-            Note { text: "Monolist " + Qt.application.version }
+            Note { text: "Monolist " + About.fullVersion }
+            Note {
+                text: "Commit " + About.commit + ", built " + About.buildDate
+                      + (About.modified ? ", with uncommitted changes" : "")
+                      + " · Qt " + About.qtVersion
+            }
             Note {
                 text: "Songs, search, lyrics and artwork come from YouTube Music, LRCLIB, yt-dlp and FFmpeg. "
                       + "Nothing is signed in: no account, and nothing about you leaves this computer."
             }
         }
     }
+
 }
+

@@ -323,6 +323,14 @@ bool YtDlp::isAvailable()
     return locate().valid;
 }
 
+QStringList YtDlp::invocationCommand()
+{
+    const Invocation invocation = locate();
+    if (!invocation.valid)
+        return {};
+    return QStringList{ invocation.program } + invocation.prefixArgs;
+}
+
 QString YtDlp::resolvedDescription()
 {
     const Invocation invocation = locate();
