@@ -60,25 +60,47 @@ Button {
         }
     }
 
+    // Grey until the pointer is on it, then ink — the same ladder as every
+    // other icon. The states that already signal brighten instead, because
+    // they cannot go to ink without losing what the colour is telling you.
+    readonly property bool live: control.hovered || control.down
+    readonly property color glyphColour:
+          downloadState === "" ? (live ? Theme.text : Theme.neutral700)
+        : downloadState === "failed" ? (live ? Theme.accent600 : Theme.accent700)
+        : downloadState === "queued" ? (live ? Theme.text : Theme.neutral700)
+        : (live ? Theme.accent600 : Theme.accent)
+
     contentItem: Item {
+        // The arrow, for the two states that still look like one. It falls
+        // only from the untouched state, where the gesture is an offer; while
+        // a download is actually running the rule underneath is doing the
+        // reporting, and a second moving thing would just be noise.
+        DownloadGlyph {
+            readonly property bool arrowState: control.downloadState === ""
+                                               || control.downloadState === "downloading"
+
+            anchors.centerIn: parent
+            visible: arrowState
+            width: control.iconSize
+            height: control.iconSize
+            color: control.glyphColour
+            falling: control.hovered && control.downloadState === ""
+
+            Behavior on color {
+                enabled: !control.hovered && !control.down
+                ColorAnimation { duration: Theme.quick }
+            }
+        }
+
         Icon {
             anchors.centerIn: parent
+            visible: control.downloadState !== "" && control.downloadState !== "downloading"
             width: control.iconSize
             height: control.iconSize
             name: control.downloadState === "done" ? "check-circle"
                 : control.downloadState === "failed" ? "rotate-ccw"
-                : (control.downloadState === "queued" || control.downloadState === "processing") ? "dots"
-                : "download"
-            // Grey until the pointer is on it, then ink — the same ladder as
-            // every other icon. The states that already signal brighten
-            // instead, because they cannot go to ink without losing what the
-            // colour is telling you.
-            readonly property bool live: control.hovered || control.down
-
-            color: control.downloadState === "" ? (live ? Theme.text : Theme.neutral700)
-                 : control.downloadState === "failed" ? (live ? Theme.accent600 : Theme.accent700)
-                 : control.downloadState === "queued" ? (live ? Theme.text : Theme.neutral700)
-                 : (live ? Theme.accent600 : Theme.accent)
+                : "dots"
+            color: control.glyphColour
 
             Behavior on color {
                 enabled: !control.hovered && !control.down

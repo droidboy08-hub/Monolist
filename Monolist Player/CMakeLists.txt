@@ -89,6 +89,7 @@ qt_add_qml_module(monolist
         components/HRule.qml
         components/PosterButton.qml
         components/DownloadButton.qml
+        components/DownloadGlyph.qml
         components/ChoiceChip.qml
         components/TrackMenu.qml
         components/QueuePanel.qml
