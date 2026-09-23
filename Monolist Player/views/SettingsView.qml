@@ -238,6 +238,44 @@ Flickable {
             onToggled: Player.autoplay = !Player.autoplay
         }
 
+        Text {
+            text: "VIDEO"
+            font.family: Theme.fontFamily
+            font.pixelSize: 11
+            font.weight: Font.Bold
+            font.letterSpacing: Theme.tracking(11, 0.08)
+            color: Theme.neutral700
+        }
+
+        // Negative spacing lets neighbouring segments share one 2px rule.
+        Row {
+            spacing: -Theme.ruleWidth
+
+            ChoiceChip {
+                label: "360p"
+                selected: Library.videoQuality === 360
+                onPicked: Library.videoQuality = 360
+            }
+            ChoiceChip {
+                label: "720p"
+                selected: Library.videoQuality === 720
+                onPicked: Library.videoQuality = 720
+            }
+            ChoiceChip {
+                label: "1080p"
+                selected: Library.videoQuality === 1080
+                onPicked: Library.videoQuality = 1080
+            }
+        }
+
+        Note {
+            text: Library.videoQuality === 360
+                  ? "Smallest, and the one to choose on a machine that decodes video in software."
+                  : Library.videoQuality === 1080
+                    ? "As large as a music video usually comes. Heavy without hardware decoding."
+                    : "What most music videos are published at. The next video uses the new size."
+        }
+
         HRule { width: parent.width }
 
         // — downloads —

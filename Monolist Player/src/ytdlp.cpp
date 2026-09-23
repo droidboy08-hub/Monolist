@@ -407,10 +407,17 @@ YtDlpRequest *YtDlp::resolveAudio(const QString &videoIdOrUrl, QObject *parent)
 YtDlpRequest *YtDlp::resolveVideo(const QString &videoIdOrUrl, int maxHeight, QObject *parent)
 {
     const int cap = qBound(240, maxHeight, 2160);
-    // Preferring the muxed stream keeps it to one connection; above 720p
-    // YouTube only offers picture and sound apart, which yt-dlp reports as
-    // two "requested_formats".
-    const QString format = QStringLiteral("b[height<=?%1]/bv*[height<=?%1]+ba/b").arg(cap);
+    // H.264 first, and only then whatever else there is. Left to itself
+    // YouTube offers AV1, which every desktop can decode in software and few
+    // can decode in hardware: on a modest machine — or a virtual one — the
+    // picture never arrives. H.264 is the one codec with hardware decoding
+    // everywhere the app runs. After that, a stream with both in one file,
+    // then anything at all.
+    const QString format = QStringLiteral(
+        "bv*[vcodec^=avc1][height<=?%1]+ba"
+        "/b[height<=?%1][vcodec!=none][acodec!=none]"
+        "/bv*[height<=?%1]+ba"
+        "/b").arg(cap);
     const QStringList args = {
         normaliseToUrl(videoIdOrUrl),
         QStringLiteral("--dump-single-json"),

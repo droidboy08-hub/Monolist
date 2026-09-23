@@ -114,6 +114,10 @@ int main(int argc, char *argv[])
 
     PlaybackController player(&engine, &resolver, &downloads);
     player.setLibrary(&library);
+    player.setVideoHeight(library.videoQuality());
+    QObject::connect(&library, &Library::videoQualityChanged, &player, [&player, &library]() {
+        player.setVideoHeight(library.videoQuality());
+    });
     // Open with the library queued and its first song ready, not playing.
     player.loadModel(library.tracks(), 0);
 
@@ -272,8 +276,21 @@ int main(int argc, char *argv[])
         });
 
         // --video plays it as something with a picture, so the video switch
-        // in Now Playing is live for it.
+        // in Now Playing is live for it; --switch-at <s> then asks for the
+        // picture after that many seconds, as pressing the switch would.
         const bool asVideo = args.contains(QStringLiteral("--video"));
+        const int switchFlag = args.indexOf(QStringLiteral("--switch-at"));
+        if (switchFlag >= 0 && switchFlag + 1 < args.size()) {
+            const int after = args.at(switchFlag + 1).toInt();
+            QObject::connect(&player, &PlaybackController::notice, &app, [](const QString &text) {
+                qWarning("selftest: notice \"%s\"", qPrintable(text));
+            });
+            QTimer::singleShot(qMax(1, after) * 1000, &app, [&player]() {
+                qWarning("selftest: asking for the video (available: %s)",
+                         player.videoAvailable() ? "yes" : "no");
+                player.setVideoWanted(true);
+            });
+        }
         const auto start = [&player, videoId, title, artist, known, asVideo]() {
             player.playSource(videoId, title, artist, known.value(QStringLiteral("artwork")).toString(),
                               known.value(QStringLiteral("durationMs")).toLongLong(),
@@ -296,6 +313,10 @@ int main(int argc, char *argv[])
             qWarning("selftest: position %s of %s, %s",
                      qPrintable(player.positionText()), qPrintable(player.durationText()),
                      player.playing() ? "playing" : "not playing");
+            qWarning("selftest: playing \"%s\" by %s; video %s",
+                     qPrintable(player.currentTrack().value(QStringLiteral("title")).toString()),
+                     qPrintable(player.currentTrack().value(QStringLiteral("artist")).toString()),
+                     player.videoPlaying() ? "on" : "off");
             QueueModel *queue = player.queue();
             QStringList upcoming;
             int fromRadio = 0;

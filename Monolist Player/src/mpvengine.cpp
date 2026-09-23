@@ -6,6 +6,12 @@
 #include <mpv/client.h>
 
 namespace {
+// What yt-dlp presents itself as, and therefore what the links it hands back
+// must be fetched as.
+const char *kBrowserUserAgent =
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/149.0.0.0 Safari/537.36";
+
 // Property ids passed to mpv_observe_property; echoed back on each change event.
 enum ObservedProperty : uint64_t {
     PropTimePos = 1,
@@ -98,7 +104,10 @@ void MpvEngine::applyBaseOptions()
     setOption("replaygain", "track");
 
     setOption("audio-client-name", "Monolist");
-    setOption("user-agent", "Mozilla/5.0 (compatible; Monolist/0.1)");
+    // The browser yt-dlp says it is when it fetches a stream URL. YouTube
+    // checks: a link extracted as one client and then fetched as another is
+    // refused with 403, which is what an honest "Monolist/0.1" earned.
+    setOption("user-agent", kBrowserUserAgent);
 
     // Keep libmpv from writing to the app's stderr; errors surface as signals.
     setOption("terminal", "no");
@@ -230,10 +239,25 @@ void MpvEngine::drainEvents()
 }
 
 void MpvEngine::load(const QString &urlOrPath, bool startPlaying, const QString &audioUrl,
-                     qint64 startAt)
+                     qint64 startAt, const QVariantMap &headers)
 {
     if (!m_mpv)
         return;
+
+    // Fetch the link the way it was obtained. Always set, so one file's
+    // headers are never sent for the next one's.
+    const QString agent = headers.value(QStringLiteral("User-Agent")).toString();
+    mpv_set_option_string(m_mpv, "user-agent",
+                          agent.isEmpty() ? kBrowserUserAgent : agent.toUtf8().constData());
+    const char *clearHeaders[] = { "change-list", "http-header-fields", "clr", "", nullptr };
+    mpv_command(m_mpv, clearHeaders);
+    for (auto it = headers.cbegin(); it != headers.cend(); ++it) {
+        if (it.key().compare(QLatin1String("User-Agent"), Qt::CaseInsensitive) == 0)
+            continue;   // its own option
+        const QByteArray field = (it.key() + QStringLiteral(": ") + it.value().toString()).toUtf8();
+        const char *add[] = { "change-list", "http-header-fields", "append", field.constData(), nullptr };
+        mpv_command(m_mpv, add);
+    }
 
     // Forget the previous file's duration. Change events are compared against
     // it, and reloading a file of the same length would otherwise never report

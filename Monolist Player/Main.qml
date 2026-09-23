@@ -362,6 +362,11 @@ ApplicationWindow {
         function onNotice(text) { toast.show(text) }
     }
 
+    Connections {
+        target: Player
+        function onNotice(text) { toast.show(text) }
+    }
+
     // — resize edges —
     // Only where the platform frame is gone entirely (Linux): the edges resize
     // through the compositor, as a frame would. Windows and macOS keep their

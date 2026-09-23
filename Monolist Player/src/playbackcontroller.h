@@ -160,6 +160,8 @@ Q_SIGNALS:
     void statusChanged();
     void videoChanged();
     void playbackError(const QString &reason);
+    // Something the user should be told, in their words, for the toast.
+    void notice(const QString &text);
 
 private:
     void startQueue(QList<QueueTrack> tracks, int start, bool autoPlay);
@@ -167,8 +169,12 @@ private:
     void beginTrack(const QVariantMap &track, bool autoPlay);
     void handleResolved(const QString &videoId, const QString &url, int tier, bool fromCache);
     void handleResolveFailed(const QString &videoId, const QString &reason);
-    void handleVideoResolved(const QString &videoId, const QString &videoUrl, const QString &audioUrl);
+    void handleVideoResolved(const QString &videoId, const QString &videoUrl, const QString &audioUrl,
+                             const QVariantMap &headers);
     void playWithVideo(bool video);
+    // A picture that will not play must not cost the song: back to the sound,
+    // from the same second, with a word about it.
+    bool abandonVideo(const QString &reason);
     void handleEndOfFile();
     void prefetchUpcoming();
     bool extendWithRadio();   // false when there is nothing to seed a radio from
@@ -210,6 +216,10 @@ private:
     bool m_favourite = false;
     bool m_videoWanted = false;
     bool m_videoPlaying = false;
+    // True from asking mpv to play the picture until a frame proves it can:
+    // anything that ends the file in between is the video's fault, not the
+    // song's, and must not move the queue on.
+    bool m_videoUnproven = false;
     qint64 m_resumeAt = 0;         // where the next load should begin
     int m_videoHeight = 720;
     QString m_videoPendingId;      // a picture being resolved for this track

@@ -73,7 +73,17 @@ PlaybackController::PlaybackController(MpvEngine *engine,
 
         connect(m_engine, &MpvEngine::endOfFile, this, &PlaybackController::handleEndOfFile);
 
+        // A frame arrived: the picture plays, so an end of file after this is
+        // the song ending, not the video failing.
+        connect(m_engine, &MpvEngine::videoSizeChanged, this, [this](const QSize &size) {
+            if (!size.isEmpty())
+                m_videoUnproven = false;
+        });
+
         connect(m_engine, &MpvEngine::loadFailed, this, [this](const QString &reason) {
+            // The picture would not open: keep the song, drop the picture.
+            if (abandonVideo(QStringLiteral("This video would not play — back to audio")))
+                return;
             // A URL can resolve and still be refused when mpv opens it: a link
             // the CDN rejects now and then, or an instance serving an error
             // page. A remembered link that no longer opens is simply stale, so
@@ -498,6 +508,7 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
     if (!m_videoPendingId.isEmpty() && m_resolver)
         m_resolver->cancelVideo(m_videoPendingId);
     m_videoPendingId.clear();
+    m_videoUnproven = false;
     if (m_videoWanted || m_videoPlaying) {
         m_videoWanted = false;
         m_videoPlaying = false;
@@ -612,8 +623,39 @@ void PlaybackController::handleResolveFailed(const QString &videoId, const QStri
     Q_EMIT playbackError(reason);
 }
 
+// True when a video that never proved itself has just been dropped, and the
+// sound of the same track is on its way back.
+bool PlaybackController::abandonVideo(const QString &reason)
+{
+    if (!m_videoPlaying || !m_videoUnproven)
+        return false;
+
+    const QString videoId = currentSourceId();
+    m_videoUnproven = false;
+    m_videoWanted = false;
+    m_videoPlaying = false;
+    if (m_engine)
+        m_engine->setVideoEnabled(false);
+    Q_EMIT videoChanged();
+    Q_EMIT notice(reason);
+
+    if (videoId.isEmpty() || !m_resolver)
+        return true;
+    m_resumeAt = m_position;
+    m_autoPlayAfterResolve = true;
+    m_pendingVideoId = videoId;
+    setStatus(QStringLiteral("Back to the sound…"), QString(), true);
+    m_resolver->resolve(videoId);
+    return true;
+}
+
 void PlaybackController::handleEndOfFile()
 {
+    // A video that stopped before it ever showed a frame did not finish the
+    // song; it failed. The queue must not move on.
+    if (abandonVideo(QStringLiteral("This video would not play — back to audio")))
+        return;
+
     if (m_repeatMode == RepeatOne) {
         m_position = 0;
         Q_EMIT positionChanged();
@@ -802,7 +844,7 @@ void PlaybackController::playWithVideo(bool video)
 }
 
 void PlaybackController::handleVideoResolved(const QString &videoId, const QString &videoUrl,
-                                             const QString &audioUrl)
+                                             const QString &audioUrl, const QVariantMap &headers)
 {
     if (videoId != m_videoPendingId)
         return;   // another track, or the switch went off again
@@ -812,7 +854,9 @@ void PlaybackController::handleVideoResolved(const QString &videoId, const QStri
 
     m_engine->setVideoEnabled(true);
     setStatus(QStringLiteral("Streaming"), QStringLiteral("yt-dlp · video"), false);
-    m_engine->load(videoUrl, m_playing || m_autoPlayAfterResolve, audioUrl, m_position);
+    // Unproven until a frame arrives: see abandonVideo.
+    m_videoUnproven = true;
+    m_engine->load(videoUrl, m_playing || m_autoPlayAfterResolve, audioUrl, m_position, headers);
     if (!m_videoPlaying) {
         m_videoPlaying = true;
         Q_EMIT videoChanged();

@@ -22,6 +22,7 @@ namespace {
 const QString kNameKey = QStringLiteral("profile.name");
 // Likewise the country to browse; empty means the system's.
 const QString kRegionKey = QStringLiteral("region");
+const QString kVideoHeightKey = QStringLiteral("video.height");
 
 // "48 min", "1 hr 12 min": a playlist's length, as its header gives it.
 QString lengthLabel(qint64 ms)
@@ -225,6 +226,23 @@ QString Library::regionInUseName() const
 QString Library::systemRegionName() const
 {
     return countryName(InnerTube::systemRegion());
+}
+
+// 720p is the most a music video usually is, and the most a machine without
+// hardware decoding can carry; 360 is there for when it cannot.
+int Library::videoQuality() const
+{
+    const int stored = settingValue(kVideoHeightKey).toInt();
+    return stored > 0 ? stored : 720;
+}
+
+void Library::setVideoQuality(int height)
+{
+    const int wanted = height >= 1080 ? 1080 : (height <= 360 ? 360 : 720);
+    if (wanted == videoQuality())
+        return;
+    setSetting(kVideoHeightKey, QString::number(wanted));
+    Q_EMIT videoQualityChanged();
 }
 
 QString Library::countryName(const QString &code) const

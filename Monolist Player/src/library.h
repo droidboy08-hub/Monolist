@@ -42,6 +42,8 @@ class Library : public QObject
     Q_PROPERTY(QString regionInUse READ regionInUse NOTIFY regionChanged)
     Q_PROPERTY(QString regionInUseName READ regionInUseName NOTIFY regionChanged)
     Q_PROPERTY(QString systemRegionName READ systemRegionName CONSTANT)
+    // The tallest picture to ask for, in pixels: 360, 720 or 1080.
+    Q_PROPERTY(int videoQuality READ videoQuality WRITE setVideoQuality NOTIFY videoQualityChanged)
 public:
     explicit Library(QObject *parent = nullptr);
 
@@ -100,6 +102,8 @@ public:
     QString regionInUse() const;
     QString regionInUseName() const;
     QString systemRegionName() const;
+    int videoQuality() const;
+    void setVideoQuality(int height);
     // The countries YouTube Music serves, as [{ code, name }], by name.
     Q_INVOKABLE QVariantList countries() const;
     Q_INVOKABLE QString countryName(const QString &code) const;
@@ -115,6 +119,7 @@ Q_SIGNALS:
     void historyCleared();
     void userChanged();
     void regionChanged();
+    void videoQualityChanged();
 
 private:
     void reloadLiked();

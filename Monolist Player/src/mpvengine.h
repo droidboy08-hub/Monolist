@@ -3,6 +3,7 @@
 #include <QObject>
 #include <QSize>
 #include <QString>
+#include <QVariantMap>
 
 struct mpv_handle;
 
@@ -32,8 +33,11 @@ public:
     // `startAt` begins the file part-way in, which is how switching between
     // the sound and the picture of the same track keeps its place: a seek sent
     // after loadfile would arrive before the file is open and be dropped.
+    // `headers` are the ones the link was fetched with (yt-dlp reports them
+    // per format): YouTube refuses a link fetched as anything else.
     void load(const QString &urlOrPath, bool startPlaying = true,
-              const QString &audioUrl = QString(), qint64 startAt = 0);
+              const QString &audioUrl = QString(), qint64 startAt = 0,
+              const QVariantMap &headers = QVariantMap());
     void stop();
     void setPaused(bool paused);
     void seekAbsolute(qint64 ms);

@@ -132,7 +132,7 @@ void StreamResolver::resolveVideo(const QString &videoId, int maxHeight)
     if (cached != m_videoCache.constEnd() && cached->expires > QDateTime::currentDateTimeUtc()) {
         const VideoLinks links = *cached;
         QMetaObject::invokeMethod(this, [this, videoId, links]() {
-            Q_EMIT videoResolved(videoId, links.video, links.audio);
+            Q_EMIT videoResolved(videoId, links.video, links.audio, links.headers);
         }, Qt::QueuedConnection);
         return;
     }
@@ -153,6 +153,7 @@ void StreamResolver::resolveVideo(const QString &videoId, int maxHeight)
                 const QJsonObject root = document.object();
                 QString video = root.value(QStringLiteral("url")).toString();
                 QString audio;
+                QJsonObject chosen = root;
                 // Two streams: yt-dlp lists them as it would merge them.
                 const QJsonArray parts = root.value(QStringLiteral("requested_formats")).toArray();
                 if (parts.size() >= 2) {
@@ -160,15 +161,22 @@ void StreamResolver::resolveVideo(const QString &videoId, int maxHeight)
                     const QJsonObject second = parts.at(1).toObject();
                     const bool firstIsVideo = first.value(QStringLiteral("vcodec")).toString()
                                               != QLatin1String("none");
-                    video = (firstIsVideo ? first : second).value(QStringLiteral("url")).toString();
+                    chosen = firstIsVideo ? first : second;
+                    video = chosen.value(QStringLiteral("url")).toString();
                     audio = (firstIsVideo ? second : first).value(QStringLiteral("url")).toString();
                 }
                 if (video.isEmpty()) {
                     Q_EMIT videoFailed(videoId, QStringLiteral("No picture is published for this track."));
                     return;
                 }
-                m_videoCache.insert(videoId, { video, audio, expiryOf(video) });
-                Q_EMIT videoResolved(videoId, video, audio);
+                // The headers the link was fetched with. YouTube ties a link
+                // to the client that asked for it and answers 403 to anyone
+                // else — which is how a video that plays in yt-dlp refuses to
+                // play here.
+                const QVariantMap headers =
+                    chosen.value(QStringLiteral("http_headers")).toObject().toVariantMap();
+                m_videoCache.insert(videoId, { video, audio, headers, expiryOf(video) });
+                Q_EMIT videoResolved(videoId, video, audio, headers);
             });
 
     connect(request, &YtDlpRequest::failed, this, [this, videoId](const QString &reason) {

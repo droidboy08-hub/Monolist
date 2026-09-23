@@ -5,6 +5,7 @@
 #include <QObject>
 #include <QPointer>
 #include <QStringList>
+#include <QVariantMap>
 
 class QNetworkAccessManager;
 class QNetworkReply;
@@ -71,7 +72,9 @@ Q_SIGNALS:
     void resolved(const QString &videoId, const QString &url, int tier, bool fromCache);
     void failed(const QString &videoId, const QString &reason);
     void tierChanged(const QString &videoId, int tier);
-    void videoResolved(const QString &videoId, const QString &videoUrl, const QString &audioUrl);
+    // `headers` are what the links must be fetched with; see MpvEngine::load.
+    void videoResolved(const QString &videoId, const QString &videoUrl, const QString &audioUrl,
+                       const QVariantMap &headers);
     void videoFailed(const QString &videoId, const QString &reason);
 
 private:
@@ -113,6 +116,7 @@ private:
     struct VideoLinks {
         QString video;
         QString audio;      // empty when the one stream carries both
+        QVariantMap headers;
         QDateTime expires;
     };
 
