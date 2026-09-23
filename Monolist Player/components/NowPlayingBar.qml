@@ -85,13 +85,12 @@ Rectangle {
                 }
             }
 
-            IconButton {
+            LikeButton {
                 visible: root.showMeta
                 anchors.verticalCenter: parent.verticalCenter
-                iconName: Player.favourite ? "heart-filled" : "heart"
+                liked: Player.favourite
                 side: 30
                 iconSize: 15
-                iconColor: Player.favourite ? Theme.accent : Theme.text
                 onClicked: Player.toggleFavourite()
                 ToolTip.visible: hovered
                 ToolTip.delay: 600
@@ -132,14 +131,14 @@ Rectangle {
 
             IconButton {
                 iconName: "shuffle"
-                iconColor: Player.shuffle ? Theme.accent : Theme.text
+                iconColor: Player.shuffle ? Theme.accent : Theme.neutral700
                 iconSize: 15
                 anchors.verticalCenter: parent.verticalCenter
                 onClicked: Player.setShuffle(!Player.shuffle)
             }
             IconButton {
                 iconName: "skip-back"
-                iconColor: Theme.text
+                iconColor: Theme.neutral700
                 anchors.verticalCenter: parent.verticalCenter
                 onClicked: Player.previous()
             }
@@ -169,13 +168,13 @@ Rectangle {
 
             IconButton {
                 iconName: "skip-forward"
-                iconColor: Theme.text
+                iconColor: Theme.neutral700
                 anchors.verticalCenter: parent.verticalCenter
                 onClicked: Player.next()
             }
             IconButton {
                 iconName: Player.repeatMode === 2 ? "repeat-1" : "repeat"
-                iconColor: Player.repeatMode === 0 ? Theme.text : Theme.accent
+                iconColor: Player.repeatMode === 0 ? Theme.neutral700 : Theme.accent
                 iconSize: 15
                 anchors.verticalCenter: parent.verticalCenter
                 onClicked: Player.cycleRepeat()
@@ -225,7 +224,7 @@ Rectangle {
 
         IconButton {
             iconName: "maximize-2"
-            iconColor: root.nowPlayingOpen ? Theme.accent : Theme.text
+            iconColor: root.nowPlayingOpen ? Theme.accent : Theme.neutral700
             iconSize: 15
             anchors.verticalCenter: parent.verticalCenter
             onClicked: root.nowPlayingToggled()
@@ -235,7 +234,7 @@ Rectangle {
         }
         IconButton {
             iconName: "list-music"
-            iconColor: root.queueOpen ? Theme.accent : Theme.text
+            iconColor: root.queueOpen ? Theme.accent : Theme.neutral700
             iconSize: 15
             anchors.verticalCenter: parent.verticalCenter
             onClicked: root.queueToggled()
@@ -245,7 +244,7 @@ Rectangle {
         }
         IconButton {
             iconName: "monitor-speaker"
-            iconColor: Theme.text
+            iconColor: Theme.neutral700
             iconSize: 15
             anchors.verticalCenter: parent.verticalCenter
         }

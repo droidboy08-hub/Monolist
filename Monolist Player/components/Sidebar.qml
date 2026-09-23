@@ -350,7 +350,7 @@ Rectangle {
             side: 28
             iconName: "pencil"
             iconSize: 14
-            iconColor: Theme.text
+            iconColor: Theme.neutral700
             onClicked: {
                 nameField.text = Library.userName
                 userStrip.editing = true

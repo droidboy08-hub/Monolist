@@ -132,6 +132,35 @@ Hover feedback appears instantly and leaves over `Theme.quick`.
 is not decoration: dragging the pointer down a list would otherwise flicker
 black-white-black at every row boundary.
 
+### 2.6a An icon answers in the glyph, never in a plate behind it
+
+No icon button draws a shape on hover. The glyph itself carries all three
+things it can say:
+
+| | Colour | Means |
+| :--- | :--- | :--- |
+| Rest | `neutral700` | there if you want it |
+| Hover, press | `text` | the pointer is on it |
+| On | `accent` | the thing it controls is on |
+
+A glyph that is already `accent` — a navigation arrow, the plus, a shuffle that
+is on — cannot go to ink without losing what its colour says, so it brightens
+to `accent600` instead. The heart is the one that can do better still: it
+fills, part-way under the pointer and completely once liked, which is a preview
+of the click rather than a report that the pointer arrived.
+
+*Why.* The plate was a filled square in 10% accent. It put a pale red box
+around every arrow and dot in the app — three at once inside a hovered track
+row — and directly behind the heart it turned the one red mark people aim at
+into a smudge. A box is also a second shape arguing with the glyph inside it,
+in an interface whose whole claim is that shapes mean something. Ink for "you
+are here" costs nothing, never collides with the accent, and leaves red to go
+on meaning *on*.
+
+This is why the transport arrows sit at grey rather than ink: ink had to be
+freed up to mean the pointer. The bar reads quieter for it, and the one red
+thing in it is the play button.
+
 ### 2.7 Motion is cheap or it is not there
 
 Animate `opacity`, `x`/`y`, `color`, `contentY`. Never animate the width or

@@ -186,7 +186,7 @@ Flickable {
                         }
                         IconButton {
                             iconName: "x"
-                            iconColor: Theme.text
+                            iconColor: Theme.neutral700
                             iconSize: 14
                             onClicked: Downloads.cancel(job.videoId)
                         }
@@ -307,7 +307,7 @@ Flickable {
 
                             IconButton {
                                 iconName: "folder"
-                                iconColor: Theme.text
+                                iconColor: Theme.neutral700
                                 iconSize: 15
                                 onClicked: Downloads.revealFile(saved.videoId)
                                 ToolTip.visible: hovered
@@ -316,7 +316,7 @@ Flickable {
                             }
                             IconButton {
                                 iconName: "trash"
-                                iconColor: saved.armed ? Theme.accent : Theme.text
+                                iconColor: saved.armed ? Theme.accent : Theme.neutral700
                                 iconSize: 15
                                 onClicked: {
                                     if (saved.armed) {

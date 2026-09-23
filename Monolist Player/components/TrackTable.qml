@@ -198,15 +198,14 @@ Column {
 
             // Buttons, so their clicks are not also taken as a tap on the row.
             // The heart stays when the song is liked, and shows on hover.
-            IconButton {
+            LikeButton {
                 visible: row.sourceId.length > 0 && (row.liked || rowHover.hovered)
                 x: root.width - root.moreWidth - root.timeWidth - root.downloadWidth - root.likeWidth
                    + (root.likeWidth - width) / 2
                 anchors.verticalCenter: parent.verticalCenter
                 side: 30
-                iconName: row.liked ? "heart-filled" : "heart"
+                liked: row.liked
                 iconSize: 15
-                iconColor: row.liked ? Theme.accent : Theme.neutral700
                 onClicked: Library.setLiked(root.trackOf(row), !row.liked)
                 ToolTip.visible: hovered
                 ToolTip.delay: 600
@@ -244,7 +243,7 @@ Column {
                 side: 30
                 iconName: "dots"
                 iconSize: 16
-                iconColor: Theme.text
+                iconColor: Theme.neutral700
                 onClicked: root.openMenu(row)
             }
 

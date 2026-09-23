@@ -74,6 +74,7 @@ qt_add_qml_module(monolist
         Theme.qml
         components/Icon.qml
         components/IconButton.qml
+        components/LikeButton.qml
         components/NavItem.qml
         components/PlaylistRow.qml
         components/Sidebar.qml

@@ -48,7 +48,7 @@ Rectangle {
             anchors.rightMargin: Theme.space4
             anchors.verticalCenter: parent.verticalCenter
             iconName: "x"
-            iconColor: Theme.text
+            iconColor: Theme.neutral700
             iconSize: 14
             onClicked: root.closeRequested()
         }
@@ -187,7 +187,7 @@ Rectangle {
                         visible: entryHover.hovered && !entry.isCurrent
                         side: 30
                         iconName: "x"
-                        iconColor: Theme.text
+                        iconColor: Theme.neutral700
                         iconSize: 12
                         onClicked: Player.removeFromQueue(entry.index)
                     }

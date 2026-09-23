@@ -230,7 +230,14 @@ Rectangle {
                 anchors.verticalCenter: parent.verticalCenter
                 iconName: "chevron-down"
                 iconSize: 20
-                iconColor: root.wide ? root.posterInk : Theme.text
+                // Over the poster the ladder is drawn in the poster's own ink:
+                // quiet until the pointer is on it, then full strength. Grey
+                // and ink from the palette would be arbitrary here, because
+                // what is behind them is whatever colour the cover is.
+                iconColor: root.wide ? Qt.rgba(root.posterInk.r, root.posterInk.g,
+                                               root.posterInk.b, 0.65)
+                                     : Theme.neutral700
+                hoverColor: root.wide ? root.posterInk : Theme.text
                 onClicked: root.closeRequested()
                 ToolTip.visible: hovered
                 ToolTip.delay: 600

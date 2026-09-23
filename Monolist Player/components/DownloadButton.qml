@@ -35,11 +35,10 @@ Button {
     hoverEnabled: true
     focusPolicy: Qt.TabFocus
 
+    // No plate under the glyph, as everywhere (see IconButton) — only the
+    // keyboard's focus ring, and the one rule this control owns.
     background: Rectangle {
-        radius: Theme.radius
-        color: control.down ? Theme.ghostActive
-             : control.hovered ? Theme.ghostHover
-             : "transparent"
+        color: "transparent"
         border.width: control.visualFocus ? 2 : 0
         border.color: Theme.accent
 
@@ -70,10 +69,21 @@ Button {
                 : control.downloadState === "failed" ? "rotate-ccw"
                 : (control.downloadState === "queued" || control.downloadState === "processing") ? "dots"
                 : "download"
-            color: control.downloadState === "" ? (control.hovered ? Theme.accent700 : Theme.neutral700)
-                 : control.downloadState === "failed" ? Theme.accent700
-                 : control.downloadState === "queued" ? Theme.neutral700
-                 : Theme.accent
+            // Grey until the pointer is on it, then ink — the same ladder as
+            // every other icon. The states that already signal brighten
+            // instead, because they cannot go to ink without losing what the
+            // colour is telling you.
+            readonly property bool live: control.hovered || control.down
+
+            color: control.downloadState === "" ? (live ? Theme.text : Theme.neutral700)
+                 : control.downloadState === "failed" ? (live ? Theme.accent600 : Theme.accent700)
+                 : control.downloadState === "queued" ? (live ? Theme.text : Theme.neutral700)
+                 : (live ? Theme.accent600 : Theme.accent)
+
+            Behavior on color {
+                enabled: !control.hovered && !control.down
+                ColorAnimation { duration: Theme.quick }
+            }
         }
     }
 
