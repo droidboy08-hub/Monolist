@@ -19,6 +19,11 @@ Item {
     Rectangle {
         anchors.fill: parent
         color: hover.hovered ? Theme.surface : "transparent"
+
+        Behavior on color {
+            enabled: !hover.hovered
+            ColorAnimation { duration: Theme.quick }
+        }
     }
 
     Item {

@@ -150,6 +150,11 @@ Rectangle {
                 color: playHover.hovered ? Theme.accent600 : Theme.accent
                 anchors.verticalCenter: parent.verticalCenter
 
+                Behavior on color {
+                    enabled: !playHover.hovered
+                    ColorAnimation { duration: Theme.quick }
+                }
+
                 Icon {
                     anchors.centerIn: parent
                     name: Player.playing ? "pause" : "play"

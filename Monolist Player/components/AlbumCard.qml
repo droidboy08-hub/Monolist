@@ -24,6 +24,11 @@ Rectangle {
     border.color: Theme.text
     implicitHeight: width + 100
 
+    Behavior on color {
+        enabled: !hover.hovered
+        ColorAnimation { duration: Theme.quick }
+    }
+
     Column {
         anchors.left: parent.left
         anchors.right: parent.right

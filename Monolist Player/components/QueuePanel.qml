@@ -118,6 +118,11 @@ Rectangle {
                 Rectangle {
                     anchors.fill: parent
                     color: entryHover.hovered && !entry.isCurrent ? Theme.rowHover : "transparent"
+
+                    Behavior on color {
+                        enabled: !entryHover.hovered
+                        ColorAnimation { duration: Theme.quick }
+                    }
                 }
 
                 Artwork {

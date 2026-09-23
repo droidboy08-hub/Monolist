@@ -251,6 +251,11 @@ Flickable {
                     Rectangle {
                         anchors.fill: parent
                         color: savedHover.hovered ? Theme.rowHover : "transparent"
+
+                        Behavior on color {
+                            enabled: !savedHover.hovered
+                            ColorAnimation { duration: Theme.quick }
+                        }
                     }
 
                     Artwork {

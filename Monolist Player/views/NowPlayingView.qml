@@ -57,8 +57,10 @@ Rectangle {
         }
     }
 
+    // Atmosphere, not information: nobody waits for the field to finish
+    // changing, so it can take its time.
     Behavior on field {
-        ColorAnimation { duration: 600; easing.type: Easing.OutCubic }
+        ColorAnimation { duration: Theme.slow; easing.type: Theme.enterCurve }
     }
 
     // Swallows clicks, so nothing underneath takes them.

@@ -16,6 +16,13 @@ Rectangle {
     border.width: Theme.ruleWidth
     border.color: Theme.text
 
+    // Choosing is immediate — a switch is mechanical — but the hover tint
+    // fades out like every other.
+    Behavior on color {
+        enabled: !choice.selected && !choiceHover.hovered
+        ColorAnimation { duration: Theme.quick }
+    }
+
     Text {
         id: choiceLabel
         anchors.centerIn: parent

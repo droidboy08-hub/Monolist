@@ -25,6 +25,11 @@ Button {
                                : (control.hovered || control.down ? Theme.text : "transparent")
         border.width: control.primary ? 0 : Theme.ruleWidth
         border.color: Theme.text
+
+        Behavior on color {
+            enabled: !control.hovered && !control.down
+            ColorAnimation { duration: Theme.quick }
+        }
     }
 
     contentItem: Item {

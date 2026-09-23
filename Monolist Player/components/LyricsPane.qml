@@ -82,12 +82,14 @@ Item {
 
         ScrollBar.vertical: MonoScrollBar { visible: root.plain && size < 1.0 }
 
+        // The longest movement in the app, and the one nobody is waiting on:
+        // it has to be slow enough to read through.
         NumberAnimation {
             id: glide
             target: scroller
             property: "contentY"
-            duration: 520
-            easing.type: Easing.OutCubic
+            duration: Theme.slow
+            easing.type: Theme.enterCurve
         }
 
         Column {
@@ -143,8 +145,10 @@ Item {
                              : line.past ? Theme.neutral500
                              : Theme.neutral600
 
+                        // The line lights as it is sung; the change has to be
+                        // visible without flashing.
                         Behavior on color {
-                            ColorAnimation { duration: 220 }
+                            ColorAnimation { duration: Theme.normal }
                         }
                     }
 

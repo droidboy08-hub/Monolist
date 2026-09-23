@@ -17,9 +17,12 @@ Rectangle {
     implicitHeight: 40
     opacity: 0
     visible: opacity > 0
+    // It appears where it is, nudged up as it arrives: enough to notice at
+    // the edge of vision, not enough to look at.
+    transform: Translate { y: (1 - root.opacity) * Theme.space2 }
 
     Behavior on opacity {
-        NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
+        NumberAnimation { duration: Theme.normal; easing.type: Theme.enterCurve }
     }
 
     Row {

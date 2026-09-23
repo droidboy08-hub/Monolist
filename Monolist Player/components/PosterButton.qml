@@ -16,6 +16,11 @@ Button {
 
     background: Rectangle {
         color: control.hovered || control.down ? Theme.text : Theme.accentForeground
+
+        Behavior on color {
+            enabled: !control.hovered && !control.down
+            ColorAnimation { duration: Theme.quick }
+        }
     }
 
     contentItem: Item {

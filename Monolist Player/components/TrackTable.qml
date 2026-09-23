@@ -136,9 +136,17 @@ Column {
                                                                  : index === root.activeIndex
             readonly property bool liked: Library.revision >= 0 && Library.isLiked(sourceId)
 
+            // Hover appears at once — that is what makes a list feel quick —
+            // and leaves over a moment, so dragging down the rows does not
+            // flicker at every boundary.
             Rectangle {
                 anchors.fill: parent
                 color: rowHover.hovered ? Theme.rowHover : "transparent"
+
+                Behavior on color {
+                    enabled: !rowHover.hovered
+                    ColorAnimation { duration: Theme.quick }
+                }
             }
 
             Text {

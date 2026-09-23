@@ -130,12 +130,14 @@ Item {
                 onPlayRequested: root.cardActivated(modelData)
             }
 
+            // Paging moves the shelf under a still pointer, so it is eased at
+            // both ends rather than thrown.
             NumberAnimation {
                 id: slide
                 target: list
                 property: "contentX"
-                duration: 320
-                easing.type: Easing.OutCubic
+                duration: Theme.page
+                easing.type: Theme.moveCurve
             }
         }
     }

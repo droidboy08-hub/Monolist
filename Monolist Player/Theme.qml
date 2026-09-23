@@ -41,6 +41,28 @@ QtObject {
     readonly property int radius: 0
     readonly property int ruleWidth: 2
 
+    // — motion —
+    // Why these, and what may move at all, is argued in DESIGN.md. In short:
+    // a pointer's own feedback is instant or the app feels slow; 120 ms is a
+    // colour changing in place; 220 ms is something appearing where it
+    // already is; 320 ms is something arriving from elsewhere; past 400 ms
+    // the user is waiting, so it is kept for long distances (the lyrics
+    // scrolling) and for atmosphere (the poster's colour field).
+    readonly property int instant: 0
+    readonly property int quick: 120
+    readonly property int normal: 220
+    readonly property int page: 320
+    readonly property int slow: 520
+    // Leaving should not hold attention, so it goes at four fifths the time.
+    readonly property int leaving: 260
+
+    // Entering decelerates into place, leaving accelerates away, and what
+    // moves while staying is eased at both ends. Nothing overshoots: paper
+    // does not bounce.
+    readonly property int enterCurve: Easing.OutCubic
+    readonly property int exitCurve: Easing.InCubic
+    readonly property int moveCurve: Easing.InOutCubic
+
     // — layout —
     readonly property int sidebarWidth: 296
     readonly property int playerBarHeight: 84

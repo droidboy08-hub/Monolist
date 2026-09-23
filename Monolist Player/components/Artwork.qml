@@ -68,8 +68,10 @@ Rectangle {
         saturation: root.colour ? 0.0 : -1.0
         visible: image.status === Image.Ready
 
+        // Colour arriving means "this is the subject", so it is worth seeing
+        // happen rather than switching.
         Behavior on saturation {
-            NumberAnimation { duration: 240; easing.type: Easing.OutCubic }
+            NumberAnimation { duration: Theme.normal; easing.type: Theme.enterCurve }
         }
     }
 

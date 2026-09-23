@@ -73,7 +73,7 @@ ApplicationWindow {
         viewHistory.push(currentView);
         viewFuture = [];
         currentView = view;
-        overlaySidebar.visible = false;
+        sidebarOverlayOpen = false;
     }
 
     function goBack() {
@@ -130,20 +130,33 @@ ApplicationWindow {
             anchors.right: parent.right
             breadcrumb: window.breadcrumbText()
             showMenuButton: !window.sidebarDocked
-            onMenuRequested: overlaySidebar.visible = true
+            onMenuRequested: window.sidebarOverlayOpen = true
             onBackRequested: window.goBack()
             onForwardRequested: window.goForward()
             onSearchActivated: function(term) { window.navigate("search") }
         }
 
+        // The queue pushes the content aside rather than covering it: what it
+        // is next to is the point. Its width is the animation, so the view
+        // beside it reflows with it.
         QueuePanel {
             id: queuePanel
-            visible: window.queueOpen
-            width: visible ? Math.min(380, Math.max(300, window.width * 0.26)) : 0
+            readonly property int openWidth: Math.min(380, Math.max(300, window.width * 0.26))
+
+            visible: width > 0
+            width: window.queueOpen ? openWidth : 0
+            clip: true
             anchors.top: topBar.bottom
             anchors.bottom: parent.bottom
             anchors.right: parent.right
             onCloseRequested: window.queueOpen = false
+
+            Behavior on width {
+                NumberAnimation {
+                    duration: window.queueOpen ? Theme.page : Theme.leaving
+                    easing.type: window.queueOpen ? Theme.enterCurve : Theme.exitCurve
+                }
+            }
         }
 
         Item {
@@ -153,58 +166,93 @@ ApplicationWindow {
             anchors.top: topBar.bottom
             anchors.bottom: parent.bottom
 
+            // Changing page replaces the content and fades the new one in:
+            // pages are not laid out side by side, so sliding would be a lie,
+            // and it would cost a third of a second on every navigation.
+            component ViewFade: Item {
+                property bool shown: false
+                anchors.fill: parent
+                visible: opacity > 0
+                opacity: shown ? 1 : 0
+                Behavior on opacity {
+                    NumberAnimation { duration: Theme.quick }
+                }
+            }
+
             Item {
                 id: viewStack
                 anchors.fill: parent
 
-                HomeView {
-                    anchors.fill: parent
-                    visible: window.currentView === "home"
-                    onPageRequested: function(browseId) { window.openPage(browseId) }
-                    onSearchRequested: function(term) {
-                        topBar.searchText = term
-                        window.navigate("search")
+                ViewFade {
+                    shown: window.currentView === "home"
+
+                    HomeView {
+                        anchors.fill: parent
+                        onPageRequested: function(browseId) { window.openPage(browseId) }
+                        onSearchRequested: function(term) {
+                            topBar.searchText = term
+                            window.navigate("search")
+                        }
                     }
                 }
 
-                PageView {
-                    anchors.fill: parent
-                    visible: window.currentView.indexOf("page:") === 0
+                ViewFade {
+                    shown: window.currentView.indexOf("page:") === 0
+
+                    PageView {
+                        anchors.fill: parent
+                    }
                 }
 
-                SearchView {
-                    anchors.fill: parent
-                    visible: window.currentView === "search"
-                    term: topBar.searchText
+                ViewFade {
+                    shown: window.currentView === "search"
+
+                    SearchView {
+                        anchors.fill: parent
+                        term: topBar.searchText
+                    }
                 }
 
-                LibraryView {
-                    anchors.fill: parent
-                    visible: window.currentView.indexOf("library") === 0
-                    tab: window.libraryTab
-                    onTabRequested: function(tab) { window.navigate(tab === "playlists" ? "library" : "library:" + tab) }
-                    onViewRequested: function(view) { window.navigate(view) }
-                    onPageRequested: function(browseId) { window.openPage(browseId) }
-                    onNewPlaylistRequested: window.createPlaylist()
+                ViewFade {
+                    shown: window.currentView.indexOf("library") === 0
+
+                    LibraryView {
+                        anchors.fill: parent
+                        tab: window.libraryTab
+                        onTabRequested: function(tab) { window.navigate(tab === "playlists" ? "library" : "library:" + tab) }
+                        onViewRequested: function(view) { window.navigate(view) }
+                        onPageRequested: function(browseId) { window.openPage(browseId) }
+                        onNewPlaylistRequested: window.createPlaylist()
+                    }
                 }
 
-                PlaylistView {
-                    anchors.fill: parent
-                    visible: window.currentView.indexOf("playlist:") === 0
-                    key: visible ? window.currentView.substring(9) : ""
-                    renameOnOpen: window.pendingRename > 0 && key === String(window.pendingRename)
-                    onRenameStarted: window.pendingRename = 0
-                    onDeleted: window.goBack()
+                ViewFade {
+                    id: playlistFade
+                    shown: window.currentView.indexOf("playlist:") === 0
+
+                    PlaylistView {
+                        anchors.fill: parent
+                        key: playlistFade.shown ? window.currentView.substring(9) : ""
+                        renameOnOpen: window.pendingRename > 0 && key === String(window.pendingRename)
+                        onRenameStarted: window.pendingRename = 0
+                        onDeleted: window.goBack()
+                    }
                 }
 
-                DownloadsView {
-                    anchors.fill: parent
-                    visible: window.currentView === "downloads"
+                ViewFade {
+                    shown: window.currentView === "downloads"
+
+                    DownloadsView {
+                        anchors.fill: parent
+                    }
                 }
 
-                SettingsView {
-                    anchors.fill: parent
-                    visible: window.currentView === "settings"
+                ViewFade {
+                    shown: window.currentView === "settings"
+
+                    SettingsView {
+                        anchors.fill: parent
+                    }
                 }
             }
         }
@@ -221,7 +269,9 @@ ApplicationWindow {
         onNowPlayingToggled: window.nowPlayingOpen = !window.nowPlayingOpen
     }
 
-    // — Now Playing: rises over everything above the player bar —
+    // — Now Playing —
+    // It rises from the player bar, because it is that bar enlarged: it comes
+    // from where the bar is, and goes back there, a little faster.
     NowPlayingView {
         id: nowPlaying
         width: parent.width
@@ -232,7 +282,10 @@ ApplicationWindow {
         onCloseRequested: window.nowPlayingOpen = false
 
         Behavior on y {
-            NumberAnimation { duration: 320; easing.type: Easing.OutCubic }
+            NumberAnimation {
+                duration: window.nowPlayingOpen ? Theme.page : Theme.leaving
+                easing.type: window.nowPlayingOpen ? Theme.enterCurve : Theme.exitCurve
+            }
         }
     }
 
@@ -244,25 +297,49 @@ ApplicationWindow {
     }
 
     // — narrow-window sidebar —
+    // It comes in from the left edge, where the docked sidebar lives, over a
+    // dimmed page: it is the same sidebar, arriving rather than appearing.
+    property bool sidebarOverlayOpen: false
+
     Rectangle {
         anchors.fill: parent
         color: "#66201e1d"
-        visible: overlaySidebar.visible
-        TapHandler { onTapped: overlaySidebar.visible = false }
+        visible: opacity > 0
+        opacity: window.sidebarOverlayOpen ? 1 : 0
+        z: 700
+        TapHandler { onTapped: window.sidebarOverlayOpen = false }
+
+        Behavior on opacity {
+            NumberAnimation { duration: Theme.quick }
+        }
     }
 
     Sidebar {
         id: overlaySidebar
-        visible: false
         width: Math.min(Theme.sidebarWidth, window.width - 48)
         anchors.top: parent.top
         anchors.bottom: parent.bottom
-        anchors.left: parent.left
+        x: window.sidebarOverlayOpen ? 0 : -width
+        visible: x > -width
+        z: 701
         currentView: window.currentView
         showCloseButton: true
-        onCloseRequested: visible = false
-        onViewRequested: function(view) { window.navigate(view) }
-        onNewPlaylistRequested: window.createPlaylist()
+        onCloseRequested: window.sidebarOverlayOpen = false
+        onViewRequested: function(view) {
+            window.sidebarOverlayOpen = false
+            window.navigate(view)
+        }
+        onNewPlaylistRequested: {
+            window.sidebarOverlayOpen = false
+            window.createPlaylist()
+        }
+
+        Behavior on x {
+            NumberAnimation {
+                duration: window.sidebarOverlayOpen ? Theme.page : Theme.leaving
+                easing.type: window.sidebarOverlayOpen ? Theme.enterCurve : Theme.exitCurve
+            }
+        }
     }
 
     // — confirmations —

@@ -238,6 +238,11 @@ Rectangle {
         Rectangle {
             anchors.fill: parent
             color: userHover.hovered && !userStrip.editing ? Theme.surface : "transparent"
+
+            Behavior on color {
+                enabled: !userHover.hovered
+                ColorAnimation { duration: Theme.quick }
+            }
         }
 
         Rectangle {

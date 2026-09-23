@@ -25,6 +25,11 @@ Button {
              : "transparent"
         border.width: control.visualFocus ? 2 : 0
         border.color: Theme.accent
+
+        Behavior on color {
+            enabled: !control.hovered && !control.down
+            ColorAnimation { duration: Theme.quick }
+        }
     }
 
     contentItem: Icon {
