@@ -12,6 +12,7 @@
 #include <QTimer>
 
 #include <initializer_list>
+#include <utility>
 
 namespace {
 
@@ -30,6 +31,16 @@ const QString kVideosFilter = QStringLiteral("EgWKAQIQAWoKEAkQChAFEAMQBA%3D%3D")
 const QByteArray kUserAgent =
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
     "Chrome/149.0.0.0 Safari/537.36";
+
+// What the visionOS client sends. It has to match the client named in the
+// context, or the request is not that client.
+const QByteArray kVisionUserAgent =
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_7_3) AppleWebKit/605.1.15 (KHTML, like Gecko) "
+    "Version/26.0 Safari/605.1.15";
+
+// One /player call, generously: it is one request, and the tier below it
+// costs seconds.
+constexpr int kPlayerTimeoutMs = 8000;
 
 // Walks object keys and "#n" array indices; a step that does not exist yields
 // an undefined value, so a changed layout reads as "nothing here" rather than
@@ -78,15 +89,36 @@ QJsonObject clientContext(InnerTube::Client client)
     if (language.isEmpty() || language == QLatin1String("C"))
         language = QStringLiteral("en");
     const QString today = QDate::currentDate().toString(QStringLiteral("yyyyMMdd"));
-    const bool music = client == InnerTube::Client::Music;
-    return QJsonObject{
-        { QStringLiteral("client"), QJsonObject{
-              { QStringLiteral("clientName"), music ? QStringLiteral("WEB_REMIX") : QStringLiteral("WEB") },
-              { QStringLiteral("clientVersion"), music ? QStringLiteral("1.%1.01.00").arg(today)
-                                                       : QStringLiteral("2.%1.00.00").arg(today) },
-              { QStringLiteral("hl"), language },
-              { QStringLiteral("gl"), region } } }
+
+    QJsonObject client_{
+        { QStringLiteral("hl"), language },
+        { QStringLiteral("gl"), region }
     };
+    switch (client) {
+    case InnerTube::Client::Music:
+        client_.insert(QStringLiteral("clientName"), QStringLiteral("WEB_REMIX"));
+        client_.insert(QStringLiteral("clientVersion"), QStringLiteral("1.%1.01.00").arg(today));
+        break;
+    case InnerTube::Client::YouTube:
+        client_.insert(QStringLiteral("clientName"), QStringLiteral("WEB"));
+        client_.insert(QStringLiteral("clientVersion"), QStringLiteral("2.%1.00.00").arg(today));
+        break;
+    case InnerTube::Client::Player:
+        // The visionOS app, described exactly as it describes itself. The
+        // whole reason this client is here is that /player answers it with
+        // plain stream URLs — no signature to undo, no throttling parameter
+        // to descramble in a JavaScript engine, no PO token. Change any of
+        // these strings and it stops being that client.
+        client_.insert(QStringLiteral("clientName"), QStringLiteral("VISIONOS"));
+        client_.insert(QStringLiteral("clientVersion"), QStringLiteral("1.02"));
+        client_.insert(QStringLiteral("deviceMake"), QStringLiteral("Apple"));
+        client_.insert(QStringLiteral("deviceModel"), QStringLiteral("RealityDevice17,1"));
+        client_.insert(QStringLiteral("osName"), QStringLiteral("visionOS"));
+        client_.insert(QStringLiteral("osVersion"), QStringLiteral("26.5.23O471"));
+        client_.insert(QStringLiteral("userAgent"), QString::fromLatin1(kVisionUserAgent));
+        break;
+    }
+    return QJsonObject{ { QStringLiteral("client"), client_ } };
 }
 
 // Cover art comes from googleusercontent.com with its size in the URL
@@ -324,23 +356,91 @@ InnerTube::InnerTube(QObject *parent)
     : QObject(parent)
     , m_network(new QNetworkAccessManager(this))
 {
-    // Open the TLS connection now, so the first search is one round trip
-    // like every later one, rather than paying for DNS and the handshake.
+    // Open the TLS connections now, so the first search and the first track
+    // are one round trip like every later one, rather than paying for DNS and
+    // the handshake. www.youtube.com is where /player is asked.
     m_network->connectToHostEncrypted(QStringLiteral("music.youtube.com"));
+    m_network->connectToHostEncrypted(QStringLiteral("www.youtube.com"));
+    // Off the critical path on purpose: by the time anything is played, this
+    // has usually already answered.
+    fetchVisitorData();
+}
+
+// The anonymous visitor id, scraped from the home page. Without one, /player
+// answers LOGIN_REQUIRED for most music.
+void InnerTube::fetchVisitorData()
+{
+    if (m_visitorPending || !m_visitorData.isEmpty())
+        return;
+    m_visitorPending = true;
+
+    QNetworkRequest request(QUrl(QStringLiteral("https://www.youtube.com/")));
+    request.setHeader(QNetworkRequest::UserAgentHeader, kVisionUserAgent);
+    request.setTransferTimeout(kPlayerTimeoutMs);
+    QNetworkReply *reply = m_network->get(request);
+
+    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        reply->deleteLater();
+        m_visitorPending = false;
+        if (reply->error() == QNetworkReply::NoError) {
+            // A custom delimiter: the pattern itself contains `)"`, which
+            // would close an ordinary R"( … )" early.
+            static const QRegularExpression visitor(
+                QStringLiteral(R"RX("visitorData":"(.*?)")RX"));
+            const QRegularExpressionMatch match = visitor.match(QString::fromUtf8(reply->readAll()));
+            if (match.hasMatch()) {
+                // The page carries it JSON-escaped ("\x3d" and friends), so it
+                // is unescaped by parsing it as the JSON string it is.
+                const QJsonDocument quoted = QJsonDocument::fromJson(
+                    "[\"" + match.captured(1).toUtf8() + "\"]");
+                m_visitorData = quoted.array().at(0).toString();
+            }
+        }
+        // Whether or not it worked: anyone waiting should stop waiting. An
+        // empty id still gets a request out, and it may still be answered.
+        const auto waiters = std::exchange(m_visitorWaiters, {});
+        for (const auto &waiter : waiters)
+            waiter();
+    });
+}
+
+void InnerTube::withVisitorData(std::function<void()> then)
+{
+    if (!m_visitorData.isEmpty() || !m_visitorPending) {
+        if (m_visitorData.isEmpty())
+            fetchVisitorData();           // a previous attempt failed; try again
+        else
+            return then();
+    }
+    m_visitorWaiters.push_back(std::move(then));
 }
 
 QNetworkReply *InnerTube::post(Client client, const QString &endpoint, QJsonObject body, int timeoutMs)
 {
-    const bool music = client == Client::Music;
-    const QString host = music ? QStringLiteral("https://music.youtube.com")
-                               : QStringLiteral("https://www.youtube.com");
-    body.insert(QStringLiteral("context"), clientContext(client));
+    QString host = QStringLiteral("https://www.youtube.com");
+    QByteArray agent = kUserAgent;
+    if (client == Client::Music) {
+        host = QStringLiteral("https://music.youtube.com");
+    } else if (client == Client::Player) {
+        agent = kVisionUserAgent;
+    }
+
+    QJsonObject context = clientContext(client);
+    if (client == Client::Player && !m_visitorData.isEmpty()) {
+        QJsonObject inner = context.value(QStringLiteral("client")).toObject();
+        inner.insert(QStringLiteral("visitorData"), m_visitorData);
+        context.insert(QStringLiteral("client"), inner);
+    }
+    body.insert(QStringLiteral("context"), context);
+
     QNetworkRequest request(QUrl(host + QStringLiteral("/youtubei/v1/") + endpoint
                                  + QStringLiteral("?prettyPrint=false")));
     request.setHeader(QNetworkRequest::ContentTypeHeader, QByteArrayLiteral("application/json"));
-    request.setHeader(QNetworkRequest::UserAgentHeader, kUserAgent);
+    request.setHeader(QNetworkRequest::UserAgentHeader, agent);
     request.setRawHeader("Origin", host.toUtf8());
     request.setRawHeader("Referer", (host + QLatin1Char('/')).toUtf8());
+    if (client == Client::Player && !m_visitorData.isEmpty())
+        request.setRawHeader("X-Goog-Visitor-Id", m_visitorData.toUtf8());
     request.setTransferTimeout(timeoutMs);
     return m_network->post(request, QJsonDocument(body).toJson(QJsonDocument::Compact));
 }
@@ -396,6 +496,99 @@ void InnerTube::send(Client client, const QString &endpoint, const QJsonObject &
                 }
                 done(document.object(), QString());
             });
+}
+
+void InnerTube::player(const QString &videoId,
+                       std::function<void(const QString &url, int itag, const QString &error)> done)
+{
+    if (videoId.isEmpty()) {
+        done({}, 0, QStringLiteral("no video id"));
+        return;
+    }
+
+    withVisitorData([this, videoId, done = std::move(done)]() mutable {
+        const QJsonObject body{
+            { QStringLiteral("videoId"), videoId },
+            // Both are what the app itself sends; without them anything
+            // flagged is refused rather than played.
+            { QStringLiteral("contentCheckOk"), true },
+            { QStringLiteral("racyCheckOk"), true }
+        };
+        send(Client::Player, QStringLiteral("player"), body, kPlayerTimeoutMs, /*slot=*/nullptr,
+             [done](const QJsonObject &root, const QString &error) {
+                 if (!error.isEmpty()) {
+                     done({}, 0, error);
+                     return;
+                 }
+                 const QString status = dig(root, { "playabilityStatus", "status" }).toString();
+                 if (status != QLatin1String("OK")) {
+                     // LOGIN_REQUIRED, UNPLAYABLE, AGE_VERIFICATION_REQUIRED:
+                     // all of them mean the tier below should try.
+                     const QString reason = dig(root, { "playabilityStatus", "reason" }).toString();
+                     done({}, 0, reason.isEmpty() ? status
+                                                  : status + QStringLiteral(": ") + reason);
+                     return;
+                 }
+
+                 // The best audio-only stream that carries a plain URL. A
+                 // format offering only `signatureCipher` needs the player
+                 // JavaScript run to unpick it, which is exactly the work this
+                 // client exists to avoid — so it is passed over, and if that
+                 // leaves nothing, yt-dlp takes the track.
+                 QString best;
+                 int bestItag = 0;
+                 int bestBitrate = -1;
+                 const QJsonArray formats =
+                     dig(root, { "streamingData", "adaptiveFormats" }).toArray();
+                 for (const QJsonValue &value : formats) {
+                     const QJsonObject format = value.toObject();
+                     const QString url = format.value(QStringLiteral("url")).toString();
+                     if (url.isEmpty())
+                         continue;
+                     if (!format.value(QStringLiteral("mimeType")).toString()
+                              .startsWith(QLatin1String("audio")))
+                         continue;
+                     const int bitrate = format.value(QStringLiteral("bitrate")).toInt();
+                     if (bitrate > bestBitrate) {
+                         bestBitrate = bitrate;
+                         bestItag = format.value(QStringLiteral("itag")).toInt();
+                         best = url;
+                     }
+                 }
+                 // Nothing audio-only: fall back to the progressive list, where
+                 // itag 18 lives — one file with the sound and a small picture
+                 // muxed together. It is the wrong choice for a music player
+                 // in general, because the video bytes are downloaded and then
+                 // thrown away (mpv is loaded with vid=no), which is why it is
+                 // not preferred above. But some tracks publish nothing else,
+                 // and half a megabyte of wasted picture on those few beats
+                 // sending the track down to yt-dlp and waiting three seconds.
+                 if (best.isEmpty()) {
+                     const QJsonArray progressive =
+                         dig(root, { "streamingData", "formats" }).toArray();
+                     for (const QJsonValue &value : progressive) {
+                         const QJsonObject format = value.toObject();
+                         const QString url = format.value(QStringLiteral("url")).toString();
+                         if (url.isEmpty())
+                             continue;
+                         // Muxed formats carry no `bitrate` worth comparing
+                         // across codecs; take the highest itag that answers,
+                         // which orders 18 ahead of the smaller ones.
+                         const int itag = format.value(QStringLiteral("itag")).toInt();
+                         if (itag > bestItag) {
+                             bestItag = itag;
+                             best = url;
+                         }
+                     }
+                 }
+
+                 if (best.isEmpty()) {
+                     done({}, 0, QStringLiteral("no plain audio stream offered"));
+                     return;
+                 }
+                 done(best, bestItag, QString());
+             });
+    });
 }
 
 void InnerTube::search(const QString &query, Filter filter)

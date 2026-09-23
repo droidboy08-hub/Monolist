@@ -9,6 +9,7 @@
 
 #include <functional>
 #include <utility>
+#include <vector>
 
 class QNetworkAccessManager;
 class QNetworkReply;
@@ -77,7 +78,13 @@ public:
 
     // Which of YouTube's front ends to ask. Music knows songs, albums and
     // artists; YouTube knows every video, and answers when Music does not.
-    enum class Client { Music, YouTube };
+    //
+    // Player is neither: it is the client YouTube's visionOS app identifies
+    // itself as, and it is the only one of the three that /player will hand a
+    // plain, directly playable stream URL to. WEB_REMIX is refused without a
+    // PO token and WEB answers with SABR, so the existing two cannot be
+    // reused for this no matter how convenient that would be.
+    enum class Client { Music, YouTube, Player };
 
     explicit InnerTube(QObject *parent = nullptr);
 
@@ -130,6 +137,20 @@ public:
     void cancelSuggestions();
     void cancelRadio();
 
+    // One /player call: the audio stream for a track, in one round trip and
+    // in this process, where the alternative is starting yt-dlp.
+    //
+    // `url` is empty whenever anything at all went wrong and `error` says
+    // what; the caller is expected to fall through to yt-dlp rather than show
+    // it, because yt-dlp still resolves things this cannot — age-gated and
+    // made-for-kids tracks, and live streams.
+    //
+    // Deliberately not cancellable: unlike search or suggestions there is no
+    // "newer one of the same kind", and giving it a slot would make a prefetch
+    // and a foreground resolve abort each other.
+    void player(const QString &videoId,
+                std::function<void(const QString &url, int itag, const QString &error)> done);
+
 Q_SIGNALS:
     void searchFinished(const QString &query, const QList<InnerTube::Track> &tracks);
     void searchFailed(const QString &query, const QString &reason);
@@ -155,7 +176,17 @@ private:
     static QStringList parseSuggestions(const QJsonObject &root);
     static QList<Track> parseRadio(const QJsonObject &root);
 
+    // /player is refused with LOGIN_REQUIRED for most music without one of
+    // these: an anonymous visitor id, scraped from the YouTube home page and
+    // good for the session. Fetched once, in the background, at start-up, so
+    // the first track does not pay for it.
+    void fetchVisitorData();
+    void withVisitorData(std::function<void()> then);
+
     QNetworkAccessManager *m_network;
+    QString m_visitorData;
+    bool m_visitorPending = false;
+    std::vector<std::function<void()>> m_visitorWaiters;
     QPointer<QNetworkReply> m_search;
     QPointer<QNetworkReply> m_suggest;
     QPointer<QNetworkReply> m_radio;

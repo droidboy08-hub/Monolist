@@ -1,4 +1,4 @@
-#include "streamresolver.h"
+﻿#include "streamresolver.h"
 #include "ytdlp.h"
 
 #include <QJsonArray>
@@ -39,7 +39,7 @@ QNetworkRequest makeRequest(const QUrl &url)
 //
 // The public instances were probed host by host: of the 15 documented Piped
 // API hosts, 11 no longer answer at all and the two that do return an empty
-// `audioStreams` list or a 500 — the extraction is broken upstream, so no
+// `audioStreams` list or a 500 â€” the extraction is broken upstream, so no
 // refreshed list repairs this. Of the Invidious hosts, one still advertises an
 // API and none serve /latest_version as media. What the tiers bought was a
 // ~7.5s walk through hosts that cannot answer, paid at the exact moment
@@ -103,7 +103,7 @@ void StreamResolver::resolve(const QString &videoId, int firstTier)
         return;
     }
 
-    if (firstTier <= TierYtDlp) {
+    if (firstTier <= TierInnerTube) {
         // Still-valid link from earlier or from a prefetch: answer at once,
         // but queued, so the caller sees the same order of events as always.
         const auto cached = m_cache.constFind(videoId);
@@ -126,7 +126,7 @@ void StreamResolver::resolve(const QString &videoId, int firstTier)
     auto *job = new Job;
     job->videoId = videoId;
     m_jobs.insert(videoId, job);
-    startTier(job, qBound(int(TierYtDlp), firstTier, int(TierExhausted)));
+    startTier(job, qBound(int(TierInnerTube), firstTier, int(TierExhausted)));
 }
 
 // The picture: yt-dlp only. The public instances answer with sound, and a
@@ -180,7 +180,7 @@ void StreamResolver::resolveVideo(const QString &videoId, int maxHeight)
                 }
                 // The headers the link was fetched with. YouTube ties a link
                 // to the client that asked for it and answers 403 to anyone
-                // else — which is how a video that plays in yt-dlp refuses to
+                // else â€” which is how a video that plays in yt-dlp refuses to
                 // play here.
                 const QVariantMap headers =
                     chosen.value(QStringLiteral("http_headers")).toObject().toVariantMap();
@@ -213,7 +213,7 @@ void StreamResolver::prefetch(const QString &videoId)
     job->videoId = videoId;
     job->prefetch = true;
     m_jobs.insert(videoId, job);
-    startTier(job, TierYtDlp);
+    startTier(job, TierInnerTube);
 }
 
 void StreamResolver::invalidate(const QString &videoId)
@@ -241,6 +241,7 @@ void StreamResolver::startTier(Job *job, int tier)
     Q_EMIT tierChanged(job->videoId, tier);
 
     switch (tier) {
+    case TierInnerTube:  startInnerTube(job);     break;
     case TierYtDlp:      startYtDlp(job);         break;
     case TierPiped:      startPipedRace(job);     break;
     case TierInvidious:  startInvidiousRace(job); break;
@@ -258,6 +259,28 @@ void StreamResolver::startTier(Job *job, int tier)
     }
 }
 
+// One request, in this process, to the endpoint YouTube's own clients use.
+// Everything that can go wrong here â€” a refused track, a stream offered only
+// behind a cipher, a network failure â€” is the same answer: let yt-dlp have it.
+void StreamResolver::startInnerTube(Job *job)
+{
+    const QString videoId = job->videoId;
+    const int generation = job->generation;
+
+    m_innerTube.player(videoId, [this, videoId, generation](const QString &url, int itag,
+                                                            const QString &error) {
+        Job *job = m_jobs.value(videoId);
+        if (!job || job->settled || job->generation != generation)
+            return;
+        if (url.isEmpty()) {
+            tierExhausted(job, QStringLiteral("InnerTube: %1").arg(error));
+            return;
+        }
+        qInfo("innertube: %s resolved as itag %d", qPrintable(videoId), itag);
+        succeed(job, url);
+    });
+}
+
 void StreamResolver::startYtDlp(Job *job)
 {
     if (!YtDlp::isAvailable()) {
@@ -272,7 +295,7 @@ void StreamResolver::startYtDlp(Job *job)
 
     // Nothing else bounds this. --socket-timeout is per socket operation, and
     // yt-dlp's own retry budget lets one resolve legitimately run for minutes
-    // while the app sits on "Resolving source…" with no way out. The guard is
+    // while the app sits on "Resolving sourceâ€¦" with no way out. The guard is
     // the same shape as the lambdas below, so a job that has already settled
     // or moved on ignores it; tierExhausted -> abortPending kills the process.
     QTimer::singleShot(kYtDlpTimeoutMs, this, [this, videoId, generation]() {
@@ -363,7 +386,7 @@ void StreamResolver::startPipedRace(Job *job)
 }
 
 // Invidious with local=true proxies the bytes through the instance itself, so
-// the resulting URL is a normal HTTP resource — fetchable, seekable, and usable
+// the resulting URL is a normal HTTP resource â€” fetchable, seekable, and usable
 // for downloads as well as playback.
 void StreamResolver::startInvidiousRace(Job *job)
 {
@@ -452,7 +475,7 @@ void StreamResolver::abortPending(Job *job)
     // than advance the tier a second time.
     ++job->generation;
 
-    // Detach the lists before touching them — starting the next tier appends to
+    // Detach the lists before touching them â€” starting the next tier appends to
     // job->pending, which must not happen mid-iteration.
     const QList<QPointer<QNetworkReply>> replies = std::exchange(job->pending, {});
     for (const QPointer<QNetworkReply> &reply : replies) {
@@ -486,3 +509,4 @@ void StreamResolver::cancelAll()
     for (const QString &id : ids)
         cancel(id);
 }
+

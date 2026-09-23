@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <QDateTime>
 #include <QHash>
@@ -6,6 +6,8 @@
 #include <QPointer>
 #include <QStringList>
 #include <QVariantMap>
+
+#include "innertube.h"
 
 class QNetworkAccessManager;
 class QNetworkReply;
@@ -16,7 +18,7 @@ class YtDlpRequest;
 //
 // This is the Melody streaming engine carried over from the React app, with one
 // structural change: Melody raced Piped and Invidious because it had no better
-// option — a browser cannot run yt-dlp, and every request had to clear CORS via
+// option â€” a browser cannot run yt-dlp, and every request had to clear CORS via
 // a public proxy. A native app has neither limit, so yt-dlp becomes tier 0 and
 // the instance racing is demoted to a fallback for when yt-dlp is missing,
 // rate-limited, or broken by an upstream change.
@@ -24,12 +26,23 @@ class YtDlpRequest;
 // The racing itself is worth keeping: public instances fail constantly and
 // unpredictably, and "ask twelve, take the first answer" degrades far better
 // than any single endpoint. It is the C++ equivalent of Melody's Promise.any.
+//
+// Since then the ladder has grown a rung above yt-dlp. Asking YouTube's own
+// /player endpoint in this process answers in well under a second where
+// starting yt-dlp takes three and a half, because what yt-dlp mostly costs is
+// not the process but the round trips it makes on its way to the same answer.
+// It is deliberately a tier and not a replacement: it cannot do age-gated or
+// made-for-kids tracks or live streams, and the arrangement it depends on is
+// one YouTube can withdraw â€” it already withdrew the equivalent for the iOS
+// client between two yt-dlp releases. When it fails, yt-dlp still gets the
+// track, and the only thing lost is the speed.
 class StreamResolver : public QObject
 {
     Q_OBJECT
 public:
     enum Tier {
-        TierYtDlp = 0,
+        TierInnerTube = 0,
+        TierYtDlp,
         TierPiped,
         TierInvidious,
         TierExhausted
@@ -42,7 +55,7 @@ public:
     // Starts at `firstTier`: a URL from one tier that the player could not open
     // is retried from the next. From the first tier, a still-valid cached URL
     // answers at once.
-    void resolve(const QString &videoId, int firstTier = TierYtDlp);
+    void resolve(const QString &videoId, int firstTier = TierInnerTube);
     // Resolves into the cache without reporting, so that the track after the
     // current one starts without waiting. A resolve() for the same id while it
     // runs takes it over.
@@ -58,7 +71,7 @@ public:
     void cancel(const QString &videoId);
     void cancelAll();
 
-    // Instance lists rot — hosts disappear every few months. They are settable
+    // Instance lists rot â€” hosts disappear every few months. They are settable
     // so a config update can fix playback without shipping a new binary.
     void setPipedInstances(const QStringList &hosts);
     void setInvidiousInstances(const QStringList &hosts);
@@ -80,9 +93,9 @@ Q_SIGNALS:
 private:
     struct Job {
         QString videoId;
-        int tier = TierYtDlp;
+        int tier = TierInnerTube;
         // Bumped on every tier change. Callbacks from an abandoned tier still
-        // arrive — aborting a reply fires its finished() handler — and are
+        // arrive â€” aborting a reply fires its finished() handler â€” and are
         // ignored by comparing against the generation they were created in.
         int generation = 0;
         QPointer<YtDlpRequest> ytdlp;
@@ -96,12 +109,13 @@ private:
     // so a replayed or prefetched track starts without going to yt-dlp again.
     struct CacheEntry {
         QString url;
-        int tier = TierYtDlp;
+        int tier = TierInnerTube;
         QDateTime expires;
     };
     static QDateTime expiryOf(const QString &url);
 
     void startTier(Job *job, int tier);
+    void startInnerTube(Job *job);
     void startYtDlp(Job *job);
     void startPipedRace(Job *job);
     void startInvidiousRace(Job *job);
@@ -121,6 +135,10 @@ private:
     };
 
     QNetworkAccessManager *m_network;
+    // The fast tier's own client, separate from the one PlaybackController
+    // uses for search and radio, so a resolve and a search never wait on each
+    // other's connection.
+    InnerTube m_innerTube;
     QHash<QString, Job *> m_jobs;
     QHash<QString, CacheEntry> m_cache;
     QHash<QString, VideoLinks> m_videoCache;
@@ -128,3 +146,4 @@ private:
     QStringList m_piped;
     QStringList m_invidious;
 };
+

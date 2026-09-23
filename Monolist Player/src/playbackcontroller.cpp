@@ -605,6 +605,7 @@ void PlaybackController::handleResolved(const QString &videoId, const QString &u
 
     QString label;
     switch (tier) {
+    case StreamResolver::TierInnerTube: label = QStringLiteral("InnerTube"); break;
     case StreamResolver::TierYtDlp:     label = QStringLiteral("yt-dlp");    break;
     case StreamResolver::TierPiped:     label = QStringLiteral("Piped");     break;
     case StreamResolver::TierInvidious: label = QStringLiteral("Invidious"); break;
