@@ -160,9 +160,18 @@ that gets blamed for the app being slow.
 * **The player bar spans the full width, below everything.**
   *Why.* It belongs to the app, not to a page: it keeps playing while views come
   and go, and its position is the one thing that must never move.
-* **Now Playing keeps the player bar visible.**
+* **Now Playing keeps the player bar visible, and slides out from behind it.**
   *Why.* Opening the big view should not take away the controls the user already
   knows; it adds the cover, the lyrics and the queue, and changes nothing else.
+  Because the view is that bar enlarged, it emerges from behind the bar and
+  tucks back behind it when closed — the bar is drawn on top throughout. Sliding
+  *over* the bar and off the bottom would read as a page leaving, which is the
+  wrong story: nothing left, the player is simply small again.
+* **The stack, bottom to top:** the page, the queue panel, Now Playing, the
+  player bar, the narrow-window sidebar with its dimmed page, then the toast.
+  *Why.* Each layer covers the one below only for as long as it is being used,
+  and the two that are always true — the player bar, and the app's answer to
+  what you just did — are never covered.
 * **Lyrics sit at the right, the cover at the left.**
   *Why.* Lyrics are read left-to-right and change constantly; they need the side
   that is not interrupted by the cover's colour field, and they need to start at

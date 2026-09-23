@@ -258,8 +258,11 @@ ApplicationWindow {
         }
     }
 
+    // Above Now Playing, so that view slides out from behind the bar and
+    // tucks back behind it: it is the bar enlarged, not a page over it.
     NowPlayingBar {
         id: playerBar
+        z: 850
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
@@ -306,7 +309,9 @@ ApplicationWindow {
         color: "#66201e1d"
         visible: opacity > 0
         opacity: window.sidebarOverlayOpen ? 1 : 0
-        z: 700
+        // Over the player bar as well: the sidebar is asked for, and covers
+        // the window until it is answered.
+        z: 870
         TapHandler { onTapped: window.sidebarOverlayOpen = false }
 
         Behavior on opacity {
@@ -321,7 +326,7 @@ ApplicationWindow {
         anchors.bottom: parent.bottom
         x: window.sidebarOverlayOpen ? 0 : -width
         visible: x > -width
-        z: 701
+        z: 871
         currentView: window.currentView
         showCloseButton: true
         onCloseRequested: window.sidebarOverlayOpen = false
@@ -348,7 +353,8 @@ ApplicationWindow {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: playerBar.top
         anchors.bottomMargin: Theme.space6
-        z: 900
+        // Over everything: it is the app answering, and it leaves by itself.
+        z: 950
     }
 
     Connections {
