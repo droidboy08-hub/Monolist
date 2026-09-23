@@ -246,8 +246,17 @@ void MpvEngine::load(const QString &urlOrPath, bool startPlaying, const QString 
     }
 
     // A stream whose sound comes separately (YouTube's larger sizes). Always
-    // set, so the last video's sound is never carried into the next file.
-    mpv_set_option_string(m_mpv, "audio-files", audioUrl.toUtf8().constData());
+    // set, so the last video's sound is never carried into the next file —
+    // and cleared as a list, because setting it to "" would leave one entry
+    // that is the empty file name, which mpv then tries to open.
+    if (audioUrl.isEmpty()) {
+        const char *clear[] = { "change-list", "audio-files", "clr", "", nullptr };
+        mpv_command(m_mpv, clear);
+    } else {
+        const QByteArray audio = audioUrl.toUtf8();
+        const char *set[] = { "change-list", "audio-files", "set", audio.constData(), nullptr };
+        mpv_command(m_mpv, set);
+    }
     // Likewise always set: the next file starts where it is told, or at 0.
     mpv_set_option_string(m_mpv, "start",
                           startAt > 0 ? QByteArray::number(startAt / 1000.0, 'f', 3).constData()

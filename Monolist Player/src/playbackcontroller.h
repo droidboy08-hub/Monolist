@@ -138,7 +138,8 @@ public Q_SLOTS:
                     const QString &artist,
                     const QString &artwork = QString(),
                     qint64 durationMs = 0,
-                    const QString &album = QString());
+                    const QString &album = QString(),
+                    bool isVideo = false);
 
     // Every YouTube video has a thumbnail at a predictable URL, so a track with
     // a source id never has to show a blank plate even when no artwork field

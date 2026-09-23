@@ -172,6 +172,19 @@ that gets blamed for the app being slow.
   *Why.* Each layer covers the one below only for as long as it is being used,
   and the two that are always true — the player bar, and the app's answer to
   what you just did — are never covered.
+* **The video plays where the cover is, and the switch sits on it.**
+  *Why.* The video is the same song moving: it belongs in the place the still
+  occupies, not in a panel of its own, and the control that swaps them belongs
+  on the thing it swaps. The plate keeps its width and loses height for a 16:9
+  picture rather than showing it in black bars — bars would be the only black
+  in a paper interface. Its bottom edge stays put, so the title below it does
+  not move. The cover stays up until the first frame arrives, so the panel is
+  never a black box, and the switch shows three dots while the picture is being
+  fetched. Songs with no video (YouTube Music's own audio tracks are a still
+  image) show the switch greyed rather than hidden, so the feature is findable.
+* **Video is never fetched until it is asked for.**
+  *Why.* It costs many times the bandwidth of audio and most listening does not
+  want it. Asking is one click, and the song carries on from the same second.
 * **Lyrics sit at the right, the cover at the left.**
   *Why.* Lyrics are read left-to-right and change constantly; they need the side
   that is not interrupted by the cover's colour field, and they need to start at

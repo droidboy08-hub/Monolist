@@ -45,6 +45,9 @@ public:
     // Whatever draws the video renders from this handle (see VideoSurface).
     void setVideoEnabled(bool enabled);
     bool videoEnabled() const { return m_video; }
+    // Empty when what is playing has no picture. Read on attaching, in case
+    // the size was reported before anything was there to draw it.
+    QSize videoSize() const { return m_videoSize; }
     mpv_handle *handle() const { return m_mpv; }
 
 Q_SIGNALS:

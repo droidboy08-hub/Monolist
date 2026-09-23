@@ -83,6 +83,8 @@ void VideoSurface::attach()
     g_holder = this;
     mpv_render_context_set_update_callback(m_render, &VideoSurface::onFrame, this);
     connect(g_engine, &MpvEngine::videoSizeChanged, this, &VideoSurface::setVideoSize);
+    // What is already playing, in case it started before this was shown.
+    setVideoSize(g_engine->videoSize());
     update();
 }
 

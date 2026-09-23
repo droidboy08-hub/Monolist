@@ -2,6 +2,7 @@
 
 #include <QImage>
 #include <QQuickItem>
+#include <QtQml/qqmlregistration.h>
 
 struct mpv_render_context;
 class MpvEngine;
@@ -24,6 +25,9 @@ class MpvEngine;
 class VideoSurface : public QQuickItem
 {
     Q_OBJECT
+    // Declared to the module rather than registered at run time, so the QML
+    // tooling knows what it is and can check the views that use it.
+    QML_ELEMENT
     // A frame has arrived and the picture is worth showing.
     Q_PROPERTY(bool showing READ showing NOTIFY showingChanged)
     // The picture's shape, for laying it out; 16:9 until the first frame.

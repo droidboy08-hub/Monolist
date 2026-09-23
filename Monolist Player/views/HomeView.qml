@@ -33,7 +33,8 @@ Flickable {
         else if (card.type === "artist")
             searchRequested(card.title)
         else if (card.videoId)
-            Player.playSource(card.videoId, card.title, card.subtitle, card.artwork)
+            Player.playSource(card.videoId, card.title, card.subtitle, card.artwork, 0, "",
+                              card.type === "video")
     }
 
     // The number, the title and the table, with the rule under it.

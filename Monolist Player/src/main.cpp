@@ -183,9 +183,10 @@ int main(int argc, char *argv[])
     qmlRegisterUncreatableType<LyricsModel>(
         "Monolist.Backend", 1, 0, "LyricsModel",
         QStringLiteral("Obtained from Lyrics.lines"));
-    // The picture, drawn inside the scene wherever a view places it.
+    // The picture, drawn inside the scene wherever a view places it. The type
+    // itself belongs to the Monolist module (QML_ELEMENT); this is only which
+    // player it draws.
     VideoSurface::setEngine(&engine);
-    qmlRegisterType<VideoSurface>("Monolist.Backend", 1, 0, "VideoSurface");
 
     QQmlApplicationEngine qmlEngine;
     qmlEngine.addImageProvider(QStringLiteral("artwork"), new ArtworkCache(&artworkFetcher));
@@ -270,10 +271,13 @@ int main(int argc, char *argv[])
                      qPrintable(player.statusText()), qPrintable(player.sourceLabel()));
         });
 
-        const auto start = [&player, videoId, title, artist, known]() {
+        // --video plays it as something with a picture, so the video switch
+        // in Now Playing is live for it.
+        const bool asVideo = args.contains(QStringLiteral("--video"));
+        const auto start = [&player, videoId, title, artist, known, asVideo]() {
             player.playSource(videoId, title, artist, known.value(QStringLiteral("artwork")).toString(),
                               known.value(QStringLiteral("durationMs")).toLongLong(),
-                              known.value(QStringLiteral("album")).toString());
+                              known.value(QStringLiteral("album")).toString(), asVideo);
         };
         QTimer::singleShot(500, &app, [videoId, clock, start]() {
             qWarning("selftest: playing %s", qPrintable(videoId));

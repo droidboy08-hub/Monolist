@@ -19,6 +19,9 @@ Rectangle {
     readonly property bool hasTrack: track.title !== undefined
     readonly property string artwork: track.artwork !== undefined ? track.artwork : ""
     readonly property bool wide: width >= 980
+    // The picture is up once mpv has a frame to give, not when it was asked
+    // for: until then the cover stays, and the switch shows it is working.
+    readonly property bool videoShowing: Player.videoPlaying && videoSurface.showing
 
     // The cover's colour as the field, signal red until it is known.
     property color field: Theme.accent
@@ -86,15 +89,80 @@ Rectangle {
             anchors.margins: Theme.space8
             spacing: Theme.space6
 
-            Artwork {
-                id: cover
+            // The cover, or the same song moving. A video is 16:9 where a
+            // cover is square, so the plate keeps its width and loses height
+            // rather than showing the picture in black bars.
+            Item {
+                id: stage
+
                 readonly property int edge: Math.max(120, Math.min(posterContent.width,
                     poster.height - Theme.titleBarHeight - info.implicitHeight - Theme.space8 * 2 - Theme.space6))
+
                 width: edge
-                height: edge
-                source: root.artwork
-                placeholder: ""
-                colour: true
+                height: root.videoShowing ? Math.round(edge / videoSurface.aspectRatio) : edge
+
+                // Under the cover, so the still stays up until the first
+                // frame arrives and the picture never appears as a black box.
+                VideoSurface {
+                    id: videoSurface
+                    anchors.fill: parent
+                    visible: Player.videoPlaying
+                }
+
+                Artwork {
+                    id: cover
+                    anchors.fill: parent
+                    visible: !root.videoShowing
+                    source: root.artwork
+                    placeholder: ""
+                    colour: true
+                }
+
+                // The switch between the still and the moving picture sits on
+                // the thing it changes. Paper on the artwork, ink under the
+                // pointer, like the poster's own button.
+                Rectangle {
+                    id: videoToggle
+
+                    readonly property bool waiting: Player.videoWanted && !root.videoShowing
+
+                    anchors.right: parent.right
+                    anchors.bottom: parent.bottom
+                    anchors.margins: Theme.space3
+                    width: 40
+                    height: 40
+                    color: toggleHover.hovered ? Theme.text : Theme.bg
+                    opacity: Player.videoAvailable ? 1 : 0.45
+
+                    Behavior on color {
+                        enabled: !toggleHover.hovered
+                        ColorAnimation { duration: Theme.quick }
+                    }
+
+                    Icon {
+                        anchors.centerIn: parent
+                        width: 18
+                        height: 18
+                        name: videoToggle.waiting ? "dots" : (root.videoShowing ? "image" : "video")
+                        color: toggleHover.hovered ? Theme.bg : Theme.text
+                    }
+
+                    HoverHandler {
+                        id: toggleHover
+                        enabled: Player.videoAvailable
+                        cursorShape: Qt.PointingHandCursor
+                    }
+                    TapHandler {
+                        enabled: Player.videoAvailable
+                        onTapped: Player.videoWanted = !Player.videoWanted
+                    }
+
+                    ToolTip.visible: toggleHover.hovered
+                    ToolTip.delay: 400
+                    ToolTip.text: !Player.videoAvailable ? "This song has no video"
+                                : root.videoShowing ? "Show the cover"
+                                : "Play the video"
+                }
             }
 
             Column {

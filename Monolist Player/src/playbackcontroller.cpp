@@ -364,7 +364,8 @@ void PlaybackController::playSource(const QString &videoId,
                                     const QString &artist,
                                     const QString &artwork,
                                     qint64 durationMs,
-                                    const QString &album)
+                                    const QString &album,
+                                    bool isVideo)
 {
     if (videoId.isEmpty())
         return;
@@ -374,6 +375,7 @@ void PlaybackController::playSource(const QString &videoId,
     track.artist = artist;
     track.album = album;
     track.durationMs = durationMs;
+    track.isVideo = isVideo;
     track.artwork = artwork.isEmpty() ? artworkForSource(videoId) : artwork;
     startQueue({ track }, 0, /*autoPlay=*/true);
 }

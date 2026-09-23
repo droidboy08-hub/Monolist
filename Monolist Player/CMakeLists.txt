@@ -43,7 +43,6 @@ qt_add_executable(monolist
     src/catalog.h                  src/catalog.cpp
     src/lyrics.h                   src/lyrics.cpp
     src/windowchrome.h             src/windowchrome.cpp
-    src/videosurface.h             src/videosurface.cpp
     # — backend merged in from the Melody player —
     ${MONOLIST_MPV_SOURCES}
     src/ytdlp.h                    src/ytdlp.cpp
@@ -66,6 +65,10 @@ set_source_files_properties(Theme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 qt_add_qml_module(monolist
     URI Monolist
     VERSION 1.0
+    # C++ types declared to the module (QML_ELEMENT), so qmllint and the QML
+    # compiler know them like any other component.
+    SOURCES
+        src/videosurface.h             src/videosurface.cpp
     QML_FILES
         Main.qml
         Theme.qml
