@@ -81,3 +81,7 @@ TasteProfile buildTaste(const Catalog &catalog,
 QVector<PlayEvent> readPlayEvents(int limit = 4000);
 
 } // namespace Rec
+
+// The history crosses a thread boundary on its way to the scan, and a queued
+// connection can only carry a type the meta-object system knows.
+Q_DECLARE_METATYPE(QVector<Rec::PlayEvent>)

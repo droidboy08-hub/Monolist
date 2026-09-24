@@ -303,6 +303,59 @@ Flickable {
 
         HRule { width: parent.width }
 
+        // — recommendations —
+        //
+        // The catalogue is not shipped with the app and cannot be: it is
+        // licensed for non-commercial use only. So it is pointed at rather
+        // than bundled, and the app works perfectly well without one.
+        SectionHeader {
+            width: parent.width
+            number: "04"
+            title: "Recommendations"
+        }
+
+        Note {
+            text: Recs.available
+                  ? "Reading from the folder below. Search suggests songs from it when nothing is typed."
+                  : (Recs.message.length > 0
+                     ? Recs.message
+                     : "Point this at a folder holding the four embeat_v1_*.bin files to get suggestions in Search.")
+        }
+
+        Item {
+            width: parent.width
+            height: Math.max(pathField.implicitHeight, rebuild.implicitHeight)
+
+            TextField {
+                id: pathField
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                width: parent.width - rebuild.width - Theme.space4
+                text: Recs.dataDirectory
+                placeholderText: "Folder holding embeat_v1_vectors.bin…"
+                font.family: Theme.fontFamily
+                font.pixelSize: 13
+                color: Theme.text
+                background: Rectangle {
+                    color: "transparent"
+                    border.width: Theme.ruleWidth
+                    border.color: pathField.activeFocus ? Theme.accent : Theme.neutral300
+                }
+                onEditingFinished: Recs.dataDirectory = text
+            }
+
+            ActionButton {
+                id: rebuild
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                text: Recs.busy ? "WORKING…" : "REBUILD"
+                enabled: Recs.available && !Recs.busy
+                onClicked: Recs.refresh()
+            }
+        }
+
+        HRule { width: parent.width }
+
         // — connections —
         //
         // Designed, not built. The app works entirely without any of these and
@@ -310,7 +363,7 @@ Flickable {
         // library and your own history, not a better player.
         SectionHeader {
             width: parent.width
-            number: "04"
+            number: "05"
             title: "Connections"
         }
 
@@ -348,7 +401,7 @@ Flickable {
         // — updates —
         SectionHeader {
             width: parent.width
-            number: "05"
+            number: "06"
             title: "Updates"
         }
 
@@ -507,7 +560,7 @@ Flickable {
         // — about —
         SectionHeader {
             width: parent.width
-            number: "06"
+            number: "07"
             title: "About"
             action: "COPY FOR A BUG REPORT →"
             onActionTriggered: About.copyReport()

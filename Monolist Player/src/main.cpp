@@ -30,6 +30,7 @@
 #include "windowchrome.h"
 #include "appinfo.h"
 #include "rec/catalog.h"
+#include "recommender.h"
 #include "rec/taste.h"
 #include "rec/vectorsearch.h"
 #include "ytdlp.h"
@@ -171,6 +172,9 @@ int main(int argc, char *argv[])
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Chrome",    &chrome);
     AppInfo appInfo;
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "About",     &appInfo);
+    Recommender recommender;
+    recommender.setPlayer(&player);
+    qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Recs",      &recommender);
     qmlRegisterUncreatableType<SearchResultModel>(
         "Monolist.Backend", 1, 0, "SearchResultModel",
         QStringLiteral("Obtained from Extractor.results"));

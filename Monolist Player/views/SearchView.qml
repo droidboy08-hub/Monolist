@@ -75,14 +75,44 @@ Flickable {
             }
         }
 
+        // — with nothing typed, the page is suggestions rather than an
+        // instruction nobody needs twice —
         Text {
-            visible: root.term.length === 0
+            visible: root.term.length === 0 && !Recs.available
             width: parent.width
-            text: "Type in the field above to search YouTube Music."
+            text: Recs.busy
+                  ? "Reading the catalogue…"
+                  : (Recs.message.length > 0
+                     ? Recs.message + "  Set the folder in Settings."
+                     : "Type in the field above to search YouTube Music.")
             wrapMode: Text.WordWrap
             font.family: Theme.fontFamily
             font.pixelSize: 14
             color: Theme.neutral700
+        }
+
+        Text {
+            visible: root.term.length === 0 && Recs.available && Recs.busy
+            width: parent.width
+            text: "Working out what to suggest…"
+            font.family: Theme.fontFamily
+            font.pixelSize: 13
+            color: Theme.neutral700
+        }
+
+        Repeater {
+            model: root.term.length === 0 && Recs.available ? Recs.shelves : []
+
+            RecShelf {
+                required property var modelData
+                required property int index
+
+                width: column.width
+                title: modelData.title
+                reason: modelData.reason
+                rows: modelData.rows
+                onRowActivated: function(row) { Recs.play(index, row) }
+            }
         }
 
         Text {
