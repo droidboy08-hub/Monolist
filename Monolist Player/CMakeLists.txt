@@ -44,6 +44,13 @@ qt_add_executable(monolist
     src/lyrics.h                   src/lyrics.cpp
     src/windowchrome.h             src/windowchrome.cpp
     src/appinfo.h                  src/appinfo.cpp
+    # — the recommender core, ported from the iOS player —
+    # Plain C++ over QtCore: no BLAS, no ANN index, no new dependency. The
+    # catalogue and graph files it reads are not shipped with the app; see
+    # RECOMMENDATION_PORTING.md section 7 on why they cannot be.
+    src/rec/matchkey.h             src/rec/matchkey.cpp
+    src/rec/catalog.h              src/rec/catalog.cpp
+    src/rec/vectorsearch.h         src/rec/vectorsearch.cpp
     # — backend merged in from the Melody player —
     ${MONOLIST_MPV_SOURCES}
     src/ytdlp.h                    src/ytdlp.cpp

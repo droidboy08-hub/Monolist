@@ -29,6 +29,8 @@
 #include "videosurface.h"
 #include "windowchrome.h"
 #include "appinfo.h"
+#include "rec/catalog.h"
+#include "rec/vectorsearch.h"
 #include "ytdlp.h"
 
 #include <memory>
@@ -391,6 +393,61 @@ int main(int argc, char *argv[])
             }
             qWarning("events: %d rows", shown);
         }
+        QTimer::singleShot(0, &app, []() { QCoreApplication::quit(); });
+    }
+
+    // --rec-test <directory>
+    //
+    // The recommender core against the real catalogue: that it loads, that the
+    // match ladder answers, that a scan is fast enough to run behind a view,
+    // and that the two answers it must refuse it does refuse.
+    const int recFlag = args.indexOf(QStringLiteral("--rec-test"));
+    if (recFlag >= 0 && recFlag + 1 < args.size()) {
+        const QString directory = args.at(recFlag + 1);
+        QElapsedTimer clock;
+        clock.start();
+        auto *catalogue = new Rec::Catalog;
+        if (!catalogue->load(directory)) {
+            qWarning("rec: could not load a catalogue from %s", qPrintable(directory));
+        } else {
+            qWarning("rec: %d rows, %d dims, loaded in %lld ms",
+                     catalogue->count(), catalogue->dims(), (long long)clock.elapsed());
+
+            const QList<QPair<QString, QString>> probes = {
+                { QStringLiteral("Blinding Lights"), QStringLiteral("The Weeknd") },
+                { QStringLiteral("Kyoto"), QStringLiteral("Phoebe Bridgers") },
+                // The multi-value tag shape: one NUL-separated artist field.
+                { QStringLiteral("Die With A Smile"),
+                  QStringLiteral("Bruno Mars") + QChar(u'\0') + QStringLiteral("Lady Gaga") },
+                // Must be refused: nothing survives normalisation on either side.
+                { QStringLiteral("???"), QString() }
+            };
+            for (const auto &probe : probes) {
+                const Rec::Catalog::Match m = catalogue->match(probe.first, probe.second);
+                qWarning("rec: match(\"%s\") -> row %d conf %.2f %s",
+                         qPrintable(probe.first), m.row, m.confidence,
+                         m.row >= 0 ? qPrintable(catalogue->title(m.row) + QStringLiteral(" — ")
+                                                 + catalogue->artist(m.row))
+                                    : "(no row)");
+            }
+
+            const Rec::Catalog::Match seed =
+                catalogue->match(QStringLiteral("Blinding Lights"), QStringLiteral("The Weeknd"));
+            if (seed.row >= 0) {
+                QVector<float> query(catalogue->dims());
+                std::copy_n(catalogue->vector(seed.row), catalogue->dims(), query.begin());
+                clock.restart();
+                const QVector<Rec::Hit> near =
+                    Rec::nearest(*catalogue, query, /*limit=*/8, /*offset=*/0, /*minPopularity=*/0);
+                qWarning("rec: one full scan in %lld ms", (long long)clock.elapsed());
+                for (const Rec::Hit &hit : near) {
+                    qWarning("rec:   %.4f  %s — %s", hit.score,
+                             qPrintable(catalogue->title(hit.row)),
+                             qPrintable(catalogue->artist(hit.row)));
+                }
+            }
+        }
+        delete catalogue;
         QTimer::singleShot(0, &app, []() { QCoreApplication::quit(); });
     }
 
