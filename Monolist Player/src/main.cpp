@@ -360,6 +360,40 @@ int main(int argc, char *argv[])
         QTimer::singleShot(0, &app, []() { QCoreApplication::quit(); });
     }
 
+    // --events
+    //
+    // What the recommender will be trained on: the listens, how much of each
+    // was heard, and the label that follows from it. Worth its own flag
+    // because a taste profile that comes out wrong is almost always wrong here
+    // first, and this is the only way to look.
+    if (args.contains(QStringLiteral("--events"))) {
+        QSqlQuery events(AppDatabase::connection());
+        if (!events.exec(QStringLiteral(
+                "SELECT kind, title, artist, track_ms, listened_ms, completed, skipped, label,"
+                " repeat_in_session, started_at FROM play_events ORDER BY id DESC LIMIT 40"))) {
+            qWarning("events: %s", qPrintable(events.lastError().text()));
+        } else {
+            int shown = 0;
+            while (events.next()) {
+                const qint64 total = events.value(3).toLongLong();
+                const qint64 heard = events.value(4).toLongLong();
+                const QVariant label = events.value(7);
+                qWarning("events: %-12s %-34s %-22s %5lld/%-5lld s  label %-4s %s%s%s",
+                         qPrintable(events.value(0).toString()),
+                         qPrintable(events.value(1).toString().left(34)),
+                         qPrintable(events.value(2).toString().left(22)),
+                         (long long)(heard / 1000), (long long)(total / 1000),
+                         label.isNull() ? "-" : qPrintable(QString::number(label.toDouble(), 'f', 1)),
+                         events.value(5).toInt() ? "completed " : "",
+                         events.value(6).toInt() ? "skipped " : "",
+                         events.value(8).toInt() ? "again" : "");
+                ++shown;
+            }
+            qWarning("events: %d rows", shown);
+        }
+        QTimer::singleShot(0, &app, []() { QCoreApplication::quit(); });
+    }
+
     // --library-test "<query>"
     //
     // The library end to end, on real songs: searches, makes a playlist of the

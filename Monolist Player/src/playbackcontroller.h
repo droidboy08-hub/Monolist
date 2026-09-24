@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QObject>
+#include <QSet>
 #include <QString>
 #include <QVariantMap>
 
@@ -184,6 +185,11 @@ private:
     void handleEndOfFile();
     void prefetchUpcoming();
     void advance(bool keepPlaying);
+    // One row per listen, finalised with the playhead at the moment the track
+    // is left. What the recommender is built on.
+    void openPlayEvent(const QVariantMap &track);
+    void closePlayEvent();
+    void recordDiscreteEvent(const QVariantMap &track, const QString &kind);
     bool extendWithRadio();   // false when there is nothing to seed a radio from
     void refreshFavourite();
     void setStatus(const QString &text, const QString &source, bool resolving, bool error = false);
@@ -207,6 +213,11 @@ private:
     QString m_statusText;
     QString m_sourceLabel;
     bool m_statusError = false;
+    // The open play event, and the songs already finalised while this app has
+    // been running — "played again" is only knowable in memory.
+    qint64 m_playEventId = 0;
+    QString m_playEventKey;
+    QSet<QString> m_finalisedThisSession;
     // Consecutive tracks that would not resolve. A queue is skipped past one
     // bad track, but a machine that is offline — or a YouTube-wide block —
     // must not race the whole queue, spawning a resolve for every row.

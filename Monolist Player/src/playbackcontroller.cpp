@@ -7,6 +7,7 @@
 #include "trackmodel.h"
 
 #include <QAbstractItemModel>
+#include <QCoreApplication>
 #include <QFileInfo>
 #include <QSqlError>
 #include <QSqlQuery>
@@ -119,6 +120,13 @@ PlaybackController::PlaybackController(MpvEngine *engine,
         });
 
         m_engine->setVolume(m_volume);
+    }
+
+    // The last song of a session is the one nothing else closes, and it is the
+    // most recent thing the listener chose — exactly the event a recommender
+    // would miss most.
+    if (QCoreApplication *app = QCoreApplication::instance()) {
+        connect(app, &QCoreApplication::aboutToQuit, this, [this]() { closePlayEvent(); });
     }
 
     if (m_resolver) {
@@ -283,6 +291,11 @@ void PlaybackController::toggleFavourite()
 {
     if (!m_library || m_currentTrack.isEmpty())
         return;
+    // A like is the strongest thing anyone tells a recommender, and an unlike
+    // is its retraction — both are recorded, so a profile built later can
+    // subtract what was taken back rather than counting it for ever.
+    recordDiscreteEvent(m_currentTrack,
+                        m_favourite ? QStringLiteral("unliked") : QStringLiteral("like"));
     // likesChanged refreshes the flag.
     m_library->setLiked(m_currentTrack, !m_favourite);
 }
@@ -503,10 +516,112 @@ void PlaybackController::recordHistory(const QVariantMap &track)
         qWarning("Monolist: could not record a play: %s", qPrintable(recent.lastError().text()));
 }
 
+// ------------------------------------------------------------- play events
+
+void PlaybackController::openPlayEvent(const QVariantMap &track)
+{
+    const QString videoId = track.value(QStringLiteral("sourceId")).toString();
+    const QString title = track.value(QStringLiteral("title")).toString();
+    if (title.isEmpty())
+        return;                       // nothing a recommender could match on
+
+    QSqlQuery event(AppDatabase::connection());
+    event.prepare(QStringLiteral(
+        "INSERT INTO play_events (kind, video_id, title, artist, track_ms, repeat_in_session)"
+        " VALUES ('play', ?, ?, ?, ?, ?)"));
+    event.addBindValue(AppDatabase::text(videoId));
+    event.addBindValue(AppDatabase::text(title));
+    event.addBindValue(AppDatabase::text(track.value(QStringLiteral("artist")).toString()));
+    event.addBindValue(track.value(QStringLiteral("durationMs")).toLongLong());
+    // A song returned to in the same sitting says something a first play does
+    // not, and it is only knowable while the app is running.
+    const QString key = videoId.isEmpty() ? title : videoId;
+    event.addBindValue(m_finalisedThisSession.contains(key) ? 1 : 0);
+    if (!event.exec()) {
+        m_playEventId = 0;
+        return;
+    }
+    m_playEventId = event.lastInsertId().toLongLong();
+    m_playEventKey = key;
+}
+
+// The label ladder is the iOS one exactly (RECOMMENDATION_PORTING.md 5.5).
+// Deliberately not "improved": a history imported from that player and one
+// recorded here have to mean the same thing, or a taste profile built from
+// both is built from two different measurements.
+void PlaybackController::closePlayEvent()
+{
+    if (m_playEventId <= 0)
+        return;
+    const qint64 id = std::exchange(m_playEventId, 0);
+    const qint64 listened = qMax<qint64>(0, m_position);
+    const qint64 total = qMax<qint64>(0, m_duration);
+
+    QVariant label;                   // null means "not long enough to say"
+    if (total > 0) {
+        const double ratio = double(listened) / double(total);
+        if (ratio < 0.10)      label = 0.0;
+        else if (ratio < 0.50) label = 0.2;
+        else if (ratio < 0.90) label = 0.6;
+        else                   label = 1.0;
+    } else if (listened < 30000) {
+        label = 0.0;              // gave up on something of unknown length
+    }
+
+    // A different threshold from the label on purpose: 0.9 of a song is a
+    // listen, but "completed" is what the queue means by finishing one.
+    const bool completed = total > 0 && listened >= qint64(total * 0.85);
+    const bool skipped = !completed && listened < 30000;
+
+    // A repeat upgrades a lukewarm label but never rescues a rejected one.
+    if (m_finalisedThisSession.contains(m_playEventKey) && label.isValid()) {
+        const double value = label.toDouble();
+        if (value > 0.0)
+            label = 1.0;
+    }
+    if (!m_playEventKey.isEmpty())
+        m_finalisedThisSession.insert(m_playEventKey);
+
+    // The duration is written here, not when the event opened: a track picked
+    // from search carries no length until mpv has opened the stream and said
+    // so, and a length of zero would make every ratio above meaningless.
+    QSqlQuery finish(AppDatabase::connection());
+    finish.prepare(QStringLiteral(
+        "UPDATE play_events SET track_ms = ?, listened_ms = ?, completed = ?, skipped = ?,"
+        " label = ? WHERE id = ?"));
+    finish.addBindValue(total);
+    finish.addBindValue(listened);
+    finish.addBindValue(completed ? 1 : 0);
+    finish.addBindValue(skipped ? 1 : 0);
+    finish.addBindValue(label);
+    finish.addBindValue(id);
+    finish.exec();
+}
+
+void PlaybackController::recordDiscreteEvent(const QVariantMap &track, const QString &kind)
+{
+    const QString title = track.value(QStringLiteral("title")).toString();
+    if (title.isEmpty())
+        return;
+    QSqlQuery event(AppDatabase::connection());
+    event.prepare(QStringLiteral(
+        "INSERT INTO play_events (kind, video_id, title, artist) VALUES (?, ?, ?, ?)"));
+    event.addBindValue(kind);
+    event.addBindValue(AppDatabase::text(track.value(QStringLiteral("sourceId")).toString()));
+    event.addBindValue(AppDatabase::text(title));
+    event.addBindValue(AppDatabase::text(track.value(QStringLiteral("artist")).toString()));
+    event.exec();
+}
+
 // Everything that decides *where* audio comes from lives here; the rest of the
 // class only cares that something is playing.
 void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
 {
+    // First, while m_position still belongs to the track being left: how much
+    // of it was heard is the single most useful thing the recommender gets,
+    // and it exists only in this instant.
+    closePlayEvent();
+
     if (m_resolver && !m_pendingVideoId.isEmpty())
         m_resolver->cancel(m_pendingVideoId);
     m_pendingVideoId.clear();
@@ -542,8 +657,10 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
 
     // Before announcing the track, so anything that reloads history on the
     // announcement already finds it there.
-    if (autoPlay)
+    if (autoPlay) {
         recordHistory(m_currentTrack);
+        openPlayEvent(m_currentTrack);
+    }
 
     Q_EMIT currentTrackChanged();
     Q_EMIT positionChanged();

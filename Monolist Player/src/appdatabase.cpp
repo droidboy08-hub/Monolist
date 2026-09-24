@@ -113,6 +113,46 @@ void AppDatabase::createSchema()
         " played_at TEXT NOT NULL DEFAULT (datetime('now')),"
         " play_count INTEGER NOT NULL DEFAULT 1)"));
 
+    // What the recommender learns from: one row per listen, plus a row for each
+    // like and each dismissal.
+    //
+    // `recent` and `history` cannot answer this. They record that a song was
+    // played, and taste is mostly in what was *not* — a song skipped after nine
+    // seconds is evidence against, and both tables record it identically to one
+    // played through. So this keeps how much was heard, and the label derived
+    // from it.
+    //
+    // The iOS player this is ported from keeps the same events in an append-only
+    // JSON Lines file. A table is the same thing where the rest of this app
+    // already lives: it is read by one query instead of a scan, it cannot be
+    // half-written, and it needs no rotation.
+    //
+    // `listened_ms` is the playhead where the track was left, not time spent
+    // watching — seeking to the end counts as a full listen, exactly as it does
+    // on iOS, and any change to that would make an imported history mean
+    // something different from a local one.
+    q.exec(QStringLiteral(
+        "CREATE TABLE IF NOT EXISTS play_events ("
+        " id INTEGER PRIMARY KEY AUTOINCREMENT,"
+        " kind TEXT NOT NULL DEFAULT 'play',"        // play | like | notInterested
+        " video_id TEXT NOT NULL DEFAULT '',"
+        " title TEXT NOT NULL DEFAULT '',"
+        " artist TEXT NOT NULL DEFAULT '',"
+        " started_at TEXT NOT NULL DEFAULT (datetime('now')),"
+        " track_ms INTEGER NOT NULL DEFAULT 0,"
+        " listened_ms INTEGER NOT NULL DEFAULT 0,"
+        " completed INTEGER NOT NULL DEFAULT 0,"
+        " skipped INTEGER NOT NULL DEFAULT 0,"
+        // NULL is meaningful: "played, but not long enough to say anything".
+        // The profile compares labels for exact equality, so they are stored,
+        // never re-derived by arithmetic.
+        " label REAL,"
+        " source TEXT NOT NULL DEFAULT '',"
+        " playlist_id INTEGER NOT NULL DEFAULT 0,"
+        " repeat_in_session INTEGER NOT NULL DEFAULT 0)"));
+    q.exec(QStringLiteral(
+        "CREATE INDEX IF NOT EXISTS play_events_started ON play_events (started_at DESC)"));
+
     // Offline set. Keyed by the upstream video id rather than the track row, so
     // a download survives the library being rebuilt and can be matched back to
     // a search result that was never in the library to begin with.
