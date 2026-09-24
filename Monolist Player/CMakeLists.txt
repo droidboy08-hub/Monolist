@@ -51,6 +51,7 @@ qt_add_executable(monolist
     src/rec/matchkey.h             src/rec/matchkey.cpp
     src/rec/catalog.h              src/rec/catalog.cpp
     src/rec/vectorsearch.h         src/rec/vectorsearch.cpp
+    src/rec/taste.h                src/rec/taste.cpp
     # — backend merged in from the Melody player —
     ${MONOLIST_MPV_SOURCES}
     src/ytdlp.h                    src/ytdlp.cpp

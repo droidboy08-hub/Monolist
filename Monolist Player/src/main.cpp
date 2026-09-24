@@ -30,6 +30,7 @@
 #include "windowchrome.h"
 #include "appinfo.h"
 #include "rec/catalog.h"
+#include "rec/taste.h"
 #include "rec/vectorsearch.h"
 #include "ytdlp.h"
 
@@ -431,6 +432,71 @@ int main(int argc, char *argv[])
                          m.row >= 0 ? qPrintable(catalogue->title(m.row) + QStringLiteral(" — ")
                                                  + catalogue->artist(m.row))
                                     : "(no row)");
+            }
+
+            // The taste profile, over a fixed set of listens rather than the
+            // database's, so the arithmetic is exercised identically on every
+            // machine and any change to it shows up as a changed number here.
+            {
+                const QDateTime now = QDateTime::currentDateTimeUtc();
+                const auto listen = [&now](const char *title, const char *artist,
+                                           double label, const char *source, int daysAgo) {
+                    Rec::PlayEvent event;
+                    event.kind = QStringLiteral("play");
+                    event.title = QString::fromUtf8(title);
+                    event.artist = QString::fromUtf8(artist);
+                    event.source = QString::fromLatin1(source);
+                    event.when = now.addDays(-daysAgo);
+                    event.hasLabel = true;
+                    event.label = label;
+                    event.listenedMs = 200000;
+                    event.trackMs = 220000;
+                    return event;
+                };
+                const QVector<Rec::PlayEvent> events = {
+                    listen("Blinding Lights", "The Weeknd", 1.0, "search", 1),
+                    listen("Save Your Tears", "The Weeknd", 1.0, "search", 2),
+                    listen("Levitating", "Dua Lipa", 1.0, "home", 3),
+                    listen("Don't Start Now", "Dua Lipa", 1.0, "playlist", 5),
+                    listen("As It Was", "Harry Styles", 1.0, "search", 6),
+                    listen("Watermelon Sugar", "Harry Styles", 0.6, "queue", 8),
+                    listen("Physical", "Dua Lipa", 1.0, "home", 9),
+                    listen("Peaches", "Justin Bieber", 0.6, "queue", 11),
+                    listen("Stay", "The Kid LAROI", 1.0, "search", 12),
+                    listen("Bad Habits", "Ed Sheeran", 1.0, "home", 14),
+                    // Two rejections, so the negative centroid has something.
+                    listen("The Sound of Silence", "Disturbed", 0.0, "queue", 4),
+                    listen("Master of Puppets", "Metallica", 0.0, "queue", 7),
+                };
+                const Rec::TasteProfile taste = Rec::buildTaste(*catalogue, events, now);
+                qWarning("rec: taste valid=%s  %d/%d events matched, coverage %.2f",
+                         taste.valid ? "yes" : "no", taste.tracksMatched,
+                         taste.eventsConsidered, taste.coverage);
+                qWarning("rec: mass +%.2f -%.2f recent %.2f", taste.positiveMass,
+                         taste.negativeMass, taste.recentMass);
+                qWarning("rec: top artists: %s",
+                         qPrintable(taste.topArtists.join(QStringLiteral(", "))));
+                if (taste.valid) {
+                    // What it would now recommend: the catalogue ranked by the
+                    // profile, which is the whole point of the thing.
+                    QVector<QPair<float, int>> ranked;
+                    ranked.reserve(catalogue->count());
+                    for (int row = 0; row < catalogue->count(); ++row) {
+                        if (catalogue->popularity(row) < 55)
+                            continue;
+                        ranked.append({ taste.score(catalogue->vector(row), catalogue->dims()), row });
+                    }
+                    const int show = qMin(8, int(ranked.size()));
+                    std::partial_sort(ranked.begin(), ranked.begin() + show, ranked.end(),
+                                      [](const QPair<float, int> &a, const QPair<float, int> &b) {
+                                          return a.first > b.first;
+                                      });
+                    for (int i = 0; i < show; ++i) {
+                        qWarning("rec:   %.3f  %s — %s", ranked.at(i).first,
+                                 qPrintable(catalogue->title(ranked.at(i).second)),
+                                 qPrintable(catalogue->artist(ranked.at(i).second)));
+                    }
+                }
             }
 
             const Rec::Catalog::Match seed =
