@@ -185,7 +185,7 @@ Flickable {
             width: parent.width
             model: Library.history
             showDownloads: true
-            onTrackActivated: function(index) { Player.playModel(Library.history, index) }
+            onTrackActivated: function(index) { Player.playModel(Library.history, index, "library") }
         }
     }
 }

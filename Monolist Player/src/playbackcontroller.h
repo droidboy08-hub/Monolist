@@ -119,9 +119,15 @@ public Q_SLOTS:
 
     // Queue every row of a list model that uses the app's track roles and
     // start at `row`: the library, search results, downloads, an album.
-    void playModel(QAbstractItemModel *model, int row);
+    //
+    // `origin` is which surface asked — "search", "home", "playlist",
+    // "library", "queue". It is not for display: the recommender weights what
+    // it learns by where a play came from, because a song picked out of a
+    // search is a stronger statement than the fourth track of an album that
+    // happened to keep going. Left empty it weighs as neutral.
+    void playModel(QAbstractItemModel *model, int row, const QString &origin = QString());
     void loadModel(QAbstractItemModel *model, int row);
-    void playTracks(const QVariantList &tracks, int start);
+    void playTracks(const QVariantList &tracks, int start, const QString &origin = QString());
 
     void playNext(const QVariantMap &track);
     void addToQueue(const QVariantMap &track);
@@ -146,7 +152,8 @@ public Q_SLOTS:
                     const QString &artwork = QString(),
                     qint64 durationMs = 0,
                     const QString &album = QString(),
-                    bool isVideo = false);
+                    bool isVideo = false,
+                    const QString &origin = QString());
 
     // Every YouTube video has a thumbnail at a predictable URL, so a track with
     // a source id never has to show a blank plate even when no artwork field
@@ -218,6 +225,10 @@ private:
     qint64 m_playEventId = 0;
     QString m_playEventKey;
     QSet<QString> m_finalisedThisSession;
+    // The surface the current queue was started from. It lasts as long as the
+    // queue: the fourth track of an album still came from wherever the album
+    // did. Only the radio's own additions override it.
+    QString m_source;
     // Consecutive tracks that would not resolve. A queue is skipped past one
     // bad track, but a machine that is offline — or a YouTube-wide block —
     // must not race the whole queue, spawning a resolve for every row.

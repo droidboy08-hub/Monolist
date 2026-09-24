@@ -133,7 +133,7 @@ Flickable {
                         iconName: "play"
                         text: "Play"
                         enabled: Catalog.pageTracks.count > 0
-                        onClicked: Player.playModel(Catalog.pageTracks, 0)
+                        onClicked: Player.playModel(Catalog.pageTracks, 0, "playlist")
                     }
                     ActionButton {
                         iconName: "shuffle"
@@ -141,7 +141,7 @@ Flickable {
                         enabled: Catalog.pageTracks.count > 1
                         onClicked: {
                             Player.shuffle = true
-                            Player.playModel(Catalog.pageTracks, Math.floor(Math.random() * Catalog.pageTracks.count))
+                            Player.playModel(Catalog.pageTracks, Math.floor(Math.random() * Catalog.pageTracks.count), "playlist")
                         }
                     }
                     ActionButton {
@@ -195,7 +195,7 @@ Flickable {
             width: parent.width
             model: Catalog.pageTracks
             showDownloads: true
-            onTrackActivated: function(index) { Player.playModel(Catalog.pageTracks, index) }
+            onTrackActivated: function(index) { Player.playModel(Catalog.pageTracks, index, "playlist") }
         }
     }
 }

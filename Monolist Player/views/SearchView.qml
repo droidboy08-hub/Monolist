@@ -123,7 +123,7 @@ Flickable {
             activeIndex: -1
             showDownloads: true
             // The results become the queue, starting from the one picked.
-            onTrackActivated: function(index) { Player.playModel(Extractor.results, index) }
+            onTrackActivated: function(index) { Player.playModel(Extractor.results, index, "search") }
         }
     }
 }

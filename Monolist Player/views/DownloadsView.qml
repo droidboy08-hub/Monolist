@@ -367,7 +367,7 @@ Flickable {
 
                     HoverHandler { id: savedHover; cursorShape: Qt.PointingHandCursor }
                     // The offline set becomes the queue, starting here.
-                    TapHandler { onTapped: Player.playModel(Downloads.library, saved.index) }
+                    TapHandler { onTapped: Player.playModel(Downloads.library, saved.index, "library") }
                 }
             }
         }

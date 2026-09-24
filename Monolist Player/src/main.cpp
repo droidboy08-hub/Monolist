@@ -372,7 +372,7 @@ int main(int argc, char *argv[])
         QSqlQuery events(AppDatabase::connection());
         if (!events.exec(QStringLiteral(
                 "SELECT kind, title, artist, track_ms, listened_ms, completed, skipped, label,"
-                " repeat_in_session, started_at FROM play_events ORDER BY id DESC LIMIT 40"))) {
+                " repeat_in_session, source FROM play_events ORDER BY id DESC LIMIT 40"))) {
             qWarning("events: %s", qPrintable(events.lastError().text()));
         } else {
             int shown = 0;
@@ -380,12 +380,14 @@ int main(int argc, char *argv[])
                 const qint64 total = events.value(3).toLongLong();
                 const qint64 heard = events.value(4).toLongLong();
                 const QVariant label = events.value(7);
-                qWarning("events: %-12s %-34s %-22s %5lld/%-5lld s  label %-4s %s%s%s",
+                const QString source = events.value(9).toString();
+                qWarning("events: %-6s %-30s %-20s %4lld/%-4lld s  label %-4s from %-8s %s%s%s",
                          qPrintable(events.value(0).toString()),
-                         qPrintable(events.value(1).toString().left(34)),
-                         qPrintable(events.value(2).toString().left(22)),
+                         qPrintable(events.value(1).toString().left(30)),
+                         qPrintable(events.value(2).toString().left(20)),
                          (long long)(heard / 1000), (long long)(total / 1000),
                          label.isNull() ? "-" : qPrintable(QString::number(label.toDouble(), 'f', 1)),
+                         source.isEmpty() ? "?" : qPrintable(source),
                          events.value(5).toInt() ? "completed " : "",
                          events.value(6).toInt() ? "skipped " : "",
                          events.value(8).toInt() ? "again" : "");

@@ -34,7 +34,7 @@ Flickable {
             searchRequested(card.title)
         else if (card.videoId)
             Player.playSource(card.videoId, card.title, card.subtitle, card.artwork, 0, "",
-                              card.type === "video")
+                              card.type === "video", "home")
     }
 
     // The number, the title and the table, with the rule under it.
@@ -59,7 +59,7 @@ Flickable {
             width: parent.width
             model: parent.model
             showDownloads: true
-            onTrackActivated: function(index) { Player.playModel(model, index) }
+            onTrackActivated: function(index) { Player.playModel(model, index, "home") }
         }
     }
 

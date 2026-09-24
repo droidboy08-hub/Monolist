@@ -236,7 +236,7 @@ Flickable {
                         iconName: "play"
                         text: "Play"
                         enabled: root.songCount > 0
-                        onClicked: Player.playModel(root.songs, 0)
+                        onClicked: Player.playModel(root.songs, 0, "playlist")
                     }
                     ActionButton {
                         iconName: "shuffle"
@@ -244,7 +244,7 @@ Flickable {
                         enabled: root.songCount > 1
                         onClicked: {
                             Player.shuffle = true
-                            Player.playModel(root.songs, Math.floor(Math.random() * root.songCount))
+                            Player.playModel(root.songs, Math.floor(Math.random() * root.songCount), "playlist")
                         }
                     }
                     ActionButton {
@@ -322,7 +322,7 @@ Flickable {
             model: root.songs
             playlistId: root.playlistId
             showDownloads: true
-            onTrackActivated: function(index) { Player.playModel(root.songs, index) }
+            onTrackActivated: function(index) { Player.playModel(root.songs, index, "playlist") }
         }
     }
 }

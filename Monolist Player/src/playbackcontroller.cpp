@@ -372,8 +372,9 @@ void PlaybackController::playIndex(int index)
     beginCurrent(/*autoPlay=*/true);
 }
 
-void PlaybackController::playModel(QAbstractItemModel *model, int row)
+void PlaybackController::playModel(QAbstractItemModel *model, int row, const QString &origin)
 {
+    m_source = origin;
     startQueue(tracksFromModel(model), row, /*autoPlay=*/true);
 }
 
@@ -382,8 +383,9 @@ void PlaybackController::loadModel(QAbstractItemModel *model, int row)
     startQueue(tracksFromModel(model), row, /*autoPlay=*/false);
 }
 
-void PlaybackController::playTracks(const QVariantList &tracks, int start)
+void PlaybackController::playTracks(const QVariantList &tracks, int start, const QString &origin)
 {
+    m_source = origin;
     QList<QueueTrack> queue;
     queue.reserve(tracks.size());
     for (const QVariant &track : tracks)
@@ -397,10 +399,12 @@ void PlaybackController::playSource(const QString &videoId,
                                     const QString &artwork,
                                     qint64 durationMs,
                                     const QString &album,
-                                    bool isVideo)
+                                    bool isVideo,
+                                    const QString &origin)
 {
     if (videoId.isEmpty())
         return;
+    m_source = origin;
     QueueTrack track;
     track.videoId = videoId;
     track.title = title;
@@ -525,10 +529,18 @@ void PlaybackController::openPlayEvent(const QVariantMap &track)
     if (title.isEmpty())
         return;                       // nothing a recommender could match on
 
+    // Where this play came from, which the profile weights by. A track the
+    // radio added was not chosen by anyone, so it counts as the queue no
+    // matter which surface the queue began on — and the queue is the weakest
+    // signal there is short of a resume.
+    const int radioStart = m_queue.radioStartIndex();
+    const bool fromRadio = radioStart >= 0 && m_queue.currentIndex() >= radioStart;
+    const QString source = fromRadio ? QStringLiteral("queue") : m_source;
+
     QSqlQuery event(AppDatabase::connection());
     event.prepare(QStringLiteral(
-        "INSERT INTO play_events (kind, video_id, title, artist, track_ms, repeat_in_session)"
-        " VALUES ('play', ?, ?, ?, ?, ?)"));
+        "INSERT INTO play_events (kind, video_id, title, artist, track_ms, repeat_in_session, source)"
+        " VALUES ('play', ?, ?, ?, ?, ?, ?)"));
     event.addBindValue(AppDatabase::text(videoId));
     event.addBindValue(AppDatabase::text(title));
     event.addBindValue(AppDatabase::text(track.value(QStringLiteral("artist")).toString()));
@@ -537,6 +549,7 @@ void PlaybackController::openPlayEvent(const QVariantMap &track)
     // not, and it is only knowable while the app is running.
     const QString key = videoId.isEmpty() ? title : videoId;
     event.addBindValue(m_finalisedThisSession.contains(key) ? 1 : 0);
+    event.addBindValue(AppDatabase::text(source));
     if (!event.exec()) {
         m_playEventId = 0;
         return;
