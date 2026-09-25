@@ -197,7 +197,7 @@ void RecommenderWorker::build(const QVector<Rec::PlayEvent> &history, const QStr
     if (m_catalog) {
         const Rec::TasteProfile taste =
             Rec::buildTaste(*m_catalog, history, QDateTime::currentDateTimeUtc());
-        shelves = Rec::buildShelves(*m_catalog, taste, history, perShelf);
+        shelves = Rec::buildShelves(*m_catalog, taste, history, perShelf, m_graph, region);
     }
 
     if (m_graph) {
@@ -355,6 +355,7 @@ QString Recommender::resolvedGraphDirectory() const
 
 void Recommender::reload()
 {
+    m_builtFrom.clear();
     m_shelves.clear();
     m_rows = 0;
     m_graphShards = 0;
@@ -376,14 +377,34 @@ void Recommender::refresh()
     // Both read here, on the main thread. A Qt SQL connection belongs to one
     // thread and using it from another is undefined rather than merely unwise;
     // and the region lives in a global the settings page writes from this one.
-    const QVector<Rec::PlayEvent> history = Rec::readPlayEvents();
     const QString region = InnerTube::region();
+
+    // Called every time Search is opened, so it has to be nothing when nothing
+    // has happened. The newest event and the country are all a page depends on:
+    // a new listen or like moves the first, Settings moves the second. Anything
+    // else — opening Search twice in a row — keeps the page exactly as it is,
+    // which also means it never rearranges itself under someone reading it.
+    QSqlQuery newest(AppDatabase::connection());
+    const qint64 lastEvent = newest.exec(QStringLiteral("SELECT MAX(id) FROM play_events")) && newest.next()
+        ? newest.value(0).toLongLong() : 0;
+    const QString fingerprint = QStringLiteral("%1|%2").arg(lastEvent).arg(region);
+    if (fingerprint == m_builtFrom && !m_shelves.isEmpty())
+        return;
+    m_builtFrom = fingerprint;
+
+    const QVector<Rec::PlayEvent> history = Rec::readPlayEvents();
     setState(true, m_message);
     QMetaObject::invokeMethod(m_worker, "build", Qt::QueuedConnection,
                               Q_ARG(QVector<Rec::PlayEvent>, history),
                               Q_ARG(QString, region),
                               Q_ARG(QString, regionDisplayName(region)),
                               Q_ARG(int, kPerShelf));
+}
+
+void Recommender::rebuild()
+{
+    m_builtFrom.clear();
+    refresh();
 }
 
 void Recommender::play(int shelfIndex, int rowIndex)

@@ -116,6 +116,13 @@ public:
     // and "Beyonce" contribute to one centroid the way they do on iOS.
     QVector<float> artistCentroid(int artistId) const;
 
+    // An artist's rows, most popular first, at most `limit`, drawn from the
+    // same credit set as the centroid. The catalogue's popularity comes from
+    // listening, which makes it a better judge of which songs to offer than the
+    // graph's rating counts — those put "Love Story / interlude" at the top of
+    // Rod Wave.
+    QVector<int> artistRows(int artistId, int limit) const;
+
     // f16 -> f32 by bit surgery: no compiler or CPU half type is assumed, and
     // subnormals, infinities and NaN payloads all survive.
     static float halfToFloat(quint16 bits);

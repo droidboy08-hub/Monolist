@@ -652,6 +652,170 @@ int main(int argc, char *argv[])
         QTimer::singleShot(0, &app, []() { QCoreApplication::quit(); });
     }
 
+    // --artist-test <catalogue directory> <graph directory>
+    //
+    // "Because you like <artist>" for a spread of real artists — genres,
+    // countries, scripts, a joint credit — plus the safety sweep: every artist
+    // the shards link to a blocked entry is used as a seed, and no row may
+    // name one. Each seed is given two full listens, which is what it takes
+    // to count as liked.
+    const int artistFlag = args.indexOf(QStringLiteral("--artist-test"));
+    if (artistFlag >= 0 && artistFlag + 2 < args.size()) {
+        auto *catalogue = new Rec::Catalog;
+        auto *graph = new Rec::Graph;
+        const bool ok = catalogue->load(args.at(artistFlag + 1)) && graph->open(args.at(artistFlag + 2));
+        qWarning("artist: catalogue and graph %s", ok ? "loaded" : "NOT loaded");
+
+        const QDateTime now = QDateTime::currentDateTimeUtc();
+        const auto likedTwice = [&now](const QString &artist) {
+            QVector<Rec::PlayEvent> history;
+            for (int i = 0; i < 2; ++i) {
+                Rec::PlayEvent event;
+                event.kind = QStringLiteral("play");
+                event.title = QStringLiteral("seed song %1").arg(i);
+                event.artist = artist;
+                event.source = QStringLiteral("search");
+                event.when = now.addDays(-i);
+                event.hasLabel = true;
+                event.label = 1.0;
+                history.append(event);
+            }
+            return history;
+        };
+        const auto artistShelf = [&](const QString &artist, const QString &region) {
+            const QVector<Rec::PlayEvent> history = likedTwice(artist);
+            for (const Rec::Shelf &shelf :
+                 Rec::buildShelves(*catalogue, Rec::TasteProfile(), history, 12, graph, region)) {
+                if (shelf.kind == QLatin1String("artist"))
+                    return shelf;
+            }
+            return Rec::Shelf();
+        };
+
+        const QStringList seeds = {
+            QStringLiteral("The Weeknd"), QStringLiteral("Billie Eilish"), QStringLiteral("Taylor Swift"),
+            QStringLiteral("Rod Wave"), QStringLiteral("Metallica"), QStringLiteral("Radiohead"),
+            QStringLiteral("Daft Punk"), QStringLiteral("Kendrick Lamar"), QStringLiteral("Coldplay"),
+            QStringLiteral("BTS"), QStringLiteral("BLACKPINK"), QStringLiteral("Bad Bunny"),
+            QStringLiteral("Arijit Singh"), QStringLiteral("Diljit Dosanjh"), QStringLiteral("A. R. Rahman"),
+            QStringLiteral("Burna Boy"), QStringLiteral("Rammstein"), QStringLiteral("Perfume"),
+            QString::fromUtf8("宇多田ヒカル"), QString::fromUtf8("Beyoncé"),
+            QStringLiteral("Bruno Mars & Lady Gaga"), QStringLiteral("Phoebe Bridgers"),
+        };
+        int fromGraph = 0, soundsLike = 0, none = 0;
+        for (const QString &seed : seeds) {
+            const Rec::GraphArtist found = graph->findArtist(seed, QStringLiteral("US"));
+            const Rec::Shelf shelf = artistShelf(seed, QStringLiteral("US"));
+            QStringList sample;
+            for (int i = 0; i < shelf.rows.size() && i < 6; ++i)
+                sample << shelf.rows.at(i).artist;
+            const bool graphShelf = shelf.title.startsWith(QLatin1String("Because"));
+            fromGraph += graphShelf;
+            soundsLike += !graphShelf && !shelf.rows.isEmpty();
+            none += shelf.rows.isEmpty();
+            qWarning("artist: %-24s graph %-10s | %-30s %2d rows | %s",
+                     qPrintable(seed),
+                     found.mbid.isEmpty() ? "not found" : qPrintable(found.region),
+                     shelf.rows.isEmpty() ? "(no shelf)" : qPrintable(shelf.title.left(30)),
+                     int(shelf.rows.size()), qPrintable(sample.join(QStringLiteral(", "))));
+            if (!shelf.rows.isEmpty())
+                qWarning("artist:   reason: %s", qPrintable(shelf.reason));
+        }
+        qWarning("artist: %d from the graph, %d fell back to sounds-like, %d with no shelf",
+                 fromGraph, soundsLike, none);
+
+        // The safety sweep. Neighbours of the blocked entries are the artists
+        // an edge could lead from, straight to them.
+        const QStringList blockedIds = { QStringLiteral("808adccd-e52b-4382-9ff6-70a3b2ab25a2"),
+                                         QStringLiteral("8530d70e-778c-4eba-b08d-831d16783c03") };
+        const QStringList never = { QStringLiteral("Landser"), QStringLiteral("Adolf Hitler") };
+        int swept = 0, leaks = 0;
+        // Every shard, not only the German one: an edge to them could sit in
+        // any country's table.
+        QSet<QString> seedsSwept;
+        int edgesToBlocked = 0;
+        for (const QString &id : blockedIds) {
+            for (const QString &code : graph->installedCodes()) {
+                for (const Rec::GraphNeighbour &link : graph->neighbours(id, code, 200)) {
+                    ++edgesToBlocked;
+                    const QString name = graph->artistName(link.mbid, code);
+                    if (name.isEmpty() || seedsSwept.contains(name))
+                        continue;
+                    seedsSwept.insert(name);
+                    ++swept;
+                    const Rec::Shelf shelf = artistShelf(name, code);
+                    for (const Rec::Suggestion &row : shelf.rows) {
+                        if (never.contains(row.artist, Qt::CaseInsensitive)) {
+                            ++leaks;
+                            qWarning("artist: LEAK via %s: %s", qPrintable(name), qPrintable(row.artist));
+                        }
+                    }
+                }
+            }
+        }
+        qWarning("artist: blocked entries have %d edges across all %d shards; %d artists seeded from them; %d leaks",
+                 edgesToBlocked, int(graph->installedCodes().size()), swept, leaks);
+
+        // And the general case, which does not depend on the blocked two having
+        // edges at all: seed from the top of the German shard, where they live,
+        // and check that every row is credited to an artist the catalogue has.
+        int generalSeeds = 0, unvetted = 0;
+        for (const Rec::GraphArtist &artist : graph->artists(QStringLiteral("DE"), 150)) {
+            const Rec::Shelf shelf = artistShelf(artist.name, QStringLiteral("DE"));
+            if (shelf.rows.isEmpty())
+                continue;
+            ++generalSeeds;
+            for (const Rec::Suggestion &row : shelf.rows) {
+                if (row.row < 0 || never.contains(row.artist, Qt::CaseInsensitive)) {
+                    ++unvetted;
+                    qWarning("artist: UNVETTED via %s: %s", qPrintable(artist.name), qPrintable(row.artist));
+                }
+            }
+        }
+        qWarning("artist: %d German seeds built shelves; %d rows not from a catalogue credit or blocked",
+                 generalSeeds, unvetted);
+
+        delete graph;
+        delete catalogue;
+        QTimer::singleShot(0, &app, []() { QCoreApplication::quit(); });
+    }
+
+    // --find-artist <graph directory> <name>
+    //
+    // Every shard's copy of an artist, with what decides which copy the
+    // "Because you like" shelf reads: the attribution confidence, and how
+    // many edges each copy's own chain has. For when a shelf's neighbours look
+    // like they came from the wrong country, which is what it usually is.
+    const int findFlag = args.indexOf(QStringLiteral("--find-artist"));
+    if (findFlag >= 0 && findFlag + 2 < args.size()) {
+        auto *graph = new Rec::Graph;
+        graph->open(args.at(findFlag + 1));
+        const QString wanted = args.at(findFlag + 2);
+        for (const QString &code : graph->installedCodes()) {
+            for (const Rec::GraphArtist &artist : graph->artists(code, 100000)) {
+                if (artist.name.compare(wanted, Qt::CaseInsensitive) != 0 || !artist.region.startsWith(
+                        code == QLatin1String("global") ? QStringLiteral("ZZ") : code.left(2)))
+                    continue;
+                const QVector<Rec::GraphNeighbour> edges = graph->neighbours(artist.mbid, artist.region, 12);
+                QStringList names;
+                int listening = 0;
+                for (int i = 0; i < edges.size() && names.size() < 5; ++i) {
+                    listening += edges.at(i).source == QLatin1String("listenbrainz");
+                    names << graph->artistName(edges.at(i).mbid, artist.region);
+                }
+                qWarning("find: %-7s mbid %s region %-6s conf %.2f pop %d | %d edges (%d listening): %s",
+                         qPrintable(code), qPrintable(artist.mbid), qPrintable(artist.region),
+                         artist.confidence, artist.popularity, int(edges.size()), listening,
+                         qPrintable(names.join(QStringLiteral(", "))));
+                break;
+            }
+        }
+        const Rec::GraphArtist chosen = graph->findArtist(wanted, QStringLiteral("US"));
+        qWarning("find: chosen for a US listener: %s in %s", qPrintable(chosen.mbid), qPrintable(chosen.region));
+        delete graph;
+        QTimer::singleShot(0, &app, []() { QCoreApplication::quit(); });
+    }
+
     // --library-test "<query>"
     //
     // The library end to end, on real songs: searches, makes a playlist of the

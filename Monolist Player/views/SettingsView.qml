@@ -350,7 +350,7 @@ Flickable {
                 anchors.verticalCenter: parent.verticalCenter
                 text: Recs.busy ? "WORKING…" : "REBUILD"
                 enabled: Recs.available && !Recs.busy
-                onClicked: Recs.refresh()
+                onClicked: Recs.rebuild()
             }
         }
         Text {

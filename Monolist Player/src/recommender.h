@@ -80,9 +80,12 @@ public:
     bool graphAvailable() const { return m_graphShards > 0; }
 
 public Q_SLOTS:
-    // Rebuilds the page. Cheap to call when nothing has changed — it refuses
-    // while a build is already running.
+    // Brings the page up to date. Nothing at all when neither the listening
+    // history nor the country has changed since the last build, so it is safe
+    // to call every time Search opens; queued if a build is already running.
     void refresh();
+    // The same, but whether or not anything has changed: Settings' button.
+    void rebuild();
     // Plays one suggestion. This is where a name becomes a song: one search,
     // then the ordinary playback path, so it behaves exactly like pressing a
     // search result, because that is what it becomes.
@@ -116,6 +119,8 @@ private:
     // Settings mid-scan, say. Dropping it would leave the page showing the old
     // country until something else happened to rebuild it.
     bool m_refreshQueued = false;
+    // What the page on screen was built from: the newest event and the country.
+    QString m_builtFrom;
     QString m_message;
     // The suggestion waiting on a search, so its answer is not mistaken for
     // an older one.

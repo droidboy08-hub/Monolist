@@ -61,7 +61,13 @@ ApplicationWindow {
 
     readonly property string libraryTab: currentView.indexOf("library:") === 0 ? currentView.substring(8) : "playlists"
 
-    onCurrentViewChanged: openCurrentPage()
+    onCurrentViewChanged: {
+        openCurrentPage()
+        // A like or a new listen since Search was last open changes what it
+        // should suggest. This rebuilds only when something did change.
+        if (currentView === "search")
+            Recs.refresh()
+    }
 
     // Below this width the sidebar leaves the layout and becomes an overlay —
     // the only concession the design makes to narrow windows.

@@ -585,4 +585,29 @@ QVector<float> Catalog::artistCentroid(int artistId) const
     return sum;
 }
 
+QVector<int> Catalog::artistRows(int artistId, int limit) const
+{
+    if (!m_loaded || artistId < 0 || artistId >= m_artistCount || limit <= 0)
+        return {};
+
+    QVector<int> rows;
+    {
+        QMutexLocker lock(&m_artistMutex);
+        ensureArtistIndex();
+        const QString key = m_artistKey.value(artistId);
+        if (key.isEmpty())
+            return {};
+        rows = m_keyRows.value(key);
+    }
+    // Row order happens to run from most to least popular in the shipped build,
+    // but the spec is explicit that nothing guarantees it across rebuilds, so
+    // the order is made rather than assumed. Stable, so ties keep row order.
+    std::stable_sort(rows.begin(), rows.end(), [this](int a, int b) {
+        return popularity(a) > popularity(b);
+    });
+    if (rows.size() > limit)
+        rows.resize(limit);
+    return rows;
+}
+
 } // namespace Rec

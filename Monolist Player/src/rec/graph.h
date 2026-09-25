@@ -117,6 +117,23 @@ public:
     // which keeps Swift's nil and "" apart.
     QString artistName(const QString &mbid, const QString &region) const;
 
+    // Not in the Swift. An artist by name, from any shard. Every country's
+    // copy is read and the one with the most edges in its own shard wins; the
+    // worldwide shard only when no country has them. `region` on the result is
+    // that copy's, which is what to walk for the artist's own edges — and why
+    // the right copy matters: a shard holds only edges between its own
+    // artists, so the copy chosen decides which country the neighbours are from.
+    //
+    // iOS only ever looked a name up among the top 400 of the listener's own
+    // country, so someone in the US who loves a Punjabi singer got nothing —
+    // the artist lives in IN-PB, and so do their edges. Answers, misses
+    // included, are remembered for the life of the Graph: a name costs one
+    // pass over the shards once, not on every rebuild.
+    //
+    // Matching is exact apart from ASCII case, which is what SQLite's NOCASE
+    // does. An empty mbid means no shard knows the name.
+    GraphArtist findArtist(const QString &name, const QString &region) const;
+
 private:
     // Name of an open connection to `code`, connecting on first use. Empty when
     // the shard is not installed or will not open. A failed open is not
@@ -134,6 +151,7 @@ private:
     QHash<QString, QString> m_files;                // code -> absolute path
     mutable QHash<QString, QString> m_connections;  // code -> connection name
     mutable QThread *m_thread = nullptr;            // whoever connected first
+    mutable QHash<QString, GraphArtist> m_found;    // lowercased name -> answer
 };
 
 } // namespace Rec

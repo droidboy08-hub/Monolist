@@ -45,12 +45,18 @@ struct Shelf {
 //
 // `perShelf` is how many suggestions each shelf holds. `history` is newest
 // first, as readPlayEvents returns it.
+class Graph;
+
+// `graph`, when given, is where "Because you like <artist>" finds the artists
+// that listeners of theirs also play; without it that shelf falls back to the
+// catalogue's "Sounds like <artist>". `region` is the country the listener
+// browses as, which decides where an artist is looked up first.
 QVector<Shelf> buildShelves(const Catalog &catalog,
                             const TasteProfile &taste,
                             const QVector<PlayEvent> &history,
-                            int perShelf = 12);
-
-class Graph;
+                            int perShelf = 12,
+                            const Graph *graph = nullptr,
+                            const QString &region = QString());
 
 // "From <country>" and "More from <country>", out of the regional graph shards.
 //

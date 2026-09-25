@@ -342,4 +342,101 @@ QString Graph::artistName(const QString &mbid, const QString &region) const
     return QString();
 }
 
+GraphArtist Graph::findArtist(const QString &name, const QString &region) const
+{
+    const QString wanted = name.trimmed();
+    if (wanted.isEmpty())
+        return {};
+    const QString cacheKey = wanted.toLower();
+    const auto cached = m_found.constFind(cacheKey);
+    if (cached != m_found.constEnd())
+        return cached.value();
+
+    // The listener's own country first, then every other country, and the
+    // worldwide shard LAST — the opposite of shardChain, which puts it at the
+    // end only because it is a top-up there.
+    //
+    // It matters here because an artist's edges are read from the shard they
+    // were found in. A. R. Rahman is in the global shard as well as India's,
+    // and found in global first his neighbours were Linkin Park and Hans
+    // Zimmer; the global shard's edges are the generic worldwide ones. Found
+    // in India's, they are India's. A fixed order also means the same name
+    // always resolves to the same row.
+    QStringList order;
+    for (const QString &code : shardChain(region)) {
+        if (code != QLatin1String("global"))
+            order.append(code);
+    }
+    for (const QString &code : installedCodes()) {
+        if (code != QLatin1String("global") && !order.contains(code))
+            order.append(code);
+    }
+    order.append(QStringLiteral("global"));
+
+    // Every country's copy is read, and the copy with the most edges in its
+    // own shard wins; the worldwide shard only when no country has them.
+    //
+    // Why edges and not confidence. One artist is one MBID, but each shard
+    // holds only the edges between artists that shard contains, so the copy
+    // chosen decides which country the neighbours come from. Utada Hikaru is
+    // in the US shard (born in New York, confidence 0.90) and the Japanese one
+    // (0.80): confidence picked the US copy and a US listener got Linkin Park
+    // and Evanescence. By edges it is 24 in Japan against 15 — the shard where
+    // an artist's listening neighbourhood is richest is the one that knows
+    // them. Ties go to higher confidence, then to the earlier shard in the
+    // order above, so the listener's own country wins an even contest.
+    struct Candidate {
+        GraphArtist artist;
+        int edges = 0;
+    };
+    const auto copyIn = [&](const QString &shard, Candidate *out) {
+        const QString connectionName = connection(shard);
+        if (connectionName.isEmpty())
+            return false;
+        const QSqlDatabase db = QSqlDatabase::database(connectionName, false);
+        QSqlQuery q(db);
+        q.setForwardOnly(true);
+        if (!q.prepare(QStringLiteral(
+                "SELECT mbid, name, region, popularity, confidence FROM artists"
+                " WHERE name = ? COLLATE NOCASE ORDER BY confidence DESC, popularity DESC, mbid LIMIT 1")))
+            return false;
+        q.addBindValue(wanted);
+        if (!q.exec() || !q.next())
+            return false;
+        out->artist.mbid = text(q.value(0).toString());
+        out->artist.name = text(q.value(1).toString());
+        out->artist.region = text(q.value(2).toString());
+        out->artist.popularity = q.value(3).toInt();
+        out->artist.confidence = q.value(4).toDouble();
+
+        QSqlQuery count(db);
+        count.setForwardOnly(true);
+        if (count.prepare(QStringLiteral("SELECT COUNT(*) FROM edges WHERE a = ? OR b = ?"))) {
+            count.addBindValue(out->artist.mbid);
+            count.addBindValue(out->artist.mbid);
+            if (count.exec() && count.next())
+                out->edges = count.value(0).toInt();
+        }
+        return true;
+    };
+
+    Candidate best;
+    for (const QString &shard : std::as_const(order)) {
+        if (shard == QLatin1String("global")) {
+            if (!best.artist.mbid.isEmpty())
+                break;                 // a country had them: global is only a last resort
+        }
+        Candidate candidate;
+        if (!copyIn(shard, &candidate))
+            continue;
+        const bool better = best.artist.mbid.isEmpty()
+            || candidate.edges > best.edges
+            || (candidate.edges == best.edges && candidate.artist.confidence > best.artist.confidence);
+        if (better)
+            best = candidate;
+    }
+    m_found.insert(cacheKey, best.artist);
+    return best.artist;
+}
+
 } // namespace Rec
