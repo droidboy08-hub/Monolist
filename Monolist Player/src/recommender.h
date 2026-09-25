@@ -10,7 +10,7 @@
 
 class PlaybackController;
 
-namespace Rec { class Catalog; }
+namespace Rec { class Catalog; class Graph; }
 
 // Does the scanning, on a thread of its own. A shelf costs a full pass over
 // 400,000 rows — about 120 ms each, and a page is several — which is an
@@ -23,15 +23,19 @@ public:
     ~RecommenderWorker() override;
 
 public Q_SLOTS:
-    void load(const QString &directory);
-    void build(const QVector<Rec::PlayEvent> &history, int perShelf);
+    // Both on this thread: a Qt SQL connection belongs to the thread that
+    // opened it, and the graph shards are SQLite.
+    void load(const QString &catalogueDirectory, const QString &graphDirectory);
+    void build(const QVector<Rec::PlayEvent> &history, const QString &region,
+               const QString &regionName, int perShelf);
 
 Q_SIGNALS:
-    void loaded(bool ok, int rows, const QString &message);
+    void loaded(bool ok, int rows, int graphShards, const QString &message);
     void built(const QVariantList &shelves, bool personal);
 
 private:
     Rec::Catalog *m_catalog = nullptr;
+    Rec::Graph *m_graph = nullptr;
 };
 
 // The Search tab's recommendations, and everything behind them.
@@ -53,6 +57,10 @@ class Recommender : public QObject
     // say so rather than implying these are someone's own recommendations.
     Q_PROPERTY(bool personal READ personal NOTIFY shelvesChanged)
     Q_PROPERTY(QString dataDirectory READ dataDirectory WRITE setDataDirectory NOTIFY stateChanged)
+    // The regional graph shards. Empty means "look beside the catalogue",
+    // which is where the iOS project keeps them.
+    Q_PROPERTY(QString graphDirectory READ graphDirectory WRITE setGraphDirectory NOTIFY stateChanged)
+    Q_PROPERTY(bool graphAvailable READ graphAvailable NOTIFY stateChanged)
 
 public:
     explicit Recommender(QObject *parent = nullptr);
@@ -60,13 +68,16 @@ public:
 
     void setPlayer(PlaybackController *player);
 
-    bool available() const { return m_rows > 0; }
+    bool available() const { return m_rows > 0 || m_graphShards > 0; }
     bool busy() const { return m_busy; }
     QString message() const { return m_message; }
     QVariantList shelves() const { return m_shelves; }
     bool personal() const { return m_personal; }
     QString dataDirectory() const;
     void setDataDirectory(const QString &path);
+    QString graphDirectory() const;
+    void setGraphDirectory(const QString &path);
+    bool graphAvailable() const { return m_graphShards > 0; }
 
 public Q_SLOTS:
     // Rebuilds the page. Cheap to call when nothing has changed — it refuses
@@ -86,6 +97,10 @@ Q_SIGNALS:
 
 private:
     void setState(bool busy, const QString &message);
+    void reload();
+    // The folder the graph is actually read from: the setting, or the
+    // GraphData folder beside the catalogue when the setting is empty.
+    QString resolvedGraphDirectory() const;
 
     QThread m_thread;
     RecommenderWorker *m_worker = nullptr;
@@ -96,9 +111,15 @@ private:
     bool m_personal = false;
     bool m_busy = false;
     int m_rows = 0;
+    int m_graphShards = 0;
+    // A refresh asked for while a build was running — a country changed in
+    // Settings mid-scan, say. Dropping it would leave the page showing the old
+    // country until something else happened to rebuild it.
+    bool m_refreshQueued = false;
     QString m_message;
     // The suggestion waiting on a search, so its answer is not mistaken for
     // an older one.
     QString m_pendingQuery;
     QString m_pendingTitle;
+    qint64 m_pendingLengthMs = -1;
 };

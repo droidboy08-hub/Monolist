@@ -30,6 +30,8 @@
 #include "windowchrome.h"
 #include "appinfo.h"
 #include "rec/catalog.h"
+#include "rec/graph.h"
+#include "rec/shelves.h"
 #include "recommender.h"
 #include "rec/taste.h"
 #include "rec/vectorsearch.h"
@@ -174,6 +176,8 @@ int main(int argc, char *argv[])
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "About",     &appInfo);
     Recommender recommender;
     recommender.setPlayer(&player);
+    // "Popular in" follows the country the rest of the app browses as.
+    QObject::connect(&library, &Library::regionChanged, &recommender, &Recommender::refresh);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Recs",      &recommender);
     qmlRegisterUncreatableType<SearchResultModel>(
         "Monolist.Backend", 1, 0, "SearchResultModel",
@@ -519,6 +523,131 @@ int main(int argc, char *argv[])
                 }
             }
         }
+        delete catalogue;
+        QTimer::singleShot(0, &app, []() { QCoreApplication::quit(); });
+    }
+
+    // --graph-test <catalogue directory> <graph directory>
+    //
+    // Evidence for the regional shelf's filters, across every shard: where the
+    // entries that must never be shown sit, whether the music catalogue knows
+    // them, and how much of each country survives each filter. The filters
+    // were chosen from this output, not guessed.
+    const int graphFlag = args.indexOf(QStringLiteral("--graph-test"));
+    if (graphFlag >= 0 && graphFlag + 2 < args.size()) {
+        auto *catalogue = new Rec::Catalog;
+        const bool haveCatalogue = catalogue->load(args.at(graphFlag + 1));
+        auto *graph = new Rec::Graph;
+        QElapsedTimer clock;
+        clock.start();
+        const bool haveGraph = graph->open(args.at(graphFlag + 2));
+        qWarning("graph: open=%s in %lld ms, %d shards; catalogue=%s",
+                 haveGraph ? "yes" : "no", (long long)clock.elapsed(),
+                 int(graph->installedCodes().size()), haveCatalogue ? "yes" : "no");
+
+        const auto known = [&](const QString &name) {
+            return haveCatalogue && catalogue->match(QString(), name).artistId >= 0;
+        };
+
+        // The entries the survey found. Each is looked for in its own region.
+        const QList<QPair<QString, QString>> probes = {
+            { QStringLiteral("DE"), QStringLiteral("Landser") },
+            { QStringLiteral("DE"), QStringLiteral("Adolf Hitler") },
+            { QStringLiteral("GB"), QStringLiteral("George Orwell") },
+            { QStringLiteral("IN"), QStringLiteral("Irrfan Khan") },
+            { QStringLiteral("IN"), QStringLiteral("Cliff Richard") },
+            { QStringLiteral("IN"), QStringLiteral("Vethathiri Maharishi") },
+        };
+        for (const auto &probe : probes) {
+            const QVector<Rec::GraphArtist> all = graph->artists(probe.first, 6000);
+            int rank = -1;
+            for (int i = 0; i < all.size(); ++i) {
+                if (all.at(i).name.compare(probe.second, Qt::CaseInsensitive) == 0) {
+                    rank = i + 1;
+                    qWarning("graph: %s in %s: rank %d, mbid %s, pop %d, conf %.2f, catalogue knows it: %s",
+                             qPrintable(probe.second), qPrintable(probe.first), rank,
+                             qPrintable(all.at(i).mbid), all.at(i).popularity,
+                             all.at(i).confidence, known(probe.second) ? "YES" : "no");
+                    break;
+                }
+            }
+            if (rank < 0)
+                qWarning("graph: %s not found in %s", qPrintable(probe.second), qPrintable(probe.first));
+        }
+
+        // Per region: of the 40 seeds the shelf would read, how many have a
+        // rating count that distinguishes them, a confident attribution, and a
+        // name the catalogue knows.
+        int wouldShow = 0;
+        for (const QString &code : graph->installedCodes()) {
+            if (code == QLatin1String("global") || code.contains(QLatin1Char('-')))
+                continue;
+            const QVector<Rec::GraphArtist> seeds = graph->artists(code, 40);
+            int rated = 0, confident = 0, catalogued = 0, all3 = 0;
+            for (const Rec::GraphArtist &artist : seeds) {
+                const bool r = artist.popularity >= 3;
+                const bool c = artist.confidence >= 0.8;
+                const bool k = known(artist.name);
+                rated += r;
+                confident += c;
+                catalogued += k;
+                all3 += (r && c && k);
+            }
+            wouldShow += all3 >= 12;
+            qWarning("graph: %-3s seeds %2d  pop>=3 %2d  conf>=0.8 %2d  catalogue %2d  all three %2d  %s",
+                     qPrintable(code), int(seeds.size()), rated, confident, catalogued, all3,
+                     all3 >= 12 ? "SHOW" : "hide");
+        }
+        qWarning("graph: %d countries would show the shelf at 12 artists passing all three", wouldShow);
+
+        // The shelves themselves, as the Search tab would build them, for a
+        // spread of countries — and a hard check that no blocked or unvetted
+        // name reaches a row anywhere.
+        const QStringList never = { QStringLiteral("Landser"), QStringLiteral("Adolf Hitler"),
+                                    QStringLiteral("George Orwell"), QStringLiteral("Irrfan Khan") };
+        int shown = 0, leaks = 0;
+        for (const QString &code : graph->installedCodes()) {
+            if (code == QLatin1String("global") || code.contains(QLatin1Char('-')))
+                continue;
+            const QVector<Rec::Shelf> shelves =
+                Rec::buildRegionShelves(*graph, catalogue, code, code, {}, 12);
+            if (!shelves.isEmpty())
+                ++shown;
+            for (const Rec::Shelf &shelf : shelves) {
+                for (const Rec::Suggestion &row : shelf.rows) {
+                    if (never.contains(row.artist, Qt::CaseInsensitive)) {
+                        ++leaks;
+                        qWarning("graph: LEAK %s: %s — %s", qPrintable(code),
+                                 qPrintable(row.title), qPrintable(row.artist));
+                    }
+                }
+            }
+            static const QStringList spotlight = { QStringLiteral("US"), QStringLiteral("DE"),
+                                                   QStringLiteral("JP"), QStringLiteral("BR"),
+                                                   QStringLiteral("IN") };
+            if (spotlight.contains(code)) {
+                if (shelves.isEmpty()) {
+                    qWarning("graph: %s -> no shelf", qPrintable(code));
+                    continue;
+                }
+                for (const Rec::Shelf &shelf : shelves) {
+                    QStringList sample;
+                    for (int i = 0; i < shelf.rows.size() && i < 6; ++i)
+                        sample << shelf.rows.at(i).artist + QStringLiteral(": ") + shelf.rows.at(i).title;
+                    qWarning("graph: %s -> \"%s\" (%d rows): %s", qPrintable(code),
+                             qPrintable(shelf.title), int(shelf.rows.size()),
+                             qPrintable(sample.join(QStringLiteral(" | "))));
+                }
+            }
+        }
+        qWarning("graph: %d countries get shelves; %d blocked or unvetted names reached a row", shown, leaks);
+
+        // Without a catalogue there is nothing to vet with, so there must be nothing.
+        const QVector<Rec::Shelf> unvetted =
+            Rec::buildRegionShelves(*graph, nullptr, QStringLiteral("DE"), QStringLiteral("DE"), {}, 12);
+        qWarning("graph: with no catalogue, DE builds %d shelves (must be 0)", int(unvetted.size()));
+
+        delete graph;
         delete catalogue;
         QTimer::singleShot(0, &app, []() { QCoreApplication::quit(); });
     }

@@ -353,6 +353,40 @@ Flickable {
                 onClicked: Recs.refresh()
             }
         }
+        Text {
+            text: "GRAPH"
+            font.family: Theme.fontFamily
+            font.pixelSize: 11
+            font.weight: Font.Bold
+            font.letterSpacing: Theme.tracking(11, 0.08)
+            color: Theme.neutral700
+            topPadding: Theme.space2
+        }
+
+        Note {
+            // Said plainly, because it decides what "Popular in" means: the
+            // shards rank artists by how many MusicBrainz ratings they have,
+            // not by how much they are played.
+            text: Recs.graphAvailable
+                  ? "Regional charts for “Popular in " + Library.regionInUseName + "”. Found beside the catalogue unless set here."
+                  : "The regional graph shards (US.sqlite, JP.sqlite and so on). Looked for beside the catalogue unless set here."
+        }
+
+        TextField {
+            id: graphField
+            width: parent.width
+            text: Recs.graphDirectory
+            placeholderText: "Automatic — the GraphData folder beside the catalogue"
+            font.family: Theme.fontFamily
+            font.pixelSize: 13
+            color: Theme.text
+            background: Rectangle {
+                color: "transparent"
+                border.width: Theme.ruleWidth
+                border.color: graphField.activeFocus ? Theme.accent : Theme.neutral300
+            }
+            onEditingFinished: Recs.graphDirectory = text
+        }
 
         HRule { width: parent.width }
 
