@@ -535,4 +535,36 @@ quint64 titleKey(const QString &title)
     return fnv1a64(titleCore(title).toUtf8());
 }
 
+QString plainName(const QString &name)
+{
+    const QList<uint> points = name.normalized(QString::NormalizationForm_KD).toUcs4();
+    QList<char32_t> out;
+    out.reserve(points.size());
+    // The script of the letter a combining mark would sit on: an accent on a
+    // Latin, Greek or Cyrillic letter is a spelling variant and goes; a vowel
+    // sign in Devanagari is part of the letter and stays, or different names
+    // collapse into one.
+    QChar::Script base = QChar::Script_Unknown;
+    for (const uint point : points) {
+        const char32_t c = char32_t(point);
+        const QChar::Category category = QChar::category(c);
+        if (category == QChar::Mark_NonSpacing || category == QChar::Mark_SpacingCombining
+            || category == QChar::Mark_Enclosing) {
+            if (base == QChar::Script_Latin || base == QChar::Script_Greek
+                || base == QChar::Script_Cyrillic)
+                continue;
+            out.append(c);
+            continue;
+        }
+        if (QChar::isLetterOrNumber(c)) {
+            base = QChar::script(c);
+            out.append(QChar::toLower(c));
+        } else {
+            base = QChar::Script_Unknown;
+            out.append(U' ');
+        }
+    }
+    return QString::fromUcs4(out.constData(), out.size()).simplified();
+}
+
 } // namespace Rec

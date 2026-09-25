@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <QDateTime>
 #include <QHash>
@@ -18,7 +18,7 @@ class YtDlpRequest;
 //
 // This is the Melody streaming engine carried over from the React app, with one
 // structural change: Melody raced Piped and Invidious because it had no better
-// option â€” a browser cannot run yt-dlp, and every request had to clear CORS via
+// option — a browser cannot run yt-dlp, and every request had to clear CORS via
 // a public proxy. A native app has neither limit, so yt-dlp becomes tier 0 and
 // the instance racing is demoted to a fallback for when yt-dlp is missing,
 // rate-limited, or broken by an upstream change.
@@ -33,7 +33,7 @@ class YtDlpRequest;
 // not the process but the round trips it makes on its way to the same answer.
 // It is deliberately a tier and not a replacement: it cannot do age-gated or
 // made-for-kids tracks or live streams, and the arrangement it depends on is
-// one YouTube can withdraw â€” it already withdrew the equivalent for the iOS
+// one YouTube can withdraw — it already withdrew the equivalent for the iOS
 // client between two yt-dlp releases. When it fails, yt-dlp still gets the
 // track, and the only thing lost is the speed.
 class StreamResolver : public QObject
@@ -71,7 +71,7 @@ public:
     void cancel(const QString &videoId);
     void cancelAll();
 
-    // Instance lists rot â€” hosts disappear every few months. They are settable
+    // Instance lists rot — hosts disappear every few months. They are settable
     // so a config update can fix playback without shipping a new binary.
     void setPipedInstances(const QStringList &hosts);
     void setInvidiousInstances(const QStringList &hosts);
@@ -95,7 +95,7 @@ private:
         QString videoId;
         int tier = TierInnerTube;
         // Bumped on every tier change. Callbacks from an abandoned tier still
-        // arrive â€” aborting a reply fires its finished() handler â€” and are
+        // arrive — aborting a reply fires its finished() handler — and are
         // ignored by comparing against the generation they were created in.
         int generation = 0;
         QPointer<YtDlpRequest> ytdlp;

@@ -13,6 +13,7 @@
 
 #include <algorithm>
 #include <climits>
+#include <cmath>
 
 namespace Rec {
 namespace {
@@ -26,6 +27,18 @@ constexpr int kPerArtistCap = 2;
 // Below this a "more like this" row is not like it in any way a listener
 // would recognise. The absolute floor is the iOS one.
 constexpr float kSongFloor = 0.85f;
+
+// Below this a graph neighbour is taken to be a different artist who shares
+// the name (see listenersAlso), or an edge that only says everyone plays them.
+//
+// Measured over 955 neighbours of 50 seed artists: the namesakes found by
+// review scored 0.04 to 0.41 against their seeds (U2's Bono 0.04, Boris's
+// MONO 0.09, SB19's justin 0.12 and PABLO 0.20, Can's Nico 0.41), and the
+// real neighbours of those same seeds 0.53 and up. Between 0.25 and 0.45 lie
+// mostly the saturated edges — Kraftwerk to The Beatles, U2 to P!nk — and
+// raising the floor across that band left every seed that had a shelf with
+// one (38 of 50 at 0.25 and at 0.45). So the higher of the two.
+constexpr float kNeighbourFloor = 0.45f;
 
 // How deep to scan. Asking for more than a shelf holds leaves room for the
 // per-artist cap and the already-heard filter to throw rows away.
@@ -53,10 +66,49 @@ QSet<quint64> heardKeys(const QVector<PlayEvent> &history)
     return keys;
 }
 
+// What the page already holds: catalogue rows, songs by their text key, and
+// titles.
+//
+// One song shows up once on one page. Rows alone let the same song through
+// twice — a remaster, a version "(feat. JAY-Z)", a reissue are all different
+// rows — and review found a quarter of the "Sounds like" shelves repeating
+// one: Grimes' "Genesis", Pixies' "Where Is My Mind?" and its 2007 remaster.
+// The text key strips exactly those differences.
+//
+// The key still includes the artist, so a duo's song reissued under one of
+// them — "Maniatica Sexual" by Lito y Polaco, then by Polaco — passed as two
+// songs. The title alone catches that. It also turns away a different song
+// that happens to share a name, which costs nothing: a shelf is filled from
+// a list many times its length.
+struct Shown {
+    QSet<int> rows;
+    QSet<quint64> songs;
+    QSet<QString> titles;
+
+    bool has(int row, const QString &title, const QString &artist) const
+    {
+        if (row >= 0 && rows.contains(row))
+            return true;
+        if (songs.contains(Rec::strictKey(title, artist)))
+            return true;
+        const QString core = Rec::titleCore(title);
+        return !core.isEmpty() && titles.contains(core);
+    }
+    void add(int row, const QString &title, const QString &artist)
+    {
+        if (row >= 0)
+            rows.insert(row);
+        songs.insert(Rec::strictKey(title, artist));
+        const QString core = Rec::titleCore(title);
+        if (!core.isEmpty())
+            titles.insert(core);
+    }
+};
+
 QVector<Suggestion> collect(const Catalog &catalog,
                             const QVector<Hit> &hits,
                             const QSet<quint64> &heard,
-                            QSet<int> &alreadyShown,
+                            Shown &shown,
                             int wanted,
                             float floorScore)
 {
@@ -66,18 +118,65 @@ QVector<Suggestion> collect(const Catalog &catalog,
             break;
         if (hit.score < floorScore)
             break;                     // hits arrive sorted, so the rest are worse
-        if (alreadyShown.contains(hit.row))
-            continue;                  // an earlier shelf already used it
         const QString title = titleOf(catalog, hit.row);
         const QString artist = catalog.artist(hit.row);
         if (title.isEmpty() || !Rec::suitableForSuggestion(title, artist))
             continue;
-        if (heard.contains(Rec::strictKey(title, artist)))
+        if (heard.contains(Rec::strictKey(title, artist)) || shown.has(hit.row, title, artist))
             continue;
-        alreadyShown.insert(hit.row);
+        shown.add(hit.row, title, artist);
         out.append({ title, artist, hit.row, hit.score });
     }
     return out;
+}
+
+// Where an artist's songs sit in the catalogue's space: the mean of the rows
+// given, L2-normalised. Empty when there are none.
+QVector<float> soundOf(const Catalog &catalog, const QVector<int> &rows)
+{
+    const int dims = catalog.dims();
+    QVector<double> sum(dims, 0.0);
+    int used = 0;
+    for (const int row : rows) {
+        const float *vector = catalog.vector(row);
+        if (!vector)
+            continue;
+        for (int i = 0; i < dims; ++i)
+            sum[i] += vector[i];
+        ++used;
+    }
+    double norm = 0.0;
+    for (const double x : std::as_const(sum))
+        norm += x * x;
+    norm = std::sqrt(norm);
+    if (used == 0 || !(norm > 0.0))
+        return {};
+    QVector<float> out(dims);
+    for (int i = 0; i < dims; ++i)
+        out[i] = float(sum.at(i) / norm);
+    return out;
+}
+
+float similarity(const QVector<float> &a, const QVector<float> &b)
+{
+    if (a.size() != b.size() || a.isEmpty())
+        return 0.0f;
+    double dot = 0.0;
+    for (int i = 0; i < a.size(); ++i)
+        dot += double(a.at(i)) * double(b.at(i));
+    return float(dot);
+}
+
+float rowSimilarity(const Catalog &catalog, int a, int b)
+{
+    const float *x = catalog.vector(a);
+    const float *y = catalog.vector(b);
+    if (!x || !y)
+        return 0.0f;
+    double dot = 0.0;
+    for (int i = 0; i < catalog.dims(); ++i)
+        dot += double(x[i]) * double(y[i]);
+    return float(dot);
 }
 
 // — graph gates, shared by every shelf that reads the shards —
@@ -113,6 +212,16 @@ bool blocked(const QString &mbid)
     return never.contains(mbid);
 }
 
+// MusicBrainz's placeholders — "[unknown]", "[anonymous]", "[traditional]" —
+// which it writes in brackets by convention. They are not artists, and
+// "[unknown]" has edges in the worldwide shard: folded, it is "unknown", which
+// the catalogue credits to an actual act of that name, so it passed every gate.
+bool placeholder(const QString &name)
+{
+    const QString trimmed = name.trimmed();
+    return trimmed.startsWith(QLatin1Char('[')) && trimmed.endsWith(QLatin1Char(']'));
+}
+
 // Han, kana or hangul anywhere in the text: the scripts an East Asian
 // edition's release titles are written in.
 bool eastAsian(const QString &text)
@@ -143,30 +252,26 @@ QString artistKey(const QString &name)
     return key.isEmpty() ? name.trimmed().toLower() : key;
 }
 
-// "Bruno Mars & Lady Gaga" is looked up as Bruno Mars when the full credit is
-// not an artist anywhere. Written in the original casing and accents, because
-// the shards are searched by name and "beyonce" is not "Beyoncé" to them.
+// A credit as the listener would say it: YouTube's auto-generated channels are
+// "Adele - Topic", which is Adele.
+QString withoutTopic(const QString &artist)
+{
+    static const QRegularExpression topic(QStringLiteral(R"(\s+-\s+topic\s*$)"),
+                                          QRegularExpression::CaseInsensitiveOption);
+    return QString(artist).remove(topic).trimmed();
+}
+
+// The lead of a joint credit — "Bruno Mars & Lady Gaga" is Bruno Mars — for
+// when the full credit is not an artist anywhere. Only ever the fallback: a
+// band called "AC/DC" or "Simon & Garfunkel" is not "AC" or "Simon", and cutting
+// first produced "Sounds like AC" over three tribute bands. Written in the
+// original casing, because it is used as a name, not as a key.
 QString firstPerformer(const QString &artist)
 {
     static const QRegularExpression separator(
         QStringLiteral(R"(\s*(?:,|&|;|/)\s*|\s+(?:feat\.?|ft\.?|with|x)\s+)"),
         QRegularExpression::CaseInsensitiveOption);
-    return artist.section(separator, 0, 0).trimmed();
-}
-
-// A name reduced to what two spellings of it share: no accents, no case, no
-// punctuation. "Beyoncé" and "BEYONCE" agree; "Belle and Sebastian" and
-// "Belle and the Nursery Rhymes Band" do not.
-QString plainName(const QString &name)
-{
-    QString out;
-    out.reserve(name.size());
-    for (const QChar c : name.normalized(QString::NormalizationForm_KD)) {
-        if (c.category() == QChar::Mark_NonSpacing)
-            continue;
-        out += c.isLetterOrNumber() ? c.toLower() : QLatin1Char(' ');
-    }
-    return out.simplified();
+    return withoutTopic(artist).section(separator, 0, 0).trimmed();
 }
 
 // The catalogue rows credited to exactly this artist, most popular first.
@@ -198,10 +303,90 @@ QVector<int> creditedRows(const Catalog &catalog, const QString &name, int limit
     return rows;
 }
 
+// Two songs credited to one name, this close or closer, are by one person.
+//
+// A name is not an artist. The catalogue's "LISA" is LiSA the anime singer,
+// BLACKPINK's Lisa and a third; its "MONO" a V-pop act, the Japanese post-rock
+// band and a lo-fi channel; its "Mayhem" the black metal band and a UK drill
+// artist. Songs by one person sit very close — 56 of the 64 dimensions are
+// the artist's genre, the same on every song — and across the names measured
+// no song sat further than 0.906 from its artist's best-known one, while the
+// nearest namesake came to 0.655 (Rosé the Swedish singer, to ROSÉ).
+constexpr float kSamePerson = 0.8f;
+
+// The songs credited to exactly `name`, split into the people behind them.
+// Each list is most popular first, at most `limit` long, and the lists are in
+// the order of their best-known song — so the first is the famous one.
+QVector<QVector<int>> peopleNamed(const Catalog &catalog, const QString &name, int limit)
+{
+    QVector<QVector<int>> people;
+    for (const int row : creditedRows(catalog, name, 40)) {
+        bool placed = false;
+        for (QVector<int> &person : people) {
+            if (rowSimilarity(catalog, person.first(), row) >= kSamePerson) {
+                if (person.size() < limit)
+                    person.append(row);
+                placed = true;
+                break;
+            }
+        }
+        if (!placed)
+            people.append(QVector<int>{ row });
+    }
+    return people;
+}
+
+// Of the people sharing a name, the one whose songs sound most like
+// `towards`; the best known when there is nothing to compare with.
+QVector<int> closestPerson(const Catalog &catalog, const QVector<QVector<int>> &people,
+                           const QVector<float> &towards)
+{
+    if (people.isEmpty())
+        return {};
+    if (towards.isEmpty())
+        return people.first();
+    int best = 0;
+    float bestScore = -2.0f;
+    for (int i = 0; i < people.size(); ++i) {
+        const float score = similarity(towards, soundOf(catalog, people.at(i)));
+        if (score > bestScore) {
+            bestScore = score;
+            best = i;
+        }
+    }
+    return people.at(best);
+}
+
+// Where the songs the listener actually played by this artist sit: which, of
+// the people sharing the name, is the one they mean. Empty when none of the
+// plays is a catalogue row.
+QVector<float> heardSoundOf(const Catalog &catalog, const QVector<PlayEvent> &history,
+                            const QString &artist)
+{
+    const QString key = artistKey(artist);
+    QVector<int> rows;
+    for (const PlayEvent &event : history) {
+        if (rows.size() >= 20)
+            break;
+        const QString credit = withoutTopic(event.artist);
+        if (event.title.isEmpty() || artistKey(credit) != key)
+            continue;
+        const Catalog::Match match = catalog.match(event.title, credit);
+        if (match.row >= 0 && !rows.contains(match.row))
+            rows.append(match.row);
+    }
+    return soundOf(catalog, rows);
+}
+
 // "Because you like" is a claim, and one play is not enough to make it: a song
-// left halfway through says nothing about liking its artist. An artist counts
-// once they have a like the listener has not taken back, or two plays heard to
-// at least 60 per cent.
+// left early says nothing about liking its artist. An artist counts once they
+// have a like the listener has not taken back, or two plays heard at least
+// halfway through.
+//
+// Halfway is read from the playhead and the length directly, not from the
+// label: the label is upgraded to 1.0 when a song is replayed in one sitting,
+// which is right for the taste profile but would let three fifteen-second
+// plays of one song claim that someone likes its artist.
 //
 // Ordered by the taste profile's own ranking when there is one — it weighs
 // recency and where a play came from, which a count does not — and otherwise
@@ -209,37 +394,39 @@ QVector<int> creditedRows(const Catalog &catalog, const QString &name, int limit
 QStringList likedArtists(const QVector<PlayEvent> &history, const TasteProfile &taste)
 {
     struct Tally {
-        // The first performer, as the listener's own history spells it: a
-        // joint credit keys under its lead artist, so it is also titled by them
-        // ("Because you like Bruno Mars", not "… Bruno Mars & Lady Gaga").
+        // The credit as the listener's newest play of them spells it, whole:
+        // the lookup tries the full name before its lead, and the heading is
+        // whatever name the lookup finally matched.
         QString name;
         bool liked = false;
         int goodPlays = 0;
         int firstSeen = 0;             // history is newest first, so lower is more recent
     };
     QHash<QString, Tally> tallies;
-    // The newest like-or-unlike per song decides whether it is liked now.
-    QSet<QString> decided;
+    // The newest like-or-unlike per song decides whether it is liked now. A
+    // song is its text key, so "Halo" liked and "HALO" unliked are one song.
+    QSet<quint64> decided;
 
     for (int i = 0; i < history.size(); ++i) {
         const PlayEvent &event = history.at(i);
-        if (event.artist.trimmed().isEmpty())
+        const QString credit = withoutTopic(event.artist);
+        if (credit.isEmpty())
             continue;
-        const QString key = artistKey(event.artist);
+        const QString key = artistKey(credit);
         Tally &tally = tallies[key];
         if (tally.name.isEmpty()) {
-            const QString lead = firstPerformer(event.artist);
-            tally.name = lead.isEmpty() ? event.artist.trimmed() : lead;
+            tally.name = credit;
             tally.firstSeen = i;
         }
-        const QString song = event.title + QLatin1Char('\u0001') + key;
+        const quint64 song = Rec::strictKey(event.title, credit);
         if (event.kind == QLatin1String("like") || event.kind == QLatin1String("unliked")) {
             if (!decided.contains(song)) {
                 decided.insert(song);
                 if (event.kind == QLatin1String("like"))
                     tally.liked = true;
             }
-        } else if (event.kind == QLatin1String("play") && event.hasLabel && event.label >= 0.6) {
+        } else if (event.kind == QLatin1String("play") && event.trackMs > 0
+                   && event.listenedMs * 2 >= event.trackMs) {
             ++tally.goodPlays;
         }
     }
@@ -250,10 +437,15 @@ QStringList likedArtists(const QVector<PlayEvent> &history, const TasteProfile &
             qualifying.append(tally);
     }
 
+    // An artist can appear more than once in the profile's twelve under
+    // different credits; their best position is the one that counts.
     QHash<QString, int> tasteRank;
     if (taste.valid) {
-        for (int i = 0; i < taste.topArtists.size(); ++i)
-            tasteRank.insert(artistKey(taste.topArtists.at(i)), i);
+        for (int i = 0; i < taste.topArtists.size(); ++i) {
+            const QString key = artistKey(withoutTopic(taste.topArtists.at(i)));
+            if (!tasteRank.contains(key))
+                tasteRank.insert(key, i);
+        }
     }
     std::sort(qualifying.begin(), qualifying.end(), [&](const Tally &a, const Tally &b) {
         const int ra = tasteRank.value(artistKey(a.name), INT_MAX);
@@ -293,86 +485,142 @@ QStringList likedArtists(const QVector<PlayEvent> &history, const TasteProfile &
 // Kept from iOS without change: no edges means no shelf. A heading that says
 // "Because you like X" over songs nothing connects to X is worse than nothing,
 // because the listener cannot tell the difference.
+//
+// And one thing iOS never needed, because it resolved every neighbour to a
+// YouTube video by MBID: a neighbour here is a NAME, looked up in a catalogue
+// that has its own artists by the same names. U2's neighbour Bono is, in the
+// catalogue, only an Albanian rapper; SB19's Justin is only a Hawaiian singer.
+// Each is exactly credited, so no name check can tell them apart. What does is
+// sound. Of everyone in the catalogue by a neighbour's name, the one that
+// sounds most like the seed is taken — Can's Nico is then the Velvet
+// Underground's, not a Romanian pop singer — and if even that one sounds
+// nothing like the seed, it is somebody else, and left out. The rest are
+// ordered by how close they sound. The seed is picked the same way, towards
+// the songs the listener actually played by them.
 Shelf listenersAlso(const Catalog &catalog, const Graph &graph, const QString &artist,
-                    const QString &region, const QSet<quint64> &heard, QSet<int> &shown,
-                    int perShelf)
+                    const QVector<float> &heardSound, const QString &region,
+                    const QSet<quint64> &heard, Shown &shown, int perShelf)
 {
     Shelf shelf;
+    // The whole credit first — "Simon & Garfunkel" is an artist — and its lead
+    // only when the whole is not.
     GraphArtist seed = graph.findArtist(artist, region);
     if (seed.mbid.isEmpty()) {
         const QString first = firstPerformer(artist);
         if (!first.isEmpty() && first != artist)
             seed = graph.findArtist(first, region);
     }
-    if (seed.mbid.isEmpty() || blocked(seed.mbid))
+    if (seed.mbid.isEmpty() || blocked(seed.mbid) || placeholder(seed.name))
         return shelf;
 
     const QString seedRegion = seed.region.isEmpty() ? region : seed.region;
-    const QString seedKey = artistKey(artist);
+    const QString seedKey = artistKey(seed.name);
+    const QVector<int> seedRows = closestPerson(catalog, peopleNamed(catalog, seed.name, 20), heardSound);
+    const QVector<float> seedSound = seedRows.isEmpty() ? heardSound : soundOf(catalog, seedRows);
 
-    QVector<QVector<int>> byNeighbour;
+    struct Candidate {
+        QString name;
+        QVector<int> rows;
+        float closeness = 0.0f;
+        bool listening = false;
+    };
+    QVector<Candidate> candidates;
     QSet<QString> neighbourNames;
-    bool anyListening = false;
-    // Twelve asked for and eight used, as on iOS: the spare four cover the
-    // neighbours the gates below turn away.
-    for (const GraphNeighbour &neighbour : graph.neighbours(seed.mbid, seedRegion, 12)) {
-        if (byNeighbour.size() >= 8)
-            break;
+    // iOS asks for twelve and uses eight. Twice that is read here, because the
+    // sound check below turns away more than the old gates did, and a shelf
+    // of three artists is not worth a heading.
+    for (const GraphNeighbour &neighbour : graph.neighbours(seed.mbid, seedRegion, 24)) {
         if (blocked(neighbour.mbid))
             continue;
         const QString name = graph.artistName(neighbour.mbid, seedRegion);
-        if (name.isEmpty() || artistKey(name) == seedKey)
+        if (name.isEmpty() || placeholder(name) || artistKey(name) == seedKey)
             continue;
         const QString plain = plainName(name);
-        if (neighbourNames.contains(plain))
+        if (plain.isEmpty() || neighbourNames.contains(plain))
             continue;
-        // Only songs credited to exactly this artist: the safety gate and the
+        // Only songs credited to exactly this name: the safety gate, and the
         // guard against "Belle and Sebastian" becoming a nursery-rhymes act.
-        const QVector<int> credited = creditedRows(catalog, name, 8);
+        // Then only one person's songs of those.
+        const QVector<int> credited =
+            closestPerson(catalog, peopleNamed(catalog, name, 8), seedSound);
         if (credited.isEmpty())
             continue;
         neighbourNames.insert(plain);
 
-        QVector<int> rows;
-        for (const int row : credited) {
-            if (rows.size() >= kPerArtistCap)
-                break;
-            if (shown.contains(row))
+        Candidate candidate;
+        candidate.name = name;
+        candidate.listening = neighbour.source == QLatin1String("listenbrainz");
+        if (!seedSound.isEmpty()) {
+            candidate.closeness = similarity(seedSound, soundOf(catalog, credited));
+            if (candidate.closeness < kNeighbourFloor)
                 continue;
-            const QString title = catalog.title(row);
-            if (title.isEmpty() || heard.contains(Rec::strictKey(title, catalog.artist(row)))
-                || !Rec::suitableForSuggestion(title, catalog.artist(row)))
-                continue;
-            rows.append(row);
         }
-        if (rows.isEmpty())
-            continue;
-        if (neighbour.source == QLatin1String("listenbrainz"))
-            anyListening = true;
-        byNeighbour.append(rows);
+        Shown own;
+        for (const int row : credited) {
+            if (candidate.rows.size() >= kPerArtistCap)
+                break;
+            const QString title = catalog.title(row);
+            const QString credit = catalog.artist(row);
+            if (title.isEmpty() || !Rec::suitableForSuggestion(title, credit))
+                continue;
+            if (heard.contains(Rec::strictKey(title, credit)) || shown.has(row, title, credit)
+                || own.has(row, title, credit))
+                continue;
+            own.add(row, title, credit);
+            candidate.rows.append(row);
+        }
+        if (!candidate.rows.isEmpty())
+            candidates.append(candidate);
     }
+
+    // The graph's own order is a score, and the ListenBrainz scores are
+    // saturated — in the US, UK, German and Irish shards every one reads 1.00
+    // — so for Miles Davis it was whichever rock act the build inserted first.
+    // Closeness in sound is the order that still means something. Stable, so
+    // with no seed sound to compare against the graph's order stands.
+    if (!seedSound.isEmpty()) {
+        std::stable_sort(candidates.begin(), candidates.end(),
+                         [](const Candidate &a, const Candidate &b) {
+                             return a.closeness > b.closeness;
+                         });
+    }
+    if (candidates.size() > 8)
+        candidates.resize(8);
 
     // Each neighbour's best song first, then their second, so the shelf is a
     // spread of artists rather than two apiece from the top three.
+    bool anyListening = false;
+    bool anyStructural = false;
     for (int pass = 0; pass < kPerArtistCap; ++pass) {
-        for (const QVector<int> &rows : std::as_const(byNeighbour)) {
-            if (pass >= rows.size() || shelf.rows.size() >= perShelf)
+        for (const Candidate &candidate : std::as_const(candidates)) {
+            if (pass >= candidate.rows.size() || shelf.rows.size() >= perShelf)
                 continue;
-            const int row = rows.at(pass);
-            shown.insert(row);
-            shelf.rows.append({ catalog.title(row), catalog.artist(row), row, 0.0f });
+            const int row = candidate.rows.at(pass);
+            const QString title = catalog.title(row);
+            const QString credit = catalog.artist(row);
+            if (shown.has(row, title, credit))
+                continue;               // two neighbours credited on one song
+            shown.add(row, title, credit);
+            shelf.rows.append({ title, credit, row, candidate.closeness });
+            (candidate.listening ? anyListening : anyStructural) = true;
         }
     }
 
     shelf.kind = QStringLiteral("artist");
-    shelf.title = QStringLiteral("Because you like %1").arg(artist);
-    // Says which kind of connection it is. The ListenBrainz edges are what
-    // listeners actually play together; the structural ones are MusicBrainz's
-    // own links — members, side projects, shared tags — and a shelf built only
-    // from those should not claim to know what anyone listens to.
-    shelf.reason = anyListening
-        ? QStringLiteral("People who listen to %1 also play these").arg(artist)
-        : QStringLiteral("Artists MusicBrainz connects with %1").arg(artist);
+    // The name the graph knows them by, which is the one the lookup matched:
+    // "Because you like Bruno Mars", not "…Bruno Mars & Anderson .Paak".
+    shelf.title = QStringLiteral("Because you like %1").arg(seed.name);
+    // Says which kind of connection it is, and only what the rows on the shelf
+    // bear out. The ListenBrainz edges are what listeners actually play
+    // together; the structural ones are MusicBrainz's own links — members,
+    // side projects, shared tags — and a shelf built from those should not
+    // claim to know what anyone listens to.
+    if (anyListening && !anyStructural)
+        shelf.reason = QStringLiteral("People who listen to %1 also play these").arg(seed.name);
+    else if (anyStructural && !anyListening)
+        shelf.reason = QStringLiteral("Artists MusicBrainz connects with %1").arg(seed.name);
+    else
+        shelf.reason = QStringLiteral("What listeners of %1 play, and artists linked to them").arg(seed.name);
     return shelf;
 }
 
@@ -392,7 +640,7 @@ QVector<Shelf> buildShelves(const Catalog &catalog,
     const QSet<quint64> heard = heardKeys(history);
     // One song shows up on one shelf. The alternative — the same track under
     // three headings — reads as a bug however defensible each heading is.
-    QSet<int> shown;
+    Shown shown;
 
     // — what they played, and what is like it —
     //
@@ -473,30 +721,43 @@ QVector<Shelf> buildShelves(const Catalog &catalog,
         if (artistShelves >= 2)
             break;
 
-        QSet<int> trial = shown;
+        Shown trial = shown;
         Shelf shelf;
+        const QVector<float> heardSound = heardSoundOf(catalog, history, artist);
         if (graph && graph->isOpen())
-            shelf = listenersAlso(catalog, *graph, artist, region, heard, trial, perShelf);
+            shelf = listenersAlso(catalog, *graph, artist, heardSound, region, heard, trial, perShelf);
 
         if (shelf.rows.size() < 4) {
             trial = shown;
-            const Catalog::Match match = catalog.match(QString(), artist);
-            if (match.artistId < 0)
+            // The sound of exactly this artist's songs. artistNeighbours took
+            // the centroid of everyone sharing the artist's KEY, and the key
+            // cuts "AC/DC" to "ac" — so "Sounds like AC/DC" was the sound of
+            // three tribute bands averaged together. The whole credit first,
+            // as with the graph, then its lead; and of the people by that
+            // name, the one the listener has been playing.
+            QString name = artist;
+            QVector<QVector<int>> people = peopleNamed(catalog, name, 20);
+            if (people.isEmpty()) {
+                name = firstPerformer(artist);
+                if (!name.isEmpty() && name != artist)
+                    people = peopleNamed(catalog, name, 20);
+            }
+            const QVector<float> sound = soundOf(catalog, closestPerson(catalog, people, heardSound));
+            if (sound.isEmpty())
                 continue;
             // Without this the artist is their own nearest neighbour: "Sounds
-            // like Bad Bunny" opened with Bad Bunny, twice. artistNeighbours
-            // drops the seed's own artist id, but a joint credit is a different
-            // id with the same lead ("Bad Bunny & Drake"), so the lead is
-            // compared instead.
-            const QString seedKey = artistKey(artist);
+            // like Bad Bunny" opened with Bad Bunny, twice. A joint credit is
+            // a different artist with the same lead ("Bad Bunny & Drake"), so
+            // the lead is what is compared.
+            const QString seedKey = artistKey(name);
             QVector<Hit> hits;
-            for (const Hit &hit : artistNeighbours(catalog, match.artistId, perShelf * 4, 0)) {
+            for (const Hit &hit : nearest(catalog, sound, perShelf * 4, 0, 0)) {
                 if (artistKey(catalog.artist(hit.row)) != seedKey)
                     hits.append(hit);
             }
             shelf = Shelf();
             shelf.kind = QStringLiteral("artist");
-            shelf.title = QStringLiteral("Sounds like %1").arg(artist);
+            shelf.title = QStringLiteral("Sounds like %1").arg(name);
             shelf.reason = QStringLiteral("Artists whose sound sits closest to theirs");
             shelf.rows = collect(catalog, hits, heard, trial, perShelf, 0.0f);
         }
@@ -566,7 +827,7 @@ QVector<Shelf> buildRegionShelves(const Graph &graph,
         // Japan" over The Beatles is exactly the mislabelling this avoids.
         if (!artist.region.startsWith(region, Qt::CaseInsensitive))
             continue;
-        if (blocked(artist.mbid))
+        if (blocked(artist.mbid) || placeholder(artist.name))
             continue;
         if (artist.popularity < kMinRatings || artist.confidence < kMinConfidence)
             continue;

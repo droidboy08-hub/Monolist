@@ -681,6 +681,9 @@ int main(int argc, char *argv[])
                 event.when = now.addDays(-i);
                 event.hasLabel = true;
                 event.label = 1.0;
+                // Heard through: likedArtists reads the playhead, not the label.
+                event.trackMs = 200000;
+                event.listenedMs = 200000;
                 history.append(event);
             }
             return history;

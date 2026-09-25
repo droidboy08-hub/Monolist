@@ -1,4 +1,5 @@
 #include "graph.h"
+#include "matchkey.h"
 
 #include <QDir>
 #include <QFileInfo>
@@ -104,6 +105,11 @@ void Graph::closeAll()
         QSqlDatabase::removeDatabase(name);
     m_connections.clear();
     m_thread = nullptr;
+    // What was learned about the old shards says nothing about new ones.
+    m_nameIndexBuilt = false;
+    m_nameIndex.clear();
+    m_edgeCounts.clear();
+    m_found.clear();
 }
 
 QString Graph::connection(const QString &code) const
@@ -342,15 +348,77 @@ QString Graph::artistName(const QString &mbid, const QString &region) const
     return QString();
 }
 
+// Every artist row in every shard, under its folded name. Built once, on the
+// first lookup, because the shards cannot be asked for a folded match: SQLite's
+// NOCASE folds ASCII only, so "Rosalía" never found "ROSALÍA", a curly
+// apostrophe never found a straight one, and "Beyonce" never found "Beyoncé".
+void Graph::buildNameIndex() const
+{
+    if (m_nameIndexBuilt)
+        return;
+    m_nameIndexBuilt = true;
+    for (const QString &shard : installedCodes()) {
+        const QString connectionName = connection(shard);
+        if (connectionName.isEmpty())
+            continue;
+        QSqlQuery q(QSqlDatabase::database(connectionName, false));
+        q.setForwardOnly(true);
+        if (!q.exec(QStringLiteral("SELECT mbid, name, region, popularity, confidence FROM artists")))
+            continue;
+        while (q.next()) {
+            const QString name = text(q.value(1).toString());
+            const QString key = Rec::plainName(name);
+            if (key.isEmpty())
+                continue;
+            NamedCopy copy;
+            copy.shard = shard;
+            copy.artist.mbid = text(q.value(0).toString());
+            copy.artist.name = name;
+            copy.artist.region = text(q.value(2).toString());
+            copy.artist.popularity = q.value(3).toInt();
+            copy.artist.confidence = q.value(4).toDouble();
+            m_nameIndex[key].append(copy);
+        }
+    }
+}
+
+int Graph::edgeCount(const QString &shard, const QString &mbid) const
+{
+    const QString key = shard + QLatin1Char('\u0001') + mbid;
+    const auto known = m_edgeCounts.constFind(key);
+    if (known != m_edgeCounts.constEnd())
+        return known.value();
+    int count = 0;
+    const QString connectionName = connection(shard);
+    if (!connectionName.isEmpty()) {
+        QSqlQuery q(QSqlDatabase::database(connectionName, false));
+        q.setForwardOnly(true);
+        if (q.prepare(QStringLiteral("SELECT COUNT(*) FROM edges WHERE a = ? OR b = ?"))) {
+            q.addBindValue(mbid);
+            q.addBindValue(mbid);
+            if (q.exec() && q.next())
+                count = q.value(0).toInt();
+        }
+    }
+    m_edgeCounts.insert(key, count);
+    return count;
+}
+
 GraphArtist Graph::findArtist(const QString &name, const QString &region) const
 {
-    const QString wanted = name.trimmed();
+    const QString wanted = Rec::plainName(name);
     if (wanted.isEmpty())
         return {};
-    const QString cacheKey = wanted.toLower();
+    // The answer depends on the listener's country as well as the name — it
+    // breaks ties — so both are the key. Keyed on the folded name, too, so
+    // one spelling's answer, a miss included, is every spelling's answer.
+    const QString cacheKey = wanted + QLatin1Char('\u0001') + region.toUpper();
     const auto cached = m_found.constFind(cacheKey);
     if (cached != m_found.constEnd())
         return cached.value();
+
+    buildNameIndex();
+    const QVector<NamedCopy> copies = m_nameIndex.value(wanted);
 
     // The listener's own country first, then every other country, and the
     // worldwide shard LAST — the opposite of shardChain, which puts it at the
@@ -373,7 +441,7 @@ GraphArtist Graph::findArtist(const QString &name, const QString &region) const
     }
     order.append(QStringLiteral("global"));
 
-    // Every country's copy is read, and the copy with the most edges in its
+    // Every country's copy is weighed, and the one with the most edges in its
     // own shard wins; the worldwide shard only when no country has them.
     //
     // Why edges and not confidence. One artist is one MBID, but each shard
@@ -383,60 +451,67 @@ GraphArtist Graph::findArtist(const QString &name, const QString &region) const
     // (0.80): confidence picked the US copy and a US listener got Linkin Park
     // and Evanescence. By edges it is 24 in Japan against 15 — the shard where
     // an artist's listening neighbourhood is richest is the one that knows
-    // them. Ties go to higher confidence, then to the earlier shard in the
-    // order above, so the listener's own country wins an even contest.
-    struct Candidate {
-        GraphArtist artist;
-        int edges = 0;
+    // them.
+    //
+    // Ties go to the earlier shard in the order above, so the listener's own
+    // country wins an even contest — before confidence, which let an obscure
+    // same-named band from another country win a US listener's zero-edge tie.
+    // Within one shard (two artists who share a name) it is confidence, then
+    // ratings, then the id, so the answer never depends on row order.
+    //
+    // The region returned is the SHARD the copy was chosen from, not the row's
+    // own region: it is what the caller walks for neighbours, and it has to be
+    // the shard whose edges were just counted. A row's region can differ — the
+    // IN-HR shard holds Punjabi and Delhi artists — and reading from the row's
+    // region counted one set of edges and used another.
+    const auto rank = [&](const QString &shard) {
+        const int at = int(order.indexOf(shard));
+        return at < 0 ? int(order.size()) : at;
     };
-    const auto copyIn = [&](const QString &shard, Candidate *out) {
-        const QString connectionName = connection(shard);
-        if (connectionName.isEmpty())
-            return false;
-        const QSqlDatabase db = QSqlDatabase::database(connectionName, false);
-        QSqlQuery q(db);
-        q.setForwardOnly(true);
-        if (!q.prepare(QStringLiteral(
-                "SELECT mbid, name, region, popularity, confidence FROM artists"
-                " WHERE name = ? COLLATE NOCASE ORDER BY confidence DESC, popularity DESC, mbid LIMIT 1")))
-            return false;
-        q.addBindValue(wanted);
-        if (!q.exec() || !q.next())
-            return false;
-        out->artist.mbid = text(q.value(0).toString());
-        out->artist.name = text(q.value(1).toString());
-        out->artist.region = text(q.value(2).toString());
-        out->artist.popularity = q.value(3).toInt();
-        out->artist.confidence = q.value(4).toDouble();
-
-        QSqlQuery count(db);
-        count.setForwardOnly(true);
-        if (count.prepare(QStringLiteral("SELECT COUNT(*) FROM edges WHERE a = ? OR b = ?"))) {
-            count.addBindValue(out->artist.mbid);
-            count.addBindValue(out->artist.mbid);
-            if (count.exec() && count.next())
-                out->edges = count.value(0).toInt();
-        }
-        return true;
-    };
-
-    Candidate best;
-    for (const QString &shard : std::as_const(order)) {
-        if (shard == QLatin1String("global")) {
-            if (!best.artist.mbid.isEmpty())
-                break;                 // a country had them: global is only a last resort
-        }
-        Candidate candidate;
-        if (!copyIn(shard, &candidate))
+    const NamedCopy *best = nullptr;
+    int bestEdges = -1;
+    for (const NamedCopy &copy : copies) {
+        if (copy.shard == QLatin1String("global"))
             continue;
-        const bool better = best.artist.mbid.isEmpty()
-            || candidate.edges > best.edges
-            || (candidate.edges == best.edges && candidate.artist.confidence > best.artist.confidence);
-        if (better)
-            best = candidate;
+        const int edges = edgeCount(copy.shard, copy.artist.mbid);
+        bool better = !best;
+        if (best) {
+            if (edges != bestEdges)
+                better = edges > bestEdges;
+            else if (rank(copy.shard) != rank(best->shard))
+                better = rank(copy.shard) < rank(best->shard);
+            else if (copy.artist.confidence != best->artist.confidence)
+                better = copy.artist.confidence > best->artist.confidence;
+            else if (copy.artist.popularity != best->artist.popularity)
+                better = copy.artist.popularity > best->artist.popularity;
+            else
+                better = copy.artist.mbid < best->artist.mbid;
+        }
+        if (better) {
+            best = &copy;
+            bestEdges = edges;
+        }
     }
-    m_found.insert(cacheKey, best.artist);
-    return best.artist;
+
+    GraphArtist found;
+    if (best) {
+        found = best->artist;
+        found.region = best->shard;
+    } else {
+        // No country has them. The worldwide copy, walked as the worldwide
+        // shard (its code for shardChain is ZZ).
+        for (const NamedCopy &copy : copies) {
+            if (copy.shard != QLatin1String("global"))
+                continue;
+            if (found.mbid.isEmpty() || copy.artist.confidence > found.confidence
+                || (copy.artist.confidence == found.confidence && copy.artist.mbid < found.mbid)) {
+                found = copy.artist;
+                found.region = QStringLiteral("ZZ");
+            }
+        }
+    }
+    m_found.insert(cacheKey, found);
+    return found;
 }
 
 } // namespace Rec

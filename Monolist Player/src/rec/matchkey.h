@@ -50,4 +50,18 @@ quint64 strictKey(const QString &title, const QString &artist);
 // across the whole of it, so a hit means something.
 quint64 titleKey(const QString &title);
 
+// Not part of the catalogue's keys, and not from the Python: a whole name
+// reduced to what two spellings of it share, for comparing one artist's name
+// across the catalogue, the graph shards and the listener's history, which
+// each spell it their own way.
+//
+// Case, punctuation and accents go, so "Beyoncé" and "BEYONCE", and "Guns N'
+// Roses" with a curly apostrophe and a straight one, agree. Unlike
+// primaryArtist it keeps the WHOLE name: "Belle and Sebastian" is not "belle",
+// and "AC/DC" is "ac dc", not "ac". Accents come off Latin, Greek and Cyrillic
+// letters only — in Devanagari or Thai a mark is part of the letter — and the
+// work is done in code points, so a character outside the basic plane is one
+// character, not two halves.
+QString plainName(const QString &name);
+
 } // namespace Rec

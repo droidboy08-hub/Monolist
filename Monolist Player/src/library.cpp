@@ -548,6 +548,22 @@ void Library::setLiked(const QVariantMap &track, bool liked)
     find.addBindValue(videoId);
     const bool inLibrary = find.exec() && find.next() && find.value(0).toInt() > 0;
 
+    // Named for the recommender's record below, taken before an unlike deletes
+    // the row: a heart pressed in a list can hand over less than the player's.
+    QString title = track.value(QStringLiteral("title")).toString();
+    QString artist = track.value(QStringLiteral("artist")).toString();
+    if (title.isEmpty() || artist.isEmpty()) {
+        QSqlQuery named(AppDatabase::connection());
+        named.prepare(QStringLiteral("SELECT title, artist FROM tracks WHERE source_id = ? LIMIT 1"));
+        named.addBindValue(videoId);
+        if (named.exec() && named.next()) {
+            if (title.isEmpty())
+                title = named.value(0).toString();
+            if (artist.isEmpty())
+                artist = named.value(1).toString();
+        }
+    }
+
     QSqlQuery write(AppDatabase::connection());
     if (liked && inLibrary) {
         write.prepare(QStringLiteral(
@@ -576,6 +592,22 @@ void Library::setLiked(const QVariantMap &track, bool liked)
     if (!write.exec()) {
         qWarning("Monolist: could not save a like: %s", qPrintable(write.lastError().text()));
         return;
+    }
+
+    // What the recommender learns from, recorded here because every heart in
+    // the app arrives here — the player's, a track list's, a menu's. It used
+    // to be recorded by the player alone, so a like from a list never counted
+    // and un-hearting a song in Liked songs never took a like back. An unlike
+    // is a tombstone that cancels the like before it.
+    if (!title.isEmpty()) {
+        QSqlQuery event(AppDatabase::connection());
+        event.prepare(QStringLiteral(
+            "INSERT INTO play_events (kind, video_id, title, artist) VALUES (?, ?, ?, ?)"));
+        event.addBindValue(liked ? QStringLiteral("like") : QStringLiteral("unliked"));
+        event.addBindValue(videoId);
+        event.addBindValue(title);
+        event.addBindValue(AppDatabase::text(artist));
+        event.exec();
     }
 
     m_tracks.reload();

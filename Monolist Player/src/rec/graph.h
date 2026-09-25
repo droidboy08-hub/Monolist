@@ -118,20 +118,22 @@ public:
     QString artistName(const QString &mbid, const QString &region) const;
 
     // Not in the Swift. An artist by name, from any shard. Every country's
-    // copy is read and the one with the most edges in its own shard wins; the
-    // worldwide shard only when no country has them. `region` on the result is
-    // that copy's, which is what to walk for the artist's own edges — and why
-    // the right copy matters: a shard holds only edges between its own
-    // artists, so the copy chosen decides which country the neighbours are from.
+    // copy is weighed and the one with the most edges in its own shard wins;
+    // the worldwide shard only when no country has them. `region` on the
+    // result is the SHARD that copy came from (ZZ for the worldwide one) — what
+    // to walk for the artist's own edges, and why the right copy matters: a
+    // shard holds only edges between its own artists, so the copy chosen
+    // decides which country the neighbours are from.
     //
     // iOS only ever looked a name up among the top 400 of the listener's own
     // country, so someone in the US who loves a Punjabi singer got nothing —
-    // the artist lives in IN-PB, and so do their edges. Answers, misses
-    // included, are remembered for the life of the Graph: a name costs one
-    // pass over the shards once, not on every rebuild.
+    // the artist lives in IN-PB, and so do their edges.
     //
-    // Matching is exact apart from ASCII case, which is what SQLite's NOCASE
-    // does. An empty mbid means no shard knows the name.
+    // Names are compared folded (Rec::plainName): case, accents and
+    // punctuation aside, so "Rosalía" finds "ROSALÍA". The first lookup reads
+    // every shard's artists once to make that possible; answers, misses
+    // included, are then remembered for the life of the Graph by folded name
+    // and region. An empty mbid means no shard knows the name.
     GraphArtist findArtist(const QString &name, const QString &region) const;
 
 private:
@@ -151,7 +153,20 @@ private:
     QHash<QString, QString> m_files;                // code -> absolute path
     mutable QHash<QString, QString> m_connections;  // code -> connection name
     mutable QThread *m_thread = nullptr;            // whoever connected first
-    mutable QHash<QString, GraphArtist> m_found;    // lowercased name -> answer
+
+    // findArtist's state: every shard's artists by folded name, built on first
+    // use; edge counts by shard and MBID; and answers by folded name and
+    // region, misses included.
+    struct NamedCopy {
+        QString shard;
+        GraphArtist artist;
+    };
+    void buildNameIndex() const;
+    int edgeCount(const QString &shard, const QString &mbid) const;
+    mutable bool m_nameIndexBuilt = false;
+    mutable QHash<QString, QVector<NamedCopy>> m_nameIndex;
+    mutable QHash<QString, int> m_edgeCounts;
+    mutable QHash<QString, GraphArtist> m_found;
 };
 
 } // namespace Rec

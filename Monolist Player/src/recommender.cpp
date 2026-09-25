@@ -4,16 +4,19 @@
 #include "playbackcontroller.h"
 #include "rec/catalog.h"
 #include "rec/graph.h"
+#include "rec/matchkey.h"
 #include "rec/shelves.h"
 
 #include <QDateTime>
 #include <QDir>
 #include <QFileInfo>
 #include <QLocale>
+#include <QSet>
 #include <QSqlQuery>
 #include <QUrl>
 #include <QVariantMap>
 
+#include <algorithm>
 #include <utility>
 
 namespace {
@@ -201,8 +204,27 @@ void RecommenderWorker::build(const QVector<Rec::PlayEvent> &history, const QStr
     }
 
     if (m_graph) {
-        const QVector<Rec::Shelf> regional =
+        QVector<Rec::Shelf> regional =
             Rec::buildRegionShelves(*m_graph, m_catalog, region, regionName, history, perShelf);
+        // The country shelves are built from the graph, apart from the rest,
+        // so nothing stopped them repeating a song a personal shelf above had
+        // already offered. Same text key as every other shelf uses.
+        QSet<quint64> above;
+        for (const Rec::Shelf &shelf : std::as_const(shelves)) {
+            for (const Rec::Suggestion &row : shelf.rows)
+                above.insert(Rec::strictKey(row.title, row.artist));
+        }
+        for (Rec::Shelf &shelf : regional) {
+            shelf.rows.erase(std::remove_if(shelf.rows.begin(), shelf.rows.end(),
+                                            [&above](const Rec::Suggestion &row) {
+                                                return above.contains(
+                                                    Rec::strictKey(row.title, row.artist));
+                                            }),
+                             shelf.rows.end());
+        }
+        regional.erase(std::remove_if(regional.begin(), regional.end(),
+                                      [](const Rec::Shelf &shelf) { return shelf.rows.size() < 4; }),
+                       regional.end());
         if (!regional.isEmpty()) {
             // The country chart is a better place to start than the
             // catalogue's worldwide most-played, so it takes that shelf's place
@@ -380,14 +402,25 @@ void Recommender::refresh()
     const QString region = InnerTube::region();
 
     // Called every time Search is opened, so it has to be nothing when nothing
-    // has happened. The newest event and the country are all a page depends on:
-    // a new listen or like moves the first, Settings moves the second. Anything
-    // else — opening Search twice in a row — keeps the page exactly as it is,
-    // which also means it never rearranges itself under someone reading it.
-    QSqlQuery newest(AppDatabase::connection());
-    const qint64 lastEvent = newest.exec(QStringLiteral("SELECT MAX(id) FROM play_events")) && newest.next()
-        ? newest.value(0).toLongLong() : 0;
-    const QString fingerprint = QStringLiteral("%1|%2").arg(lastEvent).arg(region);
+    // has happened. What a page depends on is the listening history and the
+    // country, so those are summarised and compared. Anything else — opening
+    // Search twice in a row — keeps the page exactly as it is, which also means
+    // it never rearranges itself under someone reading it.
+    //
+    // The newest event alone is not enough: a listen is written when it starts
+    // and FINISHED by an update to the same row — the playhead, the label —
+    // which moves no id. Skipping on while paused finishes a listen that way,
+    // and the page stayed stale. The labelled count and the total heard catch
+    // every such update.
+    QSqlQuery summary(AppDatabase::connection());
+    QString listened = QStringLiteral("0");
+    if (summary.exec(QStringLiteral(
+            "SELECT MAX(id), COUNT(label), TOTAL(listened_ms) FROM play_events")) && summary.next()) {
+        listened = QStringLiteral("%1/%2/%3").arg(summary.value(0).toLongLong())
+                      .arg(summary.value(1).toLongLong())
+                      .arg(summary.value(2).toLongLong());
+    }
+    const QString fingerprint = listened + QLatin1Char('|') + region;
     if (fingerprint == m_builtFrom && !m_shelves.isEmpty())
         return;
     m_builtFrom = fingerprint;

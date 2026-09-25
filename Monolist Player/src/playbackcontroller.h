@@ -196,7 +196,6 @@ private:
     // is left. What the recommender is built on.
     void openPlayEvent(const QVariantMap &track);
     void closePlayEvent();
-    void recordDiscreteEvent(const QVariantMap &track, const QString &kind);
     bool extendWithRadio();   // false when there is nothing to seed a radio from
     void refreshFavourite();
     void setStatus(const QString &text, const QString &source, bool resolving, bool error = false);

@@ -291,11 +291,8 @@ void PlaybackController::toggleFavourite()
 {
     if (!m_library || m_currentTrack.isEmpty())
         return;
-    // A like is the strongest thing anyone tells a recommender, and an unlike
-    // is its retraction — both are recorded, so a profile built later can
-    // subtract what was taken back rather than counting it for ever.
-    recordDiscreteEvent(m_currentTrack,
-                        m_favourite ? QStringLiteral("unliked") : QStringLiteral("like"));
+    // The recommender's record of this is written by Library::setLiked, where
+    // every heart in the app arrives — not here, where only this one did.
     // likesChanged refreshes the flag.
     m_library->setLiked(m_currentTrack, !m_favourite);
 }
@@ -609,21 +606,6 @@ void PlaybackController::closePlayEvent()
     finish.addBindValue(label);
     finish.addBindValue(id);
     finish.exec();
-}
-
-void PlaybackController::recordDiscreteEvent(const QVariantMap &track, const QString &kind)
-{
-    const QString title = track.value(QStringLiteral("title")).toString();
-    if (title.isEmpty())
-        return;
-    QSqlQuery event(AppDatabase::connection());
-    event.prepare(QStringLiteral(
-        "INSERT INTO play_events (kind, video_id, title, artist) VALUES (?, ?, ?, ?)"));
-    event.addBindValue(kind);
-    event.addBindValue(AppDatabase::text(track.value(QStringLiteral("sourceId")).toString()));
-    event.addBindValue(AppDatabase::text(title));
-    event.addBindValue(AppDatabase::text(track.value(QStringLiteral("artist")).toString()));
-    event.exec();
 }
 
 // Everything that decides *where* audio comes from lives here; the rest of the
