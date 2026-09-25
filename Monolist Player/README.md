@@ -331,3 +331,20 @@ alongside the app on all three platforms, for metadata InnerTube and yt-dlp
 already return. It is not wired in. If it is ever wanted, `MediaExtractor` is
 the seam — it already isolates search behind signals, which is exactly what a
 second extractor would slot into.
+
+## Licence
+
+The code in this repository is MIT-licensed — see [`LICENSE`](../LICENSE).
+
+That covers what was written here, not what the app uses:
+
+* **Archivo** in `fonts/` stays under the SIL Open Font License 1.1
+  (`fonts/OFL.txt`), which lets it be bundled but not sold on its own.
+* **Qt** is used under the LGPL 3, dynamically linked.
+* **libmpv, yt-dlp, FFmpeg and Deno** are not in the repository. They are found
+  at run time (see *Runtime dependencies*) and each keeps its own licence. A
+  build that *ships* them is bound by those licences too — libmpv and FFmpeg
+  builds are commonly GPL, which then applies to that distributed package.
+* The **recommendation catalogue and graph** the app can be pointed at are not
+  in the repository and are not covered by this licence; they carry their own
+  (CC BY-NC).
