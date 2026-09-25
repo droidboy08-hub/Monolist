@@ -30,6 +30,9 @@
 #include "windowchrome.h"
 #include "appinfo.h"
 #include "rec/catalog.h"
+#include "rec/suitable.h"
+#include <QTextStream>
+#include <QFile>
 #include "rec/graph.h"
 #include "rec/shelves.h"
 #include "recommender.h"
@@ -813,6 +816,75 @@ int main(int argc, char *argv[])
         const Rec::GraphArtist chosen = graph->findArtist(wanted, QStringLiteral("US"));
         qWarning("find: chosen for a US listener: %s in %s", qPrintable(chosen.mbid), qPrintable(chosen.region));
         delete graph;
+        QTimer::singleShot(0, &app, []() { QCoreApplication::quit(); });
+    }
+
+    // --content-test <catalogue directory> <report file>
+    //
+    // The suggestion filter against every row in the catalogue: how many it
+    // refuses, every refusal written to the report for review, and a fixed
+    // list of cases it must get right in both directions — the hateful titles
+    // review found, and the anti-fascist songs and innocent names a careless
+    // filter catches instead.
+    const int contentFlag = args.indexOf(QStringLiteral("--content-test"));
+    if (contentFlag >= 0 && contentFlag + 2 < args.size()) {
+        auto *catalogue = new Rec::Catalog;
+        if (catalogue->load(args.at(contentFlag + 1))) {
+            QFile report(args.at(contentFlag + 2));
+            report.open(QIODevice::WriteOnly | QIODevice::Truncate);
+            QTextStream out(&report);
+            out.setEncoding(QStringConverter::Utf8);
+            int refused = 0;
+            for (int row = 0; row < catalogue->count(); ++row) {
+                const QString title = catalogue->title(row);
+                const QString artist = catalogue->artist(row);
+                if (!Rec::suitableForSuggestion(title, artist)) {
+                    ++refused;
+                    out << row << '\t' << artist << '\t' << title << '\t' << catalogue->popularity(row) << '\n';
+                }
+            }
+            qWarning("content: %d of %d rows refused", refused, catalogue->count());
+
+            struct Case { const char *title; const char *artist; bool allowed; };
+            const Case cases[] = {
+                // Must pass: anti-fascist songs, and names that contain or
+                // equal a filtered word without being one.
+                { "Nazi Punks Fuck Off", "Dead Kennedys", true },
+                { "It's Okay to Punch Nazis", "Cheap Perfume", true },
+                { "Alle hassen Nazis", "KAFVKA", true },
+                { "Ahista Ahista", "Musarrat Nazir", true },
+                { "Ragione E Sentimento", "Maria Nazionale", true },
+                { "Teresa & Maria", "Jerry Heil", true },
+                { "Ganas De Vivir", "Kike Pavón", true },
+                { "Renegade", "Aaryan Shah", true },
+                { "No Mercy", "Trannos", true },
+                { "Chinkapin Oak", "Folk Band", true },
+                // Must pass: false positives an earlier version of the filter
+                // produced against the real catalogue.
+                { "Hitler muss immer wieder sterben", "Mono & Nikitaman", true },
+                { "Good Night White Pride", "Loikaemie", true },
+                { "Te bajaré la luna (feat. Kike & Manu)", "Maki", true },
+                { "Darth Vader vs Adolf Hitler", "Epic Rap Battles of History", true },
+                // Must be refused: what review found on real shelves.
+                { "I Went Back In Time And Voted For Hitler", "Anal Cunt", false },
+                { "Some Other Song", "Anal Cunt", false },
+                { "Faggot", "Mindless Self Indulgence", false },
+                { "LIKE A CHINK BITCH (G6)", "Eric Reprid", false },
+                { "Anything", "Landser & Friends", false },
+            };
+            int wrong = 0;
+            for (const Case &c : cases) {
+                const bool allowed = Rec::suitableForSuggestion(QString::fromUtf8(c.title),
+                                                                QString::fromUtf8(c.artist));
+                if (allowed != c.allowed) {
+                    ++wrong;
+                    qWarning("content: WRONG  %s — %s  (%s)", c.artist, c.title,
+                             allowed ? "allowed, should be refused" : "refused, should be allowed");
+                }
+            }
+            qWarning("content: %d of %d fixed cases wrong", wrong, int(std::size(cases)));
+        }
+        delete catalogue;
         QTimer::singleShot(0, &app, []() { QCoreApplication::quit(); });
     }
 

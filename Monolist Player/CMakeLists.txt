@@ -53,6 +53,7 @@ qt_add_executable(monolist
     src/rec/vectorsearch.h         src/rec/vectorsearch.cpp
     src/rec/taste.h                src/rec/taste.cpp
     src/rec/graph.h                src/rec/graph.cpp
+    src/rec/suitable.h             src/rec/suitable.cpp
     src/rec/shelves.h              src/rec/shelves.cpp
     src/recommender.h              src/recommender.cpp
     # — backend merged in from the Melody player —

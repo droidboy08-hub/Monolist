@@ -3,6 +3,7 @@
 #include "catalog.h"
 #include "graph.h"
 #include "matchkey.h"
+#include "suitable.h"
 #include "taste.h"
 #include "vectorsearch.h"
 
@@ -69,7 +70,7 @@ QVector<Suggestion> collect(const Catalog &catalog,
             continue;                  // an earlier shelf already used it
         const QString title = titleOf(catalog, hit.row);
         const QString artist = catalog.artist(hit.row);
-        if (title.isEmpty())
+        if (title.isEmpty() || !Rec::suitableForSuggestion(title, artist))
             continue;
         if (heard.contains(Rec::strictKey(title, artist)))
             continue;
@@ -339,7 +340,8 @@ Shelf listenersAlso(const Catalog &catalog, const Graph &graph, const QString &a
             if (shown.contains(row))
                 continue;
             const QString title = catalog.title(row);
-            if (title.isEmpty() || heard.contains(Rec::strictKey(title, catalog.artist(row))))
+            if (title.isEmpty() || heard.contains(Rec::strictKey(title, catalog.artist(row)))
+                || !Rec::suitableForSuggestion(title, catalog.artist(row)))
                 continue;
             rows.append(row);
         }
@@ -616,7 +618,8 @@ QVector<Shelf> buildRegionShelves(const Graph &graph,
         for (const GraphTrack &track : std::as_const(candidates)) {
             if (kept.size() >= 4)
                 break;
-            if (track.title.isEmpty() || seenRecordings.contains(track.recordingMbid))
+            if (track.title.isEmpty() || seenRecordings.contains(track.recordingMbid)
+                || !Rec::suitableForSuggestion(track.title, track.artistName))
                 continue;
             seenRecordings.insert(track.recordingMbid);
             // The same song is often several MusicBrainz recordings — the single,
