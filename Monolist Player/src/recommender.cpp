@@ -326,7 +326,7 @@ Recommender::Recommender(QObject *parent)
                 const InnerTube::Track &track = tracks.at(picked);
                 m_player->playSource(track.videoId, track.title, track.artist, track.artwork,
                                      track.durationMs, track.album, /*isVideo=*/false,
-                                     QStringLiteral("explore"));
+                                     QStringLiteral("explore"), track.primaryArtist);
             });
     connect(&m_innerTube, &InnerTube::searchFailed, this,
             [this](const QString &query, const QString &reason) {

@@ -40,6 +40,8 @@ class RecData : public QObject
     Q_PROPERTY(bool removing READ removing NOTIFY changed)
     // The last attempt failed, and `status` says why.
     Q_PROPERTY(bool failed READ failed NOTIFY changed)
+    // ...and it was a Remove: what could not be deleted is still there.
+    Q_PROPERTY(bool removeFailed READ removeFailed NOTIFY changed)
     // The recommender is reading its catalogue from the download.
     Q_PROPERTY(bool inUse READ inUse NOTIFY changed)
     // What is happening, or what happened: one line for the interface.
@@ -63,7 +65,8 @@ public:
     // Points the recommender at the download once it is whole, and lets go of
     // it before Remove deletes it. Also adopts a download already here when no
     // catalogue is set at all — one finished by a run that was closed just
-    // before it could say so.
+    // before it could say so — unless that run was removing it, in which case
+    // the removal is finished instead.
     void setRecommender(Recommender *recommender);
 
     bool busy() const { return m_busy; }
@@ -71,6 +74,7 @@ public:
     bool partial() const { return !m_installed && m_bytesOnDisk > 0; }
     bool removing() const { return m_removing; }
     bool failed() const { return m_failed; }
+    bool removeFailed() const { return m_removeFailed; }
     bool inUse() const;
     QString status() const { return m_status; }
     qreal progress() const;
@@ -99,7 +103,8 @@ public Q_SLOTS:
     void cancel();
     // Deletes the folder this created, and nothing else: first making the
     // recommender let go of the files, since a mapped file cannot be deleted
-    // on Windows.
+    // on Windows. Recorded in settings until done, so a quit in between is
+    // finished at the next launch.
     void remove();
     // Points the recommender at the download.
     void use();
@@ -134,6 +139,9 @@ private:
     void complete();
     void fail(const QString &message);
     void stopTransfers();
+    // Remove's two halves: waiting until the recommender holds nothing in
+    // the folder, then deleting it.
+    void removeWhenReleased();
     void removeFiles();
     // Reads what is on disk: installed or partial, and how much. A folder
     // holding nothing worth keeping is deleted, so a failed first try leaves
@@ -167,6 +175,7 @@ private:
     bool m_installed = false;
     bool m_removing = false;
     bool m_failed = false;
+    bool m_removeFailed = false;
     qint64 m_bytesOnDisk = 0;
     QString m_status;
     QString m_published;

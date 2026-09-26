@@ -16,6 +16,12 @@ Flickable {
 
     readonly property bool automatic: Library.region.length === 0
 
+    // A part of the page to open on, for a link elsewhere that names one
+    // ("recommendations"): scrolled to once, then said done, so the same
+    // link works again later.
+    property string section: ""
+    signal sectionRevealed()
+
     contentWidth: width
     contentHeight: column.implicitHeight
     boundsBehavior: Flickable.StopAtBounds
@@ -28,6 +34,22 @@ Flickable {
         // in the background: "Reading versions…" shows until they answer.
         if (!About.componentsKnown)
             About.refreshComponents()
+        if (section.length > 0)
+            Qt.callLater(revealSection)
+    }
+
+    onSectionChanged: if (section.length > 0) Qt.callLater(revealSection)
+
+    // After the page has been laid out, which a page built this moment has
+    // not been yet: the column is asked to place everything first.
+    function revealSection() {
+        if (section.length === 0)
+            return
+        column.forceLayout()
+        var target = section === "recommendations" ? recommendationsHeader : null
+        if (target)
+            contentY = Math.max(0, Math.min(target.y - Theme.space4, contentHeight - height))
+        sectionRevealed()
     }
 
     ScrollBar.vertical: MonoScrollBar {}
@@ -324,6 +346,7 @@ Flickable {
         // repository of its own, or pointed at, rather than bundled, and the
         // app works perfectly well without one.
         SectionHeader {
+            id: recommendationsHeader
             width: parent.width
             number: "04"
             title: "Recommendations"
@@ -359,6 +382,7 @@ Flickable {
 
             RecDataPanel {
                 width: parent.width
+                inSettings: true
             }
         }
 
@@ -480,9 +504,17 @@ Flickable {
                 var said = []
                 if (lastFmRow.connected)
                     said.push("Last.fm is connected as " + lastFmRow.accountName)
+                // A session being checked is held, and its cookies go with
+                // the check: not "nothing signed in".
                 if (Account.state === "active")
                     said.push("YouTube Music is signed in"
                               + (Account.accountName.length > 0 ? " as " + Account.accountName : ""))
+                else if (Account.state === "checking")
+                    said.push("a YouTube Music sign-in is being checked")
+                else if (Account.state === "unreachable")
+                    said.push("a YouTube Music sign-in is held, waiting to be checked")
+                if (said.length > 0)
+                    said[0] = said[0].charAt(0).toUpperCase() + said[0].slice(1)
                 if (said.length === 0)
                     return "Nothing is signed in. Monolist plays without an account, and keeps your library "
                            + "on this computer. Connecting one would add what only an account can know."
@@ -504,6 +536,11 @@ Flickable {
             accountName: Scrobbler.accountName
             statusLine: Scrobbler.statusLine
             confirmText: "I'VE APPROVED IT"
+            // A Disconnect that could not delete the key is tried again as a
+            // Disconnect; and an account that stopped working can be let go
+            // of rather than only reconnected.
+            errorAction: Scrobbler.disconnectFailed ? "disconnect" : "connect"
+            forgetText: Scrobbler.accountName.length > 0 ? "DISCONNECT" : ""
             // Last.fm's terms ask for the credit, and for the account to link
             // to its own page there.
             credit: "powered by <a href=\"https://www.last.fm\">AudioScrobbler</a>"
@@ -565,6 +602,9 @@ Flickable {
             actionText: serviceState === "connected" ? "SIGN OUT"
                         : serviceState === "expired" ? "IMPORT AGAIN"
                         : ""
+            // A session that ended can be forgotten, name and all, instead
+            // of imported again.
+            forgetText: "SIGN OUT"
             steps: [
                 "In your own browser, open a private window and sign in at music.youtube.com, on Google's own page. Firefox is the safest choice.",
                 "Export that tab's youtube.com cookies to a file with a cookies.txt extension. Or open the developer tools, pick any browse request to music.youtube.com, and copy its cookie header, or the whole request as cURL.",
@@ -573,10 +613,16 @@ Flickable {
                 "Close the private window without using it again. Monolist offers to delete the exported file as soon as it has read it, and never deletes it by itself.",
                 "A session lasts days to weeks; when it ends Monolist says so and keeps playing signed out. It buys none of the speed: playback, search, lyrics and radio always stay signed out."
             ]
-            onConnectRequested: importing = true
+            // The last refusal's reason belongs to the last try: a panel
+            // opened or closed starts clean.
+            onConnectRequested: {
+                Account.clearImportError()
+                importing = true
+            }
             onCancelRequested: {
                 importing = false
                 pasteField.clear()
+                Account.clearImportError()
             }
             onDisconnectRequested: Account.signOut()
 
@@ -865,9 +911,11 @@ Flickable {
             }
             Note {
                 // Once an account is connected, "nothing is signed in" would
-                // no longer be true.
+                // no longer be true; nor while a YouTube Music session is
+                // held and being checked, which sends its cookies.
                 text: "Songs, search, lyrics and artwork come from YouTube Music, LRCLIB, yt-dlp and FFmpeg. "
                       + (Scrobbler.state === "connected" || Account.state === "active"
+                         || Account.state === "checking" || Account.state === "unreachable"
                          ? "They are fetched without an account; what a connected account is told is set out "
                            + "under Connections."
                          : "Nothing is signed in: no account, and nothing about you leaves this computer.")

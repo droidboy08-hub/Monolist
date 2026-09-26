@@ -515,7 +515,8 @@ void PlaybackController::playSource(const QString &videoId,
                                     qint64 durationMs,
                                     const QString &album,
                                     bool isVideo,
-                                    const QString &origin)
+                                    const QString &origin,
+                                    const QString &primaryArtist)
 {
     if (videoId.isEmpty())
         return;
@@ -524,6 +525,7 @@ void PlaybackController::playSource(const QString &videoId,
     track.videoId = videoId;
     track.title = title;
     track.artist = artist;
+    track.primaryArtist = primaryArtist;
     track.album = album;
     track.durationMs = durationMs;
     track.isVideo = isVideo;
@@ -693,7 +695,7 @@ void PlaybackController::openPlayEvent(const QVariantMap &track)
 // Deliberately not "improved": a history imported from that player and one
 // recorded here have to mean the same thing, or a taste profile built from
 // both is built from two different measurements.
-void PlaybackController::closePlayEvent()
+void PlaybackController::closePlayEvent(bool restarting)
 {
     if (m_playEventId <= 0)
         return;
@@ -723,7 +725,10 @@ void PlaybackController::closePlayEvent()
         if (value > 0.0)
             label = 1.0;
     }
-    if (!m_playEventKey.isEmpty())
+    // A song restarted with Previous is not one returned to later in the
+    // sitting, which is what the upgrade above rewards: counted as one, a
+    // restart then skipped a few seconds in would read as a full listen.
+    if (!m_playEventKey.isEmpty() && !restarting)
         m_finalisedThisSession.insert(m_playEventKey);
 
     // The duration is written here, not when the event opened: a track picked
@@ -1071,7 +1076,7 @@ void PlaybackController::previous()
         // its own, but only once it is past this point again: until then
         // Previous means "the song before", and the restart was on the way.
         if (m_position > kRestartAfterMs) {
-            closePlayEvent();
+            closePlayEvent(/*restarting=*/true);
             m_listenPending = true;
             m_replay = Replay::Rewinding;
             // For Last.fm too: heard again from the start, it is a new

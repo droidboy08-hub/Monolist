@@ -273,6 +273,23 @@ int runCookieImportSelfTest()
                 QStringLiteral("and with a UTF-8 byte-order mark in front"), bom.error);
     }
 
+    // Expiries no whole number of seconds can hold: refused as unreadable,
+    // never turned into some other time (converting them is undefined).
+    {
+        const QByteArray odd = netscape
+                               + ".youtube.com\tTRUE\t/\tTRUE\t1e300\tHUGEEXPIRY\tTESTVAL-huge\n"
+                               + ".youtube.com\tTRUE\t/\tTRUE\tinf\tINFEXPIRY\tTESTVAL-inf\n"
+                               + ".youtube.com\tTRUE\t/\tTRUE\tnan\tNANEXPIRY\tTESTVAL-nan\n"
+                               + ".youtube.com\tTRUE\t/\tTRUE\t9300000000000000000\tOVERFLOW\tTESTVAL-overflow\n"
+                               + ".youtube.com\tTRUE\t/\tTRUE\t253402300799\tYEAR9999\tTESTVAL-9999\n";
+        const Result r = keep(CookieImport::parse(odd, kNow));
+        t.check(r.ok() && r.unreadable == lf.unreadable + 4 && !has(r.cookies, "HUGEEXPIRY")
+                    && !has(r.cookies, "INFEXPIRY") && !has(r.cookies, "NANEXPIRY") && !has(r.cookies, "OVERFLOW")
+                    && find(r.cookies, "YEAR9999").expires == 253402300799LL,
+                QStringLiteral("expiries of 1e300, inf, nan and past 2^63: unreadable; the end of 9999 is kept"),
+                counts(r));
+    }
+
     // Spaces where the tabs go.
     {
         QByteArray spaced = netscape;
@@ -737,6 +754,7 @@ int runYtmSessionSelfTest(Library *library)
     QByteArray homeLoggedIn = "1";
     bool dropAll = false;
     bool refuseJapan = false;
+    bool redirectAuthed = false;
     standIn.respond = [&](const StandIn::Request &request) {
         StandIn::Answer answer;
         if (dropAll) {
@@ -744,6 +762,11 @@ int runYtmSessionSelfTest(Library *library)
             return answer;
         }
         const bool authed = request.authed();
+        if (authed && redirectAuthed) {
+            answer.status = 302;
+            answer.extra << "Location: " + standIn.base().toUtf8() + "/redirected-elsewhere";
+            return answer;
+        }
         const QJsonObject body = request.json();
         const QString gl = body.value(QStringLiteral("context")).toObject().value(QStringLiteral("client"))
                                .toObject().value(QStringLiteral("gl")).toString();
@@ -932,6 +955,27 @@ int runYtmSessionSelfTest(Library *library)
                 QStringLiteral("region %1, %2 drops").arg(InnerTube::region()).arg(regionDrops));
         t.check(session->state() == QLatin1String("active") && !session->jar().isEmpty(),
                 QStringLiteral("a 400 is not a verdict on the session: still active"), session->state());
+    }
+
+    // — 4b. a redirect with the account is never followed: the redirected
+    // request would be a copy carrying the cookies and the Authorization —
+    redirectAuthed = true;
+    requestsBefore = int(standIn.requests.size());
+    const Answered redirected = browseNow(consumer, QStringLiteral("FEtest_redirect"), InnerTube::Auth::IfSignedIn);
+    redirectAuthed = false;
+    {
+        bool followed = false;
+        for (int i = requestsBefore; i < standIn.requests.size(); ++i)
+            followed = followed || standIn.requests.at(i).path.contains("redirected-elsewhere");
+        const bool two = standIn.requests.size() == requestsBefore + 2;
+        const bool thenAnonymous = two && standIn.requests.at(requestsBefore).authed()
+                                   && !standIn.requests.at(requestsBefore + 1).authed();
+        t.check(redirected.error.isEmpty() && !followed && thenAnonymous,
+                QStringLiteral("a 302 to a call with the account: not followed, and asked again without it"),
+                QStringLiteral("%1 requests, followed %2; %3").arg(standIn.requests.size() - requestsBefore)
+                    .arg(followed ? QStringLiteral("yes") : QStringLiteral("no"), redirected.error));
+        t.check(session->state() == QLatin1String("active") && !session->jar().isEmpty(),
+                QStringLiteral("a redirect is not a verdict on the session: still active"), session->state());
     }
 
     // — 5. a country refused for everyone is still dropped, as before —

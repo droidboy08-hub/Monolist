@@ -51,7 +51,13 @@ void ListenTracker::begin(const QVariantMap &track, bool chosenByUser)
 
 void ListenTracker::restart()
 {
+    // The length the engine reported is kept: it says it once per file, and
+    // a restart is a seek, not a new file. Without it, a song that came
+    // with no length (a card on Home) could never count the second time.
+    const qint64 known = m_durationMs;
     begin(m_track, m_chosenByUser);
+    if (known > 0)
+        m_durationMs = known;
 }
 
 void ListenTracker::setPlaying(bool playing)

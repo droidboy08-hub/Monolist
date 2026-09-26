@@ -54,8 +54,9 @@ public:
     // number, so that what the scrobbler does with each reads as policy.
     enum class Outcome {
         Ok,              // done; track.scrobble's items may still each be ignored
-        Retry,           // no answer, HTTP 5xx, an unreadable body, 11 offline,
-                         // 16 temporarily unavailable: back off and send again
+        Retry,           // no answer, HTTP 5xx, an unreadable body, 8 operation
+                         // failed, 11 offline, 16 temporarily unavailable:
+                         // back off and send again
         RateLimited,     // 29: wait a quarter of an hour
         Reauthenticate,  // 9: the session key was revoked; the user must reconnect
         Hold,            // 10 invalid key, 13 bad signature, 26 key suspended:
@@ -63,8 +64,9 @@ public:
                          // is how other scrobblers have lost whole queues
         KeepWaiting,     // 14: asked for a session before the user approved
         RestartSignIn,   // 15: the sign-in token expired (they last an hour)
-        Rejected         // 6, 8 and the rest: this request was wrong; a batch
-                         // is resent an item at a time to find the bad one
+        Rejected         // 6 and the rest, unless sent with a 5xx: this request
+                         // was wrong; a batch is resent an item at a time to
+                         // find the bad one
     };
     Q_ENUM(Outcome)
 
@@ -113,9 +115,10 @@ public:
     bool available() const;
     QString unavailableReason() const;
 
-    // Where calls go: https://ws.audioscrobbler.com/2.0/, or the address in
-    // MONOLIST_LASTFM_URL, for trying the sending against a stand-in server.
-    static QUrl endpoint();
+    // Where calls go: https://ws.audioscrobbler.com/2.0/. Only with an
+    // invented account (setTestAccount) may MONOLIST_LASTFM_URL send them to
+    // a stand-in instead, and only one on this computer (a loopback address).
+    QUrl endpoint() const;
     // The page, in the user's browser, where a token is approved.
     QUrl authPageUrl(const QString &token) const;
 
@@ -178,6 +181,7 @@ private:
 
     QByteArray m_key;
     QByteArray m_secret;
+    bool m_testAccount = false;   // the key and secret are invented ones
     QNetworkAccessManager *m_network = nullptr;
     Responder m_responder;
 };

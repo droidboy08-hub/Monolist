@@ -343,8 +343,11 @@ be, for a look at a state:
 the real library; the scrobbling tests and `--ytm-session-test` refuse to run
 without it, since they empty the scrobble queue and replace the stored session. `MONOLIST_REC_DATA_URL` fetches the recommendation data from
 another address, or a local folder (`file:///C:/dev/monolist-data/`), instead of
-the pinned tag on GitHub. `MONOLIST_LASTFM_URL` sends Last.fm calls to another
-address, for `--scrobble-send-test` against `scripts/lastfm-mock.ps1`.
+the pinned tag on GitHub. `MONOLIST_LASTFM_URL` sends the self-tests' Last.fm
+calls, made with an invented key, to a stand-in on this computer, for
+`--scrobble-send-test` against `scripts/lastfm-mock.ps1`. Only a loopback
+address is taken, and never for the build's own key or a real session, which
+only ever go to ws.audioscrobbler.com.
 
 ## Storage
 

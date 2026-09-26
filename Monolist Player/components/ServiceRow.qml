@@ -12,10 +12,11 @@ import Monolist
 //
 // One that is built says where it stands, and its button is the one thing to
 // do next: connect, cancel, disconnect or reconnect. What the button does is
-// the page's business; the row only asks, through its signals. One built but
-// unable to work here (no key in this build) keeps its CONNECT, greyed, with
-// the status line saying why: the control is where it will be, and the reason
-// it is dead is written beside it.
+// the page's business; the row only asks, through its signals. An account
+// that needs reconnecting can also be let go of, with a second button beside
+// the first. One built but unable to work here (no key in this build) has no
+// dead CONNECT: the status line says why, and the button opens the steps, as
+// a row not built yet does.
 Item {
     id: root
 
@@ -49,20 +50,32 @@ Item {
     // than DISCONNECT); the state's usual word when empty. What it does
     // still follows the state.
     property string actionText: ""
+    // In the error state, what trying again means: "connect" when a sign-in
+    // failed, "disconnect" when a Disconnect could not finish. The button
+    // then says DISCONNECT and asks for that again, never for a sign-in.
+    property string errorAction: "connect"
+    // While the row needs attention, a second button to let the account go
+    // instead of reconnecting it ("DISCONNECT", "SIGN OUT"). It asks through
+    // disconnectRequested. None when empty.
+    property string forgetText: ""
     // Whatever else the open panel needs, after the steps: YouTube Music's
     // file and paste boxes. Children of the row go here.
     default property alias panelContent: extra.data
 
     readonly property bool connected: serviceState === "connected"
     readonly property bool needsAttention: serviceState === "expired" || serviceState === "error"
+    // Built, but not able to work here: the button shows the steps instead.
+    readonly property bool unavailable: built && serviceState === "unavailable"
+    readonly property bool retriesDisconnect: serviceState === "error" && errorAction === "disconnect"
 
     signal connectRequested()
     signal disconnectRequested()
     signal cancelRequested()
     signal confirmRequested()
 
-    // The steps, opened by hand from a row not built yet; a built one shows
-    // them on its own while it waits on the browser, as what is happening.
+    // The steps, opened by hand from a row not built yet, or not able to work
+    // here; a working one shows them on its own while it waits on the
+    // browser, as what is happening.
     property bool stepsOpen: false
 
     implicitHeight: body.implicitHeight
@@ -74,13 +87,13 @@ Item {
 
         Item {
             width: parent.width
-            height: Math.max(title.implicitHeight, open.visible ? open.implicitHeight : 0)
+            height: Math.max(title.implicitHeight, buttons.implicitHeight)
 
             Column {
                 id: title
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
-                width: parent.width - (open.visible ? open.width + Theme.space4 : 0)
+                width: parent.width - buttons.implicitWidth - Theme.space4
                 spacing: 2
 
                 Text {
@@ -149,29 +162,45 @@ Item {
                 }
             }
 
-            ActionButton {
-                id: open
+            // Negative spacing lets neighbouring buttons share one 2px rule.
+            Row {
+                id: buttons
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                // Built but unable to work here (no key in this build, say):
-                // CONNECT, greyed, and the status line says why.
-                enabled: !root.built || root.serviceState !== "unavailable"
-                text: root.built && root.actionText.length > 0 ? root.actionText
-                      : !root.built ? (root.stepsOpen ? "CLOSE" : "HOW IT WILL WORK")
-                      : root.serviceState === "connected" ? "DISCONNECT"
-                      : root.serviceState === "waiting" ? "CANCEL"
-                      : root.serviceState === "expired" ? "RECONNECT"
-                      : root.serviceState === "error" ? "TRY AGAIN"
-                      : "CONNECT"
-                onClicked: {
-                    if (!root.built)
-                        root.stepsOpen = !root.stepsOpen
-                    else if (root.serviceState === "connected")
-                        root.disconnectRequested()
-                    else if (root.serviceState === "waiting")
-                        root.cancelRequested()
-                    else
-                        root.connectRequested()
+                spacing: -Theme.ruleWidth
+
+                ActionButton {
+                    id: open
+                    // Not built, or built but unable to work here (no key in
+                    // this build, say): the steps, since there is nothing to
+                    // connect; the status line says why.
+                    text: !root.built || root.unavailable ? (root.stepsOpen ? "CLOSE" : "HOW IT WILL WORK")
+                          : root.actionText.length > 0 ? root.actionText
+                          : root.serviceState === "connected" ? "DISCONNECT"
+                          : root.serviceState === "waiting" ? "CANCEL"
+                          : root.serviceState === "expired" ? "RECONNECT"
+                          : root.retriesDisconnect ? "DISCONNECT"
+                          : root.serviceState === "error" ? "TRY AGAIN"
+                          : "CONNECT"
+                    onClicked: {
+                        if (!root.built || root.unavailable)
+                            root.stepsOpen = !root.stepsOpen
+                        else if (root.serviceState === "connected" || root.retriesDisconnect)
+                            root.disconnectRequested()
+                        else if (root.serviceState === "waiting")
+                            root.cancelRequested()
+                        else
+                            root.connectRequested()
+                    }
+                }
+
+                // Reconnecting is not the only way out of an account that
+                // stopped working: it can be let go of, here, too.
+                ActionButton {
+                    visible: root.built && root.needsAttention && root.forgetText.length > 0
+                             && !root.retriesDisconnect
+                    text: root.forgetText
+                    onClicked: root.disconnectRequested()
                 }
             }
         }
@@ -180,7 +209,7 @@ Item {
         // mock of the finished dialog would suggest the dialog exists.
         Column {
             id: panel
-            visible: root.built ? root.serviceState === "waiting" : root.stepsOpen
+            visible: root.built && !root.unavailable ? root.serviceState === "waiting" : root.stepsOpen
             width: parent.width
             spacing: Theme.space2
             leftPadding: Theme.space4
@@ -244,10 +273,11 @@ Item {
                 width: parent.width - Theme.space4
                 height: confirm.implicitHeight + Theme.space2 * 2
 
+                // An outline: signal red is Play's, and the player bar's Play
+                // is on every screen (DESIGN.md).
                 ActionButton {
                     id: confirm
                     y: Theme.space2
-                    primary: true
                     text: root.confirmText
                     onClicked: root.confirmRequested()
                 }

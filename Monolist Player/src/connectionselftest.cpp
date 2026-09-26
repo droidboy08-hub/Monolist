@@ -482,9 +482,17 @@ int runLastFmSelfTest()
         { "error 6, invalid parameters", 400,
           R"({"error":6,"message":"Invalid parameters - Your request is missing a required parameter"})",
           false, Outcome::Rejected, 6, 0, 0, {} },
-        { "error 8, operation failed", 500,
+        { "error 8, operation failed (Last.fm's trouble: waited out)", 500,
           R"({"error":8,"message":"Operation failed - Most likely the backend service failed. Please try again."})",
-          false, Outcome::Rejected, 8, 0, 0, {} },
+          false, Outcome::Retry, 8, 0, 0, {} },
+        { "error 8 with a 200", 200,
+          R"({"error":8,"message":"Operation failed - Most likely the backend service failed. Please try again."})",
+          false, Outcome::Retry, 8, 0, 0, {} },
+        { "error 6 with a 503 (a server failing is waited out, whatever it says)", 503,
+          R"({"error":6,"message":"Invalid parameters - Your request is missing a required parameter"})",
+          false, Outcome::Retry, 6, 0, 0, {} },
+        { "an unknown error with a 502", 502, R"({"error":99,"message":"Something new"})",
+          false, Outcome::Retry, 99, 0, 0, {} },
         { "error 9, invalid session key (with a 403)", 403,
           R"({"error":9,"message":"Invalid session key - Please re-authenticate"})",
           false, Outcome::Reauthenticate, 9, 0, 0, {} },
@@ -582,5 +590,42 @@ int runLastFmSelfTest()
 
     if (answerFailures == 0)
         t.note(QStringLiteral("every answer read as expected (%1 canned answers)").arg(int(std::size(answers))));
+
+    // — where calls go: a stand-in only for invented keys, only on this
+    // computer. Nothing is sent; only the address is asked for. —
+    {
+        const QByteArray saved = qgetenv("MONOLIST_LASTFM_URL");
+        const bool wasSet = qEnvironmentVariableIsSet("MONOLIST_LASTFM_URL");
+        const QUrl real(QStringLiteral("https://ws.audioscrobbler.com/2.0/"));
+        LastFmApi build;       // this build's own account, key or not
+        LastFmApi invented;
+        invented.setTestAccount(kKey.toLatin1(), kSecret);
+
+        qunsetenv("MONOLIST_LASTFM_URL");
+        t.check(build.endpoint() == real && invented.endpoint() == real,
+                QStringLiteral("endpoint: Last.fm itself when nothing is set"));
+        qputenv("MONOLIST_LASTFM_URL", "http://127.0.0.1:8765/2.0/");
+        t.check(build.endpoint() == real,
+                QStringLiteral("endpoint: the build's account ignores MONOLIST_LASTFM_URL, even on this computer"),
+                build.endpoint().toString());
+        t.check(invented.endpoint() == QUrl(QStringLiteral("http://127.0.0.1:8765/2.0/")),
+                QStringLiteral("endpoint: an invented account goes to a stand-in on 127.0.0.1"),
+                invented.endpoint().toString());
+        qputenv("MONOLIST_LASTFM_URL", "http://[::1]:8765/2.0/");
+        const bool ipv6 = invented.endpoint().host() == QLatin1String("::1");
+        qputenv("MONOLIST_LASTFM_URL", "http://localhost:8765/2.0/");
+        const bool localhost = invented.endpoint().host() == QLatin1String("localhost");
+        t.check(ipv6 && localhost, QStringLiteral("endpoint: [::1] and localhost count as this computer"));
+        qputenv("MONOLIST_LASTFM_URL", "http://192.168.1.20:8765/2.0/");
+        const bool lan = invented.endpoint() == real;
+        qputenv("MONOLIST_LASTFM_URL", "https://example.com/2.0/");
+        const bool remote = invented.endpoint() == real;
+        t.check(lan && remote, QStringLiteral("endpoint: another computer is never used, even for invented keys"));
+
+        if (wasSet)
+            qputenv("MONOLIST_LASTFM_URL", saved);
+        else
+            qunsetenv("MONOLIST_LASTFM_URL");
+    }
     return t.finish();
 }

@@ -29,6 +29,8 @@ ApplicationWindow {
     property int pendingRename: 0
     // Now Playing covers everything above the player bar.
     property bool nowPlayingOpen: false
+    // The part of Settings a link asked for, until Settings has scrolled to it.
+    property string settingsSection: ""
 
     Component.onCompleted: {
         if (initialQuery.length > 0)
@@ -248,7 +250,12 @@ ApplicationWindow {
                     SearchView {
                         anchors.fill: parent
                         term: topBar.searchText
-                        onSettingsRequested: window.navigate("settings")
+                        // Its link names the catalogue folder, so Settings
+                        // opens on the section that holds it.
+                        onSettingsRequested: {
+                            window.settingsSection = "recommendations"
+                            window.navigate("settings")
+                        }
                     }
                 }
 
@@ -304,7 +311,10 @@ ApplicationWindow {
                         anchors.fill: parent
                         active: settingsFade.shown || settingsFade.opened
                         sourceComponent: Component {
-                            SettingsView {}
+                            SettingsView {
+                                section: window.settingsSection
+                                onSectionRevealed: window.settingsSection = ""
+                            }
                         }
                     }
                 }

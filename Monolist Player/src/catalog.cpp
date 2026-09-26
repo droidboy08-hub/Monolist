@@ -20,7 +20,9 @@ QVariantMap Catalog::cardToMap(const InnerTube::Card &card)
         { QStringLiteral("videoId"), card.videoId },
         { QStringLiteral("title"), card.title },
         { QStringLiteral("subtitle"), card.subtitle },
-        { QStringLiteral("artwork"), card.artwork }
+        { QStringLiteral("artwork"), card.artwork },
+        { QStringLiteral("artist"), card.artist },
+        { QStringLiteral("primaryArtist"), card.primaryArtist }
     };
 }
 

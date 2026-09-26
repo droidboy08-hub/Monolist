@@ -156,6 +156,8 @@ public Q_SLOTS:
     void setVideoWanted(bool wanted);
 
     // Plays one track on its own; autoplay carries on from it.
+    // `primaryArtist` is the first credit alone, for Last.fm, where the
+    // caller knows it; `artist` may join several.
     void playSource(const QString &videoId,
                     const QString &title,
                     const QString &artist,
@@ -163,7 +165,8 @@ public Q_SLOTS:
                     qint64 durationMs = 0,
                     const QString &album = QString(),
                     bool isVideo = false,
-                    const QString &origin = QString());
+                    const QString &origin = QString(),
+                    const QString &primaryArtist = QString());
 
     // Every YouTube video has a thumbnail at a predictable URL, so a track with
     // a source id never has to show a blank plate even when no artwork field
@@ -216,7 +219,9 @@ private:
     // is left. What the recommender is built on.
     void startListening();   // history and the play event, once per track
     void openPlayEvent(const QVariantMap &track);
-    void closePlayEvent();
+    // `restarting`: closed because Previous restarted the song, whose replay
+    // is not a return to it (no repeat_in_session, no upgraded label).
+    void closePlayEvent(bool restarting = false);
     bool extendWithRadio();   // false when there is nothing to seed a radio from
     void refreshFavourite();
     void setStatus(const QString &text, const QString &source, bool resolving, bool error = false);

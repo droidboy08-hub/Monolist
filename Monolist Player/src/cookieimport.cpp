@@ -7,12 +7,16 @@
 #include <QJsonObject>
 #include <QRegularExpression>
 
+#include <cmath>
 #include <cstring>
 
 namespace {
 
 using Cookie = CookieImport::Cookie;
 using Result = CookieImport::Result;
+
+// 9999-12-31 23:59:59 UTC: the latest expiry a cookies.txt line may carry.
+constexpr double kLastExpiry = 253402300799.0;
 
 const QString kMusicHost = QStringLiteral("music.youtube.com");
 // Every call Monolist makes with the account is under this path, so a cookie
@@ -158,11 +162,14 @@ void readNetscape(const QByteArray &text, Collector &collector)
         const int subdomains = flag(fields.at(1));
         const int secure = flag(fields.at(3));
         bool numeric = false;
-        // Some exporters write the expiry with a fraction of a second.
+        // Some exporters write the expiry with a fraction of a second. It is
+        // turned into a whole number below, which for a value no qint64 can
+        // hold (1e300, inf, nan: this is a file from outside) is undefined,
+        // so anything past the end of the year 9999 is refused first.
         const double expires = fields.at(4).trimmed().toDouble(&numeric);
         const QByteArray name = fields.at(5).trimmed();
         if (domain.isEmpty() || domain.contains(' ') || subdomains < 0 || secure < 0 || !numeric
-            || expires < 0 || name.isEmpty()) {
+            || !std::isfinite(expires) || expires < 0 || expires > kLastExpiry || name.isEmpty()) {
             ++result.unreadable;
             continue;
         }

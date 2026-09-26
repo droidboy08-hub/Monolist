@@ -101,6 +101,9 @@ public:
     // importError saying why, when it is not a signed-in session.
     Q_INVOKABLE bool importFile(const QUrl &file);
     Q_INVOKABLE bool importText(const QString &text);
+    // Forgets why the last import was refused: the panel opens, or closes,
+    // clean.
+    Q_INVOKABLE void clearImportError();
     // Deletes Monolist's encrypted copy and forgets the account. The user's
     // exported file is theirs, and is only ever deleted when they say so.
     Q_INVOKABLE void signOut();

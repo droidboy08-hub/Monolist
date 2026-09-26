@@ -33,13 +33,15 @@ class PlaybackController;
 //
 //   accepted, or ignored 1-4       the row goes (1-4 will never be accepted)
 //   ignored 5, the daily limit     kept; nothing more is sent until tomorrow
-//   no answer, 5xx, 11, 16         kept; tried again after 30 s, doubling to 30 min
+//   no answer, 5xx, 8, 11, 16      kept; tried again after 30 s, doubling to 30 min
 //   29, too many requests          kept; a quarter of an hour's pause
 //   9, the session was revoked     kept; the key is deleted and the row says Reconnect
 //   10, 13, 26, the key refused    kept; paused, since dropping on these is how
 //                                  other scrobblers have lost whole queues
-//   6, 8 and the rest on a batch   each item sent again alone, once; only an
-//                                  item refused on its own is dropped
+//   6 and the rest on a batch      each item sent again alone, once; only an
+//                                  item refused alone with 6 (invalid
+//                                  parameters) is dropped, and any other
+//                                  refusal of one alone pauses, keeping it
 //
 // Recording goes on while the session has expired, so nothing heard is lost
 // before the user reconnects; each row carries the account it was heard
@@ -59,6 +61,9 @@ class Scrobbler : public QObject
     Q_PROPERTY(bool enabled READ enabled WRITE setEnabled NOTIFY changed)
     // Scrobbles waiting for this account.
     Q_PROPERTY(int pending READ pending NOTIFY changed)
+    // The error is a Disconnect that could not delete the stored key: trying
+    // again means disconnecting again, never starting a sign-in.
+    Q_PROPERTY(bool disconnectFailed READ disconnectFailed NOTIFY changed)
 
 public:
     enum class State { Unavailable, Off, Waiting, Connected, Expired, Error };
@@ -97,6 +102,7 @@ public:
     bool enabled() const { return m_enabled; }
     void setEnabled(bool enabled);
     int pending() const { return m_pending; }
+    bool disconnectFailed() const { return m_disconnectFailed; }
 
     Q_INVOKABLE void connectAccount();
     Q_INVOKABLE void cancelConnect();
@@ -176,6 +182,7 @@ private:
     int m_pending = 0;
     QString m_statusLine;
     QString m_error;           // what the row says in the error state
+    bool m_disconnectFailed = false;   // ...and whether a Disconnect caused it
     QString m_notice;          // what it says when off, after a disconnect
 
     // The sign-in under way.

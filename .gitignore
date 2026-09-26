@@ -86,11 +86,15 @@ desktop.ini
 .env
 .env.local
 .env.*.local
-# Exported browser cookies (YouTube Music sign-in), a SecretStore folder, the
-# iPhone app's keys, and the Last.fm key header should a build ever be
-# configured inside the source tree. Only apicredentials.h.in is committed.
-cookies*.txt
+# Exported browser cookies (YouTube Music sign-in; exporters name the file
+# cookies.txt or <host>_cookies.txt), a SecretStore folder, the iPhone app's
+# keys, and the Last.fm key header (and the .candidate it is written through)
+# should a build ever be configured inside the source tree. Only
+# apicredentials.h.in is committed.
+*cookies*.txt
 *.cookies
 secrets/
 Secrets.plist
 apicredentials.h
+apicredentials.h.*
+!apicredentials.h.in

@@ -94,6 +94,10 @@ public:
     // it is cleared, and the worker lets go of the files. True when there was
     // something to let go, and dataLoaded() will say when it has.
     bool release(const QString &folder);
+    // A load is asked of the worker and not yet done: until it is, the worker
+    // may still hold whatever it read before, whatever the settings say now.
+    // dataLoaded() says when it is done.
+    bool loadPending() const { return m_loadsPending > 0; }
     // Whether `path` is `folder` or somewhere under it.
     static bool isInside(const QString &path, const QString &folder);
 

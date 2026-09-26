@@ -63,6 +63,12 @@ QString scrobbles(int count)
     return count == 1 ? QStringLiteral("1 scrobble") : QStringLiteral("%1 scrobbles").arg(count);
 }
 
+// The errors that are about this build's key rather than anything sent.
+bool keyRefused(int error)
+{
+    return error == 10 || error == 13 || error == 26;
+}
+
 }
 
 Scrobbler::Scrobbler(LastFmApi *api, Library *library, QObject *parent)
@@ -224,6 +230,8 @@ void Scrobbler::setState(State state)
     m_state = state;
     if (state != State::Off)
         m_notice.clear();
+    if (state != State::Error)
+        m_disconnectFailed = false;
     updateStatus();
 }
 
@@ -319,8 +327,11 @@ void Scrobbler::updateStatus()
                 line += QStringLiteral(": today's Last.fm limit is reached; sending again tomorrow.");
                 break;
             case Pause::Hold:
-                line += QStringLiteral(": Last.fm refused this build's key (error %1). They are kept "
-                                       "until it is accepted again.").arg(m_holdError);
+                line += keyRefused(m_holdError)
+                            ? QStringLiteral(": Last.fm refused this build's key (error %1). They are kept "
+                                             "until it is accepted again.").arg(m_holdError)
+                            : QStringLiteral(": Last.fm refused them (error %1). They are kept, and sent "
+                                             "again in half an hour.").arg(m_holdError);
                 break;
             }
         }
@@ -474,6 +485,7 @@ void Scrobbler::failConnecting(const QString &message)
     stopWaiting();
     ++m_connectGeneration;
     m_error = message;
+    m_disconnectFailed = false;
     qWarning("scrobbler: sign-in did not complete: %s", qPrintable(message));
     setState(State::Error);
 }
@@ -505,6 +517,8 @@ void Scrobbler::disconnectAccount()
     const SecretStore::Status removed = SecretStore::remove(kSessionSecret, &error);
     if (removed != SecretStore::Status::Ok) {
         m_error = QStringLiteral("Monolist could not delete the stored sign-in: %1").arg(error.toHtmlEscaped());
+        m_disconnectFailed = true;
+        qWarning("scrobbler: could not delete the session key: %s", qPrintable(error));
         setState(State::Error);
         return;
     }
@@ -557,6 +571,11 @@ QString Scrobbler::scrobbleArtist(const QVariantMap &track)
     QString artist = track.value(QStringLiteral("primaryArtist")).toString().trimmed();
     if (artist.isEmpty())
         artist = track.value(QStringLiteral("artist")).toString().trimmed();
+    // A line of YouTube's joined with bullets ("Song • Artist", "Channel •
+    // 1.6B views") is not an artist, and sent as one it would make a new,
+    // wrong artist on the user's public profile. Better nothing at all.
+    if (artist.contains(QStringLiteral(" • ")))
+        return QString();
     artist.remove(topic);
     return artist.trimmed();
 }
@@ -601,7 +620,7 @@ void Scrobbler::enqueue(const QVariantMap &track, qint64 startedAt, bool chosenB
     const QString artist = scrobbleArtist(track);
     const QString title = track.value(QStringLiteral("title")).toString().trimmed();
     if (artist.isEmpty() || title.isEmpty()) {
-        qInfo("scrobbler: not scrobbled: the track has no %s", artist.isEmpty() ? "artist" : "title");
+        qInfo("scrobbler: not scrobbled: the track has no %s", artist.isEmpty() ? "artist to send" : "title");
         return;
     }
 
@@ -854,13 +873,25 @@ void Scrobbler::handleBatch(const QList<qint64> &ids, const LastFmApi::Reply &re
             m_singles = ids;
             qInfo("scrobbler: Last.fm refused a batch of %d (%s); sending them one at a time", count,
                   qPrintable(error));
-        } else {
+            more = true;
+        } else if (reply.error == 6) {
+            // Invalid parameters, for this item alone: it will never be
+            // taken, so it goes.
             removeRows(ids);
             for (qint64 id : ids)
                 m_singles.removeAll(id);
             qWarning("scrobbler: Last.fm refused a scrobble on its own (%s); it is dropped", qPrintable(error));
+            more = true;
+        } else {
+            // Any other refusal says nothing about the item, and the same
+            // answer to every item would empty the queue one by one. Kept,
+            // like everything behind it, and asked again later.
+            m_holdError = reply.error;
+            markAttempt(ids, error);
+            pauseFor(Pause::Hold, m_timing.holdMs);
+            qWarning("scrobbler: Last.fm refused a scrobble on its own (%s); all %d waiting are kept, "
+                     "trying again in %d min", qPrintable(error), m_pending, m_timing.holdMs / 60000);
         }
-        more = true;
         break;
     }
 

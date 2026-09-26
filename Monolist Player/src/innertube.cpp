@@ -309,6 +309,12 @@ InnerTube::Card parseCard(const QJsonValue &item)
         const QString kind = dig(watch, { "watchEndpointMusicSupportedConfigs",
                                           "watchEndpointMusicConfig", "musicVideoType" }).toString();
         card.type = kind == QLatin1String("MUSIC_VIDEO_TYPE_ATV") ? QStringLiteral("song") : QStringLiteral("video");
+        // What plays is credited to an artist, not to the whole line under
+        // the card, which also carries a type label or a view count.
+        InnerTube::Track credits;
+        parseSubtitle(dig(item, { "subtitle", "runs" }).toArray(), credits);
+        card.artist = credits.artist;
+        card.primaryArtist = credits.primaryArtist;
     } else {
         card.browseId = dig(endpoint, { "browseEndpoint", "browseId" }).toString();
         card.type = pageTypeOf(endpoint);
@@ -506,6 +512,12 @@ QNetworkReply *InnerTube::post(Client client, const QString &endpoint, QJsonObje
             // YtmSession keeps those itself.
             request.setAttribute(QNetworkRequest::CookieLoadControlAttribute, QNetworkRequest::Manual);
             request.setAttribute(QNetworkRequest::CookieSaveControlAttribute, QNetworkRequest::Manual);
+            // Never followed. A redirected request is a copy of this one,
+            // raw headers and all, so the cookies and the Authorization
+            // would go wherever the redirect points; and what that host set
+            // would be kept as music.youtube.com's. send() treats a redirect
+            // as no answer.
+            request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::ManualRedirectPolicy);
             request.setRawHeader("Cookie", cookie);
             if (!authorization.isEmpty())
                 request.setRawHeader("Authorization", authorization);
@@ -574,15 +586,21 @@ void InnerTube::send(Client client, const QString &endpoint, const QJsonObject &
                     // way the call is made again without the account, and a
                     // country that really is refused is then found out by an
                     // anonymous request, as it always was.
-                    if (status == 400 || status == 401 || status == 403) {
-                        if (status != 400 && g_account.rejected)
+                    // A redirect (not followed, see post()) is no verdict
+                    // either way: the check hears nothing, and anything else
+                    // is asked again without the account.
+                    const bool redirected = status >= 300 && status < 400;
+                    if (status == 400 || status == 401 || status == 403 || redirected) {
+                        if ((status == 401 || status == 403) && g_account.rejected)
                             g_account.rejected(account, status);
                         if (superseded())
                             return;
                         // YtmSession's check wants the verdict, not an
                         // anonymous answer standing in for it.
                         if (auth == Auth::Checking) {
-                            done({}, reply->errorString());
+                            done({}, redirected ? QStringLiteral("YouTube Music answered with a redirect (HTTP %1)")
+                                                      .arg(status)
+                                                : reply->errorString());
                             return;
                         }
                         send(client, endpoint, body, timeoutMs, slot, done, retries, Auth::Anonymous);

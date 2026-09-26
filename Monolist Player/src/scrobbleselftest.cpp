@@ -450,9 +450,52 @@ void checkPrimaryArtist(Checks &t)
             QStringLiteral("an album row takes the header's first credit"),
             QStringLiteral("artist \"%1\", primary \"%2\"").arg(first.artist, first.primaryArtist));
 
+    // Home's cards: the credit, not the line under the card.
+    {
+        const auto card = [](const QString &videoId, const QString &title, const char *videoType,
+                             const QJsonArray &subtitle) {
+            QJsonObject watch = obj("videoId", videoId);
+            watch.insert(QStringLiteral("watchEndpointMusicSupportedConfigs"),
+                         obj("watchEndpointMusicConfig", obj("musicVideoType", QString::fromLatin1(videoType))));
+            QJsonObject item = obj("title", runs({ run(title) }));
+            item.insert(QStringLiteral("subtitle"), runs(subtitle));
+            item.insert(QStringLiteral("navigationEndpoint"), obj("watchEndpoint", watch));
+            return obj("musicTwoRowItemRenderer", item);
+        };
+        const QJsonArray cards{
+            card(QStringLiteral("selftestC1"), QStringLiteral("Never Gonna Give You Up"), "MUSIC_VIDEO_TYPE_OMV",
+                 { run(QStringLiteral("Rick Astley"), "MUSIC_PAGE_TYPE_USER_CHANNEL"), bullet,
+                   run(QStringLiteral("1.6B views")) }),
+            card(QStringLiteral("selftestC2"), QStringLiteral("Die With A Smile"), "MUSIC_VIDEO_TYPE_ATV",
+                 { run(QStringLiteral("Song")), bullet, artistRun(QStringLiteral("Lady Gaga")),
+                   run(QStringLiteral(" & ")), artistRun(QStringLiteral("Bruno Mars")) }),
+        };
+        QJsonObject shelf = obj("header", obj("musicCarouselShelfBasicHeaderRenderer",
+                                              obj("title", runs({ run(QStringLiteral("Music videos for you")) }))));
+        shelf.insert(QStringLiteral("contents"), cards);
+        const QJsonObject tab = obj("tabRenderer", obj("content", obj("sectionListRenderer",
+            obj("contents", QJsonArray{ obj("musicCarouselShelfRenderer", shelf) }))));
+        const QList<InnerTube::Shelf> parsed = InnerTube::parseShelves(
+            obj("contents", obj("singleColumnBrowseResultsRenderer", obj("tabs", QJsonArray{ tab }))));
+        const QList<InnerTube::Card> found = parsed.isEmpty() ? QList<InnerTube::Card>() : parsed.first().cards;
+        const auto show = [&found](int i) {
+            return i < found.size() ? QStringLiteral("subtitle \"%1\", artist \"%2\", primary \"%3\"")
+                                          .arg(found.at(i).subtitle, found.at(i).artist, found.at(i).primaryArtist)
+                                    : QStringLiteral("no such card");
+        };
+        t.check(found.size() == 2 && found.at(0).artist == QLatin1String("Rick Astley")
+                    && found.at(0).primaryArtist == QLatin1String("Rick Astley"),
+                QStringLiteral("a video card: the channel, not \"Rick Astley * 1.6B views\""), show(0));
+        t.check(found.size() == 2 && found.at(1).artist == QLatin1String("Lady Gaga & Bruno Mars")
+                    && found.at(1).primaryArtist == QLatin1String("Lady Gaga"),
+                QStringLiteral("a song card: \"Song\" left out, the first credit primary"), show(1));
+    }
+
     // What Last.fm is sent.
     struct Case { QVariantMap track; const char *expected; };
     const Case cases[] = {
+        { { { QStringLiteral("artist"), QStringLiteral("Rick Astley • 1.6B views") } }, "" },
+        { { { QStringLiteral("artist"), QStringLiteral("Song • Some Band") } }, "" },
         { { { QStringLiteral("artist"), QStringLiteral("Daft Punk - Topic") } }, "Daft Punk" },
         { { { QStringLiteral("artist"), QStringLiteral("Bruno Mars, Lady Gaga") },
             { QStringLiteral("primaryArtist"), QStringLiteral("Bruno Mars") } }, "Bruno Mars" },
@@ -468,7 +511,8 @@ void checkPrimaryArtist(Checks &t)
             t.note(QStringLiteral("  scrobbleArtist gave \"%1\", expected \"%2\"").arg(got, QString::fromUtf8(c.expected)));
         }
     }
-    t.check(wrong == 0, QStringLiteral("the artist sent: the primary credit, \" - Topic\" stripped (%1 cases)")
+    t.check(wrong == 0, QStringLiteral("the artist sent: the primary credit, \" - Topic\" stripped, "
+                                       "never a line joined with bullets (%1 cases)")
                             .arg(int(std::size(cases))));
 }
 
@@ -787,6 +831,54 @@ int runListenSelfTest()
         fake.play(90000);
         t.check(count("started", title) == 2 && count("qualified", title) == 2,
                 QStringLiteral("played past half, restarted with Previous, played past half again: two"), tally(title));
+    }
+    {
+        // A song that came with no length (a Home card): the engine says
+        // 3:30 once, when the file opens, and never again after a seek.
+        const QString title = QStringLiteral("Restarted, no listed length");
+        start({ song(title, 0) });
+        fake.duration(210000);
+        fake.play(20000);
+        player.previous();
+        fake.newFile(0);
+        fake.play(104750);
+        const bool notYet = count("qualified", title) == 0;
+        fake.play(250);
+        t.check(notYet && count("started", title) == 2 && count("qualified", title) == 1
+                    && lastOf("qualified", title).track.value(QStringLiteral("durationMs")).toLongLong() == 210000,
+                QStringLiteral("no listed length, 20 s, Previous, then half of the 3:30 mpv reported: counts"),
+                tally(title));
+    }
+    {
+        // For the recommender: a restart is not a return to the song, so the
+        // replay skipped a little way in stays the lukewarm listen it was.
+        const QString title = QStringLiteral("Restarted then skipped");
+        start({ song(title, 180000) });
+        fake.duration(180000);
+        fake.play(5000);
+        player.previous();
+        fake.newFile(0);
+        fake.play(20000);
+        start({ song(QStringLiteral("After the restart"), 60000) });
+        fake.duration(60000);
+        QSqlQuery q(AppDatabase::connection());
+        q.prepare(QStringLiteral("SELECT listened_ms, label, repeat_in_session FROM play_events"
+                                 " WHERE title = ? ORDER BY id"));
+        q.addBindValue(title);
+        QStringList rows;
+        QList<double> labels;
+        QList<int> repeats;
+        if (q.exec()) {
+            while (q.next()) {
+                labels << q.value(1).toDouble();
+                repeats << q.value(2).toInt();
+                rows << QStringLiteral("%1 ms, label %2, repeat %3").arg(q.value(0).toLongLong())
+                            .arg(q.value(1).toDouble()).arg(q.value(2).toInt());
+            }
+        }
+        t.check(labels == QList<double>({ 0.0, 0.2 }) && repeats == QList<int>({ 0, 0 }),
+                QStringLiteral("restarted at 0:05, skipped 20 s into the replay: 0.0 then 0.2, neither a repeat"),
+                rows.join(QStringLiteral("; ")));
     }
 
     // 12 — what autoplay added was not chosen.
@@ -1125,6 +1217,47 @@ int runScrobbleSelfTest(Library *library)
                 QStringLiteral("requests %1, %2 left").arg(shape.join(QLatin1Char('/'))).arg(queued(kUser)));
     }
 
+    // — 8, "operation failed", with a 500: Last.fm's own trouble. Nothing is
+    // split and nothing dropped; it is waited out —
+    {
+        clearQueue();
+        seed(kUser, 120);
+        server.requests.clear();
+        server.answer = [](const Params &) { return qMakePair(500, errorAnswer(8)); };
+        auto s = connectedScrobbler(api, library, Scrobbler::Timing());
+        s->flush();
+        waitUntil([&]() { return s->pause() != Scrobbler::Pause::None; }, 3000);
+        settle(200);
+        t.check(queued(kUser) == 120 && server.count(QStringLiteral("track.scrobble")) == 1
+                    && s->pause() == Scrobbler::Pause::Backoff,
+                QStringLiteral("error 8 (HTTP 500) on a batch of 50: all 120 kept, one request, backing off"),
+                QStringLiteral("%1 queued, %2 requests, pause %3").arg(queued(kUser))
+                    .arg(server.count(QStringLiteral("track.scrobble"))).arg(Scrobbler::pauseName(s->pause())));
+    }
+
+    // — a refusal that says nothing about the item (4, authentication
+    // failed): the batch is split, but the one refused alone is kept, and
+    // sending held, so the same answer to every item cannot empty the queue —
+    {
+        clearQueue();
+        seed(kUser, 3);
+        server.requests.clear();
+        server.answer = [](const Params &) { return qMakePair(403, errorAnswer(4)); };
+        auto s = connectedScrobbler(api, library, Scrobbler::Timing());
+        s->flush();
+        waitUntil([&]() { return s->pause() != Scrobbler::Pause::None; }, 3000);
+        settle(200);
+        QStringList shape;
+        for (const Params &request : server.of(QStringLiteral("track.scrobble")))
+            shape << QString::number(itemCount(request));
+        t.check(queued(kUser) == 3 && shape.join(QLatin1Char('/')) == QLatin1String("3/1")
+                    && s->pause() == Scrobbler::Pause::Hold && s->statusLine().contains(QLatin1String("error 4"))
+                    && !s->statusLine().contains(QLatin1String("key")),
+                QStringLiteral("error 4 on a batch of 3, then on the first alone: all 3 kept, held, and the row says so"),
+                QStringLiteral("requests %1, %2 left, pause %3: %4").arg(shape.join(QLatin1Char('/'))).arg(queued(kUser))
+                    .arg(Scrobbler::pauseName(s->pause()), s->statusLine()));
+    }
+
     // — an answer that does not account for every item —
     {
         clearQueue();
@@ -1329,6 +1462,42 @@ int runLastFmConnectSelfTest(Library *library)
         t.check(again->state() == QLatin1String("off"), QStringLiteral("after another restart: off"));
     }
 
+    // — a Disconnect that cannot delete the key: the row's button tries the
+    // Disconnect again, never a new sign-in. Held open here, the key's file
+    // cannot be deleted, as when another program has it open. —
+    if (!SecretStore::folderPath().isEmpty()) {
+        Scrobbler::Timing timing;
+        timing.pollMs = 30;
+        approveAfter = 0;
+        sessionCalls = 0;
+        auto s = make(timing);
+        s->connectAccount();
+        waitUntil([&]() { return s->state() == QLatin1String("connected"); }, 3000);
+        const QString file = QDir(SecretStore::folderPath()).filePath(QStringLiteral("lastfm.session.dpapi"));
+        QFile hold(file);
+        const bool held = hold.open(QIODevice::ReadOnly);
+        const int tokensBefore = server.count(QStringLiteral("auth.getToken"));
+        s->disconnectAccount();
+        const QString during = s->state();
+        const bool flagged = s->disconnectFailed();
+        const bool kept = QFileInfo::exists(file) && !s->accountName().isEmpty();
+        hold.close();
+        if (held && during == QLatin1String("off")) {
+            t.note(QStringLiteral("the key's file could not be held open here; the failed Disconnect is not tried"));
+        } else {
+            t.check(held && during == QLatin1String("error") && flagged && kept,
+                    QStringLiteral("Disconnect with the key's file held open: error, the account kept, marked as a "
+                                   "Disconnect to try again"),
+                    QStringLiteral("state %1, flagged %2: %3").arg(during).arg(flagged).arg(s->statusLine()));
+            s->disconnectAccount();
+            t.check(s->state() == QLatin1String("off") && !s->disconnectFailed() && !QFileInfo::exists(file)
+                        && server.count(QStringLiteral("auth.getToken")) == tokensBefore,
+                    QStringLiteral("  tried again once it is let go: off, the key gone, and no sign-in started"),
+                    s->state());
+        }
+        s->disconnectAccount();
+    }
+
     // — the button —
     {
         Scrobbler::Timing timing;
@@ -1478,8 +1647,11 @@ int runScrobbleSendTest(Library *library, int rows, bool expectKept)
     if (!scratchDataDir(t))
         return t.finish();
     // Only ever a stand-in on this computer: these are invented keys, and
-    // Last.fm itself must never see them.
-    const QUrl target = LastFmApi::endpoint();
+    // Last.fm itself must never see them. The endpoint only follows
+    // MONOLIST_LASTFM_URL for an invented account, to a loopback address.
+    LastFmApi api;
+    api.setTestAccount(kKey, kSecret);
+    const QUrl target = api.endpoint();
     const QString host = target.host();
     if (qEnvironmentVariableIsEmpty("MONOLIST_LASTFM_URL")
         || !(host == QLatin1String("127.0.0.1") || host == QLatin1String("localhost") || host == QLatin1String("::1"))) {
@@ -1495,8 +1667,6 @@ int runScrobbleSendTest(Library *library, int rows, bool expectKept)
     t.note(QStringLiteral("%1 scrobbles queued for %2, oldest started %3").arg(rows).arg(kUser)
                .arg(QDateTime::fromSecsSinceEpoch(oldest, QTimeZone::UTC).toString(Qt::ISODate)));
 
-    LastFmApi api;
-    api.setTestAccount(kKey, kSecret);
     Scrobbler::Timing timing;
     timing.afterEnqueueMs = 3600 * 1000;
     auto s = connectedScrobbler(api, library, timing);

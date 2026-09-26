@@ -32,9 +32,13 @@ Flickable {
             pageRequested(card.browseId)
         else if (card.type === "artist")
             searchRequested(card.title)
+        // The credit read from the card, not its whole subtitle, which also
+        // holds a type label or a view count; the subtitle only when the card
+        // names no one, and then Last.fm is told nothing (Scrobbler).
         else if (card.videoId)
-            Player.playSource(card.videoId, card.title, card.subtitle, card.artwork, 0, "",
-                              card.type === "video", "home")
+            Player.playSource(card.videoId, card.title, card.artist ? card.artist : card.subtitle,
+                              card.artwork, 0, "", card.type === "video", "home",
+                              card.primaryArtist ? card.primaryArtist : "")
     }
 
     // The number, the title and the table, with the rule under it.

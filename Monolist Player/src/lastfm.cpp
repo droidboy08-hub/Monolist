@@ -5,6 +5,7 @@
 
 #include <QCoreApplication>
 #include <QCryptographicHash>
+#include <QHostAddress>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonParseError>
@@ -48,6 +49,7 @@ void LastFmApi::setTestAccount(const QByteArray &key, const QByteArray &secret)
 {
     m_key = key;
     m_secret = secret;
+    m_testAccount = true;
 }
 
 void LastFmApi::setTestResponder(Responder responder)
@@ -55,13 +57,24 @@ void LastFmApi::setTestResponder(Responder responder)
     m_responder = std::move(responder);
 }
 
-QUrl LastFmApi::endpoint()
+// The stand-in is honoured only for an invented account, and only on this
+// computer. The build's key and a real session key go to Last.fm and nowhere
+// else, whatever the environment says: a variable left set after a test, or
+// set by someone else, must never send them in plain HTTP to whoever holds a
+// port.
+QUrl LastFmApi::endpoint() const
 {
-    const QString custom = qEnvironmentVariable("MONOLIST_LASTFM_URL").trimmed();
-    if (!custom.isEmpty()) {
-        const QUrl url(custom);
-        if (url.isValid() && (url.scheme() == QLatin1String("http") || url.scheme() == QLatin1String("https")))
-            return url;
+    if (m_testAccount) {
+        const QString custom = qEnvironmentVariable("MONOLIST_LASTFM_URL").trimmed();
+        if (!custom.isEmpty()) {
+            const QUrl url(custom);
+            const QString host = url.host();
+            const bool local = host.compare(QLatin1String("localhost"), Qt::CaseInsensitive) == 0
+                               || QHostAddress(host).isLoopback();
+            if (url.isValid() && local
+                && (url.scheme() == QLatin1String("http") || url.scheme() == QLatin1String("https")))
+                return url;
+        }
     }
     return QUrl(kEndpoint);
 }
@@ -266,8 +279,11 @@ LastFmApi::Outcome LastFmApi::outcomeForError(int error)
     case 13:
     case 26:
         return Outcome::Hold;
+    case 8:
     case 11:
     case 16:
+        // 8 is "operation failed, most likely the backend service failed,
+        // please try again": Last.fm's own trouble, not the request's.
         return Outcome::Retry;
     case 29:
         return Outcome::RateLimited;
@@ -276,8 +292,8 @@ LastFmApi::Outcome LastFmApi::outcomeForError(int error)
     case 15:
         return Outcome::RestartSignIn;
     default:
-        // 6 invalid parameters and 8 operation failed among them. Sent
-        // again whole it would fail again whole, so a batch is split.
+        // 6 invalid parameters among them. Sent again whole it would fail
+        // again whole, so a batch is split.
         return Outcome::Rejected;
     }
 }
@@ -308,6 +324,11 @@ LastFmApi::Reply LastFmApi::parseReply(int httpStatus, const QByteArray &body, b
         reply.error = number(reply.body.value(QStringLiteral("error")));
         reply.message = reply.body.value(QStringLiteral("message")).toString();
         reply.outcome = outcomeForError(reply.error);
+        // A server that failed says so with its status, whatever number it
+        // put in the body: that is a reason to wait, never to find fault
+        // with what was sent.
+        if (reply.outcome == Outcome::Rejected && httpStatus >= 500)
+            reply.outcome = Outcome::Retry;
         return reply;
     }
     // Anything else that is not a plain success is treated as no answer: a

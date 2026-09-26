@@ -272,6 +272,14 @@ bool YtmSession::importText(const QString &text)
     return importResult(CookieImport::parse(text.toUtf8()), QStringLiteral("pasted text"));
 }
 
+void YtmSession::clearImportError()
+{
+    if (m_importError.isEmpty())
+        return;
+    m_importError.clear();
+    Q_EMIT changed();
+}
+
 bool YtmSession::importResult(const CookieImport::Result &result, const QString &source)
 {
     if (!result.ok()) {

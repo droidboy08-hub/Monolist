@@ -17,6 +17,7 @@
 #include <QRegularExpression>
 #include <QSaveFile>
 #include <QSet>
+#include <QSqlQuery>
 #include <QStorageInfo>
 #include <QTimer>
 
@@ -95,6 +96,31 @@ int httpStatus(QNetworkReply *reply)
     return reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
 }
 
+// Set while a Remove waits for the recommender to let go, and cleared once
+// the files are gone. A quit in between would otherwise leave the files, and
+// the next launch would find them whole with no folder set, and adopt them.
+const QString kRemovePendingKey = QStringLiteral("rec.removePending");
+
+bool removePending()
+{
+    QSqlQuery query(AppDatabase::connection());
+    query.prepare(QStringLiteral("SELECT value FROM settings WHERE key = ?"));
+    query.addBindValue(kRemovePendingKey);
+    return query.exec() && query.next() && query.value(0).toString() == QLatin1String("1");
+}
+
+void setRemovePending(bool pending)
+{
+    QSqlQuery query(AppDatabase::connection());
+    if (pending) {
+        query.prepare(QStringLiteral("INSERT OR REPLACE INTO settings (key, value) VALUES (?, '1')"));
+    } else {
+        query.prepare(QStringLiteral("DELETE FROM settings WHERE key = ?"));
+    }
+    query.addBindValue(kRemovePendingKey);
+    query.exec();
+}
+
 } // namespace
 
 RecData::RecData(QObject *parent)
@@ -120,6 +146,16 @@ void RecData::setRecommender(Recommender *recommender)
         return;
     // Whether the download is the folder in use follows the settings.
     connect(recommender, &Recommender::stateChanged, this, &RecData::changed);
+    // A Remove the last run could not finish is finished now, before
+    // anything could adopt the files again.
+    if (removePending() && QFileInfo::exists(folderPath())) {
+        qInfo("Monolist: recommendation data: finishing a removal the last run could not complete");
+        m_removing = true;
+        setStatus(QStringLiteral("Removing…"));
+        removeWhenReleased();
+        return;
+    }
+    setRemovePending(false);
     if (m_installed && recommender->dataDirectory().isEmpty() && recommender->graphDirectory().isEmpty())
         use();
 }
@@ -207,6 +243,9 @@ void RecData::download()
     ++m_generation;
     m_busy = true;
     m_failed = false;
+    m_removeFailed = false;
+    // Wanted again after all: a removal left unfinished is called off.
+    setRemovePending(false);
     m_entries.clear();
     m_index = -1;
     m_completedBytes = 0;
@@ -641,14 +680,27 @@ void RecData::remove()
         return;
     m_removing = true;
     m_failed = false;
+    m_removeFailed = false;
+    setRemovePending(true);
     setStatus(QStringLiteral("Removing…"));
-    // The catalogue is memory-mapped and the charts are open SQLite files:
-    // Windows will not delete either while they are held. So the recommender
-    // is pointed away first, and the files go once its worker has let go.
-    if (m_recommender && m_recommender->release(folderPath())) {
-        connect(m_recommender, &Recommender::dataLoaded, this, &RecData::removeFiles,
-                Qt::SingleShotConnection);
-        return;
+    removeWhenReleased();
+}
+
+// The catalogue is memory-mapped and the charts are open SQLite files:
+// Windows will not delete either while they are held. So the recommender is
+// pointed away first, and the files go once its worker has let go: when no
+// setting points into the folder and no load is still queued behind a build,
+// since until that load runs the worker holds whatever it read before. Asked
+// again after each load, in case another pointed back in meanwhile.
+void RecData::removeWhenReleased()
+{
+    if (m_recommender) {
+        const bool released = m_recommender->release(folderPath());
+        if (released || m_recommender->loadPending()) {
+            connect(m_recommender, &Recommender::dataLoaded, this, &RecData::removeWhenReleased,
+                    Qt::SingleShotConnection);
+            return;
+        }
     }
     removeFiles();
 }
@@ -656,13 +708,39 @@ void RecData::remove()
 void RecData::removeFiles()
 {
     const QString folder = folderPath();
+    const QFileInfo manifest(QDir(folder).filePath(kManifestFile));
+    // The list of files goes last, and only once everything else has: what
+    // could not be deleted (held open by another program) then still reads
+    // as a download part-way, with Remove, rather than as nothing at all.
+    QStringList files;
+    QDirIterator found(folder, QDir::Files | QDir::Hidden | QDir::System, QDirIterator::Subdirectories);
+    while (found.hasNext())
+        files << found.next();
+    bool removed = true;
+    for (const QString &path : std::as_const(files)) {
+        if (QFileInfo(path) == manifest)
+            continue;
+        QFile file(path);
+        if (!file.remove()) {
+            // A read-only file, as removeRecursively deals with it.
+            file.setPermissions(file.permissions() | QFileDevice::WriteOwner);
+            if (!file.remove())
+                removed = false;
+        }
+    }
     // Only the version folder this made, and its parent if that is now empty
     // (rmdir leaves a folder with anything else in it alone).
-    const bool removed = QDir(folder).removeRecursively();
+    if (removed)
+        removed = QDir(folder).removeRecursively();
     QDir().rmdir(QFileInfo(folder).absolutePath());
+    // Left set when some of it stayed, so the next launch finishes the job
+    // rather than finding the files and putting them back to use.
+    if (removed)
+        setRemovePending(false);
     m_removing = false;
     refreshDiskState();
     m_failed = !removed;
+    m_removeFailed = !removed;
     setStatus(removed ? QStringLiteral("Removed.")
                       : QStringLiteral("Some of it could not be removed; what is left is in %1.")
                             .arg(displayFolder()));
@@ -670,7 +748,8 @@ void RecData::removeFiles()
 
 void RecData::use()
 {
-    if (!m_installed || !m_recommender)
+    // Not while a Remove waits to delete it.
+    if (!m_installed || !m_recommender || m_removing)
         return;
     // The graph is left to the "beside the catalogue" rule: the two were
     // built as a pair, and GraphData sits next to EmbeddingData here.

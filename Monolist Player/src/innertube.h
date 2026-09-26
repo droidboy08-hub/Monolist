@@ -58,6 +58,12 @@ public:
         QString title;
         QString subtitle;   // "Album • Seth Ballad", "Nirvana, Radiohead, ..."
         QString artwork;
+        // Songs and videos: who is credited, read from the subtitle's own
+        // runs as a song row's are ("Rick Astley", not "Rick Astley • 1.6B
+        // views"), and the first of them alone, for Last.fm. Empty when the
+        // subtitle names no one.
+        QString artist;
+        QString primaryArtist;
     };
 
     // One row of a browse page: a run of songs (Quick picks) or of cards.
