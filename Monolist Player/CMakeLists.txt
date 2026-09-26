@@ -33,6 +33,8 @@ qt_add_executable(monolist
     src/main.cpp
     src/appdatabase.h              src/appdatabase.cpp
     src/library.h                  src/library.cpp
+    # What the song and queue menus change, and its test (--library-edit-test).
+    src/libraryeditselftest.h      src/libraryeditselftest.cpp
     src/playlistmodel.h            src/playlistmodel.cpp
     src/albummodel.h               src/albummodel.cpp
     src/trackmodel.h               src/trackmodel.cpp
@@ -165,6 +167,7 @@ endif()
 
 set_source_files_properties(Theme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 set_source_files_properties(Nav.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
+set_source_files_properties(Menus.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 
 qt_add_qml_module(monolist
     URI Monolist
@@ -177,6 +180,7 @@ qt_add_qml_module(monolist
         Main.qml
         Theme.qml
         Nav.qml
+        Menus.qml
         components/Icon.qml
         components/IconButton.qml
         components/LikeButton.qml
@@ -210,6 +214,9 @@ qt_add_qml_module(monolist
         components/MonoMenuItem.qml
         components/MonoMenuRule.qml
         components/PlaylistSubmenu.qml
+        components/ConfirmMenuItem.qml
+        components/CardMenu.qml
+        components/PlaylistMenu.qml
         components/MonoScrollBar.qml
         components/LyricsPane.qml
         components/ToggleRow.qml

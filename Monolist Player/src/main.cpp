@@ -29,6 +29,7 @@
 #include "downloadselftest.h"
 #include "innertube.h"
 #include "library.h"
+#include "libraryeditselftest.h"
 #include "lyrics.h"
 #include "mediaextractor.h"
 #include "mpvengine.h"
@@ -149,6 +150,11 @@ int main(int argc, char *argv[])
         // network, in MONOLIST_DATA_DIR only.
         if (arguments.contains(QStringLiteral("--artist-links-test")))
             return runArtistLinksSelfTest() == 0 ? 0 : 1;
+        // What the song and queue menus change — moves in the queue and in
+        // a playlist, Remove from library and from history, Copy link — on
+        // invented songs (libraryeditselftest.cpp); in MONOLIST_DATA_DIR only.
+        if (arguments.contains(QStringLiteral("--library-edit-test")))
+            return runLibraryEditSelfTest(&library) == 0 ? 0 : 1;
     }
 
     // Which page an artist's name opens: learnt from every answer that links
@@ -243,7 +249,7 @@ int main(int argc, char *argv[])
     catalog.reloadRecent();
     QObject::connect(&player, &PlaybackController::playRecorded, &catalog, &Catalog::reloadRecent);
     QObject::connect(&player, &PlaybackController::playRecorded, &library, &Library::reloadHistory);
-    QObject::connect(&library, &Library::historyCleared, &catalog, &Catalog::reloadRecent);
+    QObject::connect(&library, &Library::historyChanged, &catalog, &Catalog::reloadRecent);
     // Another country's music is a different feed.
     QObject::connect(&library, &Library::regionChanged, &catalog, &Catalog::refresh);
 

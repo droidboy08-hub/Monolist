@@ -92,6 +92,10 @@ var data = {
     "dots":            [{ d: "M6 12 A1 1 0 1 1 4 12 A1 1 0 1 1 6 12" },
                         { d: "M13 12 A1 1 0 1 1 11 12 A1 1 0 1 1 13 12" },
                         { d: "M20 12 A1 1 0 1 1 18 12 A1 1 0 1 1 20 12" }],
+    // Lucide's grip-vertical: what a row is held by to drag it. Two columns
+    // of three dots, each column one path.
+    "grip":            [{ d: "M10 5 A1 1 0 1 1 8 5 A1 1 0 1 1 10 5 M10 12 A1 1 0 1 1 8 12 A1 1 0 1 1 10 12 M10 19 A1 1 0 1 1 8 19 A1 1 0 1 1 10 19" },
+                        { d: "M16 5 A1 1 0 1 1 14 5 A1 1 0 1 1 16 5 M16 12 A1 1 0 1 1 14 12 A1 1 0 1 1 16 12 M16 19 A1 1 0 1 1 14 19 A1 1 0 1 1 16 19" }],
     // An artist's radio: a point and the waves around it.
     "radio":           [{ d: "M4.9 19.1 C1 15.2 1 8.8 4.9 4.9" },
                         { d: "M7.8 16.2 c-2.3 -2.3 -2.3 -6.1 0 -8.5" },

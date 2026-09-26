@@ -32,8 +32,8 @@ class Library : public QObject
     // The playlist open now: { playlistId, name, trackCount, durationText, artworks }.
     Q_PROPERTY(QVariantMap playlist READ playlist NOTIFY playlistChanged)
     Q_PROPERTY(SearchResultModel *playlistTracks READ playlistTracks CONSTANT)
-    // Moves whenever a like or a save changes, so bindings that call isLiked()
-    // or isSaved() know to ask again.
+    // Moves whenever a like, a save or a playlist's songs change, so bindings
+    // that call isLiked(), isSaved() or isInLibrary() know to ask again.
     Q_PROPERTY(int revision READ revision NOTIFY revisionChanged)
     Q_PROPERTY(QString userName READ userName NOTIFY userChanged)
     Q_PROPERTY(QString userInitials READ userInitials NOTIFY userChanged)
@@ -76,14 +76,28 @@ public:
     Q_INVOKABLE bool addToPlaylist(int playlistId, const QVariantMap &track);
     Q_INVOKABLE int addAllToPlaylist(int playlistId, const QVariantList &tracks);
     Q_INVOKABLE void removeFromPlaylist(int playlistId, int entryId);
+    // One song of a playlist to `toIndex` in its order (0 first), dragged or
+    // moved from its menu; kept in playlist_tracks.position.
+    Q_INVOKABLE void movePlaylistEntry(int playlistId, int entryId, int toIndex);
     Q_INVOKABLE void openPlaylist(int playlistId);
     Q_INVOKABLE QString playlistName(int playlistId) const;
     Q_INVOKABLE QVariantList playlistTrackList() const;
     Q_INVOKABLE QVariantList likedTrackList() const;
+    // Any playlist's songs in order, open or not: what its menu plays.
+    Q_INVOKABLE QVariantList playlistTracksFor(int playlistId) const;
 
     // — likes —
     Q_INVOKABLE bool isLiked(const QString &videoId) const;
     Q_INVOKABLE void setLiked(const QVariantMap &track, bool liked);
+
+    // — the song as the user keeps it —
+    // Liked, or in any of the user's playlists. A download alone is not: it
+    // has its own Remove download.
+    Q_INVOKABLE bool isInLibrary(const QString &videoId) const;
+    // Unliked and taken out of every playlist, as the iPhone app does.
+    Q_INVOKABLE void removeFromLibrary(const QVariantMap &track);
+    // A song's link, on the clipboard.
+    Q_INVOKABLE void copyLink(const QString &url);
 
     // — albums and playlists saved from YouTube Music —
     Q_INVOKABLE bool isSaved(const QString &browseId) const;
@@ -93,6 +107,8 @@ public:
     // — history —
     Q_INVOKABLE void reloadHistory();
     Q_INVOKABLE void clearHistory();
+    // One song out of History and Recently played, every play of it.
+    Q_INVOKABLE void removeFromHistory(const QString &videoId);
 
     // An empty name goes back to the one the system knows the user by.
     Q_INVOKABLE void setUserName(const QString &name);
@@ -116,7 +132,8 @@ Q_SIGNALS:
     void likesChanged();
     void revisionChanged();
     void playlistChanged();
-    void historyCleared();
+    // History cleared, or a song taken out of it.
+    void historyChanged();
     void userChanged();
     void regionChanged();
     void videoQualityChanged();
@@ -125,6 +142,10 @@ private:
     void reloadLiked();
     void reloadSaved();
     void reloadOpenPlaylist();
+    // After any change to which songs the playlists hold.
+    void reloadPlaylistSongs();
+    // setLiked without the toast, for removeFromLibrary to say its own.
+    bool storeLike(const QVariantMap &track, bool liked);
     void touch();
     static QString systemUserName();
     static QString trackVideoId(const QVariantMap &track);
@@ -140,5 +161,6 @@ private:
     int m_openPlaylistId = 0;
     QSet<QString> m_likedIds;
     QSet<QString> m_savedIds;
+    QSet<QString> m_playlistSongIds;   // every video id in any playlist
     int m_revision = 0;
 };

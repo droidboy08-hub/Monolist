@@ -168,6 +168,7 @@ whichever contrasts better.
       main.cpp               wiring; registers the QML singletons; self-tests
       appdatabase.*          SQLite schema, migrations
       library.*              the user's playlists, likes, saved albums, history
+      libraryeditselftest.*  --library-edit-test
       playlistmodel.*  albummodel.*  trackmodel.*
 
       playbackcontroller.*   the facade QML binds to — driven by mpv
@@ -196,7 +197,26 @@ whichever contrasts better.
 
 `Library`, `Player`, `Extractor`, `Downloads`, `Catalog`, `Artists`, `Lyrics`,
 `CoverPalette` and `Chrome`. The image provider registers as
-`image://artwork/<url>`.
+`image://artwork/<url>`. In QML, `Nav` carries a link's request to the window,
+and `Menus` a right click's or a "more" button's: the window keeps one
+`TrackMenu`, `CardMenu` and `PlaylistMenu` and opens it with what was clicked.
+
+### Menus and order
+
+A song has the same menu everywhere it is shown — track tables, the queue,
+suggestion rows, Downloads, the player bar, song cards — from its dots or a
+right click: play next, queue, like, add to a playlist, remove it from this
+playlist, from History or from the library (every playlist and the like, on a
+second click), go to its artists and album, copy its link or open it on
+YouTube, and its download. Albums, playlists and artists on cards have Play,
+Open, Save or Remove from library and their link; the user's playlists (on
+their page, their card and in the sidebar) have Play, Shuffle, Add all to
+queue or to another playlist, Rename and Delete. A suggestion is only a name
+until it is looked up, so its menu searches for the song first, as pressing it
+does. Songs in a playlist and what is still to come in the queue can be
+reordered: dragged by the grip that takes the row's number (or margin) under
+the pointer, with Alt+Up and Alt+Down once the grip has been pressed, or with
+Move up and Move down in the row's menu.
 
 ### Artist links
 
@@ -360,6 +380,12 @@ mpv's own messages.
                                                     answers, names split and kept across a restart, the
                                                     artist page's and artist search's parsers (needs
                                                     MONOLIST_DATA_DIR; its invented rows are removed)
+    monolist --library-edit-test                    what the song and queue menus change, with no network:
+                                                    moves in the queue (the current song, the radio heading
+                                                    and the order shuffle off restores kept true) and in a
+                                                    playlist (read back from the database), Remove from
+                                                    library, Remove from history, Copy link (the clipboard
+                                                    put back after); needs MONOLIST_DATA_DIR
     monolist --lyrics "<query>"                     lyrics for the first three results, then one from the store
     monolist --library-test "<query>" [--videos]    a playlist, likes and a saved album from a real search;
                                                     --videos searches music videos, and says how many rows
@@ -414,10 +440,10 @@ be, for a look at a state:
                                                     invidious_instances)
 
 `MONOLIST_DATA_DIR` keeps the database somewhere else, so a test never touches
-the real library; the scrobbling tests, `--ytm-session-test` and
-`--download-cleanup-test` refuse to run without it, since they empty the
-scrobble queue, replace the stored session or open the downloads on that
-database. It moves downloads too, to `downloads` inside it, so a test never
+the real library; the scrobbling tests, `--ytm-session-test`,
+`--download-cleanup-test` and `--library-edit-test` refuse to run without it,
+since they empty the scrobble queue, replace the stored session, open the
+downloads on that database or write playlists and likes into it. It moves downloads too, to `downloads` inside it, so a test never
 writes to the real Music folder. `MONOLIST_DOWNLOAD_DIR` names the download
 folder outright, and wins when both are set. A test downloads only into one of
 those two, which is why `--download` refuses to run without either.
@@ -454,7 +480,6 @@ links, playlists, likes and saved albums, and synced and plain lyrics.
 Known gaps:
 
 * The device button in the player bar is styled but unwired.
-* Songs in a playlist cannot yet be reordered.
 * macOS and Linux build from the same code but have not been run.
 
 ## About the Swift libraries

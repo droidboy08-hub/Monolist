@@ -95,6 +95,17 @@ void SearchResultModel::append(const QList<Item> &items)
     Q_EMIT countChanged();
 }
 
+bool SearchResultModel::move(int from, int to)
+{
+    const int count = int(m_items.size());
+    if (from < 0 || from >= count || to < 0 || to >= count || from == to)
+        return false;
+    beginMoveRows(QModelIndex(), from, from, QModelIndex(), to > from ? to + 1 : to);
+    m_items.move(from, to);
+    endMoveRows();
+    return true;
+}
+
 void SearchResultModel::clear()
 {
     replace({});
@@ -104,7 +115,11 @@ QVariantMap SearchResultModel::get(int row) const
 {
     if (row < 0 || row >= m_items.size())
         return {};
-    const Item &item = m_items.at(row);
+    return toMap(m_items.at(row));
+}
+
+QVariantMap SearchResultModel::toMap(const Item &item)
+{
     return {
         { QStringLiteral("sourceId"),     item.sourceId },
         { QStringLiteral("title"),        item.title },

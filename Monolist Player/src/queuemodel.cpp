@@ -221,6 +221,61 @@ void QueueModel::removeAt(int row)
     Q_EMIT upcomingChanged();
 }
 
+// A row dragged to a new place, or moved up or down from its menu. Three
+// things have to keep telling the truth afterwards. The song playing goes on
+// being the current one wherever that leaves it. A song autoplay added, put
+// up among the songs that were chosen, counts as chosen from then on: the
+// user picked its place, and the radio's heading stays over the radio's
+// songs. And while shuffled, the order that turning shuffle off brings back
+// learns the move, so the song comes back after the one it was put after
+// rather than jumping home.
+bool QueueModel::move(int from, int to)
+{
+    const int count = int(m_items.size());
+    if (from < 0 || from >= count || to < 0 || to >= count || from == to)
+        return false;
+
+    const int oldCurrent = m_current;
+    beginMoveRows(QModelIndex(), from, from, QModelIndex(), to > from ? to + 1 : to);
+    m_items.move(from, to);
+    if (from == m_current)
+        m_current = to;
+    else if (from < m_current && to >= m_current)
+        --m_current;
+    else if (from > m_current && to <= m_current)
+        ++m_current;
+    endMoveRows();
+
+    // Which rows are past, current and upcoming is positional, so every row
+    // the move passed over may read differently now.
+    Q_EMIT dataChanged(index(qMin(from, to), 0), index(qMax(from, to), 0), { IsCurrentRole, IsPastRole });
+
+    QueueTrack &moved = m_items[to];
+    const bool upcoming = to > m_current;
+    const bool afterChosen = to - 1 <= m_current || !m_items.at(to - 1).fromRadio;
+    if (upcoming && moved.fromRadio && afterChosen) {
+        moved.fromRadio = false;
+        Q_EMIT dataChanged(index(to, 0), index(to, 0), { FromRadioRole });
+    }
+
+    if (!m_originalOrder.isEmpty()) {
+        m_originalOrder.removeAll(moved.uid);
+        if (upcoming) {
+            qsizetype at = 0;
+            if (to - 1 > m_current) {
+                const qsizetype before = m_originalOrder.indexOf(m_items.at(to - 1).uid);
+                at = before < 0 ? m_originalOrder.size() : before + 1;
+            }
+            m_originalOrder.insert(at, moved.uid);
+        }
+    }
+
+    if (m_current != oldCurrent)
+        Q_EMIT currentIndexChanged();
+    Q_EMIT upcomingChanged();
+    return true;
+}
+
 void QueueModel::clearUpcoming()
 {
     const int first = m_current + 1;

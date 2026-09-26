@@ -14,6 +14,16 @@ Column {
     property bool showDownloads: false
     // The playlist this list is, so a row's menu can take it out; 0 otherwise.
     property int playlistId: 0
+    // The rows can be put in another order (one of the user's playlists): a
+    // grip takes the number's place under the pointer, and dragging it moves
+    // the song; so do Alt+Up and Alt+Down once the grip has been pressed, and
+    // Move up and Move down in the row's menu.
+    property bool reorderable: false
+    // The list is the history, so a row's menu can take a song out of it.
+    property bool history: false
+    // The page this list scrolls in: a drag held near its top or bottom edge
+    // scrolls it, so a song can be carried further than the window shows.
+    property Flickable flickable: null
     signal trackActivated(int index)
 
     // Column visibility follows the window: metadata drops before the title does.
@@ -28,6 +38,22 @@ Column {
     readonly property int albumColumnWidth: showAlbum ? Math.round(freeWidth * 0.30) : 0
     readonly property int artistColumnWidth: showArtist ? Math.round(freeWidth * 0.28) : 0
     readonly property int titleColumnWidth: freeWidth - albumColumnWidth - artistColumnWidth
+    readonly property int headHeight: 32
+    readonly property int rowHeight: 40
+
+    // — a drag under way —
+    // The row held (-1 when none), the gap between rows it would drop into
+    // (0 before the first, count after the last), how far it has been
+    // carried, and where it was picked up; the pointer in window coordinates,
+    // for scrolling while it is held still at an edge.
+    property int dragFrom: -1
+    property int dragGap: -1
+    property real dragOffset: 0
+    property real grabY: 0
+    property point dragPointer: Qt.point(0, 0)
+    // Where the row held would end up, as a row number.
+    readonly property int dropIndex: dragGap > dragFrom ? dragGap - 1 : dragGap
+    readonly property bool dropMoves: dragFrom >= 0 && dropIndex !== dragFrom
 
     function trackOf(row) {
         return {
@@ -47,22 +73,93 @@ Column {
         }
     }
 
-    function openMenu(row) {
-        trackMenu.track = trackOf(row)
-        trackMenu.playlistId = root.playlistId
-        trackMenu.entryId = row.entryId
-        trackMenu.popup()
+    // The window's one TrackMenu (Menus), told where the row is. `anchor`,
+    // for a menu asked for from the keyboard, opens it under the row rather
+    // than at the pointer.
+    function openMenu(row, anchor) {
+        Menus.openTrack(trackOf(row), {
+            playlistId: root.playlistId,
+            entryId: row.entryId,
+            index: root.reorderable ? row.index : -1,
+            count: root.reorderable ? rows.count : 0,
+            history: root.history,
+            anchor: anchor ? anchor : null
+        })
+    }
+
+    // One of the user's playlists: the song to row `to`, kept.
+    function moveRow(from, to) {
+        if (!reorderable || playlistId <= 0 || !model || from === to
+                || from < 0 || to < 0 || from >= rows.count || to >= rows.count)
+            return
+        Library.movePlaylistEntry(playlistId, model.get(from).entryId, to)
+    }
+
+    function beginDrag(index, sceneX, sceneY) {
+        grabY = mapFromItem(null, sceneX, sceneY).y
+        dragOffset = 0
+        dragFrom = index
+        dragGap = index
+        dragPointer = Qt.point(sceneX, sceneY)
+    }
+
+    // The gap is chosen by the pointer, not by the row's edges: past the
+    // middle of the next row, the song goes beyond it.
+    function updateDrag(sceneX, sceneY) {
+        if (dragFrom < 0)
+            return
+        dragPointer = Qt.point(sceneX, sceneY)
+        const y = mapFromItem(null, sceneX, sceneY).y
+        dragOffset = y - grabY
+        dragGap = Math.max(0, Math.min(rows.count, Math.round((y - headHeight) / rowHeight)))
+    }
+
+    function endDrag(drop) {
+        const from = dragFrom
+        const to = dropIndex
+        const moves = dropMoves
+        dragFrom = -1
+        dragGap = -1
+        dragOffset = 0
+        if (drop && moves)
+            moveRow(from, to)
+    }
+
+    // A drag held within this distance of the page's top or bottom edge
+    // scrolls it, faster the closer it is.
+    Timer {
+        interval: 16
+        repeat: true
+        running: root.dragFrom >= 0 && root.flickable !== null
+        onTriggered: {
+            const page = root.flickable
+            const at = page.mapFromItem(null, root.dragPointer.x, root.dragPointer.y).y
+            const edge = 56
+            let step = 0
+            if (at < edge)
+                step = -Math.ceil((edge - Math.max(0, at)) / edge * 14)
+            else if (at > page.height - edge)
+                step = Math.ceil((Math.min(page.height, at) - (page.height - edge)) / edge * 14)
+            if (step === 0)
+                return
+            const most = Math.max(0, page.contentHeight - page.height)
+            const target = Math.max(0, Math.min(most, page.contentY + step))
+            if (target === page.contentY)
+                return
+            page.contentY = target
+            root.updateDrag(root.dragPointer.x, root.dragPointer.y)
+        }
     }
 
     spacing: 0
 
-    // One menu for the whole list; each row fills it in before opening it.
-    TrackMenu { id: trackMenu }
-
     // — head —
     Item {
         width: root.width
-        height: 32
+        height: root.headHeight
+        // Over the rows, for the drop line below, which is drawn from here
+        // because a Column places every child of its own.
+        z: 3
 
         Text {
             x: 0
@@ -118,10 +215,21 @@ Column {
             height: Theme.ruleWidth
             color: Theme.divider
         }
+
+        // Where the song held would go: a red rule in the gap, which is the
+        // one thing on the page that says "here".
+        Rectangle {
+            visible: root.dropMoves
+            y: root.headHeight + root.dragGap * root.rowHeight - height / 2
+            width: parent.width
+            height: Theme.ruleWidth
+            color: Theme.accent
+        }
     }
 
     // — rows —
     Repeater {
+        id: rows
         model: root.model
 
         delegate: Item {
@@ -143,32 +251,111 @@ Column {
             required property string albumId
 
             width: root.width
-            height: 40
+            height: root.rowHeight
             readonly property bool isActive: sourceId.length > 0 ? sourceId === Player.currentSourceId
                                                                  : index === root.activeIndex
             readonly property bool liked: Library.revision >= 0 && Library.isLiked(sourceId)
+            readonly property bool held: root.dragFrom === index
+            // The grip shows under the pointer, and stays while the row has
+            // the keyboard, so Alt+Up and Alt+Down are seen to apply to it.
+            readonly property bool gripShown: root.reorderable && (rowHover.hovered || activeFocus || held)
+
+            // Carried with the pointer, over the rows it passes.
+            z: held ? 2 : 0
+            transform: Translate { y: row.held ? root.dragOffset : 0 }
+
+            // Moving a song from the keyboard: Alt+Up and Alt+Down, once the
+            // grip has been pressed (or the row moved) gives the row the
+            // keyboard. The menu key opens its menu under it; Esc lets go.
+            Keys.onPressed: function(event) {
+                if (root.reorderable && (event.modifiers & Qt.AltModifier)
+                        && (event.key === Qt.Key_Up || event.key === Qt.Key_Down)) {
+                    event.accepted = true
+                    root.moveRow(row.index, row.index + (event.key === Qt.Key_Up ? -1 : 1))
+                } else if (event.key === Qt.Key_Menu
+                           || (event.key === Qt.Key_F10 && (event.modifiers & Qt.ShiftModifier))) {
+                    event.accepted = true
+                    root.openMenu(row, row)
+                } else if (event.key === Qt.Key_Escape) {
+                    event.accepted = true
+                    row.focus = false
+                }
+            }
 
             // Hover appears at once — that is what makes a list feel quick —
             // and leaves over a moment, so dragging down the rows does not
-            // flicker at every boundary.
+            // flicker at every boundary. A row being carried is a plate of
+            // paper in an ink frame, over the rows it passes.
             Rectangle {
                 anchors.fill: parent
-                color: rowHover.hovered ? Theme.rowHover : "transparent"
+                color: row.held ? Theme.bg : rowHover.hovered ? Theme.rowHover : "transparent"
+                border.width: row.held ? Theme.ruleWidth : 0
+                border.color: Theme.text
 
                 Behavior on color {
-                    enabled: !rowHover.hovered
+                    enabled: !rowHover.hovered && !row.held
                     ColorAnimation { duration: Theme.quick }
                 }
+            }
+
+            // The row that has the keyboard: a 2px rule down its left edge,
+            // the width of every other focus mark in the app.
+            Rectangle {
+                visible: row.activeFocus && !row.held
+                width: Theme.ruleWidth
+                height: parent.height
+                color: Theme.accent
             }
 
             Text {
                 x: 0
                 width: root.indexWidth
+                visible: !row.gripShown
                 anchors.verticalCenter: parent.verticalCenter
                 text: row.isActive && Player.playing ? "▶" : String(row.index + 1)
                 font.family: Theme.fontFamily
                 font.pixelSize: 13
                 color: row.isActive ? Theme.accent700 : Theme.text
+            }
+
+            // The grip, in the number's place. Pressed, it holds the row;
+            // taken rather than stolen, so the page does not scroll instead.
+            Item {
+                visible: root.reorderable
+                width: root.indexWidth
+                height: parent.height
+
+                Icon {
+                    visible: row.gripShown
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 16
+                    height: 16
+                    name: "grip"
+                    color: grip.containsMouse || grip.pressed ? Theme.text : Theme.neutral700
+                }
+
+                MouseArea {
+                    id: grip
+                    // The glyph's own column, not the whole number cell, so a
+                    // press beside it still plays the song.
+                    width: 24
+                    height: parent.height
+                    enabled: root.reorderable
+                    hoverEnabled: true
+                    preventStealing: true
+                    cursorShape: pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
+                    onPressed: function(mouse) {
+                        row.forceActiveFocus()
+                        const at = mapToItem(null, mouse.x, mouse.y)
+                        root.beginDrag(row.index, at.x, at.y)
+                    }
+                    onPositionChanged: function(mouse) {
+                        const at = mapToItem(null, mouse.x, mouse.y)
+                        root.updateDrag(at.x, at.y)
+                    }
+                    onReleased: root.endDrag(true)
+                    onCanceled: root.endDrag(false)
+                }
             }
 
             Text {
@@ -263,7 +450,7 @@ Column {
                 iconName: "dots"
                 iconSize: 16
                 iconColor: Theme.neutral700
-                onClicked: root.openMenu(row)
+                onClicked: root.openMenu(row, null)
             }
 
             Rectangle {
@@ -277,7 +464,7 @@ Column {
             TapHandler { onTapped: root.trackActivated(row.index) }
             TapHandler {
                 acceptedButtons: Qt.RightButton
-                onTapped: root.openMenu(row)
+                onTapped: root.openMenu(row, null)
             }
         }
     }

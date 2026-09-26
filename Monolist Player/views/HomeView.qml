@@ -50,6 +50,9 @@ Flickable {
         property string title: ""
         property var model: null
         property string action: ""
+        // Recently played is the history's latest: its rows' menus can take
+        // a song out of it.
+        property bool history: false
         signal actionTriggered()
 
         x: Theme.space8
@@ -69,6 +72,7 @@ Flickable {
         TrackTable {
             width: parent.width
             model: parent.model
+            history: section.history
             showDownloads: true
             onTrackActivated: function(index) { Player.playModel(model, index, "home") }
         }
@@ -152,6 +156,7 @@ Flickable {
             number: root.pad(root.hasPicks ? 2 : 1)
             title: "Recently played"
             model: Catalog.recent
+            history: true
             action: "SHOW ALL"
             onActionTriggered: root.viewRequested("library:history")
         }

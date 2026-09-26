@@ -48,7 +48,7 @@ Priority runs from 1 (first) to 9. Size: S under an hour, M a few hours, L a day
   Done when: A small platform layer publishes title, artist, artwork and position, and handles play, pause, next, previous and seek. It uses the MediaPlayer framework through Objective-C++ on macOS and SMTC (or a WM_APPCOMMAND fallback) on Windows, with MPRIS later for Linux.
 - [ ] **P04** The queue, current song and position are not restored after a restart *(P5, M)*
   Done when: The last queue, current index and position are saved on quit and restored, paused, at launch.
-- [ ] **P05** No menu for the song that is playing, and no sleep timer *(P5, S)*
+- [ ] **P05** *(Partly done: the player bar has the song menu, from its dots or a right click on the song; Now Playing and the sleep timer are still to do.)* No menu for the song that is playing, and no sleep timer *(P5, S)*
   Done when: A more button on the player bar and in Now Playing opens TrackMenu for Player.currentTrack, plus a sleep timer (15, 30, 45 or 60 minutes, or end of song) shown as a countdown that pauses playback.
 - [ ] **P06** Buffering, streaming-versus-offline source and lyrics error reasons are never shown *(P5, S)*
   Done when: The player bar's status line shows buffering and a small source label such as 'Offline · local file' or 'Streaming · InnerTube'. The lyrics error says why it failed.
@@ -63,7 +63,7 @@ Priority runs from 1 (first) to 9. Size: S under an hour, M a few hours, L a day
   Done when: 'Not interested' appears on suggestion rows, in TrackMenu and in Now Playing. It records a notInterested event, removes the row, keeps the song out of shelves and autoplay radio, and can be undone from the toast.
 - [ ] **R02** Search is missing rails and scoring: weekend and 'back to' rails, Liked/playlist/genre rails, and skipped songs never count against *(P3, M)*
   Done when: Search shows 'Your weekend sound' and 'Back to a couple of months ago' when their minimum listening is met, plus 'More like your Liked songs', 'More like <playlist>' and genre shelves. Taste shelves rank with profile.score, so sounds the user skips sink.
-- [ ] **R03** Suggestion shelves are tap-to-play only: no Play all, row menu, loading state or See all *(P3, M)*
+- [ ] **R03** *(Partly done: rows have the song menu, from their dots or a right click, which looks the song up first.)* Suggestion shelves are tap-to-play only: no Play all, row menu, loading state or See all *(P3, M)*
   Done when: Each shelf header has Play all, which resolves the songs lazily in order, and See all, which loads more rows from the same source. Rows get TrackMenu on right-click and a spinner while resolving.
 - [ ] **R04** Suggestions never rotate, and they include songs the user already owns *(P3, M)*
   Done when: A refresh on the Search page brings up different rows, and the page rebuilds after about 45 minutes. Songs in the library, playlists and downloads are left out, and that set is part of the rebuild check.
@@ -121,11 +121,11 @@ Priority runs from 1 (first) to 9. Size: S under an hour, M a few hours, L a day
 
 ## Library & playlists
 
-- [ ] **L01** Playlist songs and the play queue can't be reordered *(P4, M)*
+- [x] **L01** Playlist songs and the play queue can't be reordered *(P4, M)*
   Done when: Drag handles, plus Alt+Up/Down, on playlist rows and upcoming queue rows. They are backed by Library.movePlaylistEntry and QueueModel::move, which keep the current index and shuffle order consistent.
-- [ ] **L02** Right-click and more menus exist only in track tables *(P4, M)*
+- [x] **L02** Right-click and more menus exist only in track tables *(P4, M)*
   Done when: Right-click and a more button open TrackMenu on download, queue and suggestion rows. Sidebar playlists get Play, Rename and Delete, saved cards get Remove from library, and Liked songs gets Add all to queue and Add all to playlist.
-- [ ] **L03** The song menu lacks Copy link, Open on YouTube, Remove from history and Remove from library *(P5, S)*
+- [x] **L03** The song menu lacks Copy link, Open on YouTube, Remove from history and Remove from library *(P5, S)*
   Done when: TrackMenu adds Copy link (music.youtube.com/watch?v=<id>), Open on YouTube, Remove from history (when shown in History) and Remove from library.
 - [ ] **L04** The library has no Songs or Artists view *(P5, M)*
   Done when: A SONGS tab lists every distinct liked, playlist and downloaded song with Shuffle all. An ARTISTS tab groups them, and an artist opens their songs, or the A01 artist page once it exists.
@@ -251,6 +251,8 @@ Seen by the agents that fixed B01–B13 and by their reviewers, and not yet fixe
   Done when: rows are made only near what is on screen (a ListView kept in step with the page's scroll, or rows that load their controls lazily), measured with --page <id> --all.
 - [ ] **F29** The library's cards (Liked songs, your playlists, saved albums and playlists) have no play plate, while YouTube Music's cards on Home, artist pages, search and "show all" now do *(P6, S)*
   Done when: every album and playlist card plays from its plate, your own playlists and Liked songs included.
+- [ ] **F30** Play next and Add to queue say nothing: with the queue closed there is no sign either worked, and from a suggestion's menu the song is first looked up, so nothing happens for a second and then still nothing is said *(P5, S)*
+  Done when: both answer in the toast ("Playing next: <title>", "Added to queue"), or the queue button shows that something was added.
 
 ## Connections
 

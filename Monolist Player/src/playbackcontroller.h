@@ -142,6 +142,9 @@ public Q_SLOTS:
     void playNext(const QVariantMap &track);
     void addToQueue(const QVariantMap &track);
     void removeFromQueue(int index);
+    // An upcoming song to another upcoming place, `to` being where it then
+    // stands: dragged in the queue, or moved from its menu.
+    void moveInQueue(int from, int to);
     void clearUpcoming();
 
     void setPosition(qint64 ms);

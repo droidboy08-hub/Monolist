@@ -179,6 +179,7 @@ Flickable {
                 title: modelData.title
                 reason: modelData.reason
                 rows: modelData.rows
+                shelfIndex: index
                 onRowActivated: function(row) { Recs.play(index, row) }
             }
         }

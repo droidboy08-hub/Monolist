@@ -608,6 +608,18 @@ void PlaybackController::removeFromQueue(int index)
     prefetchUpcoming();
 }
 
+// Only among what is still to come: what has played stays where it was, and
+// the song playing is not moved out from under itself. The next song may be
+// another one now, so it is the one fetched ahead.
+void PlaybackController::moveInQueue(int from, int to)
+{
+    const int first = m_queue.currentIndex() + 1;
+    if (from < first || to < first)
+        return;
+    if (m_queue.move(from, to))
+        prefetchUpcoming();
+}
+
 void PlaybackController::clearUpcoming()
 {
     m_innerTube.cancelRadio();

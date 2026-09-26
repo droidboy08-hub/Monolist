@@ -24,10 +24,14 @@ Rectangle {
     // The play plate, and three dots on it while the songs are fetched.
     property bool playable: false
     property bool playLoading: false
+    // A menu, from three dots in the footer under the pointer or a right
+    // click anywhere on the card: what the owner opens (Menus).
+    property bool hasMenu: false
     // The card itself pressed: open it (or, for a song, play it).
     signal playRequested()
     // The play plate pressed.
     signal playClicked()
+    signal menuRequested()
 
     color: hover.hovered ? Theme.surface : Theme.bg
     border.width: Theme.ruleWidth
@@ -116,7 +120,7 @@ Rectangle {
 
         Text {
             anchors.left: parent.left
-            anchors.right: playMark.left
+            anchors.right: moreButton.visible ? moreButton.left : playMark.left
             anchors.rightMargin: Theme.space2
             anchors.bottom: parent.bottom
             text: root.footer.length > 0 ? root.footer
@@ -126,6 +130,22 @@ Rectangle {
             font.pixelSize: 11
             font.letterSpacing: Theme.tracking(11, 0.1)
             color: Theme.neutral600
+        }
+
+        // On paper, so a bare glyph (DESIGN 2.6a), beside the mark that says
+        // what a click on the card does. A button, so its press is not also
+        // taken for one on the card.
+        IconButton {
+            id: moreButton
+            visible: root.hasMenu && hover.hovered
+            anchors.right: playMark.left
+            anchors.rightMargin: Theme.space1
+            anchors.verticalCenter: playMark.verticalCenter
+            side: 24
+            iconName: "dots"
+            iconSize: 14
+            iconColor: Theme.neutral700
+            onClicked: root.menuRequested()
         }
 
         Icon {
@@ -148,5 +168,10 @@ Rectangle {
             if (!playPlate.visible || !playPlate.hovered)
                 root.playRequested()
         }
+    }
+    TapHandler {
+        enabled: root.hasMenu
+        acceptedButtons: Qt.RightButton
+        onTapped: root.menuRequested()
     }
 }

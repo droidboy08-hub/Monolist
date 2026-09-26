@@ -25,8 +25,12 @@ ApplicationWindow {
     property string initialQuery: ""
     // The queue docks at the right, like a second sidebar.
     property bool queueOpen: false
-    // A playlist just made, whose page opens with its name ready to type.
+    // A playlist just made, whose page opens with its name ready to type; or
+    // one whose Rename was chosen from its menu away from its page.
     property int pendingRename: 0
+    // A playlist whose Delete was chosen from its menu, whose page opens
+    // asking to confirm it.
+    property int pendingDelete: 0
     // Now Playing covers everything above the player bar.
     property bool nowPlayingOpen: false
     // The part of Settings a link asked for, until Settings has scrolled to it.
@@ -154,6 +158,20 @@ ApplicationWindow {
             return
         pendingRename = created
         navigate("playlist:" + created)
+    }
+
+    // Rename and Delete from a playlist's menu in the sidebar or on its card:
+    // both are done on its page, so they go there first. Now Playing covers
+    // the page, so it closes.
+    function renamePlaylist(playlistId) {
+        nowPlayingOpen = false
+        pendingRename = playlistId
+        navigate("playlist:" + playlistId)
+    }
+    function deletePlaylist(playlistId) {
+        nowPlayingOpen = false
+        pendingDelete = playlistId
+        navigate("playlist:" + playlistId)
     }
 
     readonly property string libraryTab: currentView.indexOf("library:") === 0 ? currentView.substring(8) : "playlists"
@@ -393,6 +411,8 @@ ApplicationWindow {
                         key: playlistFade.shown ? window.currentView.substring(9) : ""
                         renameOnOpen: window.pendingRename > 0 && key === String(window.pendingRename)
                         onRenameStarted: window.pendingRename = 0
+                        confirmDeleteOnOpen: window.pendingDelete > 0 && key === String(window.pendingDelete)
+                        onDeleteAsked: window.pendingDelete = 0
                         onDeleted: window.goBack()
                     }
                 }
@@ -589,6 +609,24 @@ ApplicationWindow {
         function onNotice(text) { toast.show(text) }
     }
 
+    // — menus —
+    // One of each for the whole window, opened through Menus from wherever a
+    // song, a card or a playlist was right-clicked or its dots pressed.
+    TrackMenu { id: trackMenu }
+    CardMenu { id: cardMenu }
+    PlaylistMenu {
+        id: playlistMenu
+        onRenameRequested: function(playlistId) { window.renamePlaylist(playlistId) }
+        onDeleteRequested: function(playlistId) { window.deletePlaylist(playlistId) }
+    }
+
+    Connections {
+        target: Menus
+        function onTrackRequested(track, context) { trackMenu.show(track, context) }
+        function onCardRequested(card, origin) { cardMenu.show(card, origin) }
+        function onPlaylistRequested(key) { playlistMenu.show(key, null) }
+    }
+
     // — links —
     // An artist's name or an album's title, clicked in any list, bar or page.
     Connections {
@@ -625,6 +663,13 @@ ApplicationWindow {
     Connections {
         target: Recs
         function onNotice(text) { toast.show(text) }
+        // A suggestion's menu entry, once the name has been found as a song:
+        // "<action>|<argument>", as TrackMenu asked (RecShelf).
+        function onResolved(purpose, track) {
+            const bar = purpose.indexOf("|")
+            trackMenu.run(bar < 0 ? purpose : purpose.substring(0, bar),
+                          bar < 0 ? "" : purpose.substring(bar + 1), track)
+        }
     }
 
     // The YouTube Music sign-in's answers: a file deleted or kept.

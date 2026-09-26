@@ -16,6 +16,80 @@ Rectangle {
 
     color: Theme.bg
 
+    // — a drag under way —
+    // What is still to come can be put in another order: a grip at the row's
+    // left edge under the pointer, dragged; or Alt+Up and Alt+Down once the
+    // grip has been pressed; or Move up and Move down in the row's menu.
+    // The row held (-1 when none), the gap it would drop into (a row number:
+    // before that row, or the count for after the last), where the red rule
+    // for that gap goes in the list's content, how far the row has been
+    // carried, where it was picked up, and the pointer in the window.
+    property int dragFrom: -1
+    property int dragGap: -1
+    property real dropLineY: 0
+    property real dragOffset: 0
+    property real grabY: 0
+    property point dragPointer: Qt.point(0, 0)
+    readonly property int firstUpcoming: Player.queue.currentIndex + 1
+    readonly property int dropIndex: dragGap > dragFrom ? dragGap - 1 : dragGap
+    readonly property bool dropMoves: dragFrom >= 0 && dropIndex !== dragFrom
+    readonly property int rowHeight: 56
+
+    function openMenu(index, anchor) {
+        Menus.openTrack(Player.queue.get(index), { queueIndex: index, anchor: anchor ? anchor : null })
+    }
+
+    function moveEntry(from, to) {
+        if (from >= root.firstUpcoming && to >= root.firstUpcoming && to < Player.queue.count)
+            Player.moveInQueue(from, to)
+    }
+
+    function beginDrag(index, sceneX, sceneY) {
+        grabY = list.contentItem.mapFromItem(null, sceneX, sceneY).y
+        dragOffset = 0
+        dragFrom = index
+        updateDrag(sceneX, sceneY)
+    }
+
+    // The gap under the pointer: before a row while the pointer is in its
+    // upper half (or on its caption), after it in the lower; never among
+    // what has played, nor before the song playing.
+    function updateDrag(sceneX, sceneY) {
+        if (dragFrom < 0)
+            return
+        dragPointer = Qt.point(sceneX, sceneY)
+        const y = list.contentItem.mapFromItem(null, sceneX, sceneY).y
+        dragOffset = y - grabY
+        const count = Player.queue.count
+        let gap = count
+        const over = list.indexAt(1, y)
+        if (over >= 0) {
+            const item = list.itemAtIndex(over)
+            const rowTop = item.y + item.height - rowHeight
+            gap = y < rowTop + rowHeight / 2 ? over : over + 1
+        } else {
+            const first = list.itemAtIndex(root.firstUpcoming)
+            if (first && y < first.y)
+                gap = root.firstUpcoming
+        }
+        gap = Math.max(root.firstUpcoming, Math.min(count, gap))
+        dragGap = gap
+        const at = list.itemAtIndex(Math.min(gap, count - 1))
+        if (at)
+            dropLineY = gap < count ? at.y + at.height - rowHeight : at.y + at.height
+    }
+
+    function endDrag(drop) {
+        const from = dragFrom
+        const to = dropIndex
+        const moves = dropMoves
+        dragFrom = -1
+        dragGap = -1
+        dragOffset = 0
+        if (drop && moves)
+            moveEntry(from, to)
+    }
+
     component Caption: Text {
         font.family: Theme.fontFamily
         font.pixelSize: 11
@@ -73,6 +147,41 @@ Rectangle {
 
         ScrollBar.vertical: MonoScrollBar { width: 8 }
 
+        // Where the song held would go: a red rule in the gap. In the list's
+        // content, so it scrolls with the rows.
+        Rectangle {
+            visible: root.dropMoves
+            y: root.dropLineY - height / 2
+            z: 3
+            width: list.width
+            height: Theme.ruleWidth
+            color: Theme.accent
+        }
+
+        // A drag held near the list's top or bottom edge scrolls it.
+        Timer {
+            interval: 16
+            repeat: true
+            running: root.dragFrom >= 0
+            onTriggered: {
+                const at = list.mapFromItem(null, root.dragPointer.x, root.dragPointer.y).y
+                const edge = 48
+                let step = 0
+                if (at < edge)
+                    step = -Math.ceil((edge - Math.max(0, at)) / edge * 12)
+                else if (at > list.height - edge)
+                    step = Math.ceil((Math.min(list.height, at) - (list.height - edge)) / edge * 12)
+                if (step === 0)
+                    return
+                const most = Math.max(0, list.contentHeight - list.height)
+                const target = Math.max(0, Math.min(most, list.contentY + step))
+                if (target === list.contentY)
+                    return
+                list.contentY = target
+                root.updateDrag(root.dragPointer.x, root.dragPointer.y)
+            }
+        }
+
         delegate: Column {
             id: entry
 
@@ -86,9 +195,31 @@ Rectangle {
             required property bool isPast
             required property var credits
 
+            readonly property bool upcoming: !isCurrent && !isPast
+            readonly property bool held: root.dragFrom === index
+            readonly property bool gripShown: upcoming && (entryHover.hovered || activeFocus || held)
+
             width: ListView.view ? ListView.view.width : 0
             visible: !isPast
             height: visible ? implicitHeight : 0
+            z: held ? 2 : 0
+
+            // From the keyboard, once the grip has been pressed: Alt+Up and
+            // Alt+Down move the song, the menu key opens its menu, Esc lets go.
+            Keys.onPressed: function(event) {
+                if (entry.upcoming && (event.modifiers & Qt.AltModifier)
+                        && (event.key === Qt.Key_Up || event.key === Qt.Key_Down)) {
+                    event.accepted = true
+                    root.moveEntry(entry.index, entry.index + (event.key === Qt.Key_Up ? -1 : 1))
+                } else if (event.key === Qt.Key_Menu
+                           || (event.key === Qt.Key_F10 && (event.modifiers & Qt.ShiftModifier))) {
+                    event.accepted = true
+                    root.openMenu(entry.index, rowPart)
+                } else if (event.key === Qt.Key_Escape) {
+                    event.accepted = true
+                    entry.focus = false
+                }
+            }
 
             Caption {
                 visible: entry.isCurrent
@@ -114,17 +245,64 @@ Rectangle {
             }
 
             Item {
+                id: rowPart
                 width: entry.width
-                height: 56
+                height: root.rowHeight
+                // Carried with the pointer; the caption above it stays.
+                transform: Translate { y: entry.held ? root.dragOffset : 0 }
 
+                // A row being carried is a plate of paper in an ink frame.
                 Rectangle {
                     anchors.fill: parent
-                    color: entryHover.hovered && !entry.isCurrent ? Theme.rowHover : "transparent"
+                    color: entry.held ? Theme.bg
+                         : entryHover.hovered && !entry.isCurrent ? Theme.rowHover : "transparent"
+                    border.width: entry.held ? Theme.ruleWidth : 0
+                    border.color: Theme.text
 
                     Behavior on color {
-                        enabled: !entryHover.hovered
+                        enabled: !entryHover.hovered && !entry.held
                         ColorAnimation { duration: Theme.quick }
                     }
+                }
+
+                // The row that has the keyboard.
+                Rectangle {
+                    visible: entry.activeFocus && !entry.held
+                    width: Theme.ruleWidth
+                    height: parent.height
+                    color: Theme.accent
+                }
+
+                // The grip, in the margin at the row's left edge. Taken
+                // rather than stolen, so the list does not scroll instead.
+                Icon {
+                    visible: entry.gripShown
+                    x: (Theme.space6 - width) / 2
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 16
+                    height: 16
+                    name: "grip"
+                    color: grip.containsMouse || grip.pressed ? Theme.text : Theme.neutral700
+                }
+                MouseArea {
+                    id: grip
+                    enabled: entry.upcoming
+                    width: Theme.space6
+                    height: parent.height
+                    hoverEnabled: true
+                    preventStealing: true
+                    cursorShape: pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
+                    onPressed: function(mouse) {
+                        entry.forceActiveFocus()
+                        const at = mapToItem(null, mouse.x, mouse.y)
+                        root.beginDrag(entry.index, at.x, at.y)
+                    }
+                    onPositionChanged: function(mouse) {
+                        const at = mapToItem(null, mouse.x, mouse.y)
+                        root.updateDrag(at.x, at.y)
+                    }
+                    onReleased: root.endDrag(true)
+                    onCanceled: root.endDrag(false)
                 }
 
                 Artwork {
@@ -164,34 +342,47 @@ Rectangle {
                     }
                 }
 
+                // The length at rest; under the pointer, the row's menu and,
+                // for what is still to come, taking it out.
                 Item {
                     id: tail
                     anchors.right: parent.right
                     anchors.rightMargin: Theme.space4
                     anchors.verticalCenter: parent.verticalCenter
-                    width: 44
+                    width: 64
                     height: 30
 
                     Text {
                         anchors.right: parent.right
                         anchors.verticalCenter: parent.verticalCenter
-                        visible: !removeButton.visible
+                        visible: !entryHover.hovered
                         text: entry.durationMs > 0 ? entry.durationText : ""
                         font.family: Theme.fontFamily
                         font.pixelSize: 12
                         color: entry.isCurrent ? Theme.accent700 : Theme.neutral700
                     }
 
-                    IconButton {
-                        id: removeButton
+                    Row {
                         anchors.right: parent.right
                         anchors.verticalCenter: parent.verticalCenter
-                        visible: entryHover.hovered && !entry.isCurrent
-                        side: 30
-                        iconName: "x"
-                        iconColor: Theme.neutral700
-                        iconSize: 12
-                        onClicked: Player.removeFromQueue(entry.index)
+                        visible: entryHover.hovered
+                        spacing: Theme.space1
+
+                        IconButton {
+                            side: 30
+                            iconName: "dots"
+                            iconColor: Theme.neutral700
+                            iconSize: 15
+                            onClicked: root.openMenu(entry.index, null)
+                        }
+                        IconButton {
+                            visible: !entry.isCurrent
+                            side: 30
+                            iconName: "x"
+                            iconColor: Theme.neutral700
+                            iconSize: 12
+                            onClicked: Player.removeFromQueue(entry.index)
+                        }
                     }
                 }
 
@@ -199,6 +390,10 @@ Rectangle {
                 TapHandler {
                     enabled: !entry.isCurrent
                     onTapped: Player.playIndex(entry.index)
+                }
+                TapHandler {
+                    acceptedButtons: Qt.RightButton
+                    onTapped: root.openMenu(entry.index, null)
                 }
             }
         }

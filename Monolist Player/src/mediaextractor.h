@@ -41,6 +41,8 @@ public:
 
     // A song as YouTube Music sent it, as a row.
     static Item fromTrack(const InnerTube::Track &track);
+    // A row as QML and the player take a track: what get() returns.
+    static QVariantMap toMap(const Item &item);
 
     explicit SearchResultModel(QObject *parent = nullptr);
 
@@ -53,6 +55,9 @@ public:
     // rows it has already made and makes only the new ones, which is what
     // lets a long playlist grow under the reader without redrawing it.
     void append(const QList<Item> &items);
+    // One row to `to`, as a move: the view carries over the row it has
+    // rather than making every row again. False when nothing moved.
+    bool move(int from, int to);
     void clear();
 
     Q_INVOKABLE QVariantMap get(int row) const;

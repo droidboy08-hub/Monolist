@@ -33,6 +33,14 @@ AlbumCard {
     artwork: card.artwork || ""
     playable: collection && (card.browseId || "").length > 0
     playLoading: playable && Catalog.collectionLoading === card.browseId
+    // A song's or a video's is the song menu; anything else's, the card's.
+    hasMenu: (card.videoId || "").length > 0 || (card.browseId || "").length > 0
     onPlayRequested: root.activated(root.card)
     onPlayClicked: Catalog.playCollection(root.card.browseId, root.card.title || "", root.origin)
+    onMenuRequested: {
+        if (!root.collection && card.type !== "artist" && (card.videoId || "").length > 0)
+            Menus.openTrack(Menus.trackOfCard(root.card), {})
+        else
+            Menus.openCard(root.card, root.origin)
+    }
 }

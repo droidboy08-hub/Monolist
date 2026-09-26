@@ -1,6 +1,6 @@
 import QtQuick
-import QtQuick.Controls.Basic
 import Monolist
+import Monolist.Backend
 
 // One shelf of suggestions: a heading, the reason it exists, and the songs.
 //
@@ -14,10 +14,26 @@ Item {
     property string title: ""
     property string reason: ""
     property var rows: []
+    // Which of Recs.shelves this is, for the row menu's look-ups.
+    property int shelfIndex: -1
 
     signal rowActivated(int index)
 
     implicitHeight: body.implicitHeight
+
+    // The song menu, for a row that is still only a name: what needs the
+    // song itself (Play next, Add to playlist, Copy link…) looks it up first,
+    // as pressing the row does, and TrackMenu is handed the answer (Main).
+    function openMenu(index) {
+        const row = rows[index]
+        if (!row)
+            return
+        Menus.openTrack({ title: row.title, artist: row.artist }, {
+            resolve: function(action, argument) {
+                Recs.resolve(root.shelfIndex, index, action + "|" + argument)
+            }
+        })
+    }
 
     Column {
         id: body
@@ -89,14 +105,28 @@ Item {
 
                     // The catalogue keeps names only; Artists finds the page
                     // for one YouTube Music has linked, and looks up the rest.
+                    // It leaves room at the end for the row's dots.
                     ArtistLine {
                         x: parent.width * 0.55
                         anchors.verticalCenter: parent.verticalCenter
-                        width: parent.width * 0.45
+                        width: Math.max(0, parent.width * 0.45 - 36)
                         artist: row.modelData.artist
                         font.family: Theme.fontFamily
                         font.pixelSize: 13
                         color: Theme.neutral700
+                    }
+
+                    // A button, so its click is not also taken as a tap on
+                    // the row.
+                    IconButton {
+                        visible: hover.hovered
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        side: 30
+                        iconName: "dots"
+                        iconSize: 16
+                        iconColor: Theme.neutral700
+                        onClicked: root.openMenu(row.index)
                     }
 
                     Rectangle {
@@ -108,6 +138,10 @@ Item {
 
                     HoverHandler { id: hover; cursorShape: Qt.PointingHandCursor }
                     TapHandler { onTapped: root.rowActivated(row.index) }
+                    TapHandler {
+                        acceptedButtons: Qt.RightButton
+                        onTapped: root.openMenu(row.index)
+                    }
                 }
             }
         }

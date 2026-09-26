@@ -112,8 +112,15 @@ public Q_SLOTS:
     // then the ordinary playback path, so it behaves exactly like pressing a
     // search result, because that is what it becomes.
     void play(int shelfIndex, int rowIndex);
+    // The same search, for a row's menu rather than for playing it at once:
+    // Play next, Add to playlist and the rest need a song, and a suggestion
+    // is only a name until it is looked up. `purpose` is handed back with the
+    // song in resolved(), untouched. As with play(), the latest ask wins.
+    void resolve(int shelfIndex, int rowIndex, const QString &purpose);
 
 Q_SIGNALS:
+    // What resolve() found, as a track map with the app's track roles.
+    void resolved(const QString &purpose, const QVariantMap &track);
     void stateChanged();
     void shelvesChanged();
     void hideExplicitChanged();
@@ -127,6 +134,8 @@ Q_SIGNALS:
 private:
     void setState(bool busy, const QString &message);
     void reload();
+    // One suggestion's search: play() and resolve() both come here.
+    void lookUp(int shelfIndex, int rowIndex, const QString &purpose);
     // The folder the graph is actually read from: the setting, or the
     // GraphData folder beside the catalogue when the setting is empty.
     QString resolvedGraphDirectory() const;
@@ -157,4 +166,6 @@ private:
     QString m_pendingQuery;
     QString m_pendingTitle;
     qint64 m_pendingLengthMs = -1;
+    // Empty to play the answer; otherwise what resolve() was asked for.
+    QString m_pendingPurpose;
 };

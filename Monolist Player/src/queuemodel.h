@@ -68,6 +68,8 @@ public:
     void replace(QList<QueueTrack> tracks, int current);
     void insert(int row, QList<QueueTrack> tracks);
     void removeAt(int row);           // not the current row
+    // One row to `to`, where it then stands. False when nothing moved.
+    bool move(int from, int to);
     void clearUpcoming();
     void shuffleUpcoming();
     void restoreOrder();

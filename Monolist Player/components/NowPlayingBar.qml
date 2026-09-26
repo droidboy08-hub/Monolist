@@ -48,6 +48,14 @@ Rectangle {
         color: Theme.text
     }
 
+    // The song playing has the song menu, as it has anywhere else: from the
+    // dots beside the title, or a right click on the cover or the title.
+    readonly property bool hasSong: Player.currentTrack.title !== undefined
+    function openMenu() {
+        if (hasSong)
+            Menus.openTrack(Player.currentTrack, {})
+    }
+
     // — now playing —
     Item {
         id: nowPlaying
@@ -56,6 +64,11 @@ Rectangle {
         anchors.verticalCenter: parent.verticalCenter
         width: root.showMeta ? 320 : 52
         height: 52
+
+        TapHandler {
+            acceptedButtons: Qt.RightButton
+            onTapped: root.openMenu()
+        }
 
         Row {
             anchors.fill: parent
@@ -75,8 +88,9 @@ Rectangle {
             Column {
                 visible: root.showMeta
                 anchors.verticalCenter: parent.verticalCenter
-                // artwork, then the heart and the download control beside the text
-                width: parent.width - 52 - 30 * 2 - Theme.space3 * 3
+                // artwork, then the heart, the download control and the dots
+                // beside the text
+                width: parent.width - 52 - 30 * 3 - Theme.space3 * 4
                 spacing: 1
 
                 HoverHandler { cursorShape: Qt.PointingHandCursor }
@@ -157,6 +171,20 @@ Rectangle {
                 artwork: Player.currentTrack.artwork !== undefined ? Player.currentTrack.artwork : ""
                 durationMs: Player.duration
                 isVideo: Player.currentTrack.isVideo === true
+            }
+
+            // Dimmed with nothing loaded, like the heart, so it is in its
+            // place when a song arrives.
+            IconButton {
+                visible: root.showMeta
+                enabled: root.hasSong
+                opacity: enabled ? 1 : 0.4
+                anchors.verticalCenter: parent.verticalCenter
+                side: 30
+                iconName: "dots"
+                iconSize: 15
+                iconColor: Theme.neutral700
+                onClicked: root.openMenu()
             }
         }
     }

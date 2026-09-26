@@ -1,6 +1,7 @@
 #include "recommender.h"
 
 #include "appdatabase.h"
+#include "mediaextractor.h"
 #include "playbackcontroller.h"
 #include "rec/catalog.h"
 #include "rec/graph.h"
@@ -318,12 +319,22 @@ Recommender::Recommender(QObject *parent)
                 if (query != m_pendingQuery)
                     return;
                 m_pendingQuery.clear();
+                const QString purpose = std::exchange(m_pendingPurpose, QString());
                 const int picked = pickResult(tracks, m_pendingTitle, m_pendingLengthMs);
-                if (picked < 0 || !m_player) {
-                    Q_EMIT notice(QStringLiteral("Couldn't find “%1” to play").arg(m_pendingTitle));
+                if (picked < 0 || (purpose.isEmpty() && !m_player)) {
+                    Q_EMIT notice((purpose.isEmpty() ? QStringLiteral("Couldn't find “%1” to play")
+                                                     : QStringLiteral("Couldn't find “%1”")).arg(m_pendingTitle));
                     return;
                 }
                 const InnerTube::Track &track = tracks.at(picked);
+                if (!purpose.isEmpty()) {
+                    // Not a video, as for playing it: the catalogue lists
+                    // recordings, and a search for songs answers with songs.
+                    SearchResultModel::Item item = SearchResultModel::fromTrack(track);
+                    item.isVideo = false;
+                    Q_EMIT resolved(purpose, SearchResultModel::toMap(item));
+                    return;
+                }
                 m_player->playSource(track.videoId, track.title, track.artist, track.artwork,
                                      track.durationMs, track.album, /*isVideo=*/false,
                                      QStringLiteral("explore"), track.primaryArtist);
@@ -333,7 +344,9 @@ Recommender::Recommender(QObject *parent)
                 if (query != m_pendingQuery)
                     return;
                 m_pendingQuery.clear();
-                Q_EMIT notice(QStringLiteral("Couldn't play “%1”: %2").arg(m_pendingTitle, reason));
+                const bool playing = std::exchange(m_pendingPurpose, QString()).isEmpty();
+                Q_EMIT notice((playing ? QStringLiteral("Couldn't play “%1”: %2")
+                                       : QStringLiteral("Couldn't find “%1”: %2")).arg(m_pendingTitle, reason));
             });
 
     // Off the critical path: whatever is set is loaded in the background while
@@ -529,6 +542,17 @@ void Recommender::rebuild()
 
 void Recommender::play(int shelfIndex, int rowIndex)
 {
+    lookUp(shelfIndex, rowIndex, QString());
+}
+
+void Recommender::resolve(int shelfIndex, int rowIndex, const QString &purpose)
+{
+    if (!purpose.isEmpty())
+        lookUp(shelfIndex, rowIndex, purpose);
+}
+
+void Recommender::lookUp(int shelfIndex, int rowIndex, const QString &purpose)
+{
     if (shelfIndex < 0 || shelfIndex >= m_shelves.size())
         return;
     const QVariantList rows = m_shelves.at(shelfIndex).toMap()
@@ -546,6 +570,7 @@ void Recommender::play(int shelfIndex, int rowIndex)
     // search, and from there it is an ordinary track like any other.
     m_pendingTitle = title;
     m_pendingQuery = artist.isEmpty() ? title : artist + QLatin1Char(' ') + title;
+    m_pendingPurpose = purpose;
     m_innerTube.search(m_pendingQuery, InnerTube::Filter::Songs);
 }
 
