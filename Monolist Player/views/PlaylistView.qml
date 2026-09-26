@@ -1,19 +1,22 @@
 import QtQuick
-import QtQuick.Controls.Basic
 import Monolist
 import Monolist.Backend
 import "../components"
 
 // One of the user's playlists, or Liked songs: the same page as an album's,
 // with the cover a mosaic of the songs' own, and the title theirs to change.
-Flickable {
+ScrollPage {
     id: root
 
     // "liked", or a playlist's id.
     property string key: ""
     // Set for a playlist just made, so its name is ready to be typed.
     property bool renameOnOpen: false
+    // Set when Delete was chosen from the playlist's menu elsewhere, so the
+    // page opens asking to confirm it.
+    property bool confirmDeleteOnOpen: false
     signal renameStarted()
+    signal deleteAsked()
     signal deleted()
 
     readonly property bool liked: key === "liked"
@@ -28,12 +31,7 @@ Flickable {
     property bool renaming: false
     property bool confirmingDelete: false
 
-    contentWidth: width
     contentHeight: column.implicitHeight
-    boundsBehavior: Flickable.StopAtBounds
-    clip: true
-
-    ScrollBar.vertical: MonoScrollBar {}
 
     onKeyChanged: {
         renaming = false
@@ -60,43 +58,40 @@ Flickable {
     }
 
     onRenameOnOpenChanged: if (renameOnOpen && ready) Qt.callLater(startRenaming)
-    onReadyChanged: if (renameOnOpen && ready) Qt.callLater(startRenaming)
+    onReadyChanged: {
+        if (renameOnOpen && ready)
+            Qt.callLater(startRenaming)
+        if (confirmDeleteOnOpen && ready)
+            Qt.callLater(askDelete)
+    }
+
+    // Later rather than at once, so it lands after onKeyChanged, which
+    // clears the question for the playlist it is leaving.
+    function askDelete() {
+        if (liked || missing || !confirmDeleteOnOpen)
+            return
+        confirmingDelete = true
+        deleteAsked()
+    }
+    onConfirmDeleteOnOpenChanged: if (confirmDeleteOnOpen && ready) Qt.callLater(askDelete)
 
     function trackList() {
         return liked ? Library.likedTrackList() : Library.playlistTrackList()
     }
 
+    // In one call, video flags and all (Downloads.enqueueAll).
     function downloadAll() {
-        var tracks = trackList()
-        for (var i = 0; i < tracks.length; ++i) {
-            var track = tracks[i]
-            Downloads.enqueue(track.sourceId, track.title, track.artist, track.artwork, track.durationMs)
-        }
+        Downloads.enqueueAll(trackList())
     }
 
     function songsLabel(n) { return n + (n === 1 ? " song" : " songs") }
 
-    MonoMenu {
+    // The playlist's own menu, as on its card and in the sidebar; here the
+    // renaming and the question are this page's own.
+    PlaylistMenu {
         id: playlistMenu
-
-        Action {
-            text: "Add all to queue"
-            enabled: root.songCount > 0
-            onTriggered: {
-                var tracks = root.trackList()
-                for (var i = 0; i < tracks.length; ++i)
-                    Player.addToQueue(tracks[i])
-            }
-        }
-        MonoMenuRule {}
-        Action {
-            text: "Rename"
-            onTriggered: root.startRenaming()
-        }
-        Action {
-            text: "Delete playlist"
-            onTriggered: root.confirmingDelete = true
-        }
+        onRenameRequested: root.startRenaming()
+        onDeleteRequested: root.confirmingDelete = true
     }
 
     Column {
@@ -256,9 +251,9 @@ Flickable {
                     }
                     ActionButton {
                         id: moreButton
-                        visible: !root.liked
+                        visible: !root.missing
                         iconName: "dots"
-                        onClicked: playlistMenu.popup(moreButton, 0, moreButton.height + Theme.space1)
+                        onClicked: playlistMenu.show(root.key, moreButton)
                     }
                 }
             }
@@ -316,11 +311,16 @@ Flickable {
             color: Theme.neutral700
         }
 
+        // A playlist's songs are in the order the user gives them: dragged by
+        // the grip, or moved from a row's menu or with Alt+Up and Alt+Down.
+        // Liked songs keeps the order they were liked in.
         TrackTable {
             visible: root.songCount > 0 && !root.missing
             width: parent.width
             model: root.songs
             playlistId: root.playlistId
+            reorderable: !root.liked
+            flickable: root
             showDownloads: true
             onTrackActivated: function(index) { Player.playModel(root.songs, index, "playlist") }
         }

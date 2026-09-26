@@ -891,6 +891,35 @@ int runListenSelfTest()
         t.check(count("qualified", title) == 1 && !q.chosen && !lastOf("started", title).chosen,
                 QStringLiteral("a song autoplay added is sent as not chosen by the listener"), tally(title));
     }
+    {
+        // As the radio's songs are usually reached: after a chosen one, with
+        // Next. The play is recorded as the radio's, not as the surface the
+        // queue began on; the chosen song before it keeps that surface.
+        const QString chosen = QStringLiteral("Chosen before the radio");
+        const QString picked = QStringLiteral("The radio's pick");
+        start({ song(chosen, 60000), song(picked, 60000, { { QStringLiteral("fromRadio"), true } }) });
+        fake.duration(60000);
+        fake.play(30000);
+        player.next();
+        fake.newFile();
+        fake.duration(60000);
+        fake.play(30000);
+        const auto sourceOf = [](const QString &title) {
+            QSqlQuery q(AppDatabase::connection());
+            q.prepare(QStringLiteral("SELECT source FROM play_events WHERE title = ? ORDER BY id DESC LIMIT 1"));
+            q.addBindValue(title);
+            return q.exec() && q.next() ? q.value(0).toString() : QStringLiteral("(no play event)");
+        };
+        const QString chosenSource = sourceOf(chosen);
+        const QString pickedSource = sourceOf(picked);
+        t.check(chosenSource == QLatin1String("selftest") && pickedSource == QLatin1String("radio"),
+                QStringLiteral("play events: the chosen song from where it was played, the radio's pick as \"radio\""),
+                QStringLiteral("%1 / %2").arg(chosenSource, pickedSource));
+        t.check(count("qualified", picked) == 1 && lastOf("qualified", chosen).chosen
+                    && !lastOf("qualified", picked).chosen && !lastOf("started", picked).chosen,
+                QStringLiteral("Last.fm: the chosen song as chosen, the radio's pick reached with Next as not"),
+                QStringLiteral("%1 / %2").arg(tally(chosen), tally(picked)));
+    }
 
     // 13 — a length learned late.
     {

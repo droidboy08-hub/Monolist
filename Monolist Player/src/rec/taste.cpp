@@ -52,6 +52,7 @@ double sourceMultiplier(const QString &source)
     if (source == QLatin1String("search"))        return 1.0;
     if (source == QLatin1String("home"))          return 0.9;
     if (source == QLatin1String("queue"))         return 0.8;
+    if (source == QLatin1String("radio"))         return 0.8;   // autoplay: nobody chose it
     if (source == QLatin1String("playlist"))      return 0.7;
     if (source == QLatin1String("library"))       return 0.7;
     if (source == QLatin1String("resume"))        return 0.3;
@@ -199,6 +200,12 @@ TasteProfile buildTaste(const Catalog &catalog,
 
     for (const PlayEvent &event : events) {
         if (event.kind == QLatin1String("unliked"))
+            continue;
+        // "Don't suggest this artist" names no song and says nothing about a
+        // sound: the shelves leave the artist out (Exclusions), and the
+        // profile, which is about sounds, is not told. A song turned down,
+        // "notInterested", is the profile's strongest no, and counts below.
+        if (event.kind == QLatin1String("notInterestedArtist"))
             continue;
         if (event.kind == QLatin1String("like")) {
             // Newest first, so the first like met of a song liked now is the

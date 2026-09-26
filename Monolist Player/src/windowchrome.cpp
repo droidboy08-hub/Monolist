@@ -1,6 +1,7 @@
 #include "windowchrome.h"
 
 #include <QCoreApplication>
+#include <QCursor>
 #include <QWindow>
 
 #if !defined(Q_OS_WIN) && !defined(Q_OS_MACOS)
@@ -200,6 +201,15 @@ void WindowChrome::readButtonLayout() const
 #endif
 }
 
+int WindowChrome::cursorShape() const
+{
+#if QT_CONFIG(cursor)
+    if (m_window)
+        return int(m_window->cursor().shape());
+#endif
+    return int(Qt::ArrowCursor);
+}
+
 void WindowChrome::attach(QWindow *window)
 {
     m_window = window;
@@ -297,8 +307,10 @@ bool WindowChrome::nativeEventFilter(const QByteArray &eventType, void *message,
     case WM_NCHITTEST: {
         // The resize edges, now inside the window. Everything else is client
         // area: the title bar moves the window from QML (startSystemMove),
-        // which runs the native move loop, snapping included.
-        if (IsZoomed(msg->hwnd)) {
+        // which runs the native move loop, snapping included. A maximised or
+        // full-screen window has no edges to drag: in full screen the video
+        // runs to the screen's edge, and a resize cursor there would be a lie.
+        if (IsZoomed(msg->hwnd) || m_window->visibility() == QWindow::FullScreen) {
             *result = HTCLIENT;
             return true;
         }

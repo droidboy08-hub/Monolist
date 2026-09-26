@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Controls.Basic
 import Monolist
 import Monolist.Backend
 import "../components"
@@ -7,7 +6,7 @@ import "../components"
 // Your Library: what you made, what you saved, what you played, one tab each.
 // The tab is part of the view's name ("library:albums"), so back and forward
 // step through tabs like pages.
-Flickable {
+ScrollPage {
     id: root
 
     // "playlists", "albums" or "history"
@@ -23,17 +22,12 @@ Flickable {
     readonly property int columns: Math.max(1, Math.min(5, Math.floor((column.width + Theme.space6) / (200 + Theme.space6))))
     readonly property int cardWidth: Math.floor((column.width - (columns - 1) * Theme.space6) / columns)
 
-    contentWidth: width
     contentHeight: column.implicitHeight
-    boundsBehavior: Flickable.StopAtBounds
-    clip: true
 
     onTabChanged: {
         clearArmed = false
         contentY = 0
     }
-
-    ScrollBar.vertical: MonoScrollBar {}
 
     Timer {
         id: disarm
@@ -42,6 +36,13 @@ Flickable {
     }
 
     function songs(n) { return n + (n === 1 ? " SONG" : " SONGS") }
+
+    // A saved album or playlist in the shape of a YouTube Music card, for
+    // the card menu: Play, Open, Remove from library, its link.
+    function savedCard(type, saved) {
+        return { type: type, browseId: saved.browseId, title: saved.title,
+                 artist: saved.artist, artwork: saved.artwork }
+    }
 
     component Note: Text {
         width: column.width
@@ -103,13 +104,17 @@ Flickable {
             width: parent.width
             spacing: Theme.space6
 
+            // Each card has its menu (Menus): a playlist's own for Liked
+            // songs and the user's playlists, the card menu for the saved.
             AlbumCard {
                 width: root.cardWidth
                 plate: "liked"
                 title: "Liked songs"
                 artist: "Everything you liked, latest first"
                 footer: root.songs(Library.liked.count)
+                hasMenu: true
                 onPlayRequested: root.viewRequested("playlist:liked")
+                onMenuRequested: Menus.openPlaylist("liked")
             }
 
             Repeater {
@@ -121,7 +126,9 @@ Flickable {
                     title: model.name
                     artist: "By " + Library.userName
                     footer: "PLAYLIST · " + root.songs(model.trackCount)
+                    hasMenu: true
                     onPlayRequested: root.viewRequested("playlist:" + model.playlistId)
+                    onMenuRequested: Menus.openPlaylist(model.playlistId)
                 }
             }
 
@@ -143,7 +150,9 @@ Flickable {
                     title: model.title
                     artist: model.artist
                     footer: "PLAYLIST · SAVED"
+                    hasMenu: model.browseId.length > 0
                     onPlayRequested: root.pageRequested(model.browseId)
+                    onMenuRequested: Menus.openCard(root.savedCard("playlist", model), "library")
                 }
             }
         }
@@ -169,7 +178,9 @@ Flickable {
                     artist: model.artist
                     year: model.year
                     format: model.format
+                    hasMenu: model.browseId.length > 0
                     onPlayRequested: root.pageRequested(model.browseId)
+                    onMenuRequested: Menus.openCard(root.savedCard("album", model), "library")
                 }
             }
         }
@@ -184,6 +195,7 @@ Flickable {
             visible: root.tab === "history" && Library.history.count > 0
             width: parent.width
             model: Library.history
+            history: true
             showDownloads: true
             onTrackActivated: function(index) { Player.playModel(Library.history, index, "library") }
         }

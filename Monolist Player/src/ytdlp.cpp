@@ -6,8 +6,17 @@
 #include <QJsonObject>
 #include <QJsonParseError>
 #include <QProcessEnvironment>
+#include <QDeadlineTimer>
 #include <QRegularExpression>
 #include <QStandardPaths>
+#include <QThread>
+
+#if defined(Q_OS_WIN)
+#include <windows.h>
+#elif defined(Q_OS_UNIX)
+#include <signal.h>
+#include <unistd.h>
+#endif
 
 namespace {
 
@@ -62,10 +71,43 @@ YtDlpRequest::YtDlpRequest(QObject *parent)
 
 YtDlpRequest::~YtDlpRequest()
 {
-    if (m_process && m_process->state() != QProcess::NotRunning) {
-        m_process->kill();
-        m_process->waitForFinished(1000);
+    stopProcess();
+#if defined(Q_OS_WIN)
+    if (m_job)
+        CloseHandle(HANDLE(m_job));
+#endif
+}
+
+// yt-dlp runs FFmpeg for the conversion and the tags, and Deno for YouTube's
+// challenges, as processes of their own. Killing yt-dlp alone left those
+// running: a download cancelled while FFmpeg converted it went on being
+// written after the cleanup had run, and on Windows the files FFmpeg held open
+// could not be deleted by it at all. So the whole tree goes, and this returns
+// once it has gone, with every file it held let go.
+void YtDlpRequest::stopProcess()
+{
+    if (!m_process || m_process->state() == QProcess::NotRunning)
+        return;
+#if defined(Q_OS_WIN)
+    if (m_job) {
+        TerminateJobObject(HANDLE(m_job), 1);
+        // That starts the ending and returns; the files are released only
+        // once each process has actually gone.
+        const QDeadlineTimer deadline(2000);
+        JOBOBJECT_BASIC_ACCOUNTING_INFORMATION accounting = {};
+        while (QueryInformationJobObject(HANDLE(m_job), JobObjectBasicAccountingInformation, &accounting,
+                                         sizeof(accounting), nullptr)
+               && accounting.ActiveProcesses > 0 && !deadline.hasExpired())
+            QThread::msleep(10);
     }
+#elif defined(Q_OS_UNIX)
+    // Its process group, which it leads (see start()): FFmpeg and Deno too.
+    const qint64 pid = m_process->processId();
+    if (pid > 0)
+        ::kill(-pid_t(pid), SIGKILL);
+#endif
+    m_process->kill();
+    m_process->waitForFinished(1000);
 }
 
 bool YtDlpRequest::isRunning() const
@@ -99,7 +141,40 @@ void YtDlpRequest::start(const QString &program, const QStringList &arguments, b
             settleFailed(QStringLiteral("yt-dlp could not be started. Check that it is installed."));
     });
 
+#if defined(Q_OS_UNIX)
+    // A process group of its own, which everything it starts belongs to, so
+    // stopProcess can end them together. Run in the child before exec, where
+    // only async-signal-safe calls are allowed; setpgid is one.
+    m_process->setChildProcessModifier([]() { ::setpgid(0, 0); });
+#endif
+
     m_process->start();
+
+#if defined(Q_OS_WIN)
+    // Windows has no process group to signal. A job does the same: what yt-dlp
+    // starts joins its job by itself, and closing the job's last handle ends
+    // whatever is still in it, so not even a crash leaves FFmpeg writing.
+    // yt-dlp takes a good fraction of a second to start Python before it can
+    // start anything, well after it is in the job.
+    const qint64 pid = m_process->processId();
+    if (pid > 0) {
+        HANDLE job = CreateJobObjectW(nullptr, nullptr);
+        HANDLE process = OpenProcess(PROCESS_SET_QUOTA | PROCESS_TERMINATE, FALSE, DWORD(pid));
+        if (job && process) {
+            JOBOBJECT_EXTENDED_LIMIT_INFORMATION limits = {};
+            limits.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+            if (SetInformationJobObject(job, JobObjectExtendedLimitInformation, &limits, sizeof(limits))
+                && AssignProcessToJobObject(job, process)) {
+                m_job = job;
+                job = nullptr;
+            }
+        }
+        if (process)
+            CloseHandle(process);
+        if (job)
+            CloseHandle(job);
+    }
+#endif
 }
 
 void YtDlpRequest::handleStdout()
@@ -238,10 +313,7 @@ void YtDlpRequest::settleFailed(const QString &reason)
 
 void YtDlpRequest::cancel()
 {
-    if (m_process && m_process->state() != QProcess::NotRunning) {
-        m_process->kill();
-        m_process->waitForFinished(1000);
-    }
+    stopProcess();
     settleFailed(QStringLiteral("Cancelled."));
 }
 
@@ -423,6 +495,25 @@ YtDlpRequest *YtDlp::resolveAudio(const QString &videoIdOrUrl, QObject *parent)
         // Usually Opus at ~130-160 kb/s, which beats the ~128 kb/s AAC stream;
         // mpv plays either directly.
         QStringLiteral("-f"), QStringLiteral("bestaudio/best")
+    };
+    return run(args, /*expectJson=*/true, parent);
+}
+
+YtDlpRequest *YtDlp::resolveMuxed(const QString &videoIdOrUrl, QObject *parent)
+{
+    const QStringList args = {
+        normaliseToUrl(videoIdOrUrl),
+        QStringLiteral("--dump-single-json"),
+        QStringLiteral("--no-playlist"),
+        // Other clients than the ones yt-dlp prefers. Those — the visionOS
+        // app's first, which is also the one InnerTube resolves as — list no
+        // muxed stream at all now, and this is asked for because a stream of
+        // theirs was just refused. Of the clients that do list itag 18, the
+        // Android app's and the simple TV app's serve it whole without a PO
+        // token (September 2026); mweb's, android_vr's and the embedded
+        // player's are answered with 403.
+        QStringLiteral("--extractor-args"), QStringLiteral("youtube:player_client=android,tv_simply"),
+        QStringLiteral("-f"), QStringLiteral("18/b")
     };
     return run(args, /*expectJson=*/true, parent);
 }

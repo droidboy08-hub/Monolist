@@ -33,6 +33,8 @@ qt_add_executable(monolist
     src/main.cpp
     src/appdatabase.h              src/appdatabase.cpp
     src/library.h                  src/library.cpp
+    # What the song and queue menus change, and its test (--library-edit-test).
+    src/libraryeditselftest.h      src/libraryeditselftest.cpp
     src/playlistmodel.h            src/playlistmodel.cpp
     src/albummodel.h               src/albummodel.cpp
     src/trackmodel.h               src/trackmodel.cpp
@@ -41,6 +43,9 @@ qt_add_executable(monolist
     src/mediaextractor.h           src/mediaextractor.cpp
     src/innertube.h                src/innertube.cpp
     src/catalog.h                  src/catalog.cpp
+    # Which page an artist's name opens, and its test (--artist-links-test).
+    src/artistlinks.h              src/artistlinks.cpp
+    src/artistselftest.h           src/artistselftest.cpp
     src/lyrics.h                   src/lyrics.cpp
     src/windowchrome.h             src/windowchrome.cpp
     src/appinfo.h                  src/appinfo.cpp
@@ -65,7 +70,10 @@ qt_add_executable(monolist
     src/streamresolver.h           src/streamresolver.cpp
     src/downloadmanager.h          src/downloadmanager.cpp
     src/downloadmodels.h           src/downloadmodels.cpp
+    src/downloadselftest.h         src/downloadselftest.cpp
     src/artworkcache.h             src/artworkcache.cpp
+    # How scrolling behaves, measured (--scroll-test).
+    src/scrollselftest.h           src/scrollselftest.cpp
 )
 
 # The build's own identity: version, build number, commit, date. Regenerated
@@ -160,6 +168,8 @@ if(QT_KNOWN_POLICY_QTP0004)
 endif()
 
 set_source_files_properties(Theme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
+set_source_files_properties(Nav.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
+set_source_files_properties(Menus.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 
 qt_add_qml_module(monolist
     URI Monolist
@@ -171,6 +181,8 @@ qt_add_qml_module(monolist
     QML_FILES
         Main.qml
         Theme.qml
+        Nav.qml
+        Menus.qml
         components/Icon.qml
         components/IconButton.qml
         components/LikeButton.qml
@@ -193,6 +205,8 @@ qt_add_qml_module(monolist
         components/TrackMenu.qml
         components/QueuePanel.qml
         components/CardShelf.qml
+        components/ShelfCard.qml
+        components/CardGrid.qml
         components/ActionButton.qml
         components/WindowButtons.qml
         components/WindowDragArea.qml
@@ -202,19 +216,32 @@ qt_add_qml_module(monolist
         components/MonoMenuItem.qml
         components/MonoMenuRule.qml
         components/PlaylistSubmenu.qml
+        components/ConfirmMenuItem.qml
+        components/CardMenu.qml
+        components/PlaylistMenu.qml
         components/MonoScrollBar.qml
+        components/ScrollPage.qml
+        components/SmoothWheel.qml
         components/LyricsPane.qml
         components/ToggleRow.qml
         components/DownloadOptions.qml
         components/ServiceRow.qml
         components/RecShelf.qml
+        components/RecRow.qml
         components/RecDataPanel.qml
         components/DataCredit.qml
+        components/PlateButton.qml
+        components/MiniVideo.qml
+        components/FullscreenVideo.qml
+        components/ArtistLine.qml
         views/HomeView.qml
         views/SearchView.qml
         views/LibraryView.qml
         views/DownloadsView.qml
         views/PageView.qml
+        views/ArtistView.qml
+        views/ShelfView.qml
+        views/RecsView.qml
         views/PlaylistView.qml
         views/NowPlayingView.qml
         views/SettingsView.qml

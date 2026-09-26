@@ -121,12 +121,53 @@ void StreamResolver::resolve(const QString &videoId, int firstTier)
         }
     }
 
+    QList<int> tiers;
+    for (int tier = qMax(int(TierInnerTube), firstTier); tier < TierExhausted; ++tier)
+        tiers.append(tier);
+    start(videoId, tiers);
+}
+
+void StreamResolver::resolveVia(const QString &videoId, const QList<int> &tiers)
+{
+    if (videoId.isEmpty()) {
+        Q_EMIT failed(videoId, QStringLiteral("Empty video id."));
+        return;
+    }
+    start(videoId, tiers);
+}
+
+void StreamResolver::start(const QString &videoId, QList<int> tiers)
+{
     cancel(videoId);
 
     auto *job = new Job;
     job->videoId = videoId;
     m_jobs.insert(videoId, job);
-    startTier(job, qBound(int(TierInnerTube), firstTier, int(TierExhausted)));
+    const int first = tiers.isEmpty() ? int(TierExhausted) : tiers.takeFirst();
+    job->next = tiers;
+    startTier(job, first);
+}
+
+// A link the player refused says something about where it came from. After
+// InnerTube's, the muxed stream comes first: yt-dlp's sound would be fetched
+// as the very client whose link was just turned down, where the muxed stream
+// is asked of others. After yt-dlp's, the muxed stream is the one kind left
+// to try; after the muxed stream's, yt-dlp's sound. The public instances come
+// last either way.
+QList<int> StreamResolver::afterRefusal(int tier)
+{
+    switch (tier) {
+    case TierInnerTube: return { TierMuxed, TierYtDlp, TierPiped, TierInvidious };
+    case TierYtDlp:     return { TierMuxed, TierPiped, TierInvidious };
+    case TierMuxed:     return { TierYtDlp, TierPiped, TierInvidious };
+    case TierPiped:     return { TierInvidious };
+    default:            return {};
+    }
+}
+
+QVariantMap StreamResolver::headersFor(const QString &videoId) const
+{
+    return m_cache.value(videoId).headers;
 }
 
 // The picture: yt-dlp only. The public instances answer with sound, and a
@@ -212,6 +253,7 @@ void StreamResolver::prefetch(const QString &videoId)
     auto *job = new Job;
     job->videoId = videoId;
     job->prefetch = true;
+    job->next = { TierYtDlp, TierMuxed, TierPiped, TierInvidious };
     m_jobs.insert(videoId, job);
     startTier(job, TierInnerTube);
 }
@@ -243,6 +285,7 @@ void StreamResolver::startTier(Job *job, int tier)
     switch (tier) {
     case TierInnerTube:  startInnerTube(job);     break;
     case TierYtDlp:      startYtDlp(job);         break;
+    case TierMuxed:      startMuxed(job);         break;
     case TierPiped:      startPipedRace(job);     break;
     case TierInvidious:  startInvidiousRace(job); break;
     default: {
@@ -277,7 +320,25 @@ void StreamResolver::startInnerTube(Job *job)
             return;
         }
         qInfo("innertube: %s resolved as itag %d", qPrintable(videoId), itag);
-        succeed(job, url);
+
+        QString handed = url;
+        if (!job->prefetch && videoId == m_spoil) {
+            m_spoil.clear();
+            // The expiry is signed into the link, so any change to it is a
+            // link the CDN answers with 403 — the refusal this stands in for.
+            QUrl spoiled(url);
+            QUrlQuery query(spoiled);
+            if (query.hasQueryItem(QStringLiteral("expire"))) {
+                query.removeAllQueryItems(QStringLiteral("expire"));
+                query.addQueryItem(QStringLiteral("expire"), QStringLiteral("1"));
+                spoiled.setQuery(query);
+            } else {
+                spoiled.setHost(QStringLiteral("spoiled.invalid"));
+            }
+            handed = spoiled.toString(QUrl::FullyEncoded);
+            qInfo("innertube: %s handed over spoiled, for the self-test", qPrintable(videoId));
+        }
+        succeed(job, handed);
     });
 }
 
@@ -321,6 +382,60 @@ void StreamResolver::startYtDlp(Job *job)
                 Job *job = m_jobs.value(videoId);
                 if (job && !job->settled && job->generation == generation)
                     tierExhausted(job, QStringLiteral("yt-dlp: %1").arg(reason));
+            });
+}
+
+// The muxed stream: itag 18 where it is offered, the best other stream with
+// the sound and the picture in one file where it is not. mpv plays it as sound
+// (vid=no), and the picture's bytes are the price of a stream that plays when
+// the sound-only ones would not — paid for this track alone, and only then.
+void StreamResolver::startMuxed(Job *job)
+{
+    if (!YtDlp::isAvailable()) {
+        tierExhausted(job, QStringLiteral("yt-dlp not installed, so no muxed stream"));
+        return;
+    }
+
+    YtDlpRequest *request = YtDlp::resolveMuxed(job->videoId, this);
+    job->ytdlp = request;
+    const QString videoId = job->videoId;
+    const int generation = job->generation;
+
+    // Bounded like the sound's own request, for the same reason.
+    QTimer::singleShot(kYtDlpTimeoutMs, this, [this, videoId, generation]() {
+        Job *job = m_jobs.value(videoId);
+        if (job && !job->settled && job->generation == generation && job->tier == TierMuxed)
+            tierExhausted(job, QStringLiteral("yt-dlp timed out finding the muxed stream"));
+    });
+
+    connect(request, &YtDlpRequest::succeededJson, this,
+            [this, videoId, generation](const QJsonDocument &document) {
+                Job *job = m_jobs.value(videoId);
+                if (!job || job->settled || job->generation != generation)
+                    return;
+                const QJsonObject root = document.object();
+                const QString url = root.value(QStringLiteral("url")).toString();
+                if (url.isEmpty()) {
+                    tierExhausted(job, QStringLiteral("yt-dlp returned no muxed stream"));
+                    return;
+                }
+                // Which itag, and as which client: the log is the only place
+                // that says what a failed track was rescued with.
+                const QString client = QUrlQuery(QUrl(url)).queryItemValue(QStringLiteral("c"));
+                qInfo("muxed: %s resolved as itag %s (%s), for this track alone",
+                      qPrintable(videoId),
+                      qPrintable(root.value(QStringLiteral("format_id")).toString()),
+                      qPrintable(client.isEmpty() ? QStringLiteral("client not named") : client));
+                // Fetched as the client that asked for it, or YouTube refuses
+                // it (see resolveVideo).
+                succeed(job, url, root.value(QStringLiteral("http_headers")).toObject().toVariantMap());
+            });
+
+    connect(request, &YtDlpRequest::failed, this,
+            [this, videoId, generation](const QString &reason) {
+                Job *job = m_jobs.value(videoId);
+                if (job && !job->settled && job->generation == generation)
+                    tierExhausted(job, QStringLiteral("muxed: %1").arg(reason));
             });
 }
 
@@ -441,7 +556,7 @@ void StreamResolver::startInvidiousRace(Job *job)
     }
 }
 
-void StreamResolver::succeed(Job *job, const QString &url)
+void StreamResolver::succeed(Job *job, const QString &url, const QVariantMap &headers)
 {
     if (job->settled)
         return;
@@ -450,7 +565,7 @@ void StreamResolver::succeed(Job *job, const QString &url)
     const QString videoId = job->videoId;
     const int tier = job->tier;
     const bool silent = job->prefetch;
-    m_cache.insert(videoId, { url, tier, expiryOf(url) });
+    m_cache.insert(videoId, { url, tier, expiryOf(url), headers });
 
     abortPending(job);
     discard(job);
@@ -465,7 +580,7 @@ void StreamResolver::tierExhausted(Job *job, const QString &reason)
         return;
     job->errors.append(reason);
     abortPending(job);
-    startTier(job, job->tier + 1);
+    startTier(job, job->next.isEmpty() ? int(TierExhausted) : job->next.takeFirst());
 }
 
 void StreamResolver::abortPending(Job *job)

@@ -31,7 +31,9 @@ Button {
     implicitHeight: side
     padding: 0
     flat: true
-    hoverEnabled: true
+    // Qt 6 still reports a disabled button as hovered, which would redden a
+    // heart that cannot be pressed and show its tooltip: it offers nothing.
+    hoverEnabled: enabled
     focusPolicy: Qt.TabFocus
     opacity: enabled ? 1 : 0.4
 

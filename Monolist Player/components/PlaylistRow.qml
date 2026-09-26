@@ -2,7 +2,9 @@ import QtQuick
 import Monolist
 
 // One line of the sidebar's playlist list: its number (or a glyph), its name
-// and how many songs it holds. Red when it is the page open.
+// and how many songs it holds. Red when it is the page open. Under the
+// pointer the count gives way to three dots, the playlist's menu, which a
+// right click anywhere on the line opens too.
 Item {
     id: root
 
@@ -13,6 +15,7 @@ Item {
     property int trackCount: 0
     property bool active: false
     signal activated()
+    signal menuRequested()
 
     implicitHeight: 32
 
@@ -56,7 +59,7 @@ Item {
         Text {
             anchors.left: parent.left
             anchors.leftMargin: 20 + Theme.space3
-            anchors.right: count.left
+            anchors.right: moreButton.visible ? moreButton.left : count.left
             anchors.rightMargin: Theme.space2
             anchors.verticalCenter: parent.verticalCenter
             text: root.name
@@ -69,6 +72,7 @@ Item {
 
         Text {
             id: count
+            visible: !hover.hovered
             text: root.trackCount
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
@@ -76,8 +80,27 @@ Item {
             font.pixelSize: 11
             color: root.active ? Theme.accent700 : Theme.neutral500
         }
+
+        // Where the count was; a button, so its press does not also open
+        // the playlist.
+        IconButton {
+            id: moreButton
+            visible: hover.hovered
+            anchors.right: parent.right
+            anchors.rightMargin: -Theme.space1
+            anchors.verticalCenter: parent.verticalCenter
+            side: 24
+            iconName: "dots"
+            iconSize: 14
+            iconColor: Theme.neutral700
+            onClicked: root.menuRequested()
+        }
     }
 
     HoverHandler { id: hover; cursorShape: Qt.PointingHandCursor }
     TapHandler { onTapped: root.activated() }
+    TapHandler {
+        acceptedButtons: Qt.RightButton
+        onTapped: root.menuRequested()
+    }
 }

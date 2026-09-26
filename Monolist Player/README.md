@@ -45,6 +45,26 @@ back empty, the same query runs through yt-dlp. The API is unofficial and
 changes without notice; the parsers are written to degrade to "nothing found"
 rather than crash, and the fallback covers the gap.
 
+The chips over the results pick what to search for: songs and videos come back
+as rows, albums, artists and playlists as cards that open their pages (a
+playlist search shows YouTube Music's own playlists and its listeners' as two
+sections). Cards exist only on YouTube Music, so they have no fallback.
+
+### Long lists and shelves
+
+A YouTube Music playlist arrives a hundred songs at a time. The page asks for
+the next hundred as the reader scrolls towards the end (`Catalog::loadMorePage`),
+and anything that takes the whole playlist — Play, Shuffle, Download all, Add
+all — first loads the rest (`loadRestOfPage`, up to YouTube's 5,000). A part
+that repeats songs already listed ends the list: some of YouTube Music's own
+playlists answer every "more" with their first hundred again.
+
+A shelf's header offers SHOW ALL where YouTube Music has a page of the whole
+shelf (a playlist, an artist's albums, the week's new releases, opened as
+`shelf:<browse id>[|<params>]`) and PLAY ALL where the shelf is songs. An
+album's or a playlist's card plays from a plate on its cover, without opening
+the page.
+
 ### The source ladder
 
 `PlaybackController::beginTrack` decides where audio comes from:
@@ -135,16 +155,20 @@ whichever contrasts better.
 
     Main.qml                 window, view switching, breakpoints, shortcuts
     Theme.qml                design tokens
+    Nav.qml                  where a link in any list asks to go (an artist, a page)
     Icons.js                 Lucide glyph outlines as path data
     components/              UI components: the prototype's, and the menus,
-                             cards, queue panel, lyrics pane, title bar parts
+                             cards, queue panel, lyrics pane, title bar parts,
+                             ArtistLine (an artist line whose names are links)
     views/                   Home, Search, Library, Downloads, Page (album or
-                             YouTube Music playlist), Playlist, Now Playing
+                             YouTube Music playlist), Artist, Shelf (a shelf's
+                             "show all"), Playlist, Now Playing
 
     src/
       main.cpp               wiring; registers the QML singletons; self-tests
       appdatabase.*          SQLite schema, migrations
       library.*              the user's playlists, likes, saved albums, history
+      libraryeditselftest.*  --library-edit-test
       playlistmodel.*  albummodel.*  trackmodel.*
 
       playbackcontroller.*   the facade QML binds to — driven by mpv
@@ -152,13 +176,18 @@ whichever contrasts better.
       mpvengine.*            libmpv wrapper, audio-only
       mediaextractor.*       search: InnerTube first, yt-dlp as fallback
       innertube.*            YouTube Music's API: search, suggestions, radio,
-                             browse pages, lyrics
-      catalog.*              Home's feed and album pages
+                             browse pages, artist pages, lyrics
+      catalog.*              Home's feed, album, playlist, artist and "show all"
+                             pages, and a card's play button
+      artistlinks.*          which page an artist's name opens, learnt from every
+                             answer that links one and kept in the database
+      artistselftest.*       --artist-links-test
       lyrics.*               LRCLIB and YouTube Music lyrics, synced to playback
       ytdlp.*                QProcess wrapper around yt-dlp; finds FFmpeg and Deno
       streamresolver.*       the tiered source ladder and its link cache
       downloadmanager.*      offline library: queue, options, files, DB rows
       downloadmodels.*       the queue and offline-set models for QML
+      downloadselftest.*     --download-cleanup-test
       artworkcache.*         async disk-cached image provider + cover colours
       windowchrome.*         the window without the system title bar
       recdata.*              downloads the recommendation data, checked against
@@ -166,9 +195,42 @@ whichever contrasts better.
 
 ### QML singletons
 
-`Library`, `Player`, `Extractor`, `Downloads`, `Catalog`, `Lyrics`,
+`Library`, `Player`, `Extractor`, `Downloads`, `Catalog`, `Artists`, `Lyrics`,
 `CoverPalette` and `Chrome`. The image provider registers as
-`image://artwork/<url>`.
+`image://artwork/<url>`. In QML, `Nav` carries a link's request to the window,
+and `Menus` a right click's or a "more" button's: the window keeps one
+`TrackMenu`, `CardMenu` and `PlaylistMenu` and opens it with what was clicked.
+
+### Menus and order
+
+A song has the same menu everywhere it is shown — track tables, the queue,
+suggestion rows, Downloads, the player bar, song cards — from its dots or a
+right click: play next, queue, like, add to a playlist, remove it from this
+playlist, from History or from the library (every playlist and the like, on a
+second click), go to its artists and album, copy its link or open it on
+YouTube, and its download. Albums, playlists and artists on cards have Play,
+Open, Save or Remove from library and their link; the user's playlists (on
+their page, their card and in the sidebar) have Play, Shuffle, Add all to
+queue or to another playlist, Rename and Delete. A suggestion is only a name
+until it is looked up, so its menu searches for the song first, as pressing it
+does. Songs in a playlist and what is still to come in the queue can be
+reordered: dragged by the grip that takes the row's number (or margin) under
+the pointer, with Alt+Up and Alt+Down once the grip has been pressed, or with
+Move up and Move down in the row's menu.
+
+### Artist links
+
+Every artist's name in the interface is a link: in track tables, the player
+bar, Now Playing, album pages, the queue, Downloads and the suggestion rows.
+A song fresh from YouTube Music carries its credits piece by piece with each
+name's page (`credits` in the song models), so a joint credit links each name
+to its own artist. A song kept by name only (Liked songs, playlists, History,
+downloads, the catalogue's suggestions) is matched by `Artists` against every
+name an answer has linked before, kept in the `artist_links` table; a line it
+cannot split wholly into known names stays one link, and a name nobody has
+linked is looked up among YouTube Music's artists, falling back to Search when
+there is no artist of that name. The view names are `artist:<channel id>` and
+`artistname:<name>` (a lookup, replaced by the page once found).
 
 ## Build
 
@@ -277,9 +339,13 @@ The debug build keeps its console. Start it with `QT_FORCE_STDERR_LOGGING=1` to
 see the log there, and with `MONOLIST_MPV_LOG=warn` (or `info`, `v`) to add
 mpv's own messages.
 
-    monolist --play <videoId> [seconds] [--again] [--at <s>]
+    monolist --play <videoId> [seconds] [--again] [--at <s>] [--spoil] [--video [--switch-at <s>]]
                                                     resolve and play; --again replays from the cache,
-                                                    --at jumps into the song
+                                                    --at jumps into the song; --spoil hands InnerTube's
+                                                    link over spoiled, so mpv refuses it and the track is
+                                                    retried as its muxed stream (itag 18), which the log
+                                                    names; --video plays it as a music video and
+                                                    --switch-at asks for the picture after that long
     monolist --queue-test <videoId>... [--early]    load paused, Play, Next near the end, Previous twice,
                                                     Next while paused: the clock and what was recorded at
                                                     each step. One id that will not resolve checks the
@@ -288,10 +354,43 @@ mpv's own messages.
                                                     back from a failure: the broken id fails twice and
                                                     records nothing, the good one plays again and pauses,
                                                     and two quick Nexts while paused stay paused
-    monolist --download <videoId> [seconds]         one download through yt-dlp and FFmpeg
-    monolist --search "<query>"                     one timed search, with suggestions
+    monolist --download <videoId> [seconds]         one download through yt-dlp and FFmpeg, into the scratch
+                                                    database and download folder (refuses without
+                                                    MONOLIST_DATA_DIR; MONOLIST_DOWNLOAD_DIR may still
+                                                    pick the folder)
+    monolist --download-cleanup-test                what a failed or cancelled download deletes, on invented
+                                                    files in a scratch folder: yt-dlp's partial and working
+                                                    files, never a finished file, whatever the database
+                                                    says; and where MONOLIST_DATA_DIR and
+                                                    MONOLIST_DOWNLOAD_DIR send downloads
+    monolist --search "<query>" [--filter <kind>]   one timed search, with suggestions; --filter songs,
+                                                    videos, albums, artists or playlists picks the chip,
+                                                    and the last three print their cards by section
+    monolist --page <browse id> [--all]             an album or playlist page: the header, the first
+                                                    hundred songs, then one more hundred as scrolling asks
+                                                    for it, or with --all the whole rest as Play loads it,
+                                                    timed, with how many rows are distinct songs
+    monolist --shelf <browse id> [params]           a shelf's "show all" page: its title, each section's
+                                                    cards, its songs, and one more part where it has more
+    monolist --artist-page <channel id | name> [--mix shuffle|radio]
+                                                    one artist page as the interface opens it (a name is
+                                                    looked up first): the header, the top songs with each
+                                                    credit's page, every shelf; --mix fetches that button's
+                                                    songs too, and the open window plays them
+    monolist --artist-links-test                    artist links with no network: credits from canned
+                                                    answers, names split and kept across a restart, the
+                                                    artist page's and artist search's parsers (needs
+                                                    MONOLIST_DATA_DIR; its invented rows are removed)
+    monolist --library-edit-test                    what the song and queue menus change, with no network:
+                                                    moves in the queue (the current song, the radio heading
+                                                    and the order shuffle off restores kept true) and in a
+                                                    playlist (read back from the database), Remove from
+                                                    library, Remove from history, Copy link (the clipboard
+                                                    put back after); needs MONOLIST_DATA_DIR
     monolist --lyrics "<query>"                     lyrics for the first three results, then one from the store
-    monolist --library-test "<query>"               a playlist, likes and a saved album from a real search
+    monolist --library-test "<query>" [--videos]    a playlist, likes and a saved album from a real search;
+                                                    --videos searches music videos, and says how many rows
+                                                    read back from the database still know they are videos
     monolist --rec-download [--cancel-at <MB>]      the recommendation data downloaded as Settings does it,
                                                     each file kept, fetched or refused, then the shelves
                                                     built from it; --cancel-at stops part-way
@@ -322,6 +421,21 @@ mpv's own messages.
                                                     this computer: signed-out requests byte for byte, the
                                                     check, rotation, 400/401/403, restart, sign-out, the
                                                     offer to delete the imported file, no value in the log
+    monolist --audio-devices [<videoId>]            the output menu: every device mpv lists, what the menu
+                                                    offers (Auto, then the WASAPI or CoreAudio devices, then
+                                                    a chosen one that is not connected), the kept choice and
+                                                    the one in use; with a video id it plays, switches to
+                                                    each device in turn with the clock read after each, and
+                                                    goes back to the choice it found (needs
+                                                    MONOLIST_DATA_DIR for that part)
+    monolist --view <view> --scroll-test [--scroll-away]
+                                                    that page scrolled as a person does (one notch, a quick
+                                                    spin, touchpad streams, a fling, the wheel to the end, a
+                                                    notch over a shelf): how far, how fast, the frame times
+                                                    and the longest hold-up of the interface's thread, the
+                                                    page's settings and make-up, and how many covers were
+                                                    decoded where; the pointer sits over the page, or off
+                                                    the window with --scroll-away
     monolist --diag                                 what the database holds, whether there is a Last.fm
                                                     key, the scrobbles waiting, and the YouTube Music session
                                                     (its state, size and cookie names, never a value)
@@ -330,7 +444,9 @@ Each quits by itself and reports on stderr. These open the window as it would
 be, for a look at a state:
 
     monolist --view <view>                          home, search, downloads, library[:albums|:history],
-                                                    page:<browse id>, playlist:<id>, playlist:liked
+                                                    page:<browse id>, artist:<channel id>,
+                                                    artistname:<name>, shelf:<browse id>[|<params>],
+                                                    playlist:<id>, playlist:liked
     monolist --query "<text>"                       search, with the text typed in
     monolist --open-queue  /  --now-playing         with the queue, or Now Playing, open
     monolist --ytm-demo <state>[+file]              the YouTube Music row as active, checking, unreachable
@@ -340,9 +456,15 @@ be, for a look at a state:
                                                     invidious_instances)
 
 `MONOLIST_DATA_DIR` keeps the database somewhere else, so a test never touches
-the real library; the scrobbling tests and `--ytm-session-test` refuse to run
-without it, since they empty the scrobble queue and replace the stored session. `MONOLIST_REC_DATA_URL` fetches the recommendation data from
-another address, or a local folder (`file:///C:/dev/monolist-data/`), instead of
+the real library; the scrobbling tests, `--ytm-session-test`,
+`--download-cleanup-test` and `--library-edit-test` refuse to run without it,
+since they empty the scrobble queue, replace the stored session, open the
+downloads on that database or write playlists and likes into it. It moves downloads too, to `downloads` inside it, so a test never
+writes to the real Music folder. `MONOLIST_DOWNLOAD_DIR` names the download
+folder outright, and wins when both are set. It moves only the folder, not the
+database, and a finished download is written into the library, which is why
+`--download` refuses to run without `MONOLIST_DATA_DIR`.
+`MONOLIST_REC_DATA_URL` fetches the recommendation data from another address, or a local folder (`file:///C:/dev/monolist-data/`), instead of
 the pinned tag on GitHub. `MONOLIST_LASTFM_URL` sends the self-tests' Last.fm
 calls, made with an invented key, to a stand-in on this computer, for
 `--scrobble-send-test` against `scripts/lastfm-mock.ps1`. Only a loopback
@@ -358,22 +480,25 @@ only ever go to ws.audioscrobbler.com.
     artwork           <Cache>/artwork  (256 MB cap)
 
 Downloads live in the user's real Music folder, the convention Melody settled
-on, so they survive reinstalls and other players can see them.
+on, so they survive reinstalls and other players can see them; with
+`MONOLIST_DOWNLOAD_DIR` or `MONOLIST_DATA_DIR` set they go there instead (see
+Self-tests and diagnostics). A download that fails or is cancelled takes only
+what it wrote itself and yt-dlp's partial files with it: a finished file already
+in the folder stays, even one the database has no row for.
 
 ## State
 
 Builds and runs on Windows 11 (ARM64, through x64 emulation) with Qt 6.11.2 and
 MinGW 13.1. Verified end to end: InnerTube search and suggestions, streaming
 through yt-dlp, the link cache, downloads with tags and cover art, offline
-playback, the queue and autoplay radio, Home and album pages, playlists, likes
-and saved albums, and synced and plain lyrics.
+playback, the queue and autoplay radio, Home, album and artist pages, artist
+links, playlists, likes and saved albums, and synced and plain lyrics.
 
 Known gaps:
 
-* Artist pages: an artist card searches for the name instead.
-* The device button in the player bar is styled but unwired.
-* Songs in a playlist cannot yet be reordered.
-* macOS and Linux build from the same code but have not been run.
+* macOS and Linux build from the same code but have not been run: the output
+  menu's CoreAudio devices and the wheel and trackpad scrolling there are
+  untested.
 
 ## About the Swift libraries
 

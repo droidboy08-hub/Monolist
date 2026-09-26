@@ -49,10 +49,28 @@ public:
     void setSpeed(qreal speed);
     void setReplayGainEnabled(bool enabled);
 
+    // The sound devices mpv can play through, as it lists them: maps with a
+    // `name`, which setAudioDevice takes, and a `description`, which is what
+    // the system calls the device. mpv lists every sound driver it was built
+    // with, so the same speakers can appear more than once, and the first
+    // entry is always "auto". Empty until mpv has looked, then kept current
+    // as devices are plugged in and taken out.
+    QVariantList audioDevices() const { return m_audioDevices; }
+    // Where the sound goes: a name from audioDevices, or "auto" for the
+    // system's default device, followed as that changes. Takes effect at
+    // once, part-way through a song too.
+    void setAudioDevice(const QString &name);
+
     // Decoding the picture costs, so it is off until something shows it.
     // Whatever draws the video renders from this handle (see VideoSurface).
     void setVideoEnabled(bool enabled);
     bool videoEnabled() const { return m_video; }
+    // Whether anything is on screen to show the picture. A picture nobody can
+    // see is not decoded: its track is put aside (vid=no) with the file left
+    // as it is, and taken up again, where the file has got to, once something
+    // shows it. Separate from setVideoEnabled, which is the listener's choice
+    // and reloads the stream; this is only where the picture can go.
+    void setVideoWatched(bool watched);
     // Empty when what is playing has no picture. Read on attaching, in case
     // the size was reported before anything was there to draw it.
     QSize videoSize() const { return m_videoSize; }
@@ -68,6 +86,7 @@ Q_SIGNALS:
     void metadataChanged(const QString &title, const QString &artist);
     // Empty until the file being played turns out to have a picture.
     void videoSizeChanged(const QSize &size);
+    void audioDevicesChanged();
 
 private Q_SLOTS:
     void drainEvents();
@@ -94,6 +113,8 @@ private:
     bool m_paused = true;
     bool m_buffering = false;
     bool m_video = false;
+    bool m_watched = true;   // until a surface says otherwise
     QSize m_videoSize;
     qint64 m_duration = 0;
+    QVariantList m_audioDevices;
 };

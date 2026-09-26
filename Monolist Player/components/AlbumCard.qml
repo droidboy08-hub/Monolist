@@ -3,6 +3,10 @@ import Monolist
 
 // A card: the cover, a title, a line under it, and a footer label with the
 // play mark. The cover blooms into colour under the pointer.
+//
+// A card that opens a page (an album, a playlist) can also be played from
+// where it stands: with `playable` set, a play plate comes onto the cover's
+// corner under the pointer, and pressing it plays instead of opening.
 Rectangle {
     id: root
 
@@ -17,7 +21,17 @@ Rectangle {
     property var artworks: []
     // "liked" or "new": see CollectionCover.
     property string plate: ""
+    // The play plate, and three dots on it while the songs are fetched.
+    property bool playable: false
+    property bool playLoading: false
+    // A menu, from three dots in the footer under the pointer or a right
+    // click anywhere on the card: what the owner opens (Menus).
+    property bool hasMenu: false
+    // The card itself pressed: open it (or, for a song, play it).
     signal playRequested()
+    // The play plate pressed.
+    signal playClicked()
+    signal menuRequested()
 
     color: hover.hovered ? Theme.surface : Theme.bg
     border.width: Theme.ruleWidth
@@ -43,6 +57,28 @@ Rectangle {
                     : root.artwork.length > 0 ? [root.artwork] : []
             plate: root.plate
             colour: hover.hovered
+
+            // On the picture, so a plate rather than a bare glyph (see
+            // PlateButton). It arrives with the pointer and leaves over
+            // `quick`, like every hover; it stays while its songs are on
+            // their way, so the dots are seen.
+            PlateButton {
+                id: playPlate
+                readonly property bool shown: root.playable && (hover.hovered || root.playLoading)
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                anchors.margins: Theme.space2
+                iconName: root.playLoading ? "dots" : "play"
+                tip: "Play"
+                opacity: shown ? 1 : 0
+                visible: opacity > 0
+                onClicked: root.playClicked()
+
+                Behavior on opacity {
+                    enabled: !playPlate.shown
+                    NumberAnimation { duration: Theme.quick }
+                }
+            }
         }
 
         Column {
@@ -84,7 +120,7 @@ Rectangle {
 
         Text {
             anchors.left: parent.left
-            anchors.right: playMark.left
+            anchors.right: moreButton.visible ? moreButton.left : playMark.left
             anchors.rightMargin: Theme.space2
             anchors.bottom: parent.bottom
             text: root.footer.length > 0 ? root.footer
@@ -94,6 +130,22 @@ Rectangle {
             font.pixelSize: 11
             font.letterSpacing: Theme.tracking(11, 0.1)
             color: Theme.neutral600
+        }
+
+        // On paper, so a bare glyph (DESIGN 2.6a), beside the mark that says
+        // what a click on the card does. A button, so its press is not also
+        // taken for one on the card.
+        IconButton {
+            id: moreButton
+            visible: root.hasMenu && hover.hovered
+            anchors.right: playMark.left
+            anchors.rightMargin: Theme.space1
+            anchors.verticalCenter: playMark.verticalCenter
+            side: 24
+            iconName: "dots"
+            iconSize: 14
+            iconColor: Theme.neutral700
+            onClicked: root.menuRequested()
         }
 
         Icon {
@@ -109,5 +161,17 @@ Rectangle {
     }
 
     HoverHandler { id: hover; cursorShape: Qt.PointingHandCursor }
-    TapHandler { onTapped: root.playRequested() }
+    // Not when the press was the play plate's: that one plays, and opening
+    // the page as well would take the reader away from where they pressed.
+    TapHandler {
+        onTapped: {
+            if (!playPlate.visible || !playPlate.hovered)
+                root.playRequested()
+        }
+    }
+    TapHandler {
+        enabled: root.hasMenu
+        acceptedButtons: Qt.RightButton
+        onTapped: root.menuRequested()
+    }
 }

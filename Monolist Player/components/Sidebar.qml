@@ -210,6 +210,7 @@ Rectangle {
             trackCount: Library.liked.count
             active: root.currentView === "playlist:liked"
             onActivated: root.viewRequested("playlist:liked")
+            onMenuRequested: Menus.openPlaylist("liked")
         }
 
         // Roles through `model`: the row's own properties share their names.
@@ -220,9 +221,11 @@ Rectangle {
             trackCount: model.trackCount
             active: root.currentView === "playlist:" + model.playlistId
             onActivated: root.viewRequested("playlist:" + model.playlistId)
+            onMenuRequested: Menus.openPlaylist(model.playlistId)
         }
 
         ScrollBar.vertical: MonoScrollBar {}
+        SmoothWheel { flickable: playlistList }
     }
 
     // — the user —

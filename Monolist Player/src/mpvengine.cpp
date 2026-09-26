@@ -22,8 +22,39 @@ enum ObservedProperty : uint64_t {
     PropMediaTitle,
     PropMetaArtist,
     PropVideoWidth,
-    PropVideoHeight
+    PropVideoHeight,
+    PropAudioDeviceList
 };
+
+// The devices in mpv's audio-device-list: an array of maps, each with a
+// "name" and a "description".
+QVariantList audioDevicesOf(const mpv_node &list)
+{
+    QVariantList devices;
+    if (list.format != MPV_FORMAT_NODE_ARRAY || !list.u.list)
+        return devices;
+    for (int i = 0; i < list.u.list->num; ++i) {
+        const mpv_node &entry = list.u.list->values[i];
+        if (entry.format != MPV_FORMAT_NODE_MAP || !entry.u.list)
+            continue;
+        QString name;
+        QString description;
+        for (int k = 0; k < entry.u.list->num; ++k) {
+            const mpv_node &value = entry.u.list->values[k];
+            if (value.format != MPV_FORMAT_STRING)
+                continue;
+            if (qstrcmp(entry.u.list->keys[k], "name") == 0)
+                name = QString::fromUtf8(value.u.string);
+            else if (qstrcmp(entry.u.list->keys[k], "description") == 0)
+                description = QString::fromUtf8(value.u.string);
+        }
+        if (!name.isEmpty()) {
+            devices.append(QVariantMap{ { QStringLiteral("name"), name },
+                                        { QStringLiteral("description"), description } });
+        }
+    }
+    return devices;
+}
 
 // The playlist entry a loadfile made, from mpv's answer to it; -1 when the
 // answer does not say, as an older mpv's does not.
@@ -147,6 +178,10 @@ void MpvEngine::observeProperties()
     // is also how the surface knows a picture is there at all.
     mpv_observe_property(m_mpv, PropVideoWidth,     "dwidth",               MPV_FORMAT_INT64);
     mpv_observe_property(m_mpv, PropVideoHeight,    "dheight",              MPV_FORMAT_INT64);
+    // Observing the list is also what starts mpv watching for devices coming
+    // and going; the first answer arrives with the first events, well before
+    // anyone could reach the output menu.
+    mpv_observe_property(m_mpv, PropAudioDeviceList, "audio-device-list",   MPV_FORMAT_NODE);
 }
 
 // Called by libmpv from its own thread. Must not touch Qt state directly.
@@ -177,7 +212,8 @@ void MpvEngine::drainEvents()
             // one's, running on under the new track's title.
             const bool perFile = event->reply_userdata != PropPause
                                  && event->reply_userdata != PropCoreIdle
-                                 && event->reply_userdata != PropCacheBuffering;
+                                 && event->reply_userdata != PropCacheBuffering
+                                 && event->reply_userdata != PropAudioDeviceList;
             if (perFile && !currentFileStarted())
                 break;
 
@@ -232,6 +268,16 @@ void MpvEngine::drainEvents()
                                        QString::fromUtf8(artist ? artist : ""));
                 if (title)  mpv_free(title);
                 if (artist) mpv_free(artist);
+                break;
+            }
+            case PropAudioDeviceList: {
+                if (prop->format != MPV_FORMAT_NODE)
+                    break;
+                const QVariantList devices = audioDevicesOf(*static_cast<mpv_node *>(prop->data));
+                if (devices != m_audioDevices) {
+                    m_audioDevices = devices;
+                    Q_EMIT audioDevicesChanged();
+                }
                 break;
             }
             default:
@@ -385,7 +431,19 @@ void MpvEngine::setVideoEnabled(bool enabled)
     // Hardware decoding where the driver offers it, copied back to memory
     // because the frames are rendered by the CPU into a Qt Quick texture.
     mpv_set_option_string(m_mpv, "hwdec", enabled ? "auto-copy-safe" : "no");
-    mpv_set_property_string(m_mpv, "vid", enabled ? "auto" : "no");
+    mpv_set_property_string(m_mpv, "vid", enabled && m_watched ? "auto" : "no");
+}
+
+void MpvEngine::setVideoWatched(bool watched)
+{
+    if (!m_mpv || watched == m_watched)
+        return;
+    m_watched = watched;
+    if (!m_video)
+        return;   // no picture either way; the next one starts as this says
+    mpv_set_property_string(m_mpv, "vid", watched ? "auto" : "no");
+    qInfo("video: %s", watched ? "on screen again, decoding (vid=auto)"
+                               : "nothing shows the picture, decoding stops (vid=no)");
 }
 
 void MpvEngine::setPaused(bool paused)
@@ -423,4 +481,16 @@ void MpvEngine::setSpeed(qreal speed)
 void MpvEngine::setReplayGainEnabled(bool enabled)
 {
     setOption("replaygain", enabled ? "track" : "no");
+}
+
+// Asked without waiting for the answer: during a song, mpv reopens the sound
+// output on the new device before it answers, which is long enough to be
+// felt if the interface stood still for it.
+void MpvEngine::setAudioDevice(const QString &name)
+{
+    if (!m_mpv)
+        return;
+    const QByteArray device = (name.isEmpty() ? QStringLiteral("auto") : name).toUtf8();
+    const char *value = device.constData();
+    mpv_set_property_async(m_mpv, 0, "audio-device", MPV_FORMAT_STRING, &value);
 }

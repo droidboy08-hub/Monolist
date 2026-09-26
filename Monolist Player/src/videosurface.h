@@ -1,11 +1,12 @@
 #pragma once
 
 #include <QImage>
+#include <QPointer>
 #include <QQuickItem>
 #include <QtQml/qqmlregistration.h>
 
-struct mpv_render_context;
 class MpvEngine;
+class QQuickWindow;
 
 // Draws what mpv is playing, inside the Qt Quick scene.
 //
@@ -19,9 +20,14 @@ class MpvEngine;
 // on the GPU but always sits on top of everything: no controls over the video,
 // no fullscreen overlay. That trade is why this one renders through Qt.
 //
-// mpv allows one render context per player, so one surface shows the picture at
-// a time: a surface takes the context when it is shown and gives it back when
-// it is hidden.
+// mpv allows one render context per player, and freeing it while a picture
+// plays takes the picture away for good: mpv drops the video track. So the
+// context is made once and kept for as long as any surface exists, and the
+// surfaces — Now Playing's, the mini panel's, full screen's — take turns at
+// being where its frames go. A surface that is shown takes them; one that is
+// hidden hands them to another still on screen. When none is, the engine is
+// told nobody is looking and stops decoding the picture, and the first
+// surface shown again starts it where the file has got to.
 class VideoSurface : public QQuickItem
 {
     Q_OBJECT
@@ -55,12 +61,18 @@ private Q_SLOTS:
     void setVideoSize(const QSize &size);
 
 private:
-    void attach();     // take the render context
-    void detach();     // give it back
-    static void onFrame(void *surface);
+    // Shown, in a window that is not minimised: somewhere the picture can be seen.
+    bool canShow() const;
+    void reconsider();   // attach or detach, as canShow says
+    void attach();       // become where the frames go
+    void detach();       // stop, handing them to another surface on screen
+    void release();      // forget the picture, handing over to nobody
+    static void onFrame(void *);
 
-    mpv_render_context *m_render = nullptr;
     QImage m_frame;
     bool m_showing = false;
+    bool m_dying = false;   // in the destructor: hand over, but draw nothing more
     qreal m_aspect = 16.0 / 9.0;
+    // The window whose minimising hides this surface along with everything.
+    QPointer<QQuickWindow> m_window;
 };

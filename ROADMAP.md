@@ -40,15 +40,15 @@ Priority runs from 1 (first) to 9. Size: S under an hour, M a few hours, L a day
   Done when: Starting a new track stops or pauses the old file, and mpv events are matched to the current playlist_entry_id from MPV_EVENT_START_FILE. Nothing from the previous file reaches the new one, and position starts at 0.
 - [x] **B06** Player bar: the queue and Now Playing buttons vanish below 1040 px, volume has no fallback, and the queue button does nothing while Now Playing is open *(P1, S)*
   Done when: The Now Playing and queue toggles stay visible at every width, and only volume collapses to a button with a popup slider and mute. In Now Playing the queue button switches the right pane to UP NEXT.
-- [ ] **U01** The itag 18 fallback doesn't run when a track actually fails to play (user request) *(P3, S)*
+- [x] **U01** The itag 18 fallback doesn't run when a track actually fails to play (user request) *(P3, S)*
   Done when: When mpv fails on an InnerTube adaptive URL, the same track is retried once with its best progressive format (itag 18) before yt-dlp. This is exercised on a real track, with the itag logged.
-- [ ] **P01** The output-device button in the player bar does nothing *(P4, M)*
+- [x] **P01** The output-device button in the player bar does nothing *(P4, M)*
   Done when: MpvEngine observes audio-device-list and sets audio-device. The button opens a menu of outputs (WASAPI on Windows, CoreAudio on macOS) with the current one marked, and the choice is saved.
 - [ ] **P02** No media keys and no system Now Playing (Windows media flyout, macOS Control Center, AirPods) *(P4, L)*
   Done when: A small platform layer publishes title, artist, artwork and position, and handles play, pause, next, previous and seek. It uses the MediaPlayer framework through Objective-C++ on macOS and SMTC (or a WM_APPCOMMAND fallback) on Windows, with MPRIS later for Linux.
 - [ ] **P04** The queue, current song and position are not restored after a restart *(P5, M)*
   Done when: The last queue, current index and position are saved on quit and restored, paused, at launch.
-- [ ] **P05** No menu for the song that is playing, and no sleep timer *(P5, S)*
+- [ ] **P05** *(Partly done: the player bar has the song menu, from its dots or a right click on the song; Now Playing and the sleep timer are still to do.)* No menu for the song that is playing, and no sleep timer *(P5, S)*
   Done when: A more button on the player bar and in Now Playing opens TrackMenu for Player.currentTrack, plus a sleep timer (15, 30, 45 or 60 minutes, or end of song) shown as a countdown that pauses playback.
 - [ ] **P06** Buffering, streaming-versus-offline source and lyrics error reasons are never shown *(P5, S)*
   Done when: The player bar's status line shows buffering and a small source label such as 'Offline · local file' or 'Streaming · InnerTube'. The lyrics error says why it failed.
@@ -59,13 +59,13 @@ Priority runs from 1 (first) to 9. Size: S under an hour, M a few hours, L a day
   Done when: The worker checks a stop flag between scans, and the destructor waits until it stops, so quitting mid-build exits cleanly.
 - [x] **B11** The recommender learns the wrong things: re-liked songs never count, skipped songs seed 'More like…', weekends use the UTC day *(P2, S)*
   Done when: The newest like or unlike per song decides. Only positively labelled plays seed song rails (label ≥0.6, liked, or unlabelled but heard for ≥30 s). The weekend check uses the local date.
-- [ ] **R01** 'Not interested' is read by the taste profile, but nothing can record it *(P3, M)*
+- [x] **R01** 'Not interested' is read by the taste profile, but nothing can record it *(P3, M)*
   Done when: 'Not interested' appears on suggestion rows, in TrackMenu and in Now Playing. It records a notInterested event, removes the row, keeps the song out of shelves and autoplay radio, and can be undone from the toast.
 - [ ] **R02** Search is missing rails and scoring: weekend and 'back to' rails, Liked/playlist/genre rails, and skipped songs never count against *(P3, M)*
   Done when: Search shows 'Your weekend sound' and 'Back to a couple of months ago' when their minimum listening is met, plus 'More like your Liked songs', 'More like <playlist>' and genre shelves. Taste shelves rank with profile.score, so sounds the user skips sink.
-- [ ] **R03** Suggestion shelves are tap-to-play only: no Play all, row menu, loading state or See all *(P3, M)*
+- [x] **R03** Suggestion shelves are tap-to-play only: no Play all, row menu, loading state or See all *(P3, M)*
   Done when: Each shelf header has Play all, which resolves the songs lazily in order, and See all, which loads more rows from the same source. Rows get TrackMenu on right-click and a spinner while resolving.
-- [ ] **R04** Suggestions never rotate, and they include songs the user already owns *(P3, M)*
+- [x] **R04** Suggestions never rotate, and they include songs the user already owns *(P3, M)*
   Done when: A refresh on the Search page brings up different rows, and the page rebuilds after about 45 minutes. Songs in the library, playlists and downloads are left out, and that set is part of the rebuild check.
 - [ ] **R05** Every suggestion press searches YouTube, even for songs already in the library, and the answer isn't remembered *(P5, M)*
   Done when: play() first plays a library or download copy of the song if one exists. Otherwise it searches and caches the pick for a while, and later presses and Play all use the cache.
@@ -76,7 +76,7 @@ Priority runs from 1 (first) to 9. Size: S under an hour, M a few hours, L a day
 
 ## Polish
 
-- [ ] **U02** Slow-feeling scrolling was never investigated (user request) *(P3, S)*
+- [x] **U02** Slow-feeling scrolling was never investigated (user request) *(P3, S)*
   Done when: Scrolling is compared on a Release build and natively on the Mac. If it is still sluggish, wheel step and flick velocity are tuned once in a shared scroll component used by every view.
 - [ ] **L06** Missing feedback and empty states: no page retry, silent download failures, a blank or bare Search page, 'Art' in an empty player bar *(P5, M)*
   Done when: Page errors get RETRY. Download failures, 'Download all' and 'Copy for a bug report' each show a toast. Search explains an empty or not-yet-personal page. The empty player bar says 'Nothing playing', with the heart, download and transport controls disabled.
@@ -95,20 +95,20 @@ Priority runs from 1 (first) to 9. Size: S under an hour, M a few hours, L a day
 
 ## Video
 
-- [ ] **U03** Video works only in wide Now Playing: no switch in the narrow layout, no fullscreen or mini panel, and hidden video keeps decoding *(P3, M)*
+- [x] **U03** Video works only in wide Now Playing: no switch in the narrow layout, no fullscreen or mini panel, and hidden video keeps decoding *(P3, M)*
   Done when: Narrow Now Playing gets the switch and a 16:9 plate, and hiding the last visible surface drops back to audio or shows a mini panel above the bar. F or double-click opens fullscreen video, and Esc leaves it.
-- [ ] **P03** Music videos lose their video switch once liked, saved to a playlist or replayed from History *(P4, M)*
+- [x] **P03** Music videos lose their video switch once liked, saved to a playlist or replayed from History *(P4, M)*
   Done when: A migration adds is_video, every insert path writes it and every reader exposes it, so a video played from anywhere offers the switch.
 
 ## Artist pages & search
 
-- [ ] **A01** Artist pages are not built, and artist names are never links *(P4, L)*
+- [x] **A01** Artist pages are not built, and artist names are never links *(P4, L)*
   Done when: An 'artist:<UC id>' view shows top songs, albums and singles, and related artists, with Play and Shuffle. Tracks carry artist and album browse IDs, so names link to those pages, and TrackMenu gains Go to artist and Go to album.
-- [ ] **A02** Search returns only songs or videos, though the field says 'Artists, albums, tracks…' *(P4, M)*
+- [x] **A02** Search returns only songs or videos, though the field says 'Artists, albums, tracks…' *(P4, M)*
   Done when: ALBUMS and PLAYLISTS filters, and ARTISTS once A01 exists, show card grids that open PageView. Until then the placeholder no longer promises them.
-- [ ] **A03** Long YouTube Music playlists stop at the first page *(P4, M)*
+- [x] **A03** Long YouTube Music playlists stop at the first page *(P4, M)*
   Done when: Catalog::openPage follows continuation tokens, either as the user scrolls or up to a cap, so pageTracks holds the whole playlist.
-- [ ] **A04** Shelves have no See all or Play all, cards can't be played without opening them, and Recently played has no Show all *(P5, M)*
+- [x] **A04** Shelves have no See all or Play all, cards can't be played without opening them, and Recently played has no Show all *(P5, M)*
   Done when: A shelf header opens a full view that loads more pages. Song shelves get Play all, album and playlist cards get a hover play button, and Recently played links to library:history.
 - [ ] **A05** Search with nothing typed has no recent searches or moods & genres *(P5, M)*
   Done when: Recent searches (capped at about 50, each removable, with Clear all) appear under the empty field and on an idle Search page, along with YouTube Music's moods & genres as cards. The recommender shelves sit above them when a catalogue is set.
@@ -121,11 +121,11 @@ Priority runs from 1 (first) to 9. Size: S under an hour, M a few hours, L a day
 
 ## Library & playlists
 
-- [ ] **L01** Playlist songs and the play queue can't be reordered *(P4, M)*
+- [x] **L01** Playlist songs and the play queue can't be reordered *(P4, M)*
   Done when: Drag handles, plus Alt+Up/Down, on playlist rows and upcoming queue rows. They are backed by Library.movePlaylistEntry and QueueModel::move, which keep the current index and shuffle order consistent.
-- [ ] **L02** Right-click and more menus exist only in track tables *(P4, M)*
+- [x] **L02** Right-click and more menus exist only in track tables *(P4, M)*
   Done when: Right-click and a more button open TrackMenu on download, queue and suggestion rows. Sidebar playlists get Play, Rename and Delete, saved cards get Remove from library, and Liked songs gets Add all to queue and Add all to playlist.
-- [ ] **L03** The song menu lacks Copy link, Open on YouTube, Remove from history and Remove from library *(P5, S)*
+- [x] **L03** The song menu lacks Copy link, Open on YouTube, Remove from history and Remove from library *(P5, S)*
   Done when: TrackMenu adds Copy link (music.youtube.com/watch?v=<id>), Open on YouTube, Remove from history (when shown in History) and Remove from library.
 - [ ] **L04** The library has no Songs or Artists view *(P5, M)*
   Done when: A SONGS tab lists every distinct liked, playlist and downloaded song with Shuffle all. An ARTISTS tab groups them, and an artist opens their songs, or the A01 artist page once it exists.
@@ -157,7 +157,7 @@ Priority runs from 1 (first) to 9. Size: S under an hour, M a few hours, L a day
   Done when: CMake requires 6.9 on APPLE and the README says so, or the flags are guarded with QT_VERSION_CHECK(6,9,0) and fall back to the standard title bar.
 - [ ] **M03** yt-dlp, FFmpeg and Deno aren't found when the app is opened from Finder, and any python3 makes yt-dlp look installed (Windows too) *(P6, S)*
   Done when: On macOS the lookup also searches the bundle's tools folder, ~/Library/Application Support/Monolist/tools, /opt/homebrew/bin and /usr/local/bin. The python fallback is used only if `-m yt_dlp --version` succeeds, and missing-tool messages give the right step for each platform.
-- [ ] **M04** The build-without-libmpv option (-DMONOLIST_NO_MPV=ON) no longer compiles *(P6, S)*
+- [x] **M04** The build-without-libmpv option (-DMONOLIST_NO_MPV=ON) no longer compiles *(P6, S)*
   Done when: The stub matches the header and VideoSurface's mpv code is guarded, so a NO_MPV build compiles and shows 'Built without libmpv'.
 - [ ] **M05** The Mac build is a bare executable, not a Monolist.app *(P6, M)*
   Done when: On APPLE, CMake sets MACOSX_BUNDLE and OUTPUT_NAME Monolist and uses a cmake/Info.plist.in (bundle ID, version from PROJECT_VERSION, build number, minimum macOS, Music category, icon). cmake --build then produces a Monolist.app that opens from Finder.
@@ -217,24 +217,50 @@ Seen by the agents that fixed B01–B13 and by their reviewers, and not yet fixe
 - [ ] **F12** Compiler warnings: deprecated QDateTime::setTimeSpec (taste.cpp), unchecked QFile::open in --content-test (main.cpp) *(P8, S)*
   Done when: the changed files build without warnings.
 
-- [ ] **F13** Data loss: when a download fails or is cancelled, a finished file for the same song that the database does not know about (after app data was reset, or a test run) is deleted with the partial files *(P1, S)*
+- [x] **F13** Data loss: when a download fails or is cancelled, a finished file for the same song that the database does not know about (after app data was reset, or a test run) is deleted with the partial files *(P1, S)*
   Done when: only yt-dlp's partial and intermediate files are removed, never a complete audio file, whatever the database says.
-- [ ] **F14** Tests and self-tests download into the user's real Music folder even with a scratch data folder *(P2, S)*
+- [x] **F14** Tests and self-tests download into the user's real Music folder even with a scratch data folder *(P2, S)*
   Done when: MONOLIST_DATA_DIR (or a MONOLIST_DOWNLOAD_DIR override) keeps test downloads out of the real Music folder.
-- [ ] **F15** Radio tracks are never marked as radio: openPlayEvent's fromRadio test can never be true, so play_events and Last.fm's chosenByUser treat autoplay songs as chosen *(P2, S)*
+- [x] **F15** Radio tracks are never marked as radio: openPlayEvent's fromRadio test can never be true, so play_events and Last.fm's chosenByUser treat autoplay songs as chosen *(P2, S)*
   Done when: songs added by autoplay radio are recorded with source "radio" and scrobbled with chosenByUser=0.
 - [ ] **F16** Pin the published manifest's SHA-256 in the app once Monolist-data v1 is pushed, so a moved tag cannot swap the data *(P3, S)*
   Done when: RecData refuses a manifest whose hash differs from the one built into the app for that version.
 - [ ] **F17** With "Hide explicit titles" on, pressing a clean suggestion can still play an explicit version, because the YouTube search that resolves it is not filtered *(P5, S)*
   Done when: with the switch on, the resolver prefers a non-explicit result when one exists.
-- [ ] **F18** The download button does nothing while a download is processing (FFmpeg), though the menu and Downloads page can cancel it *(P5, S)*
+- [x] **F18** The download button does nothing while a download is processing (FFmpeg), though the menu and Downloads page can cancel it *(P5, S)*
   Done when: the button cancels in every in-flight state.
-- [ ] **F19** With nothing loaded, the player bar's heart offers "Add to Liked songs" and does nothing *(P6, S)*
+- [x] **F19** With nothing loaded, the player bar's heart offers "Add to Liked songs" and does nothing *(P6, S)*
   Done when: the heart is disabled or hidden when nothing is loaded.
-- [ ] **F20** The build-without-libmpv stub (-DMONOLIST_NO_MPV=ON) no longer compiles: load() and setVideoEnabled are out of date *(P6, S)*
+- [x] **F20** The build-without-libmpv stub (-DMONOLIST_NO_MPV=ON) no longer compiles: load(), setVideoEnabled and setVideoWatched are out of date *(P6, S)*
   Done when: that configuration builds. (Same as M04.)
 - [ ] **F21** The README's self-test list lacks --rec-test, --graph-test, --artist-test, --content-test and the new --lastfm-test, --cookie-test, --listen-test, --scrobble-test, --lastfm-connect-test, --ytm-session-test, --secret-test *(P9, S)*
   Done when: every self-test flag is documented with what it checks.
+- [ ] **F22** Downloading a song again in the "original" format while its finished file is still in the folder, unknown to the database, has FFmpeg rewrite that file in place, so a cancel or failure at that moment leaves it cut short *(P4, S)*
+  Done when: a finished file already in the folder for that video id is taken into the library instead of being downloaded again, or the new copy is written under another name until it is complete.
+- [ ] **F23** The video sometimes fails at once with HTTP 403 on a freshly resolved yt-dlp link (2 of about a dozen runs on LrM_Y39Gmhk), and the app goes straight back to sound with "This video would not play" *(P4, S)*
+  Done when: a refused picture is resolved once more (a fresh link, or the android/tv_simply clients, whose streams played whole in September 2026) before the app gives up on it.
+- [ ] **F24** Cards that open a page (albums, playlists, artists) carry the same red play triangle as cards that play (AlbumCard.qml footer), so an artist card promises to play and opens a page *(P8, S)*
+  Done when: the footer mark says what a click does: an arrow for a page, the triangle for a song or video.
+- [ ] **F25** A song queued from a track table's menu loses its first credit for Last.fm: TrackTable.trackOf leaves out `primaryArtist`, so "Play next" or "Add to queue" on "Lady Gaga & Bruno Mars" scrobbles the whole line as one artist (Scrobbler::scrobbleArtist falls back to `artist`) rather than "Lady Gaga" *(P6, S)*
+  Done when: trackOf carries primaryArtist, and a joint-credit song queued from the menu scrobbles its first credit.
+- [ ] **F26** YouTube Music's own playlists (RDCLAK…) stop at about a hundred songs: asked anonymously, every continuation answers the first hundred again ("'90s Alternative" lists 126 songs and 101 load; the page stops there rather than looping) *(P5, S)*
+  Done when: the rest comes another way (the watch playlist, /next with the playlist id, or the signed-in session), or the page says how many of the total it could load.
+- [ ] **F27** Home shows only the first two or three shelves of YouTube Music's feed: the feed's own continuation is never followed, and asked anonymously it answers an empty page (token in the body, in the URL, or both) *(P5, M)*
+  Done when: Home follows the feed's continuation as the reader scrolls (probably with the visitor cookie or the signed-in session), and shows the shelves below the first few.
+- [ ] **F28** Track tables make every row up front (a Repeater in a Column): 100 rows cost 250-300 ms in the Debug build here, so a 5,000-song playlist would hold 5,000 heavy rows. Pages now add them 25 at a time (at most ~90 ms a batch), which keeps scrolling smooth but not the memory. Every view stays made, so those rows stay resident after the page is left. Play, Shuffle, Download all and Add all no longer wait for the rows, only for the songs (Catalog.pageFetching) *(P5, M)*
+  Done when: rows are made only near what is on screen (a ListView kept in step with the page's scroll, or rows that load their controls lazily), measured with --page <id> --all.
+- [ ] **F29** The library's cards (Liked songs, your playlists, saved albums and playlists) have no play plate, while YouTube Music's cards on Home, artist pages, search and "show all" now do *(P6, S)*
+  Done when: every album and playlist card plays from its plate, your own playlists and Liked songs included.
+- [ ] **F30** Play next and Add to queue say nothing: with the queue closed there is no sign either worked, and from a suggestion's menu the song is first looked up, so nothing happens for a second and then still nothing is said *(P5, S)*
+  Done when: both answer in the toast ("Playing next: <title>", "Added to queue"), or the queue button shows that something was added.
+- [ ] **F31** "Not interested" and "Don't suggest <artist>" can be taken back only from their toast: once it has gone they hold for good (they are play_events rows), and nothing lists them or clears them *(P5, S)*
+  Done when: Settings lists the songs and artists turned down, each removable, with a Clear all, and the page rebuilds after a change.
+- [ ] **F32** Two lists still scroll with Qt's own wheel handling, capped at about 600 px a second: Settings' country list and the lyrics in Now Playing. They sit inside something else that scrolls or swallows the wheel, and SmoothWheel, which the pages, the queue and the sidebar now use, keeps every wheel event it gets, so at the country list's ends the wheel would no longer move on to the page *(P6, S)*
+  Done when: both use SmoothWheel, the country list passes the wheel on to the Settings page at its ends, and the lyrics still stop following the song when scrolled by hand (LyricsPane uses onMovementStarted, which a wheel glide does not raise).
+- [ ] **F33** Now Playing's colour field decodes its cover on the interface's thread: PaletteTool::request reads, scales and measures the image in the network reply's slot (artworkcache.cpp), the same 10-190 ms per cover that --scroll-test measured for covers before they moved to a thread pool *(P6, S)*
+  Done when: the decode and the histogram run on ArtworkFetcher's pool and only the colour comes back.
+- [ ] **F34** "Add all to queue" on a long page (PageView, PlaylistView) still queues one song per call: each is a JS-to-C++ call with its map, a queue model insert that the queue panel's captions re-read, a scan for autoplay's first row and a prefetch, so a few thousand songs hold the window for seconds. Download all now goes in one call (Downloads.enqueueAll) *(P6, S)*
+  Done when: Player takes the whole list in one call and inserts it as one block of rows, measured on a 5,000-song page.
 
 ## Connections
 

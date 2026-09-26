@@ -8,6 +8,7 @@
 #include <QPointer>
 #include <QSet>
 #include <QStringList>
+#include <QVariant>
 
 #include <functional>
 #include <utility>
@@ -33,6 +34,17 @@ class InnerTube : public QObject
 {
     Q_OBJECT
 public:
+    // One piece of an artist line, as YouTube Music wrote it: a name and the
+    // page its link opens ("Bruno Mars", his channel id), or what stands
+    // between two names (" & ", ", "), which links nowhere. A name that came
+    // without a link has an empty id and `name` set, so it can still be
+    // looked up by what it says.
+    struct Credit {
+        QString text;
+        QString browseId;
+        bool name = false;
+    };
+
     struct Track {
         QString videoId;
         QString title;
@@ -48,6 +60,16 @@ public:
         // again would break "Tyler, The Creator" in two. Empty when the
         // answer had no credit to read it from.
         QString primaryArtist;
+        // `artist` again, piece by piece with each name's page, so every
+        // name in a joint credit can open its own. Joined, the texts are
+        // `artist` exactly. Empty when the answer linked nothing.
+        QList<Credit> credits;
+        // The album's page, when the row linked to it.
+        QString albumId;
+        // A playlist row's own id. The same song twice in one playlist has
+        // one video id and two of these, so it is what tells a later page's
+        // rows from ones already shown. Empty outside playlists.
+        QString setVideoId;
     };
 
     // An album, playlist, artist or video, as the home feed and charts show them.
@@ -66,12 +88,25 @@ public:
         QString primaryArtist;
     };
 
+    // Where a link goes: a page, and the parameters that pick part of it
+    // (an artist's albums rather than the whole artist). `pageType` is
+    // YouTube Music's own name for the page ("MUSIC_PAGE_TYPE_PLAYLIST"),
+    // where the link says.
+    struct Link {
+        QString browseId;
+        QString params;
+        QString pageType;
+    };
+
     // One row of a browse page: a run of songs (Quick picks) or of cards.
     struct Shelf {
         QString title;
         QString strapline;  // the small line above the title
         QList<Track> songs;
         QList<Card> cards;
+        // The shelf's own "more" button: the whole of what it shows a few
+        // of. Empty when it has none.
+        Link more;
     };
 
     // An album or playlist page.
@@ -81,13 +116,79 @@ public:
         QString title;
         QString subtitle;     // "Album • 2026"
         QString artist;       // an album's artist line
+        QList<Credit> artistCredits;   // the same, with each name's page
+        QString primaryArtist;         // its first credit alone
         QString details;      // "20 songs • 1 hour, 38 minutes"
         QString description;
         QString artwork;
         QList<Track> tracks;
+        // A long playlist comes a hundred songs at a time; this asks for the
+        // next hundred (continueBrowse). Empty when there are no more.
+        QString continuation;
     };
 
-    enum class Filter { Songs, Videos };
+    // The next part of a long list, from continueBrowse: songs (a playlist's
+    // or a shelf's), cards (a grid's), or whole shelves (a page that goes on
+    // below), and the token for the part after it, empty at the end.
+    struct Continuation {
+        QList<Track> tracks;
+        QList<Card> cards;
+        QList<Shelf> shelves;
+        QString next;
+    };
+
+    // A page that is a list rather than an album or an artist: what a
+    // shelf's "more" button opens — a grid of albums, runs of songs, or
+    // shelves of cards — under the page's own title.
+    struct Listing {
+        QString title;
+        QList<Shelf> sections;
+        // More of the last section's cards or songs, and more sections
+        // after it, each asked for with continueBrowse.
+        QString itemsContinuation;
+        QString sectionsContinuation;
+    };
+
+    // What one of YouTube Music's own buttons plays: a watch playlist, from
+    // a song in it. An artist's Shuffle and Mix are two of these.
+    struct Watch {
+        QString videoId;
+        QString playlistId;
+        QString params;
+    };
+
+    // An artist's page (or a channel's, which YouTube Music lays out alike):
+    // the header, the top songs, then shelves of cards in the page's own
+    // order and under its own titles ("Albums", "Singles & EPs", "Videos",
+    // "Featured on", "Fans might also like"…), in the language asked in.
+    struct Artist {
+        QString browseId;
+        // An artist's own page, rather than a plain channel's (an uploader
+        // a video credits), which has no photograph header, top songs or mix.
+        bool artistPage = false;
+        QString name;
+        QString description;
+        QString audience;     // "217M monthly audience", or subscribers
+        QString artwork;      // the banner, wide
+        Watch shuffle;
+        Watch radio;
+        QString songsTitle;   // "Top songs"
+        QString songsId;      // the playlist behind "Show all"
+        QList<Track> songs;
+        QList<Shelf> shelves;
+    };
+
+    // One artist in a search for artists.
+    struct ArtistHit {
+        QString name;
+        QString browseId;
+        QString artwork;
+    };
+
+    // What a search asks YouTube Music for. Songs and videos come back as
+    // songs (search), the rest as cards (searchCards). Its own playlists and
+    // its listeners' are two separate searches there, as they are here.
+    enum class Filter { Songs, Videos, Albums, Artists, FeaturedPlaylists, CommunityPlaylists };
 
     // Which of YouTube's front ends to ask. Music knows songs, albums and
     // artists; YouTube knows every video, and answers when Music does not.
@@ -126,6 +227,17 @@ public:
     };
     static void setAccountHook(AccountHook hook);
 
+    // Told of every artist name an answer links to a page, as it is read:
+    // the name, the page, and whether it is an artist's page (rather than a
+    // plain channel's). ArtistLinks keeps them, so a name that reaches the
+    // interface later without its link — from the library, the history, a
+    // suggestion — can still open the page. Set once at start (main.cpp);
+    // unset, nothing is told.
+    static void setArtistHook(std::function<void(const QString &name, const QString &browseId,
+                                                 bool artistPage)> hook);
+    // Credits as QML reads them: [{ text, id, link }], `link` for a name.
+    static QVariantList creditsToVariant(const QList<Credit> &credits);
+
     // `warmUp` opens the TLS connections and fetches the visitor id at once,
     // for the objects that play and search. One that only makes the odd
     // call (YtmSession's check) goes without.
@@ -161,8 +273,49 @@ public:
     void browse(const QString &browseId,
                 std::function<void(const QJsonObject &root, const QString &error)> done,
                 Auth auth = Auth::Anonymous);
+    // The same with the parameters a link carries (Link::params), which
+    // pick part of a page: an artist's albums, say, rather than the artist.
+    void browse(const QString &browseId, const QString &params,
+                std::function<void(const QJsonObject &root, const QString &error)> done);
+    // The next part of a long list, by the token its last part ended with
+    // (Collection::continuation, Listing's, Continuation::next); read the
+    // answer with parseContinuation.
+    void continueBrowse(const QString &token,
+                        std::function<void(const QJsonObject &root, const QString &error)> done);
     static QList<Shelf> parseShelves(const QJsonObject &root);
     static Collection parseCollection(const QString &browseId, const QJsonObject &root);
+    // A playlist's song as its page would show it: what its row leaves out
+    // (an album's artist, its cover) filled in from the page's header.
+    static void completeTrack(Track &track, const Collection &collection);
+    static Continuation parseContinuation(const QJsonObject &root);
+    static Listing parseListing(const QJsonObject &root);
+    static Artist parseArtist(const QString &browseId, const QJsonObject &root);
+    static QList<ArtistHit> parseArtistSearch(const QJsonObject &root);
+    static QList<Card> parseCardSearch(const QJsonObject &root);
+    // A card as QML reads it: { type, browseId, videoId, title, subtitle,
+    // artwork, artist, primaryArtist }.
+    static QVariantMap cardToVariant(const Card &card);
+
+    // YouTube Music's artists matching a name, best first. `done` gets an
+    // error only when the request failed. Not cancellable: each caller
+    // keeps its own answer or drops it.
+    void searchArtists(const QString &query,
+                       std::function<void(const QList<ArtistHit> &hits, const QString &error)> done);
+    // Albums, artists or playlists matching a query, as cards, best first
+    // (Filter::Albums, Artists, FeaturedPlaylists or CommunityPlaylists).
+    // Not cancellable either: the caller drops an answer it no longer wants.
+    void searchCards(const QString &query, Filter filter,
+                     std::function<void(const QList<Card> &cards, const QString &error)> done);
+    // Songs or videos matching a query, as search() finds them, answered to
+    // `done` rather than by signal. Not cancellable, so several can be in
+    // flight at once: the recommender looks a suggestion up for a press, for
+    // a menu and for Play all, and none of them may silence another.
+    void searchTracks(const QString &query, Filter filter,
+                      std::function<void(const QList<Track> &tracks, const QString &error)> done);
+    // The songs behind a Watch — an artist's Shuffle or Mix — as the queue
+    // YouTube Music would play, the first song first.
+    void watchPlaylist(const Watch &watch,
+                       std::function<void(const QList<Track> &tracks, const QString &error)> done);
 
     // account/account_menu: who is signed in. Asked only with the account;
     // without one it only offers to sign in.
@@ -184,7 +337,8 @@ public:
 
     // A newer call of the same kind cancels the one still in flight. The kinds
     // are independent: a search starting must not cancel the suggestions for
-    // what is being typed.
+    // what is being typed. Songs or videos; the other filters are cards, and
+    // go to searchCards.
     void search(const QString &query, Filter filter);
     // The same query against youtube.com, for when Music fails or finds
     // nothing: videos with their channel, not songs with their album, but one
