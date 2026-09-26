@@ -115,6 +115,10 @@ Rectangle {
 
             LikeButton {
                 visible: root.showMeta
+                // Nothing loaded, or a file with no video id: there is
+                // nothing a like could be kept against. Dimmed rather than
+                // hidden, so it is already in its place when a song arrives.
+                enabled: Player.currentSourceId.length > 0
                 anchors.verticalCenter: parent.verticalCenter
                 liked: Player.favourite
                 side: 30

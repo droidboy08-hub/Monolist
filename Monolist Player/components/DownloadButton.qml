@@ -9,7 +9,7 @@ import Monolist.Backend
 //   not saved    download glyph              click: save for offline
 //   queued       three dots                  click: cancel
 //   downloading  glyph over a 2px progress   click: cancel
-//   processing   three dots in accent        FFmpeg is tagging; nothing to do
+//   processing   three dots in accent        click: cancel (FFmpeg is tagging)
 //   failed       retry glyph                 click: try again
 //   saved        check                       click: show the file
 Button {
@@ -116,6 +116,7 @@ Button {
             break
         case "queued":
         case "downloading":
+        case "processing":
             Downloads.cancel(videoId)
             break
         case "failed":
@@ -132,7 +133,7 @@ Button {
     ToolTip.text: downloadState === "" ? "Download"
                 : downloadState === "queued" ? "Queued. Click to cancel"
                 : downloadState === "downloading" ? "Downloading " + Math.round(progress * 100) + "%. Click to cancel"
-                : downloadState === "processing" ? "Finishing up"
+                : downloadState === "processing" ? "Finishing up. Click to cancel"
                 : downloadState === "failed" ? "Download failed. Click to try again"
                 : "Downloaded. Click to show the file"
 }

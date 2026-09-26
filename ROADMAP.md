@@ -227,9 +227,9 @@ Seen by the agents that fixed B01–B13 and by their reviewers, and not yet fixe
   Done when: RecData refuses a manifest whose hash differs from the one built into the app for that version.
 - [ ] **F17** With "Hide explicit titles" on, pressing a clean suggestion can still play an explicit version, because the YouTube search that resolves it is not filtered *(P5, S)*
   Done when: with the switch on, the resolver prefers a non-explicit result when one exists.
-- [ ] **F18** The download button does nothing while a download is processing (FFmpeg), though the menu and Downloads page can cancel it *(P5, S)*
+- [x] **F18** The download button does nothing while a download is processing (FFmpeg), though the menu and Downloads page can cancel it *(P5, S)*
   Done when: the button cancels in every in-flight state.
-- [ ] **F19** With nothing loaded, the player bar's heart offers "Add to Liked songs" and does nothing *(P6, S)*
+- [x] **F19** With nothing loaded, the player bar's heart offers "Add to Liked songs" and does nothing *(P6, S)*
   Done when: the heart is disabled or hidden when nothing is loaded.
 - [ ] **F20** The build-without-libmpv stub (-DMONOLIST_NO_MPV=ON) no longer compiles: load() and setVideoEnabled are out of date *(P6, S)*
   Done when: that configuration builds. (Same as M04.)
