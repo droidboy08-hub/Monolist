@@ -36,10 +36,20 @@ Rectangle {
             anchors.fill: parent
         }
 
-        Row {
+        // Where the desktop keeps the window buttons on the left, they are
+        // here, in the window's corner, ahead of the name.
+        WindowButtons {
+            id: brandButtons
+            visible: Chrome.buttonsOnLeft && !Chrome.nativeButtons
+            anchors.top: parent.top
             anchors.left: parent.left
+            height: parent.height - Theme.ruleWidth
+        }
+
+        Row {
+            anchors.left: brandButtons.visible ? brandButtons.right : parent.left
             // macOS keeps its traffic lights here.
-            anchors.leftMargin: Theme.space6 + Chrome.nativeButtonsInset
+            anchors.leftMargin: (brandButtons.visible ? Theme.space2 : Theme.space6) + Chrome.nativeButtonsInset
             anchors.verticalCenter: parent.verticalCenter
             spacing: Theme.space2
 

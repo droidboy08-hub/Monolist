@@ -212,21 +212,49 @@ that gets blamed for the app being slow.
   tucks back behind it when closed — the bar is drawn on top throughout. Sliding
   *over* the bar and off the bottom would read as a page leaving, which is the
   wrong story: nothing left, the player is simply small again.
+* **Now Playing closes beside the window buttons, on whichever side they are.**
+  A **⌄ CLOSE** plate, with its key (Esc) printed on it, sits next to minimise:
+  on Windows at the right, the full height of the bar like the caption buttons
+  it joins; on Linux wherever the desktop's own button layout puts close
+  (GNOME's `button-layout`, KDE's `kwinrc`), left or right; on macOS after the
+  traffic lights. The player bar's Now Playing button turns to the same
+  chevron, in red, while the view is open.
+  *Why.* The close used to be a small chevron at the top left while Windows
+  keeps its buttons at the top right, so putting the player away meant
+  crossing the whole window. The corner with the window buttons is where the
+  hand already goes to deal with the window. It is a plate with a word, split
+  off by a rule, so it is not mistaken for one of the window's own buttons —
+  the red X is one button further on.
+* **The picture switch is COVER | VIDEO, above the picture it changes.** In the
+  strip at the poster's right edge, printed in the poster's ink. Both sides are
+  always there, so it never moves: a song without a video dims VIDEO and says
+  why under the pointer, and while a video loads VIDEO is already chosen and
+  shows dots, with the cover up until the first frame. `V` does the same. A
+  video takes the poster's full width, where a cover keeps its square.
+  *Why.* The old switch was a bare 40px glyph on the cover's corner; a glyph
+  that changes between "video" and "image" reads as a status, not a choice.
+  Two labelled sides say what there is to choose and which one is on.
+* **Window buttons follow the desktop.** Square caption buttons the height of
+  the bar on Windows; round ones, centred, on Linux, in the order and on the
+  side the desktop lists them. With them on the left, the sidebar's brand holds
+  them ahead of the name, or the top bar when the sidebar is folded away.
 * **The stack, bottom to top:** the page, the queue panel, Now Playing, the
   player bar, the narrow-window sidebar with its dimmed page, then the toast.
   *Why.* Each layer covers the one below only for as long as it is being used,
   and the two that are always true — the player bar, and the app's answer to
   what you just did — are never covered.
-* **The video plays where the cover is, and the switch sits on it.**
+* **The video plays where the cover is, and the switch is right above it.**
   *Why.* The video is the same song moving: it belongs in the place the still
   occupies, not in a panel of its own, and the control that swaps them belongs
-  on the thing it swaps. The plate keeps its width and loses height for a 16:9
-  picture rather than showing it in black bars — bars would be the only black
-  in a paper interface. Its bottom edge stays put, so the title below it does
-  not move. The cover stays up until the first frame arrives, so the panel is
-  never a black box, and the switch shows three dots while the picture is being
-  fetched. Songs with no video (YouTube Music's own audio tracks are a still
-  image) show the switch greyed rather than hidden, so the feature is findable.
+  next to the thing it swaps (COVER | VIDEO, in the strip; see above). The
+  picture takes the poster's width at its own 16:9 shape rather than sitting
+  in black bars — bars would be the only black in a paper interface. Its
+  bottom edge stays put, so the title below it does not move. The cover stays
+  up until the first frame arrives, so the panel is never a black box, and the
+  switch shows three dots while the picture is being fetched. Songs with no
+  video (YouTube Music's own audio tracks are a still image) show the switch
+  greyed rather than hidden, so the feature is findable. What stays on the
+  picture is full screen, once it plays: that one acts on the picture itself.
 * **Video is never fetched until it is asked for.**
   *Why.* It costs many times the bandwidth of audio and most listening does not
   want it. Asking is one click, and the song carries on from the same second.
@@ -255,7 +283,7 @@ that gets blamed for the app being slow.
   *Why.* "Play this album" is the commonest wish on a shelf, and opening the
   page to press Play is a page load and a second click for it. The mark sits
   on the picture, so it is a plate (paper square, ink glyph) rather than a
-  bare glyph, for the reason the video switch is (2.6a is about glyphs on
+  bare glyph, for the reason full screen on the video is (2.6a is about glyphs on
   paper); and it is there only under the pointer, so a shelf at rest is still
   covers and titles.
 * **A shelf says what it offers as a whole in its header**, as a section

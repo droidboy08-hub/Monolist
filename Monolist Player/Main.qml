@@ -810,4 +810,10 @@ ApplicationWindow {
                 window.enterVideoFullscreen()
         }
     }
+    // The cover / video switch in Now Playing, from the keyboard.
+    Shortcut {
+        sequence: "V"
+        enabled: window.nowPlayingOpen && Player.videoAvailable && !topBar.searchFocused
+        onActivated: Player.videoWanted = !Player.videoWanted
+    }
 }

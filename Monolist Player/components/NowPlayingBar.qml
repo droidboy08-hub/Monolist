@@ -370,7 +370,9 @@ Rectangle {
             ToolTip.text: Player.videoWanted ? "Stop the video" : "Play the video"
         }
         IconButton {
-            iconName: "maximize-2"
+            // Open, it is the way back down: the same chevron as the close
+            // button beside the window buttons.
+            iconName: root.nowPlayingOpen ? "chevron-down" : "maximize-2"
             iconColor: root.nowPlayingOpen ? Theme.accent : Theme.neutral700
             iconSize: 15
             anchors.verticalCenter: parent.verticalCenter

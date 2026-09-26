@@ -77,20 +77,28 @@ Rectangle {
         color: Theme.divider
     }
 
+    // At the right, or — where the desktop keeps them on the left — at the
+    // left, but only with the sidebar folded away: otherwise the sidebar's
+    // brand holds them, in the window's corner.
     WindowButtons {
         id: windowButtons
-        visible: !Chrome.nativeButtons
+        visible: !Chrome.nativeButtons && (!Chrome.buttonsOnLeft || root.showMenuButton)
         anchors.top: parent.top
-        anchors.right: parent.right
+        anchors.right: Chrome.buttonsOnLeft ? undefined : parent.right
+        anchors.left: Chrome.buttonsOnLeft ? parent.left : undefined
         height: parent.height - Theme.ruleWidth
     }
+    readonly property bool buttonsAtRight: windowButtons.visible && !Chrome.buttonsOnLeft
+    readonly property real buttonsAtLeft: windowButtons.visible && Chrome.buttonsOnLeft
+                                         ? windowButtons.width : 0
 
     Row {
         id: leftGroup
         anchors.left: parent.left
         // With the sidebar folded away this bar starts at the window's edge,
         // where macOS keeps its traffic lights.
-        anchors.leftMargin: Theme.space8 + (root.showMenuButton ? Chrome.nativeButtonsInset : 0)
+        anchors.leftMargin: (root.buttonsAtLeft > 0 ? root.buttonsAtLeft + Theme.space2 : Theme.space8)
+                            + (root.showMenuButton ? Chrome.nativeButtonsInset : 0)
         anchors.verticalCenter: parent.verticalCenter
         spacing: Theme.space2
 
@@ -131,11 +139,11 @@ Rectangle {
 
         // Where its right edge falls, worked out rather than read from x,
         // which follows from the width being decided here.
-        readonly property real rightEdge: (windowButtons.visible ? windowButtons.x : root.width)
+        readonly property real rightEdge: (root.buttonsAtRight ? windowButtons.x : root.width)
                                           - anchors.rightMargin
 
-        anchors.right: windowButtons.visible ? windowButtons.left : parent.right
-        anchors.rightMargin: windowButtons.visible ? Theme.space6 : Theme.space8
+        anchors.right: root.buttonsAtRight ? windowButtons.left : parent.right
+        anchors.rightMargin: root.buttonsAtRight ? Theme.space6 : Theme.space8
         anchors.verticalCenter: parent.verticalCenter
         // Its share of the bar, but never over the arrows: in a narrow window
         // it takes what is left between them and the window buttons.
