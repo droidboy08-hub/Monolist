@@ -33,8 +33,10 @@
 #include "rec/suitable.h"
 #include <QTextStream>
 #include <QFile>
+#include <QFileInfo>
 #include "rec/graph.h"
 #include "rec/shelves.h"
+#include "recdata.h"
 #include "recommender.h"
 #include "rec/taste.h"
 #include "rec/vectorsearch.h"
@@ -200,6 +202,11 @@ int main(int argc, char *argv[])
     // "Popular in" follows the country the rest of the app browses as.
     QObject::connect(&library, &Library::regionChanged, &recommender, &Recommender::refresh);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Recs",      &recommender);
+    // What it recommends from, downloadable from Settings and from an empty
+    // Search page.
+    RecData recData;
+    recData.setRecommender(&recommender);
+    qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "RecData",   &recData);
     qmlRegisterUncreatableType<SearchResultModel>(
         "Monolist.Backend", 1, 0, "SearchResultModel",
         QStringLiteral("Obtained from Extractor.results"));
@@ -888,6 +895,128 @@ int main(int argc, char *argv[])
         }
         delete catalogue;
         QTimer::singleShot(0, &app, []() { QCoreApplication::quit(); });
+    }
+
+    // --rec-download [--cancel-at <MB>]
+    //
+    // The recommendation data fetched exactly as Settings fetches it: into
+    // the data folder (MONOLIST_DATA_DIR), from MONOLIST_REC_DATA_URL when
+    // that is set. Reports each step and what became of every file, then the
+    // recommender loading from the download and the shelves it builds, and
+    // quits. --cancel-at stops it once that many megabytes are in, as Cancel.
+    //
+    // --rec-remove
+    //
+    // Remove, as Settings does it, a few seconds after launch so the
+    // recommender is holding the files: it must let go, and the folder go.
+    if (args.contains(QStringLiteral("--rec-download")) || args.contains(QStringLiteral("--rec-remove"))) {
+        auto clock = std::make_shared<QElapsedTimer>();
+        clock->start();
+        const auto say = [clock](const QString &text) {
+            qWarning("recdata: +%6lld ms  %s", (long long)clock->elapsed(), qPrintable(text));
+        };
+        const auto onDisk = [&recData]() {
+            return QStringLiteral("installed %1, partial %2, %3 on disk, in use %4")
+                .arg(recData.installed() ? QStringLiteral("yes") : QStringLiteral("no"),
+                     recData.partial() ? QStringLiteral("yes") : QStringLiteral("no"),
+                     recData.sizeText(),
+                     recData.inUse() ? QStringLiteral("yes") : QStringLiteral("no"));
+        };
+        say(QStringLiteral("from %1 into %2").arg(RecData::baseUrl(), recData.displayFolder()));
+        say(QStringLiteral("at launch: ") + onDisk());
+
+        auto lastStatus = std::make_shared<QString>();
+        auto lastTenth = std::make_shared<int>(-1);
+        const int cancelFlag = args.indexOf(QStringLiteral("--cancel-at"));
+        const qint64 cancelAt = cancelFlag >= 0 && cancelFlag + 1 < args.size()
+                                    ? args.at(cancelFlag + 1).toLongLong() << 20 : -1;
+        QObject::connect(&recData, &RecData::changed, &app,
+                         [&recData, say, lastStatus, lastTenth, cancelAt]() {
+            if (recData.status() != *lastStatus) {
+                *lastStatus = recData.status();
+                say(QStringLiteral("status: ") + recData.status());
+            }
+            const int tenth = int(recData.progress() * 10);
+            if (recData.busy() && tenth != *lastTenth) {
+                *lastTenth = tenth;
+                say(QStringLiteral("progress: ") + recData.progressText());
+            }
+            if (cancelAt >= 0 && recData.busy() && recData.doneBytes() >= cancelAt) {
+                say(QStringLiteral("cancelling at ") + recData.progressText());
+                recData.cancel();
+            }
+        });
+
+        // Polls until `ready` holds or `limitMs` passes.
+        const auto waitFor = [](std::function<bool()> ready, int limitMs, std::function<void()> then) {
+            auto *poll = new QTimer(qApp);
+            auto waited = std::make_shared<QElapsedTimer>();
+            waited->start();
+            QObject::connect(poll, &QTimer::timeout, qApp, [poll, waited, ready, limitMs, then]() {
+                if (!ready() && waited->elapsed() < limitMs)
+                    return;
+                poll->stop();
+                poll->deleteLater();
+                then();
+            });
+            poll->start(100);
+        };
+        const auto reportRecs = [&recommender, say]() {
+            QStringList titles;
+            for (const QVariant &shelf : recommender.shelves())
+                titles << shelf.toMap().value(QStringLiteral("title")).toString();
+            say(QStringLiteral("recommender: catalogue \"%1\", available %2, graph %3, %4 shelves: %5%6")
+                    .arg(recommender.dataDirectory(),
+                         recommender.available() ? QStringLiteral("yes") : QStringLiteral("no"),
+                         recommender.graphAvailable() ? QStringLiteral("yes") : QStringLiteral("no"))
+                    .arg(recommender.shelves().size())
+                    .arg(titles.join(QStringLiteral(" | ")),
+                         recommender.message().isEmpty() ? QString()
+                                                         : QStringLiteral("; says \"%1\"").arg(recommender.message())));
+        };
+
+        if (args.contains(QStringLiteral("--rec-download"))) {
+            QObject::connect(&recData, &RecData::finished, &app,
+                             [&recData, &recommender, say, onDisk, waitFor, reportRecs](bool ok) {
+                say(QStringLiteral("finished %1: %2 files kept, %3 downloaded, %4 refused; %5")
+                        .arg(ok ? QStringLiteral("whole") : QStringLiteral("NOT whole"))
+                        .arg(recData.keptFiles()).arg(recData.fetchedFiles()).arg(recData.refusedFiles())
+                        .arg(onDisk()));
+                if (!ok) {
+                    QTimer::singleShot(300, qApp, []() { QCoreApplication::quit(); });
+                    return;
+                }
+                // The download points the recommender at itself; the page it
+                // then builds is the proof the files are the ones it reads.
+                waitFor([&recommender]() {
+                            return !recommender.busy() && !recommender.shelves().isEmpty();
+                        }, 240000, [reportRecs, say]() {
+                            reportRecs();
+                            say(QStringLiteral("done, quitting"));
+                            QTimer::singleShot(200, qApp, []() { QCoreApplication::quit(); });
+                        });
+            });
+            QTimer::singleShot(500, &app, [&recData]() { recData.download(); });
+        } else {
+            QTimer::singleShot(4000, &app, [&recData, say, onDisk, waitFor, reportRecs]() {
+                reportRecs();
+                say(QStringLiteral("removing"));
+                recData.remove();
+                waitFor([&recData]() { return !recData.removing(); }, 240000,
+                        [&recData, say, onDisk, reportRecs]() {
+                    say(QStringLiteral("after: ") + onDisk() + QStringLiteral("; folder %1")
+                            .arg(QFileInfo::exists(RecData::folderPath()) ? QStringLiteral("STILL THERE")
+                                                                           : QStringLiteral("gone")));
+                    reportRecs();
+                    say(QStringLiteral("done, quitting"));
+                    QTimer::singleShot(200, qApp, []() { QCoreApplication::quit(); });
+                });
+            });
+        }
+        QTimer::singleShot(600000, &app, []() {
+            qWarning("recdata: timed out");
+            QCoreApplication::exit(2);
+        });
     }
 
     // --graph-test <catalogue directory> <graph directory>

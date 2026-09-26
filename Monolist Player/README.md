@@ -161,6 +161,8 @@ whichever contrasts better.
       downloadmodels.*       the queue and offline-set models for QML
       artworkcache.*         async disk-cached image provider + cover colours
       windowchrome.*         the window without the system title bar
+      recdata.*              downloads the recommendation data, checked against
+                             its manifest, into the data folder
 
 ### QML singletons
 
@@ -279,6 +281,10 @@ mpv's own messages.
     monolist --search "<query>"                     one timed search, with suggestions
     monolist --lyrics "<query>"                     lyrics for the first three results, then one from the store
     monolist --library-test "<query>"               a playlist, likes and a saved album from a real search
+    monolist --rec-download [--cancel-at <MB>]      the recommendation data downloaded as Settings does it,
+                                                    each file kept, fetched or refused, then the shelves
+                                                    built from it; --cancel-at stops part-way
+    monolist --rec-remove                           Remove, as Settings does it, with the data in use
     monolist --diag                                 what the database holds
 
 Each quits by itself and reports on stderr. These open the window as it would
@@ -292,13 +298,16 @@ be, for a look at a state:
                                                     invidious_instances)
 
 `MONOLIST_DATA_DIR` keeps the database somewhere else, so a test never touches
-the real library.
+the real library. `MONOLIST_REC_DATA_URL` fetches the recommendation data from
+another address, or a local folder (`file:///C:/dev/monolist-data/`), instead of
+the pinned tag on GitHub.
 
 ## Storage
 
-    downloads   <Music>/Monolist/<artist> - <title> [<id>].<ext>
-    database    <AppData>/monolist.db  (library, playlists, history, lyrics, settings)
-    artwork     <Cache>/artwork  (256 MB cap)
+    downloads         <Music>/Monolist/<artist> - <title> [<id>].<ext>
+    database          <AppData>/monolist.db  (library, playlists, history, lyrics, settings)
+    recommendations   <AppData>/recommendations/v1  (downloaded from Settings; Remove deletes it)
+    artwork           <Cache>/artwork  (256 MB cap)
 
 Downloads live in the user's real Music folder, the convention Melody settled
 on, so they survive reinstalls and other players can see them.
@@ -356,3 +365,7 @@ That covers what was written here, not what the app uses:
 * The **recommendation catalogue and graph** the app can be pointed at are not
   in the repository and are not covered by this licence; they carry their own
   (CC BY-NC).
+* The **recommendation data** the app downloads from Settings lives in its own
+  repository, [Monolist-data](https://github.com/droidboy08-hub/Monolist-data),
+  under its own licences — CC BY-NC 4.0 for the catalogue, CC BY-NC-SA 3.0 for
+  the graph — for non-commercial use only; see that repository for the credits.

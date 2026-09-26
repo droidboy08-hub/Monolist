@@ -86,6 +86,17 @@ public:
     // Rebuilds the page straight away, so the switch is seen to work.
     void setHideExplicit(bool hide);
 
+    // Both folders at once, with one reload rather than one each: how the
+    // downloaded data (RecData) is put to use. An empty graph means "beside
+    // the catalogue".
+    void useDirectories(const QString &catalogue, const QString &graph);
+    // Stops reading anything inside `folder`: whichever setting points into
+    // it is cleared, and the worker lets go of the files. True when there was
+    // something to let go, and dataLoaded() will say when it has.
+    bool release(const QString &folder);
+    // Whether `path` is `folder` or somewhere under it.
+    static bool isInside(const QString &path, const QString &folder);
+
 public Q_SLOTS:
     // Brings the page up to date. Nothing at all when neither the listening
     // history nor the country has changed since the last build, so it is safe
@@ -105,6 +116,9 @@ Q_SIGNALS:
     // Something worth a line in the toast: a suggestion that could not be
     // found, usually.
     void notice(const QString &text);
+    // The worker holds exactly what the settings name, with no other load
+    // queued behind: any file read before is closed and unmapped.
+    void dataLoaded();
 
 private:
     void setState(bool busy, const QString &message);
@@ -124,6 +138,8 @@ private:
     bool m_hideExplicit = false;
     int m_rows = 0;
     int m_graphShards = 0;
+    // Loads asked of the worker and not yet answered.
+    int m_loadsPending = 0;
     // A refresh asked for while a build was running — a country changed in
     // Settings mid-scan, say. Dropping it would leave the page showing the old
     // country until something else happened to rebuild it.

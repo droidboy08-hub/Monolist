@@ -231,6 +231,7 @@ ApplicationWindow {
                     SearchView {
                         anchors.fill: parent
                         term: topBar.searchText
+                        onSettingsRequested: window.navigate("settings")
                     }
                 }
 

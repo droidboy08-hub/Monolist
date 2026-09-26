@@ -11,6 +11,9 @@ Flickable {
 
     property string term: ""
 
+    // The empty page's way to the recommendation folders.
+    signal settingsRequested()
+
     // YouTube Music answers in a few hundred milliseconds, so results can
     // follow the typing; the pause only keeps one request per word or so.
     onTermChanged: debounce.restart()
@@ -78,17 +81,52 @@ Flickable {
         // — with nothing typed, the page is suggestions rather than an
         // instruction nobody needs twice —
         Text {
-            visible: root.term.length === 0 && !Recs.available
+            visible: root.term.length === 0 && !Recs.available && Recs.busy
             width: parent.width
-            text: Recs.busy
-                  ? "Reading the catalogue…"
-                  : (Recs.message.length > 0
-                     ? Recs.message + "  Set the folder in Settings."
-                     : "Type in the field above to search YouTube Music.")
-            wrapMode: Text.WordWrap
+            text: "Reading the catalogue…"
             font.family: Theme.fontFamily
             font.pixelSize: 14
             color: Theme.neutral700
+        }
+
+        // Nothing to suggest from: said plainly, and the download offered
+        // right here, rather than a blank page that leaves the listener to
+        // guess why there is nothing on it.
+        Column {
+            visible: root.term.length === 0 && !Recs.available && !Recs.busy
+            width: parent.width
+            spacing: Theme.space4
+
+            Text {
+                width: parent.width
+                // A folder set by hand that holds no catalogue says so, since
+                // that is the thing to fix.
+                text: Recs.dataDirectory.length > 0 && Recs.message.length > 0 && !RecData.busy
+                      ? Recs.message
+                      : "Nothing to suggest yet: suggestions come from the recommendation data, which is "
+                        + "downloaded separately. The field above searches YouTube Music in the meantime."
+                wrapMode: Text.WordWrap
+                font.family: Theme.fontFamily
+                font.pixelSize: 14
+                color: Theme.neutral700
+            }
+
+            RecDataPanel {
+                width: parent.width
+            }
+
+            // For a copy kept somewhere else.
+            Text {
+                text: "OR CHOOSE A FOLDER IN SETTINGS →"
+                font.family: Theme.fontFamily
+                font.pixelSize: 12
+                font.weight: Font.Bold
+                font.letterSpacing: Theme.tracking(12, 0.12)
+                color: settingsLinkHover.hovered ? Theme.accent700 : Theme.neutral700
+
+                HoverHandler { id: settingsLinkHover; cursorShape: Qt.PointingHandCursor }
+                TapHandler { onTapped: root.settingsRequested() }
+            }
         }
 
         Text {

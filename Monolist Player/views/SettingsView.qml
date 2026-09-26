@@ -307,8 +307,9 @@ Flickable {
         // — recommendations —
         //
         // The catalogue is not shipped with the app and cannot be: it is
-        // licensed for non-commercial use only. So it is pointed at rather
-        // than bundled, and the app works perfectly well without one.
+        // licensed for non-commercial use only. So it is downloaded from a
+        // repository of its own, or pointed at, rather than bundled, and the
+        // app works perfectly well without one.
         SectionHeader {
             width: parent.width
             number: "04"
@@ -321,6 +322,43 @@ Flickable {
                   : (Recs.message.length > 0
                      ? Recs.message
                      : "Point this at a folder holding the four embeat_v1_*.bin files to get suggestions in Search.")
+        }
+
+        // — the data, downloaded —
+        //
+        // Offered whenever there is nothing to recommend from, and kept in
+        // view once it is here, or part of it is, with Remove. Hidden while a
+        // folder of the listener's own is in use: that needs nothing from it.
+        Column {
+            visible: RecData.busy || RecData.removing || RecData.installed || RecData.partial
+                     || RecData.failed || (!Recs.available && !Recs.busy)
+            width: parent.width
+            spacing: Theme.space3
+
+            Text {
+                text: "DATA"
+                font.family: Theme.fontFamily
+                font.pixelSize: 11
+                font.weight: Font.Bold
+                font.letterSpacing: Theme.tracking(11, 0.08)
+                color: Theme.neutral700
+            }
+
+            RecDataPanel {
+                width: parent.width
+            }
+        }
+
+        // The folders themselves, for a copy kept anywhere else. The download
+        // fills the first in when it is done; typing over it still works.
+        Text {
+            text: "CATALOGUE"
+            font.family: Theme.fontFamily
+            font.pixelSize: 11
+            font.weight: Font.Bold
+            font.letterSpacing: Theme.tracking(11, 0.08)
+            color: Theme.neutral700
+            topPadding: Theme.space2
         }
 
         Item {
@@ -400,6 +438,11 @@ Flickable {
                   + "It goes by the title alone; search results and albums are left as they are."
             checked: Recs.hideExplicit
             onToggled: Recs.hideExplicit = !Recs.hideExplicit
+        }
+
+        // The licences ask for it wherever the data is used.
+        DataCredit {
+            width: parent.width
         }
 
         HRule { width: parent.width }
@@ -627,6 +670,9 @@ Flickable {
             Note {
                 text: "Songs, search, lyrics and artwork come from YouTube Music, LRCLIB, yt-dlp and FFmpeg. "
                       + "Nothing is signed in: no account, and nothing about you leaves this computer."
+            }
+            DataCredit {
+                width: parent.width
             }
         }
     }

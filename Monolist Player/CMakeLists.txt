@@ -56,6 +56,9 @@ qt_add_executable(monolist
     src/rec/suitable.h             src/rec/suitable.cpp
     src/rec/shelves.h              src/rec/shelves.cpp
     src/recommender.h              src/recommender.cpp
+    # Fetches those files from their own repository (Monolist-data), checked
+    # against its manifest, into the data folder.
+    src/recdata.h                  src/recdata.cpp
     # — backend merged in from the Melody player —
     ${MONOLIST_MPV_SOURCES}
     src/ytdlp.h                    src/ytdlp.cpp
@@ -149,6 +152,8 @@ qt_add_qml_module(monolist
         components/DownloadOptions.qml
         components/ServiceRow.qml
         components/RecShelf.qml
+        components/RecDataPanel.qml
+        components/DataCredit.qml
         views/HomeView.qml
         views/SearchView.qml
         views/LibraryView.qml

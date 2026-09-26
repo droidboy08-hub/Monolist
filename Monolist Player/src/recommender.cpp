@@ -293,6 +293,11 @@ Recommender::Recommender(QObject *parent)
                 setState(false, message);
                 if (ok)
                     refresh();
+                // Loads run in the order asked, so the last one answered is
+                // the one the settings name now.
+                m_loadsPending = qMax(0, m_loadsPending - 1);
+                if (m_loadsPending == 0)
+                    Q_EMIT dataLoaded();
             });
     connect(m_worker, &RecommenderWorker::built, this,
             [this](const QVariantList &shelves, bool personal) {
@@ -394,6 +399,51 @@ void Recommender::setHideExplicit(bool hide)
     refresh();
 }
 
+void Recommender::useDirectories(const QString &catalogue, const QString &graph)
+{
+    storeSetting(kDataDirKey, cleanPath(catalogue));
+    storeSetting(kGraphDirKey, cleanPath(graph));
+    reload();
+    // The folder fields follow even when the state line did not change.
+    Q_EMIT stateChanged();
+}
+
+bool Recommender::release(const QString &folder)
+{
+    bool changed = false;
+    if (isInside(dataDirectory(), folder)) {
+        storeSetting(kDataDirKey, QString());
+        changed = true;
+    }
+    if (isInside(graphDirectory(), folder)) {
+        storeSetting(kGraphDirKey, QString());
+        changed = true;
+    }
+    // A graph found beside the catalogue is inside the folder only when the
+    // catalogue is, which the first test has already let go of.
+    if (!changed)
+        return false;
+    reload();
+    Q_EMIT stateChanged();
+    return true;
+}
+
+bool Recommender::isInside(const QString &path, const QString &folder)
+{
+    if (path.trimmed().isEmpty() || folder.trimmed().isEmpty())
+        return false;
+    // The file systems these run on by default ignore case.
+#if defined(Q_OS_WIN) || defined(Q_OS_MACOS)
+    const Qt::CaseSensitivity sensitivity = Qt::CaseInsensitive;
+#else
+    const Qt::CaseSensitivity sensitivity = Qt::CaseSensitive;
+#endif
+    const QString inner = QDir::cleanPath(QDir::fromNativeSeparators(path.trimmed()));
+    const QString outer = QDir::cleanPath(QDir::fromNativeSeparators(folder.trimmed()));
+    return inner.compare(outer, sensitivity) == 0
+           || inner.startsWith(outer + QLatin1Char('/'), sensitivity);
+}
+
 QString Recommender::resolvedGraphDirectory() const
 {
     const QString explicitDir = graphDirectory();
@@ -416,6 +466,7 @@ void Recommender::reload()
     m_graphShards = 0;
     Q_EMIT shelvesChanged();
     setState(true, QString());
+    ++m_loadsPending;
     QMetaObject::invokeMethod(m_worker, "load", Qt::QueuedConnection,
                               Q_ARG(QString, dataDirectory()),
                               Q_ARG(QString, resolvedGraphDirectory()));
