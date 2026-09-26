@@ -5,6 +5,8 @@
 #include <QTimer>
 #include <QVariant>
 
+#include <utility>
+
 Catalog::Catalog(QObject *parent)
     : QObject(parent)
 {
@@ -36,6 +38,13 @@ QList<SearchResultModel::Item> Catalog::toItems(const QList<InnerTube::Track> &t
 // the view updates once both have answered.
 void Catalog::refresh()
 {
+    // A load is already out, asked from whatever country was set when it
+    // started. Refusing this one would leave Home on that country after a
+    // new one was picked mid-load, so it waits and runs when the load ends.
+    if (m_pendingHome > 0) {
+        m_refreshQueued = true;
+        return;
+    }
     m_retries = 0;   // asked for, so start counting again
     load();
 }
@@ -49,6 +58,12 @@ void Catalog::load()
     Q_EMIT homeChanged();
 
     m_innerTube.browse(QStringLiteral("FEmusic_home"), [this](const QJsonObject &root, const QString &error) {
+        // Superseded while it was out: the queued refresh asks again, and
+        // this answer is for what was asked before.
+        if (m_refreshQueued) {
+            finishHome();
+            return;
+        }
         if (error.isEmpty()) {
             m_homeShelves.clear();
             bool songsTaken = false;
@@ -78,6 +93,10 @@ void Catalog::load()
     });
 
     m_innerTube.browse(QStringLiteral("FEmusic_new_releases"), [this](const QJsonObject &root, const QString &error) {
+        if (m_refreshQueued) {
+            finishHome();
+            return;
+        }
         if (error.isEmpty()) {
             m_releaseShelves.clear();
             m_featured.clear();
@@ -109,6 +128,14 @@ void Catalog::finishHome()
 {
     if (--m_pendingHome > 0)
         return;
+    // Asked again while this load was out — another country picked in
+    // Settings. Load again rather than settle on, or retry, the old one; Home
+    // stays "loading" throughout, since the next load starts before anything
+    // is announced.
+    if (std::exchange(m_refreshQueued, false)) {
+        refresh();
+        return;
+    }
     m_shelves = m_releaseShelves + m_homeShelves;
     // One failed request out of two still leaves a page worth showing.
     if (!m_shelves.isEmpty() || m_quickPicks.rowCount() > 0) {

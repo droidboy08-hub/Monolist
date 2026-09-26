@@ -161,13 +161,29 @@ Q_SIGNALS:
     void radioFailed(const QString &seedVideoId, const QString &reason);
 
 private:
+    // Where the one request of a kind (search, suggestions, radio) is kept,
+    // so a newer one or a cancel can replace it. The reply alone is not
+    // enough: between a failed attempt and its retry there is no reply in
+    // flight, only a timer, and a retry that fired after a newer request had
+    // started would take that request's place and silence it. So every new
+    // request and every cancel also moves the generation on, and anything
+    // started for an older generation — a reply, a retry waiting to be sent —
+    // drops itself when it finds the slot has moved.
+    struct Slot {
+        QPointer<QNetworkReply> reply;
+        quint64 generation = 0;
+    };
+    // Moves the slot on and aborts the reply it holds, if any.
+    static void release(Slot &slot);
+
     QNetworkReply *post(Client client, const QString &endpoint, QJsonObject body, int timeoutMs);
     // One request, its answer as JSON. A dropped connection or a timeout is
     // ordinary on a home connection, so it is tried once more before failing;
     // `slot`, where given, holds the reply so a newer request can cancel it,
-    // and a cancelled request is dropped silently rather than retried.
+    // and a cancelled or replaced request is dropped silently rather than
+    // retried.
     void send(Client client, const QString &endpoint, const QJsonObject &body, int timeoutMs,
-              QPointer<QNetworkReply> *slot,
+              Slot *slot,
               std::function<void(const QJsonObject &root, const QString &error)> done,
               int retries = 1);
 
@@ -187,7 +203,7 @@ private:
     QString m_visitorData;
     bool m_visitorPending = false;
     std::vector<std::function<void()>> m_visitorWaiters;
-    QPointer<QNetworkReply> m_search;
-    QPointer<QNetworkReply> m_suggest;
-    QPointer<QNetworkReply> m_radio;
+    Slot m_search;
+    Slot m_suggest;
+    Slot m_radio;
 };

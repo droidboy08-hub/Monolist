@@ -82,6 +82,16 @@ ApplicationWindow {
         sidebarOverlayOpen = false;
     }
 
+    // Search asked for by name, from the sidebar or with Ctrl+F: the page, and
+    // the cursor in the field ready to type. Not what navigate("search")
+    // does for typing, which is already in the field and must not have its
+    // text selected under it. Now Playing covers the field, so it closes.
+    function openSearch() {
+        nowPlayingOpen = false
+        navigate("search")
+        topBar.focusSearch()
+    }
+
     function goBack() {
         if (viewHistory.length === 0)
             return;
@@ -123,7 +133,12 @@ ApplicationWindow {
             anchors.bottom: parent.bottom
             anchors.left: parent.left
             currentView: window.currentView
-            onViewRequested: function(view) { window.navigate(view) }
+            onViewRequested: function(view) {
+                if (view === "search")
+                    window.openSearch()
+                else
+                    window.navigate(view)
+            }
             onNewPlaylistRequested: window.createPlaylist()
         }
 
@@ -353,7 +368,10 @@ ApplicationWindow {
         onCloseRequested: window.sidebarOverlayOpen = false
         onViewRequested: function(view) {
             window.sidebarOverlayOpen = false
-            window.navigate(view)
+            if (view === "search")
+                window.openSearch()
+            else
+                window.navigate(view)
         }
         onNewPlaylistRequested: {
             window.sidebarOverlayOpen = false
@@ -449,10 +467,7 @@ ApplicationWindow {
     // binds all of them, `sequence` would silently take only the first.
     Shortcut {
         sequences: [StandardKey.Find]
-        onActivated: {
-            window.nowPlayingOpen = false
-            window.navigate("search")
-        }
+        onActivated: window.openSearch()
     }
     Shortcut {
         sequence: "Esc"

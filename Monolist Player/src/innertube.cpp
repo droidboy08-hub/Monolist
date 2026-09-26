@@ -445,23 +445,40 @@ QNetworkReply *InnerTube::post(Client client, const QString &endpoint, QJsonObje
     return m_network->post(request, QJsonDocument(body).toJson(QJsonDocument::Compact));
 }
 
+void InnerTube::release(Slot &slot)
+{
+    // Moved on first: abort() delivers finished() synchronously, and that
+    // handler must see itself as superseded, not as a failed request.
+    ++slot.generation;
+    if (QNetworkReply *reply = slot.reply) {
+        slot.reply = nullptr;
+        reply->abort();
+    }
+}
+
 void InnerTube::send(Client client, const QString &endpoint, const QJsonObject &body, int timeoutMs,
-                     QPointer<QNetworkReply> *slot,
+                     Slot *slot,
                      std::function<void(const QJsonObject &, const QString &)> done, int retries)
 {
     QNetworkReply *reply = post(client, endpoint, body, timeoutMs);
+    // The request this attempt belongs to. Its retries carry it forward, and
+    // whichever of them finds the slot moved on stops there.
+    const quint64 generation = slot ? slot->generation : 0;
     if (slot)
-        *slot = reply;
+        slot->reply = reply;
+    const auto superseded = [slot, generation]() {
+        return slot && slot->generation != generation;
+    };
 
     connect(reply, &QNetworkReply::finished, this,
-            [this, reply, client, endpoint, body, timeoutMs, slot, done, retries]() {
+            [this, reply, client, endpoint, body, timeoutMs, slot, done, retries, superseded]() {
                 reply->deleteLater();
                 // A newer request of the same kind took this one's place, or it
                 // was cancelled: whoever did that has already moved on.
-                if (slot && *slot != reply)
+                if (superseded())
                     return;
                 if (slot)
-                    *slot = nullptr;
+                    slot->reply = nullptr;
 
                 if (reply->error() != QNetworkReply::NoError) {
                     // A country YouTube Music does not serve is refused with
@@ -473,6 +490,10 @@ void InnerTube::send(Client client, const QString &endpoint, const QJsonObject &
                         g_region.clear();
                         if (g_regionRejected)
                             g_regionRejected(refused);
+                        // Being told can start a newer request of this kind;
+                        // if it did, that one is the answer now.
+                        if (superseded())
+                            return;
                         send(client, endpoint, body, timeoutMs, slot, done, retries);
                         return;
                     }
@@ -480,7 +501,13 @@ void InnerTube::send(Client client, const QString &endpoint, const QJsonObject &
                     // connection; the second attempt usually works.
                     if (retries > 0 && reply->error() != QNetworkReply::OperationCanceledError) {
                         QTimer::singleShot(1200, this, [this, client, endpoint, body, timeoutMs,
-                                                        slot, done, retries]() {
+                                                        slot, done, retries, superseded]() {
+                            // Replaced or cancelled while waiting. Sending now
+                            // would put this old request back in the slot,
+                            // where the newer one's answer would be dropped
+                            // as stale and nobody would ever hear back.
+                            if (superseded())
+                                return;
                             send(client, endpoint, body, timeoutMs, slot, done, retries - 1);
                         });
                         return;
@@ -593,12 +620,7 @@ void InnerTube::player(const QString &videoId,
 
 void InnerTube::search(const QString &query, Filter filter)
 {
-    // Detach before aborting: abort() delivers finished() synchronously, and
-    // that handler must see itself as superseded, not as a failed search.
-    if (QNetworkReply *previous = m_search) {
-        m_search = nullptr;
-        previous->abort();
-    }
+    release(m_search);
 
     const QJsonObject body{
         { QStringLiteral("query"), query },
@@ -615,10 +637,7 @@ void InnerTube::search(const QString &query, Filter filter)
 
 void InnerTube::searchYouTube(const QString &query)
 {
-    if (QNetworkReply *previous = m_search) {
-        m_search = nullptr;
-        previous->abort();
-    }
+    release(m_search);
 
     send(Client::YouTube, QStringLiteral("search"), { { QStringLiteral("query"), query } },
          kSearchTimeoutMs, &m_search,
@@ -632,10 +651,7 @@ void InnerTube::searchYouTube(const QString &query)
 
 void InnerTube::suggest(const QString &input)
 {
-    if (QNetworkReply *previous = m_suggest) {
-        m_suggest = nullptr;
-        previous->abort();
-    }
+    release(m_suggest);
 
     // Suggestions are a nicety and are asked for while typing: no retry, and
     // a failure simply shows none.
@@ -677,26 +693,17 @@ void InnerTube::radio(const QString &videoId)
 
 void InnerTube::cancelRadio()
 {
-    if (QNetworkReply *reply = m_radio) {
-        m_radio = nullptr;
-        reply->abort();
-    }
+    release(m_radio);
 }
 
 void InnerTube::cancelSearch()
 {
-    if (QNetworkReply *reply = m_search) {
-        m_search = nullptr;
-        reply->abort();
-    }
+    release(m_search);
 }
 
 void InnerTube::cancelSuggestions()
 {
-    if (QNetworkReply *reply = m_suggest) {
-        m_suggest = nullptr;
-        reply->abort();
-    }
+    release(m_suggest);
 }
 
 QList<InnerTube::Track> InnerTube::parseSearch(const QJsonObject &root)

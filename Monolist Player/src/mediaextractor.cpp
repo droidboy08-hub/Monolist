@@ -197,6 +197,10 @@ void MediaExtractor::search(const QString &query)
     // First, so that anything cancelled below reads as stale in its handler.
     m_query = trimmed;
     cancel();
+    // Whatever went wrong belonged to the last query. Cleared even when the
+    // field was emptied, or the old failure sits on the search page with
+    // nothing typed above it.
+    setLastError(QString());
 
     if (trimmed.isEmpty()) {
         m_results.clear();
@@ -205,7 +209,6 @@ void MediaExtractor::search(const QString &query)
     }
 
     setBusy(true);
-    setLastError(QString());
     m_innerTube.search(trimmed, m_filter == QLatin1String("videos") ? InnerTube::Filter::Videos
                                                                      : InnerTube::Filter::Songs);
 }

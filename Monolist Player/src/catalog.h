@@ -59,7 +59,8 @@ Q_SIGNALS:
 
 private:
     // The two requests Home is made of. refresh() resets the retry count and
-    // calls this; a failed load calls it again by itself, twice.
+    // calls this (or queues itself behind a load already out); a failed load
+    // calls it again by itself, twice.
     void load();
     void finishHome();
     static QVariantMap cardToMap(const InnerTube::Card &card);
@@ -72,6 +73,10 @@ private:
 
     int m_pendingHome = 0;
     int m_retries = 0;
+    // A refresh asked for while Home was loading — a country picked in
+    // Settings before the first load answered, say. It runs when that load
+    // ends, and the load's own answers, now stale, are not shown.
+    bool m_refreshQueued = false;
     QString m_error;
     QString m_quickPicksTitle;
     QVariantList m_homeShelves;       // from the home feed

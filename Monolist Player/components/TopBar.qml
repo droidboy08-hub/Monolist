@@ -32,6 +32,26 @@ Rectangle {
         searchActivated(text)
     }
 
+    // Search asked for by name — Ctrl+F, the sidebar's Search — means "I am
+    // about to type". The cursor goes to the field with what is there
+    // selected, so typing replaces the last search and an arrow key keeps it.
+    function focusSearch() {
+        searchField.forceActiveFocus()
+        searchField.selectAll()
+    }
+
+    // The X. Setting the text is not an edit, so what an emptied field does
+    // when typed away (onTextEdited) is done here by hand. The cursor stays
+    // in the field, for the next search.
+    function clearSearch() {
+        suggestTimer.stop()
+        suggesting = false
+        highlighted = -1
+        searchField.text = ""
+        Extractor.clearSuggestions()
+        searchField.forceActiveFocus()
+    }
+
     // The typed part stays regular and the completion goes bold, the way
     // YouTube Music sets its own suggestions.
     function suggestionMarkup(suggestion) {
@@ -128,12 +148,30 @@ Rectangle {
             anchors.verticalCenter: parent.verticalCenter
         }
 
+        // Only there when there is something to clear. A glyph like every
+        // other icon: grey at rest, ink under the pointer, no plate behind it
+        // (DESIGN 2.6a). The glyph fills the button inside its padding, so
+        // the padding is what sizes it: a 10px cross, no heavier than the
+        // magnifier opposite, on a target still big enough to hit.
+        IconButton {
+            id: clearButton
+            visible: searchField.text.length > 0
+            anchors.right: parent.right
+            anchors.rightMargin: Theme.space1
+            anchors.verticalCenter: parent.verticalCenter
+            side: 28
+            padding: Theme.space1
+            iconName: "x"
+            iconColor: Theme.neutral700
+            onClicked: root.clearSearch()
+        }
+
         TextInput {
             id: searchField
             anchors.left: searchIcon.right
             anchors.leftMargin: Theme.space2
-            anchors.right: parent.right
-            anchors.rightMargin: Theme.space3
+            anchors.right: clearButton.visible ? clearButton.left : parent.right
+            anchors.rightMargin: clearButton.visible ? 0 : Theme.space3
             anchors.verticalCenter: parent.verticalCenter
             font.family: Theme.fontFamily
             font.pixelSize: 13

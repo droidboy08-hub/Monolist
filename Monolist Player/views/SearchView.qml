@@ -125,8 +125,11 @@ Flickable {
             color: Theme.neutral700
         }
 
+        // Only under a query: the search itself is only told of an emptied
+        // field once the debounce has run, and until then the failure would
+        // sit under the suggestions.
         Text {
-            visible: !Extractor.busy && Extractor.lastError.length > 0
+            visible: !Extractor.busy && root.term.length > 0 && Extractor.lastError.length > 0
             width: parent.width
             text: Extractor.lastError
             wrapMode: Text.WordWrap
