@@ -367,6 +367,12 @@ int main(int argc, char *argv[])
         // --again plays the same track a second time halfway through, which
         // should start from the resolver's cache instead of from yt-dlp.
         const bool again = args.contains(QStringLiteral("--again"));
+        // --spoil hands the track's first sound-only stream over spoiled, so
+        // mpv is refused it and the recovery — the same track's muxed stream,
+        // then yt-dlp — runs on a real track, as it would for a link the CDN
+        // turned down.
+        if (args.contains(QStringLiteral("--spoil")))
+            resolver.spoilNextStream(videoId);
         auto clock = std::make_shared<QElapsedTimer>();
         // A library song plays under its own name, so the lyrics can be found.
         QVariantMap known;
@@ -1559,21 +1565,31 @@ int main(int argc, char *argv[])
         QTimer::singleShot(0, &app, []() { QCoreApplication::quit(); });
     }
 
-    // --library-test "<query>"
+    // --library-test "<query>" [--videos]
     //
     // The library end to end, on real songs: searches, makes a playlist of the
     // results, adds one twice, likes three, saves Home's newest album, then
     // removes, renames and reports. Meant for a scratch database
     // (MONOLIST_DATA_DIR), which it leaves filled for a look at the views.
+    // --videos searches music videos instead, and the report says how many of
+    // the rows read back from the database still know they are videos.
     const int libraryFlag = args.indexOf(QStringLiteral("--library-test"));
     if (libraryFlag >= 0 && libraryFlag + 1 < args.size()) {
         const QString query = args.at(libraryFlag + 1);
         auto done = std::make_shared<int>(0);   // the search and Home, both needed
+        if (args.contains(QStringLiteral("--videos")))
+            extractor.setFilter(QStringLiteral("videos"));
 
         QObject::connect(&library, &Library::notice, &app, [](const QString &text) {
             qWarning("selftest: notice \"%s\"", qPrintable(text));
         });
-        const auto report = [&library]() {
+        const auto videosIn = [](SearchResultModel *model) {
+            int videos = 0;
+            for (int row = 0; row < model->rowCount(); ++row)
+                videos += model->get(row).value(QStringLiteral("isVideo")).toBool() ? 1 : 0;
+            return videos;
+        };
+        const auto report = [&library, videosIn]() {
             const QVariantMap open = library.playlist();
             qWarning("selftest: playlist %d \"%s\": %d songs, %s; %d playlists, %d liked, %d saved albums",
                      open.value(QStringLiteral("playlistId")).toInt(),
@@ -1582,6 +1598,9 @@ int main(int argc, char *argv[])
                      qPrintable(open.value(QStringLiteral("durationText")).toString()),
                      library.playlists()->rowCount(), library.liked()->rowCount(),
                      library.albums()->rowCount());
+            qWarning("selftest: music videos read back: %d of %d in the playlist, %d of %d liked",
+                     videosIn(library.playlistTracks()), library.playlistTracks()->rowCount(),
+                     videosIn(library.liked()), library.liked()->rowCount());
         };
         const auto finish = [&library, &catalog, report, done]() {
             if (++*done < 2)
@@ -1601,7 +1620,13 @@ int main(int argc, char *argv[])
                 finish();
         });
         QObject::connect(&extractor, &MediaExtractor::searchFinished, &app,
-                         [&library, report, finish](const QVariantList &results) {
+                         [&library, &extractor, report, finish](const QVariantList &) {
+                             // The rows as the interface hands them on, from
+                             // the model: the signal's own list is a shorter
+                             // summary without the video flag.
+                             QVariantList results;
+                             for (int row = 0; row < extractor.results()->rowCount(); ++row)
+                                 results.append(extractor.results()->get(row));
                              const int id = library.createPlaylist(QStringLiteral("Selftest mix"));
                              library.openPlaylist(id);
                              library.addAllToPlaylist(id, results.mid(0, 8));

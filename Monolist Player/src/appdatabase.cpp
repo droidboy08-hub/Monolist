@@ -264,6 +264,17 @@ void AppDatabase::migrate()
     if (!hasColumn(QStringLiteral("albums"), QStringLiteral("saved_at")))
         q.exec(QStringLiteral("ALTER TABLE albums ADD COLUMN saved_at TEXT NOT NULL DEFAULT ''"));
 
+    // Whether a song is a music video, with a picture worth showing. Only
+    // search and YouTube Music's own lists know it, so every copy of a song
+    // kept here carries it too — otherwise a video liked, saved to a playlist,
+    // downloaded or replayed from History would come back as sound alone,
+    // with no way to ask for its picture.
+    for (const QString &table : { QStringLiteral("tracks"), QStringLiteral("recent"),
+                                  QStringLiteral("playlist_tracks"), QStringLiteral("downloads") }) {
+        if (!hasColumn(table, QStringLiteral("is_video")))
+            q.exec(QStringLiteral("ALTER TABLE %1 ADD COLUMN is_video INTEGER NOT NULL DEFAULT 0").arg(table));
+    }
+
     removeSampleData();
 
     // history.track_id is ON DELETE SET NULL, so removing a track leaves a row

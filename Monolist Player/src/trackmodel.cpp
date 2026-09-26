@@ -36,6 +36,7 @@ QVariant TrackModel::data(const QModelIndex &index, int role) const
     case SourceIdRole:     return item.sourceId;
     case ArtworkRole:      return item.artwork;
     case FavouriteRole:    return item.favourite;
+    case IsVideoRole:      return item.isVideo;
     default:               return {};
     }
 }
@@ -52,7 +53,8 @@ QHash<int, QByteArray> TrackModel::roleNames() const
         { SourceRole, "sourceUrl" },
         { SourceIdRole, "sourceId" },
         { ArtworkRole, "artwork" },
-        { FavouriteRole, "favourite" }
+        { FavouriteRole, "favourite" },
+        { IsVideoRole, "isVideo" }
     };
 }
 
@@ -62,11 +64,12 @@ void TrackModel::reload()
     m_items.clear();
     QSqlQuery q(AppDatabase::connection());
     q.exec(QStringLiteral("SELECT id, title, artist, album, duration_ms, source_url, source_id,"
-                          " artwork, favourite FROM tracks ORDER BY position ASC"));
+                          " artwork, favourite, is_video FROM tracks ORDER BY position ASC"));
     while (q.next())
         m_items.append({ q.value(0).toInt(), q.value(1).toString(), q.value(2).toString(),
                          q.value(3).toString(), q.value(4).toLongLong(), q.value(5).toString(),
-                         q.value(6).toString(), q.value(7).toString(), q.value(8).toBool() });
+                         q.value(6).toString(), q.value(7).toString(), q.value(8).toBool(),
+                         q.value(9).toBool() });
     endResetModel();
     Q_EMIT countChanged();
 }
@@ -86,7 +89,8 @@ QVariantMap TrackModel::get(int row) const
         { QStringLiteral("sourceUrl"), item.sourceUrl },
         { QStringLiteral("sourceId"), item.sourceId },
         { QStringLiteral("artwork"), item.artwork },
-        { QStringLiteral("favourite"), item.favourite }
+        { QStringLiteral("favourite"), item.favourite },
+        { QStringLiteral("isVideo"), item.isVideo }
     };
 }
 

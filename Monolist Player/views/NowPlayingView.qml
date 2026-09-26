@@ -13,7 +13,12 @@ Rectangle {
 
     // "lyrics" or "queue"
     property string pane: "lyrics"
+    // Whether the video's place is here. Main gives the picture one place at
+    // a time: full screen takes it from here, and closing this view sends it
+    // to the mini panel above the player bar.
+    property bool videoHere: true
     signal closeRequested()
+    signal fullscreenRequested()
 
     readonly property var track: Player.currentTrack
     readonly property bool hasTrack: track.title !== undefined
@@ -21,7 +26,13 @@ Rectangle {
     readonly property bool wide: width >= 980
     // The picture is up once mpv has a frame to give, not when it was asked
     // for: until then the cover stays, and the switch shows it is working.
-    readonly property bool videoShowing: Player.videoPlaying && videoSurface.showing
+    readonly property bool videoShowing: Player.videoPlaying
+                                         && (wide ? videoSurface.showing : narrowSurface.showing)
+    readonly property bool videoWaiting: Player.videoWanted && !videoShowing
+    // What the switch says, wherever it is.
+    readonly property string switchTip: !Player.videoAvailable ? "This song has no video"
+                                      : videoShowing ? "Show the cover"
+                                      : "Play the video"
 
     // The cover's colour as the field, signal red until it is known.
     property color field: Theme.accent
@@ -106,7 +117,7 @@ Rectangle {
                 VideoSurface {
                     id: videoSurface
                     anchors.fill: parent
-                    visible: Player.videoPlaying
+                    visible: root.videoHere && Player.videoPlaying
                 }
 
                 Artwork {
@@ -118,50 +129,33 @@ Rectangle {
                     colour: true
                 }
 
-                // The switch between the still and the moving picture sits on
-                // the thing it changes. Paper on the artwork, ink under the
-                // pointer, like the poster's own button.
-                Rectangle {
-                    id: videoToggle
+                // A double-click on the moving picture fills the screen with it.
+                TapHandler {
+                    onDoubleTapped: if (root.videoShowing) root.fullscreenRequested()
+                }
 
-                    readonly property bool waiting: Player.videoWanted && !root.videoShowing
-
+                // The switches sit on the thing they change: the one between
+                // the still and the moving picture, and, once the picture
+                // plays, full screen beside it.
+                Row {
                     anchors.right: parent.right
                     anchors.bottom: parent.bottom
                     anchors.margins: Theme.space3
-                    width: 40
-                    height: 40
-                    color: toggleHover.hovered ? Theme.text : Theme.bg
-                    opacity: Player.videoAvailable ? 1 : 0.45
+                    spacing: Theme.space1
 
-                    Behavior on color {
-                        enabled: !toggleHover.hovered
-                        ColorAnimation { duration: Theme.quick }
+                    PlateButton {
+                        visible: root.videoShowing
+                        iconName: "fullscreen"
+                        tip: "Full screen (F)"
+                        onClicked: root.fullscreenRequested()
                     }
-
-                    Icon {
-                        anchors.centerIn: parent
-                        width: 18
-                        height: 18
-                        name: videoToggle.waiting ? "dots" : (root.videoShowing ? "image" : "video")
-                        color: toggleHover.hovered ? Theme.bg : Theme.text
+                    PlateButton {
+                        id: videoToggle
+                        available: Player.videoAvailable
+                        iconName: root.videoWaiting ? "dots" : (root.videoShowing ? "image" : "video")
+                        tip: root.switchTip
+                        onClicked: Player.videoWanted = !Player.videoWanted
                     }
-
-                    HoverHandler {
-                        id: toggleHover
-                        enabled: Player.videoAvailable
-                        cursorShape: Qt.PointingHandCursor
-                    }
-                    TapHandler {
-                        enabled: Player.videoAvailable
-                        onTapped: Player.videoWanted = !Player.videoWanted
-                    }
-
-                    ToolTip.visible: toggleHover.hovered
-                    ToolTip.delay: 400
-                    ToolTip.text: !Player.videoAvailable ? "This song has no video"
-                                : root.videoShowing ? "Show the cover"
-                                : "Play the video"
                 }
             }
 
@@ -279,7 +273,9 @@ Rectangle {
         anchors.top: strip.bottom
         anchors.bottom: parent.bottom
 
-        // Narrow windows have no poster: the song goes above the lyrics.
+        // Narrow windows have no poster: the song goes above the lyrics, with
+        // the video switch at the end of its line, and the picture, while it
+        // plays, below it.
         Row {
             id: compactHead
             visible: !root.wide
@@ -298,7 +294,7 @@ Rectangle {
             }
             Column {
                 anchors.verticalCenter: parent.verticalCenter
-                width: parent.width - 64 - Theme.space4
+                width: parent.width - 64 - narrowToggle.width - Theme.space4 * 2
                 spacing: 2
 
                 Text {
@@ -319,11 +315,76 @@ Rectangle {
                     color: Theme.neutral700
                 }
             }
+
+            // On paper, so a bare glyph like the rest of the page's: grey at
+            // rest, red while the picture is on, greyed out for a song with
+            // none rather than hidden.
+            IconButton {
+                id: narrowToggle
+                anchors.verticalCenter: parent.verticalCenter
+                side: 40
+                iconSize: 18
+                enabled: Player.videoAvailable
+                hoverEnabled: enabled
+                opacity: enabled ? 1 : 0.45
+                iconName: root.videoWaiting ? "dots" : (root.videoShowing ? "image" : "video")
+                iconColor: Player.videoWanted ? Theme.accent : Theme.neutral700
+                onClicked: Player.videoWanted = !Player.videoWanted
+                ToolTip.visible: hovered
+                ToolTip.delay: 400
+                ToolTip.text: root.switchTip
+            }
+        }
+
+        // The picture in a narrow window: the full width of the page, at its
+        // own shape, and no taller than half the page, so the lyrics keep
+        // room below. Laid out as soon as the video starts loading, with the
+        // cover in it until the first frame, so the picture never arrives as
+        // a black box and nothing below jumps twice.
+        Item {
+            id: narrowStage
+            visible: !root.wide && Player.videoPlaying
+            anchors.top: compactHead.bottom
+            anchors.topMargin: Theme.space6
+            x: Theme.space8
+            readonly property real room: Math.max(120, (side.height - compactHead.height) * 0.5)
+            width: Math.min(parent.width - Theme.space8 * 2, room * narrowSurface.aspectRatio)
+            height: visible ? Math.round(width / narrowSurface.aspectRatio) : 0
+            clip: true
+
+            VideoSurface {
+                id: narrowSurface
+                anchors.fill: parent
+                visible: root.videoHere && Player.videoPlaying
+            }
+
+            Artwork {
+                anchors.fill: parent
+                visible: !root.videoShowing
+                source: root.artwork
+                placeholder: ""
+                colour: true
+            }
+
+            TapHandler {
+                onDoubleTapped: if (root.videoShowing) root.fullscreenRequested()
+            }
+
+            PlateButton {
+                visible: root.videoShowing
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                anchors.margins: Theme.space3
+                iconName: "fullscreen"
+                tip: "Full screen (F)"
+                onClicked: root.fullscreenRequested()
+            }
         }
 
         Item {
             id: paneHead
-            anchors.top: compactHead.visible ? compactHead.bottom : parent.top
+            anchors.top: narrowStage.visible ? narrowStage.bottom
+                       : compactHead.visible ? compactHead.bottom : parent.top
             anchors.topMargin: Theme.space6
             x: Theme.space8
             width: parent.width - Theme.space8 * 2

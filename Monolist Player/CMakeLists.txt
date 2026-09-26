@@ -211,6 +211,9 @@ qt_add_qml_module(monolist
         components/RecShelf.qml
         components/RecDataPanel.qml
         components/DataCredit.qml
+        components/PlateButton.qml
+        components/MiniVideo.qml
+        components/FullscreenVideo.qml
         views/HomeView.qml
         views/SearchView.qml
         views/LibraryView.qml

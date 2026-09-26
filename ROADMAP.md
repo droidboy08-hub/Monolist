@@ -40,7 +40,7 @@ Priority runs from 1 (first) to 9. Size: S under an hour, M a few hours, L a day
   Done when: Starting a new track stops or pauses the old file, and mpv events are matched to the current playlist_entry_id from MPV_EVENT_START_FILE. Nothing from the previous file reaches the new one, and position starts at 0.
 - [x] **B06** Player bar: the queue and Now Playing buttons vanish below 1040 px, volume has no fallback, and the queue button does nothing while Now Playing is open *(P1, S)*
   Done when: The Now Playing and queue toggles stay visible at every width, and only volume collapses to a button with a popup slider and mute. In Now Playing the queue button switches the right pane to UP NEXT.
-- [ ] **U01** The itag 18 fallback doesn't run when a track actually fails to play (user request) *(P3, S)*
+- [x] **U01** The itag 18 fallback doesn't run when a track actually fails to play (user request) *(P3, S)*
   Done when: When mpv fails on an InnerTube adaptive URL, the same track is retried once with its best progressive format (itag 18) before yt-dlp. This is exercised on a real track, with the itag logged.
 - [ ] **P01** The output-device button in the player bar does nothing *(P4, M)*
   Done when: MpvEngine observes audio-device-list and sets audio-device. The button opens a menu of outputs (WASAPI on Windows, CoreAudio on macOS) with the current one marked, and the choice is saved.
@@ -95,9 +95,9 @@ Priority runs from 1 (first) to 9. Size: S under an hour, M a few hours, L a day
 
 ## Video
 
-- [ ] **U03** Video works only in wide Now Playing: no switch in the narrow layout, no fullscreen or mini panel, and hidden video keeps decoding *(P3, M)*
+- [x] **U03** Video works only in wide Now Playing: no switch in the narrow layout, no fullscreen or mini panel, and hidden video keeps decoding *(P3, M)*
   Done when: Narrow Now Playing gets the switch and a 16:9 plate, and hiding the last visible surface drops back to audio or shows a mini panel above the bar. F or double-click opens fullscreen video, and Esc leaves it.
-- [ ] **P03** Music videos lose their video switch once liked, saved to a playlist or replayed from History *(P4, M)*
+- [x] **P03** Music videos lose their video switch once liked, saved to a playlist or replayed from History *(P4, M)*
   Done when: A migration adds is_video, every insert path writes it and every reader exposes it, so a video played from anywhere offers the switch.
 
 ## Artist pages & search
@@ -231,12 +231,14 @@ Seen by the agents that fixed B01–B13 and by their reviewers, and not yet fixe
   Done when: the button cancels in every in-flight state.
 - [x] **F19** With nothing loaded, the player bar's heart offers "Add to Liked songs" and does nothing *(P6, S)*
   Done when: the heart is disabled or hidden when nothing is loaded.
-- [ ] **F20** The build-without-libmpv stub (-DMONOLIST_NO_MPV=ON) no longer compiles: load() and setVideoEnabled are out of date *(P6, S)*
+- [ ] **F20** The build-without-libmpv stub (-DMONOLIST_NO_MPV=ON) no longer compiles: load(), setVideoEnabled and setVideoWatched are out of date *(P6, S)*
   Done when: that configuration builds. (Same as M04.)
 - [ ] **F21** The README's self-test list lacks --rec-test, --graph-test, --artist-test, --content-test and the new --lastfm-test, --cookie-test, --listen-test, --scrobble-test, --lastfm-connect-test, --ytm-session-test, --secret-test *(P9, S)*
   Done when: every self-test flag is documented with what it checks.
 - [ ] **F22** Downloading a song again in the "original" format while its finished file is still in the folder, unknown to the database, has FFmpeg rewrite that file in place, so a cancel or failure at that moment leaves it cut short *(P4, S)*
   Done when: a finished file already in the folder for that video id is taken into the library instead of being downloaded again, or the new copy is written under another name until it is complete.
+- [ ] **F23** The video sometimes fails at once with HTTP 403 on a freshly resolved yt-dlp link (2 of about a dozen runs on LrM_Y39Gmhk), and the app goes straight back to sound with "This video would not play" *(P4, S)*
+  Done when: a refused picture is resolved once more (a fresh link, or the android/tv_simply clients, whose streams played whole in September 2026) before the app gives up on it.
 
 ## Connections
 

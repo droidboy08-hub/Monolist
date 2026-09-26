@@ -278,9 +278,13 @@ The debug build keeps its console. Start it with `QT_FORCE_STDERR_LOGGING=1` to
 see the log there, and with `MONOLIST_MPV_LOG=warn` (or `info`, `v`) to add
 mpv's own messages.
 
-    monolist --play <videoId> [seconds] [--again] [--at <s>]
+    monolist --play <videoId> [seconds] [--again] [--at <s>] [--spoil] [--video [--switch-at <s>]]
                                                     resolve and play; --again replays from the cache,
-                                                    --at jumps into the song
+                                                    --at jumps into the song; --spoil hands InnerTube's
+                                                    link over spoiled, so mpv refuses it and the track is
+                                                    retried as its muxed stream (itag 18), which the log
+                                                    names; --video plays it as a music video and
+                                                    --switch-at asks for the picture after that long
     monolist --queue-test <videoId>... [--early]    load paused, Play, Next near the end, Previous twice,
                                                     Next while paused: the clock and what was recorded at
                                                     each step. One id that will not resolve checks the
@@ -299,7 +303,9 @@ mpv's own messages.
                                                     MONOLIST_DOWNLOAD_DIR send downloads
     monolist --search "<query>"                     one timed search, with suggestions
     monolist --lyrics "<query>"                     lyrics for the first three results, then one from the store
-    monolist --library-test "<query>"               a playlist, likes and a saved album from a real search
+    monolist --library-test "<query>" [--videos]    a playlist, likes and a saved album from a real search;
+                                                    --videos searches music videos, and says how many rows
+                                                    read back from the database still know they are videos
     monolist --rec-download [--cancel-at <MB>]      the recommendation data downloaded as Settings does it,
                                                     each file kept, fetched or refused, then the shelves
                                                     built from it; --cancel-at stops part-way

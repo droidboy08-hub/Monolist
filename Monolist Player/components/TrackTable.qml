@@ -36,7 +36,10 @@ Column {
             artist: row.artist,
             album: row.album,
             artwork: row.artwork,
-            durationMs: row.durationMs
+            durationMs: row.durationMs,
+            // Carried into a like, a playlist and the queue, so a music video
+            // keeps its picture wherever it is played from next.
+            isVideo: row.isVideo
         }
     }
 
@@ -129,6 +132,7 @@ Column {
             required property string artwork
             required property real durationMs
             required property int entryId
+            required property bool isVideo
 
             width: root.width
             height: 40
@@ -224,6 +228,7 @@ Column {
                 artist: row.artist
                 artwork: row.artwork
                 durationMs: row.durationMs
+                isVideo: row.isVideo
             }
 
             Text {

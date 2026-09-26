@@ -178,6 +178,7 @@ QVariant DownloadLibraryModel::data(const QModelIndex &index, int role) const
     case FilePathRole:     return item.filePath;
     case FormatRole:       return QFileInfo(item.filePath).suffix().toUpper();
     case SizeTextRole:     return formatBytes(item.bytes);
+    case IsVideoRole:      return item.isVideo;
     default:               return {};
     }
 }
@@ -193,7 +194,8 @@ QHash<int, QByteArray> DownloadLibraryModel::roleNames() const
         { DurationTextRole, "durationText" },
         { FilePathRole, "filePath" },
         { FormatRole, "format" },
-        { SizeTextRole, "sizeText" }
+        { SizeTextRole, "sizeText" },
+        { IsVideoRole, "isVideo" }
     };
 }
 
@@ -203,7 +205,7 @@ void DownloadLibraryModel::reload()
     m_items.clear();
     QSqlQuery query(AppDatabase::connection());
     query.exec(QStringLiteral(
-        "SELECT video_id, title, artist, artwork, file_path, duration_ms, bytes"
+        "SELECT video_id, title, artist, artwork, file_path, duration_ms, bytes, is_video"
         " FROM downloads ORDER BY downloaded_at DESC, rowid DESC"));
     while (query.next()) {
         Item item;
@@ -214,6 +216,7 @@ void DownloadLibraryModel::reload()
         item.filePath = query.value(4).toString();
         item.durationMs = query.value(5).toLongLong();
         item.bytes = query.value(6).toLongLong();
+        item.isVideo = query.value(7).toBool();
         if (QFileInfo::exists(item.filePath))   // not deleted outside the app
             m_items.append(item);
     }
@@ -240,7 +243,8 @@ QVariantMap DownloadLibraryModel::get(int row) const
         { QStringLiteral("artist"), item.artist },
         { QStringLiteral("artwork"), item.artwork },
         { QStringLiteral("durationMs"), item.durationMs },
-        { QStringLiteral("filePath"), item.filePath }
+        { QStringLiteral("filePath"), item.filePath },
+        { QStringLiteral("isVideo"), item.isVideo }
     };
 }
 

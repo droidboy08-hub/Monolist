@@ -61,7 +61,8 @@ MonoMenu {
         text: "Download"
         enabled: Downloads.available && menu.sourceId.length > 0 && menu.downloadState.length === 0
         onTriggered: Downloads.enqueue(menu.sourceId, menu.track.title, menu.track.artist,
-                                       menu.track.artwork, menu.track.durationMs)
+                                       menu.track.artwork, menu.track.durationMs,
+                                       menu.track.isVideo === true)
     }
     // Waiting its turn, downloading, or being finished by FFmpeg: any of the
     // three can be stopped, as in Downloads, and nothing is left behind.

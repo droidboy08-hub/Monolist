@@ -42,6 +42,10 @@ var data = {
     "chevron-down":    [{ d: "M6 9 L12 15 L18 9" }],
     "maximize-2":      [{ d: "M15 3 H21 V9" }, { d: "M9 21 H3 V15" }, { d: "M21 3 L14 10" }, { d: "M3 21 L10 14" }],
     "video":           [{ d: "M2 6 H15 V18 H2 Z" }, { d: "M22 7 L17 12 L22 17 Z", fill: true }],
+    // Lucide's maximize and minimize, with square corners: the picture full
+    // screen, and back.
+    "fullscreen":      [{ d: "M8 3 H3 V8" }, { d: "M16 3 H21 V8" }, { d: "M3 16 V21 H8" }, { d: "M21 16 V21 H16" }],
+    "fullscreen-exit": [{ d: "M8 3 V8 H3" }, { d: "M16 3 V8 H21" }, { d: "M3 16 H8 V21" }, { d: "M21 16 H16 V21" }],
     "image":           [{ d: "M3 4 H21 V20 H3 Z" },
                         { d: "M11 10 A1.6 1.6 0 1 1 7.8 10 A1.6 1.6 0 1 1 11 10" },
                         { d: "M21 17 L15.5 11.5 L7 20" }],

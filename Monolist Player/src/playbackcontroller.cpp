@@ -38,6 +38,19 @@ const QString kAutoplayKey = QStringLiteral("player.autoplay");
 // Long enough to outlast one drag of the slider.
 constexpr int kVolumeSaveDelayMs = 400;
 
+// Where a stream came from, as the status line and the log name it.
+QString tierLabel(int tier)
+{
+    switch (tier) {
+    case StreamResolver::TierInnerTube: return QStringLiteral("InnerTube");
+    case StreamResolver::TierYtDlp:     return QStringLiteral("yt-dlp");
+    case StreamResolver::TierMuxed:     return QStringLiteral("yt-dlp · muxed");
+    case StreamResolver::TierPiped:     return QStringLiteral("Piped");
+    case StreamResolver::TierInvidious: return QStringLiteral("Invidious");
+    default:                            return QStringLiteral("Stream");
+    }
+}
+
 QList<QueueTrack> tracksFromModel(QAbstractItemModel *model)
 {
     QList<QueueTrack> tracks;
@@ -118,29 +131,48 @@ PlaybackController::PlaybackController(MpvEngine *engine,
             // The picture would not open: keep the song, drop the picture.
             if (abandonVideo(QStringLiteral("This video would not play — back to audio")))
                 return;
+            // Whichever way this goes: the only place the player's own reason
+            // is written down.
+            if (m_streamTier >= 0) {
+                qWarning("playback: %s would not play from %s: %s", qPrintable(m_streamVideoId),
+                         qPrintable(tierLabel(m_streamTier)), qPrintable(reason));
+            }
             // A URL can resolve and still be refused when mpv opens it: a link
             // the CDN rejects now and then, or an instance serving an error
             // page. A remembered link that no longer opens is simply stale, so
-            // fetch a fresh one from the same tier; anything else goes to the
-            // next tier before giving up.
-            if (m_streamTier >= 0 && m_resolver && m_streamFromCache) {
-                const int sameTier = m_streamTier;
-                m_streamTier = -1;
-                m_resolver->invalidate(m_streamVideoId);
-                m_pendingVideoId = m_streamVideoId;
-                setStatus(QStringLiteral("Refreshing the source…"), QString(), true);
-                m_resolver->resolve(m_pendingVideoId, sameTier);
-                return;
-            }
-            if (m_streamTier >= 0 && m_resolver
-                && m_streamTier + 1 < StreamResolver::TierExhausted) {
-                const int nextTier = m_streamTier + 1;
-                m_streamTier = -1;
-                m_resolver->invalidate(m_streamVideoId);
-                m_pendingVideoId = m_streamVideoId;
-                setStatus(QStringLiteral("Trying another source…"), QString(), true);
-                m_resolver->resolve(m_pendingVideoId, nextTier);
-                return;
+            // a fresh one from the same tier comes first; after that, the
+            // tiers this track has not yet had refused, in the order the
+            // resolver gives for a refusal. After InnerTube's sound-only
+            // stream that is the track's muxed stream — itag 18, or the best
+            // other stream with the sound and a small picture in one file —
+            // fetched for this track alone, before anything else. Whichever
+            // it is, the song carries on from where it was: a stream refused
+            // part-way through does not start it again.
+            if (m_streamTier >= 0 && m_resolver) {
+                const int refused = std::exchange(m_streamTier, -1);
+                QList<int> tiers;
+                if (m_streamFromCache)
+                    tiers.append(refused);
+                else
+                    m_refusedTiers.insert(refused);
+                for (const int tier : StreamResolver::afterRefusal(refused)) {
+                    if (!m_refusedTiers.contains(tier) && !tiers.contains(tier))
+                        tiers.append(tier);
+                }
+                if (!tiers.isEmpty()) {
+                    m_resolver->invalidate(m_streamVideoId);
+                    m_pendingVideoId = m_streamVideoId;
+                    m_resumeAt = m_position;
+                    if (tiers.first() == StreamResolver::TierMuxed) {
+                        qInfo("playback: trying %s again as its muxed stream (itag 18), for this track alone",
+                              qPrintable(m_pendingVideoId));
+                    }
+                    setStatus(m_streamFromCache ? QStringLiteral("Refreshing the source…")
+                                                : QStringLiteral("Trying another source…"),
+                              QString(), true);
+                    m_resolver->resolveVia(m_pendingVideoId, tiers);
+                    return;
+                }
             }
             m_streamTier = -1;
             haltPlayback();
@@ -216,6 +248,7 @@ PlaybackController::PlaybackController(MpvEngine *engine,
                     track.artwork = song.artwork;
                     track.durationMs = song.durationMs;
                     track.primaryArtist = song.primaryArtist;
+                    track.isVideo = song.isVideo;
                     track.fromRadio = true;
                     additions.append(track);
                     if (additions.size() >= kRadioBatch)
@@ -619,13 +652,16 @@ void PlaybackController::recordHistory(const QVariantMap &track)
     // Every song played, in the library or not, for Home's "Recently played".
     if (videoId.isEmpty())
         return;
+    // A video stays one: replayed from somewhere that does not know it is
+    // (a download, a suggestion), it keeps the picture History offers.
     QSqlQuery recent(AppDatabase::connection());
     recent.prepare(QStringLiteral(
-        "INSERT INTO recent (video_id, title, artist, album, artwork, duration_ms)"
-        " VALUES (?, ?, ?, ?, ?, ?)"
+        "INSERT INTO recent (video_id, title, artist, album, artwork, duration_ms, is_video)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?)"
         " ON CONFLICT(video_id) DO UPDATE SET"
         "   title = excluded.title, artist = excluded.artist, album = excluded.album,"
         "   artwork = excluded.artwork, duration_ms = excluded.duration_ms,"
+        "   is_video = MAX(is_video, excluded.is_video),"
         "   played_at = datetime('now'), play_count = play_count + 1"));
     recent.addBindValue(videoId);
     recent.addBindValue(AppDatabase::text(track.value(QStringLiteral("title")).toString()));
@@ -633,6 +669,7 @@ void PlaybackController::recordHistory(const QVariantMap &track)
     recent.addBindValue(AppDatabase::text(track.value(QStringLiteral("album")).toString()));
     recent.addBindValue(AppDatabase::text(track.value(QStringLiteral("artwork")).toString()));
     recent.addBindValue(track.value(QStringLiteral("durationMs")).toLongLong());
+    recent.addBindValue(track.value(QStringLiteral("isVideo")).toBool() ? 1 : 0);
     if (!recent.exec())
         qWarning("Monolist: could not record a play: %s", qPrintable(recent.lastError().text()));
 }
@@ -760,6 +797,7 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
         m_resolver->cancel(m_pendingVideoId);
     m_pendingVideoId.clear();
     m_streamTier = -1;
+    m_refusedTiers.clear();
     m_resumeAt = 0;
 
     // The song being left stops now, not when the next one has resolved.
@@ -872,16 +910,7 @@ void PlaybackController::handleResolved(const QString &videoId, const QString &u
         return;                       // a later track superseded this one
     m_pendingVideoId.clear();
 
-    QString label;
-    switch (tier) {
-    case StreamResolver::TierInnerTube: label = QStringLiteral("InnerTube"); break;
-    case StreamResolver::TierYtDlp:     label = QStringLiteral("yt-dlp");    break;
-    case StreamResolver::TierPiped:     label = QStringLiteral("Piped");     break;
-    case StreamResolver::TierInvidious: label = QStringLiteral("Invidious"); break;
-    default:                            label = QStringLiteral("Stream");    break;
-    }
-
-    setStatus(QStringLiteral("Streaming"), label, false);
+    setStatus(QStringLiteral("Streaming"), tierLabel(tier), false);
     m_consecutiveFailures = 0;
     m_streamVideoId = videoId;
     m_streamTier = tier;
@@ -890,8 +919,11 @@ void PlaybackController::handleResolved(const QString &videoId, const QString &u
     // only — a stream refreshed or re-resolved mid-song arrives here again.)
     if (m_autoPlayAfterResolve)
         startListening();
+    // A link some tiers only serve to the client that asked for it (the muxed
+    // stream's) comes with the headers to ask as.
     if (m_engine)
-        m_engine->load(url, m_autoPlayAfterResolve, QString(), m_resumeAt);
+        m_engine->load(url, m_autoPlayAfterResolve, QString(), m_resumeAt,
+                       m_resolver ? m_resolver->headersFor(videoId) : QVariantMap());
     m_resumeAt = 0;
     prefetchUpcoming();
 }

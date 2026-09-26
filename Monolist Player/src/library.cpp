@@ -42,8 +42,8 @@ QString artworkOr(const QString &artwork, const QString &videoId)
     return QStringLiteral("https://i.ytimg.com/vi/%1/hqdefault.jpg").arg(videoId);
 }
 
-// Rows of video_id, title, artist, album, artwork, duration_ms and optionally
-// an entry id, as the song lists QML shows.
+// Rows of video_id, title, artist, album, artwork, duration_ms, is_video and
+// optionally an entry id, as the song lists QML shows.
 QList<SearchResultModel::Item> readSongs(QSqlQuery &query, bool withEntryId)
 {
     QList<SearchResultModel::Item> items;
@@ -55,8 +55,9 @@ QList<SearchResultModel::Item> readSongs(QSqlQuery &query, bool withEntryId)
         item.album = query.value(3).toString();
         item.artwork = artworkOr(query.value(4).toString(), item.sourceId);
         item.durationMs = query.value(5).toLongLong();
+        item.isVideo = query.value(6).toBool();
         if (withEntryId)
-            item.entryId = query.value(6).toInt();
+            item.entryId = query.value(7).toInt();
         items.append(item);
     }
     return items;
@@ -66,9 +67,10 @@ bool insertEntry(int playlistId, const QString &videoId, const QVariantMap &trac
 {
     QSqlQuery q(AppDatabase::connection());
     q.prepare(QStringLiteral(
-        "INSERT INTO playlist_tracks (playlist_id, position, video_id, title, artist, album, artwork, duration_ms)"
+        "INSERT INTO playlist_tracks (playlist_id, position, video_id, title, artist, album, artwork,"
+        " duration_ms, is_video)"
         " SELECT ?, (SELECT COALESCE(MAX(position) + 1, 0) FROM playlist_tracks WHERE playlist_id = ?),"
-        " ?, ?, ?, ?, ?, ?"));
+        " ?, ?, ?, ?, ?, ?, ?"));
     q.addBindValue(playlistId);
     q.addBindValue(playlistId);
     q.addBindValue(videoId);
@@ -77,6 +79,7 @@ bool insertEntry(int playlistId, const QString &videoId, const QVariantMap &trac
     q.addBindValue(AppDatabase::text(track.value(QStringLiteral("album")).toString()));
     q.addBindValue(AppDatabase::text(artworkOr(track.value(QStringLiteral("artwork")).toString(), videoId)));
     q.addBindValue(track.value(QStringLiteral("durationMs")).toLongLong());
+    q.addBindValue(track.value(QStringLiteral("isVideo")).toBool() ? 1 : 0);
     if (!q.exec()) {
         qWarning("Monolist: could not add to a playlist: %s", qPrintable(q.lastError().text()));
         return false;
@@ -474,7 +477,7 @@ void Library::reloadOpenPlaylist()
 
     QSqlQuery q(AppDatabase::connection());
     q.prepare(QStringLiteral(
-        "SELECT video_id, title, artist, album, artwork, duration_ms, id FROM playlist_tracks"
+        "SELECT video_id, title, artist, album, artwork, duration_ms, is_video, id FROM playlist_tracks"
         " WHERE playlist_id = ? ORDER BY position ASC, id ASC"));
     q.addBindValue(id);
     QList<SearchResultModel::Item> items;
@@ -519,7 +522,7 @@ void Library::reloadLiked()
 {
     QSqlQuery q(AppDatabase::connection());
     q.exec(QStringLiteral(
-        "SELECT source_id, title, artist, album, artwork, duration_ms FROM tracks"
+        "SELECT source_id, title, artist, album, artwork, duration_ms, is_video FROM tracks"
         " WHERE favourite = 1 AND source_id <> '' ORDER BY liked_at DESC, id DESC"));
     const QList<SearchResultModel::Item> items = readSongs(q, /*withEntryId=*/false);
     m_likedIds.clear();
@@ -564,23 +567,29 @@ void Library::setLiked(const QVariantMap &track, bool liked)
         }
     }
 
+    // Whether it is a music video: a row that already knows keeps knowing,
+    // whatever list the heart was pressed in.
+    const int isVideo = track.value(QStringLiteral("isVideo")).toBool() ? 1 : 0;
     QSqlQuery write(AppDatabase::connection());
     if (liked && inLibrary) {
         write.prepare(QStringLiteral(
-            "UPDATE tracks SET favourite = 1, liked_at = datetime('now') WHERE source_id = ?"));
+            "UPDATE tracks SET favourite = 1, liked_at = datetime('now'),"
+            " is_video = MAX(is_video, ?) WHERE source_id = ?"));
+        write.addBindValue(isVideo);
         write.addBindValue(videoId);
     } else if (liked) {
         write.prepare(QStringLiteral(
             "INSERT INTO tracks (position, title, artist, album, duration_ms, source_url, source_id,"
-            " artwork, favourite, liked_at)"
+            " artwork, favourite, liked_at, is_video)"
             " SELECT (SELECT COALESCE(MAX(position) + 1, 0) FROM tracks), ?, ?, ?, ?, '', ?, ?, 1,"
-            " datetime('now')"));
+            " datetime('now'), ?"));
         write.addBindValue(AppDatabase::text(track.value(QStringLiteral("title")).toString()));
         write.addBindValue(AppDatabase::text(track.value(QStringLiteral("artist")).toString()));
         write.addBindValue(AppDatabase::text(track.value(QStringLiteral("album")).toString()));
         write.addBindValue(track.value(QStringLiteral("durationMs")).toLongLong());
         write.addBindValue(videoId);
         write.addBindValue(AppDatabase::text(track.value(QStringLiteral("artwork")).toString()));
+        write.addBindValue(isVideo);
     } else {
         QSqlQuery drop(AppDatabase::connection());
         drop.prepare(QStringLiteral("DELETE FROM tracks WHERE source_id = ? AND source_url = ''"));
@@ -689,7 +698,7 @@ void Library::reloadHistory()
 {
     QSqlQuery q(AppDatabase::connection());
     q.exec(QStringLiteral(
-        "SELECT video_id, title, artist, album, artwork, duration_ms FROM recent"
+        "SELECT video_id, title, artist, album, artwork, duration_ms, is_video FROM recent"
         " ORDER BY played_at DESC, rowid DESC LIMIT 200"));
     m_history.replace(readSongs(q, /*withEntryId=*/false));
 }

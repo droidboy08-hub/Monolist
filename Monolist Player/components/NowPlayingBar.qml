@@ -9,8 +9,8 @@ Rectangle {
     // As the window narrows the bar gives things up in one order: the volume
     // slider folds into a button (the output button, which has nothing to
     // choose between yet, goes with it), then the progress line moves under
-    // the buttons, then the title goes. The Now Playing and queue buttons
-    // never go: nothing else opens either of them.
+    // the buttons, then the title goes. The video, Now Playing and queue
+    // buttons never go: nothing else opens any of them.
     readonly property bool showVolume: width >= 1120
     readonly property bool showMeta: width >= 760
     // Under the buttons once one line would leave the progress line too short
@@ -141,6 +141,7 @@ Rectangle {
                 artist: Player.currentTrack.artist !== undefined ? Player.currentTrack.artist : ""
                 artwork: Player.currentTrack.artwork !== undefined ? Player.currentTrack.artwork : ""
                 durationMs: Player.duration
+                isVideo: Player.currentTrack.isVideo === true
             }
         }
     }
@@ -261,6 +262,25 @@ Rectangle {
         anchors.verticalCenter: parent.verticalCenter
         spacing: Theme.space2
 
+        // The picture, from anywhere: in Now Playing while that is open, and
+        // otherwise in the mini panel above this bar. Red while it is on, three
+        // dots while it loads, greyed for a song that has none, so it is
+        // there to be found before it is needed. Never folded away: nothing
+        // else turns the picture on while Now Playing is closed.
+        IconButton {
+            readonly property bool waiting: Player.videoWanted && !Player.videoPlaying
+            enabled: Player.videoAvailable
+            hoverEnabled: enabled
+            opacity: enabled ? 1 : 0.4
+            iconName: waiting ? "dots" : "video"
+            iconColor: Player.videoWanted ? Theme.accent : Theme.neutral700
+            iconSize: 15
+            anchors.verticalCenter: parent.verticalCenter
+            onClicked: Player.videoWanted = !Player.videoWanted
+            ToolTip.visible: hovered
+            ToolTip.delay: 600
+            ToolTip.text: Player.videoWanted ? "Stop the video" : "Play the video"
+        }
         IconButton {
             iconName: "maximize-2"
             iconColor: root.nowPlayingOpen ? Theme.accent : Theme.neutral700

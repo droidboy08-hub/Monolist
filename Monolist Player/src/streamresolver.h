@@ -40,9 +40,17 @@ class StreamResolver : public QObject
 {
     Q_OBJECT
 public:
+    // In the order a resolve walks them.
     enum Tier {
         TierInnerTube = 0,
         TierYtDlp,
+        // The track's muxed stream (itag 18, the sound with a small picture in
+        // one file), from other clients than the two above. Never a first
+        // choice — the picture's bytes are fetched and thrown away — but the
+        // last try for sound before a track is given up on, and the first
+        // after the player refuses InnerTube's sound-only stream, since the
+        // sound yt-dlp would fetch next comes from that same client.
+        TierMuxed,
         TierPiped,
         TierInvidious,
         TierExhausted
@@ -52,10 +60,19 @@ public:
     explicit StreamResolver(QObject *parent = nullptr);
     ~StreamResolver() override;
 
-    // Starts at `firstTier`: a URL from one tier that the player could not open
-    // is retried from the next. From the first tier, a still-valid cached URL
-    // answers at once.
+    // Walks the tiers from `firstTier` down until one answers. From the first
+    // tier, a still-valid cached URL answers at once.
     void resolve(const QString &videoId, int firstTier = TierInnerTube);
+    // Walks exactly these tiers, in this order: how the player retries a
+    // track whose stream it could not open (see afterRefusal).
+    void resolveVia(const QString &videoId, const QList<int> &tiers);
+    // Where to look next once the player has refused a link from `tier`,
+    // best first; the caller leaves out what this track has already had
+    // refused.
+    static QList<int> afterRefusal(int tier);
+    // What a link must be fetched with, where its tier says so (the muxed
+    // stream's, which yt-dlp gets as a client that checks); empty otherwise.
+    QVariantMap headersFor(const QString &videoId) const;
     // Resolves into the cache without reporting, so that the track after the
     // current one starts without waiting. A resolve() for the same id while it
     // runs takes it over.
@@ -70,6 +87,11 @@ public:
     void invalidate(const QString &videoId);
     void cancel(const QString &videoId);
     void cancelAll();
+
+    // For --play --spoil: the next InnerTube link for this track is handed
+    // over spoiled, so the CDN refuses it the way it now and then refuses a
+    // real one, and the recovery can be watched on a real track.
+    void spoilNextStream(const QString &videoId) { m_spoil = videoId; }
 
     // Instance lists rot — hosts disappear every few months. They are settable
     // so a config update can fix playback without shipping a new binary.
@@ -94,6 +116,7 @@ private:
     struct Job {
         QString videoId;
         int tier = TierInnerTube;
+        QList<int> next;   // the tiers still to try, in order
         // Bumped on every tier change. Callbacks from an abandoned tier still
         // arrive — aborting a reply fires its finished() handler — and are
         // ignored by comparing against the generation they were created in.
@@ -111,16 +134,19 @@ private:
         QString url;
         int tier = TierInnerTube;
         QDateTime expires;
+        QVariantMap headers;
     };
     static QDateTime expiryOf(const QString &url);
 
+    void start(const QString &videoId, QList<int> tiers);
     void startTier(Job *job, int tier);
     void startInnerTube(Job *job);
     void startYtDlp(Job *job);
+    void startMuxed(Job *job);
     void startPipedRace(Job *job);
     void startInvidiousRace(Job *job);
 
-    void succeed(Job *job, const QString &url);
+    void succeed(Job *job, const QString &url, const QVariantMap &headers = QVariantMap());
     void tierExhausted(Job *job, const QString &reason);
     void abortPending(Job *job);
     void discard(Job *job);
@@ -145,5 +171,6 @@ private:
     QHash<QString, QPointer<YtDlpRequest>> m_videoJobs;
     QStringList m_piped;
     QStringList m_invidious;
+    QString m_spoil;   // see spoilNextStream
 };
 

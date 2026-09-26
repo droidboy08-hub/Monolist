@@ -32,6 +32,48 @@ ApplicationWindow {
     // The part of Settings a link asked for, until Settings has scrolled to it.
     property string settingsSection: ""
 
+    // — the picture —
+    // Where the video goes while there is one: full screen when asked for,
+    // Now Playing while that is open, and the mini panel above the player bar
+    // otherwise. One place at a time, and always one: a picture nobody can see
+    // is not decoded, so closing Now Playing moves it rather than hiding it,
+    // and the mini panel's close button is the switch turning off.
+    property bool videoFullscreen: false
+    readonly property string videoPlace: !Player.videoWanted && !Player.videoPlaying ? ""
+                                       : videoFullscreen ? "fullscreen"
+                                       : nowPlayingOpen ? "nowplaying"
+                                       : "mini"
+    // How the window was before full screen, to go back to.
+    property int visibilityBeforeFullscreen: Window.Windowed
+
+    // Asked for with nothing playing yet, it is asked for with the picture
+    // too: F on a music video means "watch it", not "turn the switch on first".
+    function enterVideoFullscreen() {
+        if (videoFullscreen || !Player.videoAvailable)
+            return
+        if (!Player.videoWanted)
+            Player.videoWanted = true
+        visibilityBeforeFullscreen = window.visibility
+        videoFullscreen = true
+        window.showFullScreen()
+    }
+
+    function leaveVideoFullscreen() {
+        if (!videoFullscreen)
+            return
+        videoFullscreen = false
+        if (visibilityBeforeFullscreen === Window.Maximized)
+            window.showMaximized()
+        else
+            window.showNormal()
+    }
+
+    // Left some other way — the system's own full-screen control, say.
+    onVisibilityChanged: {
+        if (window.videoFullscreen && window.visibility !== Window.FullScreen)
+            window.videoFullscreen = false
+    }
+
     Component.onCompleted: {
         if (initialQuery.length > 0)
             topBar.searchText = initialQuery
@@ -330,6 +372,18 @@ ApplicationWindow {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
+        // Over the picture in full screen, and gone with the rest of its
+        // chrome once the pointer has been still a moment.
+        readonly property bool tucked: window.videoFullscreen && !fullscreenVideo.chromeShown
+        opacity: tucked ? 0 : 1
+        visible: opacity > 0
+        Behavior on opacity {
+            NumberAnimation {
+                duration: playerBar.tucked ? Theme.normal : Theme.quick
+                easing.type: playerBar.tucked ? Theme.exitCurve : Theme.enterCurve
+            }
+        }
+        HoverHandler { id: barHover }
         // Now Playing covers the docked queue, so there the button shows the
         // queue where it can be seen: the view's own UP NEXT pane.
         queueOpen: window.nowPlayingOpen ? nowPlaying.pane === "queue" : window.queueOpen
@@ -353,7 +407,9 @@ ApplicationWindow {
         y: window.nowPlayingOpen ? 0 : height
         visible: y < height
         z: 800
+        videoHere: window.videoPlace === "nowplaying"
         onCloseRequested: window.nowPlayingOpen = false
+        onFullscreenRequested: window.enterVideoFullscreen()
 
         Behavior on y {
             NumberAnimation {
@@ -361,6 +417,33 @@ ApplicationWindow {
                 easing.type: window.nowPlayingOpen ? Theme.enterCurve : Theme.exitCurve
             }
         }
+    }
+
+    // — the picture, while Now Playing is closed —
+    // Under Now Playing, which rises over it and takes the picture as it
+    // comes, and over the page and the queue, beside which it stands.
+    MiniVideo {
+        id: miniVideo
+        z: 790
+        anchors.right: parent.right
+        anchors.rightMargin: Theme.space6 + (queuePanel.visible ? queuePanel.width : 0)
+        anchors.bottom: playerBar.top
+        anchors.bottomMargin: Theme.space6
+        active: window.videoPlace === "mini" && Player.videoPlaying
+        onOpenRequested: window.nowPlayingOpen = true
+        onFullscreenRequested: window.enterVideoFullscreen()
+    }
+
+    // — the picture, full screen —
+    // Over everything but the player bar, which stands on it while the
+    // pointer moves, and the app's own answers (the toast).
+    FullscreenVideo {
+        id: fullscreenVideo
+        anchors.fill: parent
+        z: 840
+        active: window.videoPlace === "fullscreen"
+        barHovered: barHover.hovered
+        onLeaveRequested: window.leaveVideoFullscreen()
     }
 
     // Lyrics are looked up only while they are on screen.
@@ -454,6 +537,12 @@ ApplicationWindow {
         // status line is only shown while a track is resolving, and failing is
         // the moment that stops. Say it out loud.
         function onPlaybackError(reason) { toast.show(reason) }
+        // The picture gone — the switch turned off, the next song begun, a
+        // video that would not play — takes full screen with it.
+        function onVideoChanged() {
+            if (!Player.videoWanted && !Player.videoPlaying)
+                window.leaveVideoFullscreen()
+        }
     }
 
     // — resize edges —
@@ -510,9 +599,27 @@ ApplicationWindow {
         sequences: [StandardKey.Find]
         onActivated: window.openSearch()
     }
+    // Full screen leaves first; Now Playing, under it, stays open.
     Shortcut {
         sequence: "Esc"
-        enabled: window.nowPlayingOpen
-        onActivated: window.nowPlayingOpen = false
+        enabled: window.nowPlayingOpen || window.videoFullscreen
+        onActivated: {
+            if (window.videoFullscreen)
+                window.leaveVideoFullscreen()
+            else
+                window.nowPlayingOpen = false
+        }
+    }
+    // The picture full screen, and back; with no picture on yet, the picture
+    // too. Not while a search is being typed.
+    Shortcut {
+        sequence: "F"
+        enabled: !topBar.searchFocused && (window.videoFullscreen || Player.videoAvailable)
+        onActivated: {
+            if (window.videoFullscreen)
+                window.leaveVideoFullscreen()
+            else
+                window.enterVideoFullscreen()
+        }
     }
 }

@@ -427,6 +427,25 @@ YtDlpRequest *YtDlp::resolveAudio(const QString &videoIdOrUrl, QObject *parent)
     return run(args, /*expectJson=*/true, parent);
 }
 
+YtDlpRequest *YtDlp::resolveMuxed(const QString &videoIdOrUrl, QObject *parent)
+{
+    const QStringList args = {
+        normaliseToUrl(videoIdOrUrl),
+        QStringLiteral("--dump-single-json"),
+        QStringLiteral("--no-playlist"),
+        // Other clients than the ones yt-dlp prefers. Those — the visionOS
+        // app's first, which is also the one InnerTube resolves as — list no
+        // muxed stream at all now, and this is asked for because a stream of
+        // theirs was just refused. Of the clients that do list itag 18, the
+        // Android app's and the simple TV app's serve it whole without a PO
+        // token (September 2026); mweb's, android_vr's and the embedded
+        // player's are answered with 403.
+        QStringLiteral("--extractor-args"), QStringLiteral("youtube:player_client=android,tv_simply"),
+        QStringLiteral("-f"), QStringLiteral("18/b")
+    };
+    return run(args, /*expectJson=*/true, parent);
+}
+
 YtDlpRequest *YtDlp::resolveVideo(const QString &videoIdOrUrl, int maxHeight, QObject *parent)
 {
     const int cap = qBound(240, maxHeight, 2160);

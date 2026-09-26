@@ -385,7 +385,19 @@ void MpvEngine::setVideoEnabled(bool enabled)
     // Hardware decoding where the driver offers it, copied back to memory
     // because the frames are rendered by the CPU into a Qt Quick texture.
     mpv_set_option_string(m_mpv, "hwdec", enabled ? "auto-copy-safe" : "no");
-    mpv_set_property_string(m_mpv, "vid", enabled ? "auto" : "no");
+    mpv_set_property_string(m_mpv, "vid", enabled && m_watched ? "auto" : "no");
+}
+
+void MpvEngine::setVideoWatched(bool watched)
+{
+    if (!m_mpv || watched == m_watched)
+        return;
+    m_watched = watched;
+    if (!m_video)
+        return;   // no picture either way; the next one starts as this says
+    mpv_set_property_string(m_mpv, "vid", watched ? "auto" : "no");
+    qInfo("video: %s", watched ? "on screen again, decoding (vid=auto)"
+                               : "nothing shows the picture, decoding stops (vid=no)");
 }
 
 void MpvEngine::setPaused(bool paused)

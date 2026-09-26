@@ -74,11 +74,14 @@ public:
 
     // Queue a track for offline use. Re-queuing something already stored or in
     // flight is a no-op, so the interface can call this from a simple toggle.
+    // `isVideo` is kept with the copy, so a music video played from Downloads
+    // still offers its picture (streamed, since the file is the sound alone).
     Q_INVOKABLE void enqueue(const QString &videoId,
                              const QString &title,
                              const QString &artist,
                              const QString &artwork = QString(),
-                             qint64 durationMs = 0);
+                             qint64 durationMs = 0,
+                             bool isVideo = false);
 
     Q_INVOKABLE void cancel(const QString &videoId);   // also dismisses a failed entry
     Q_INVOKABLE void retry(const QString &videoId);

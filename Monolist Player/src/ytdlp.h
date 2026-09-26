@@ -109,6 +109,11 @@ public:
     // Full metadata for one video, including a direct bestaudio URL.
     static YtDlpRequest *resolveAudio(const QString &videoIdOrUrl, QObject *parent);
 
+    // The muxed stream alone — itag 18, the sound with a small picture in one
+    // file, or failing that the best other stream that carries both — for a
+    // track whose sound-only streams the player would not play.
+    static YtDlpRequest *resolveMuxed(const QString &videoIdOrUrl, QObject *parent);
+
     // The picture as well as the sound, capped so a music video does not
     // arrive as 4K. One stream where YouTube still muxes both (up to 720p),
     // otherwise two, which mpv plays together.

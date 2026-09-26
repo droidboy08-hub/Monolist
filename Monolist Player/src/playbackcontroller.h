@@ -245,6 +245,9 @@ private:
     QString m_streamVideoId;         // the resolved stream now loaded, if any,
     int m_streamTier = -1;           // the tier it came from (-1 for files),
     bool m_streamFromCache = false;  // and whether it was a remembered link
+    // The tiers whose fresh links mpv refused for the current track, so a
+    // retry never goes back to one of them.
+    QSet<int> m_refusedTiers;
     QString m_statusText;
     QString m_sourceLabel;
     bool m_statusError = false;

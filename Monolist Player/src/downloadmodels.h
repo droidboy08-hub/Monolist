@@ -21,6 +21,7 @@ public:
         QString artist;
         QString artwork;
         qint64 durationMs = 0;
+        bool isVideo = false;       // a music video, as the list it came from said
         State state = State::Queued;
         qreal progress = 0.0;       // 0..1
         qint64 received = 0;
@@ -73,10 +74,12 @@ public:
         QString filePath;
         qint64 durationMs = 0;
         qint64 bytes = 0;
+        bool isVideo = false;
     };
 
     enum Roles { VideoIdRole = Qt::UserRole + 1, TitleRole, ArtistRole, ArtworkRole,
-                 DurationRole, DurationTextRole, FilePathRole, FormatRole, SizeTextRole };
+                 DurationRole, DurationTextRole, FilePathRole, FormatRole, SizeTextRole,
+                 IsVideoRole };
 
     explicit DownloadLibraryModel(QObject *parent = nullptr);
 

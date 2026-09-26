@@ -214,6 +214,24 @@ that gets blamed for the app being slow.
 * **Video is never fetched until it is asked for.**
   *Why.* It costs many times the bandwidth of audio and most listening does not
   want it. Asking is one click, and the song carries on from the same second.
+* **The picture is always in exactly one place: full screen, Now Playing, or a
+  small panel above the player bar.** Closing Now Playing moves it to the
+  panel, at the right, framed by a 2px ink rule; a click on the panel opens Now
+  Playing, and its close button turns the picture off while the song plays on
+  as sound. The player bar has the same switch, so the picture can be asked for
+  from anywhere. In a narrow window the switch ends the song's line and the
+  picture plays under it, full width and no taller than half the page.
+  *Why.* A picture nobody can see should not be decoded, and one that vanished
+  whenever Now Playing closed would make the switch mean "only in Now
+  Playing". So there is no hidden state: wherever the video is on, it is on
+  screen, and when nothing can show it (a minimised window) mpv stops decoding
+  it until something can.
+* **Full screen is ink.** F, or a double-click on the picture, fills the screen;
+  the strip along the top and the player bar fade once the pointer has been
+  still a moment and come back when it moves. Esc leaves.
+  *Why.* It is the one place the page is not paper. A moving picture on paper
+  reads as a photograph pasted on, and the margins beside it as bars; on ink
+  the margins are the frame, and the picture is the page.
 * **Lyrics sit at the right, the cover at the left.**
   *Why.* Lyrics are read left-to-right and change constantly; they need the side
   that is not interrupted by the cover's colour field, and they need to start at

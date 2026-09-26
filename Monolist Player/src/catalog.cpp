@@ -157,11 +157,12 @@ void Catalog::reloadRecent()
     QList<SearchResultModel::Item> items;
     QSqlQuery query(AppDatabase::connection());
     query.exec(QStringLiteral(
-        "SELECT video_id, title, artist, album, artwork, duration_ms FROM recent"
+        "SELECT video_id, title, artist, album, artwork, duration_ms, is_video FROM recent"
         " ORDER BY played_at DESC, rowid DESC LIMIT 10"));
     while (query.next()) {
         items.append({ query.value(0).toString(), query.value(1).toString(), query.value(2).toString(),
-                       query.value(3).toString(), query.value(4).toString(), query.value(5).toLongLong() });
+                       query.value(3).toString(), query.value(4).toString(), query.value(5).toLongLong(),
+                       0, query.value(6).toBool() });
     }
     m_recent.replace(items);
 }

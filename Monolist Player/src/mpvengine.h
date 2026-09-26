@@ -53,6 +53,12 @@ public:
     // Whatever draws the video renders from this handle (see VideoSurface).
     void setVideoEnabled(bool enabled);
     bool videoEnabled() const { return m_video; }
+    // Whether anything is on screen to show the picture. A picture nobody can
+    // see is not decoded: its track is put aside (vid=no) with the file left
+    // as it is, and taken up again, where the file has got to, once something
+    // shows it. Separate from setVideoEnabled, which is the listener's choice
+    // and reloads the stream; this is only where the picture can go.
+    void setVideoWatched(bool watched);
     // Empty when what is playing has no picture. Read on attaching, in case
     // the size was reported before anything was there to draw it.
     QSize videoSize() const { return m_videoSize; }
@@ -94,6 +100,7 @@ private:
     bool m_paused = true;
     bool m_buffering = false;
     bool m_video = false;
+    bool m_watched = true;   // until a surface says otherwise
     QSize m_videoSize;
     qint64 m_duration = 0;
 };

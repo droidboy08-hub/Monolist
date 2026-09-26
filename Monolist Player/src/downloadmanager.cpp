@@ -186,7 +186,8 @@ void DownloadManager::enqueue(const QString &videoId,
                               const QString &title,
                               const QString &artist,
                               const QString &artwork,
-                              qint64 durationMs)
+                              qint64 durationMs,
+                              bool isVideo)
 {
     if (videoId.isEmpty())
         return;
@@ -203,6 +204,7 @@ void DownloadManager::enqueue(const QString &videoId,
     item.artist = YtDlp::cleanArtist(artist);
     item.artwork = artwork;
     item.durationMs = durationMs;
+    item.isVideo = isVideo;
     m_queue.upsert(item);   // replaces a failed attempt at the same track
     m_pending.append(videoId);
     touch();
@@ -625,10 +627,25 @@ QStringList DownloadManager::removeLeftovers(const QString &directory, const QSt
 
 void DownloadManager::recordStored(const DownloadQueueModel::Item &item, const QString &path)
 {
+    // Whether it is a music video: as the list it was downloaded from said,
+    // or as any copy of it the app already keeps says — the menus that queue
+    // a download do not all pass it on.
+    int isVideo = item.isVideo ? 1 : 0;
+    QSqlQuery known(AppDatabase::connection());
+    known.prepare(QStringLiteral(
+        "SELECT MAX(v) FROM (SELECT is_video AS v FROM recent WHERE video_id = ?"
+        " UNION ALL SELECT is_video FROM playlist_tracks WHERE video_id = ?"
+        " UNION ALL SELECT is_video FROM tracks WHERE source_id = ?)"));
+    known.addBindValue(item.videoId);
+    known.addBindValue(item.videoId);
+    known.addBindValue(item.videoId);
+    if (known.exec() && known.next() && known.value(0).toInt() > 0)
+        isVideo = 1;
+
     QSqlQuery query(AppDatabase::connection());
     query.prepare(QStringLiteral(
-        "INSERT INTO downloads (video_id, title, artist, artwork, duration_ms, file_path, bytes)"
-        " VALUES (?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO downloads (video_id, title, artist, artwork, duration_ms, file_path, bytes, is_video)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
         " ON CONFLICT(video_id) DO UPDATE SET"
         "   title = excluded.title,"
         "   artist = excluded.artist,"
@@ -636,6 +653,7 @@ void DownloadManager::recordStored(const DownloadQueueModel::Item &item, const Q
         "   duration_ms = excluded.duration_ms,"
         "   file_path = excluded.file_path,"
         "   bytes = excluded.bytes,"
+        "   is_video = MAX(is_video, excluded.is_video),"
         "   downloaded_at = datetime('now')"));
     query.addBindValue(item.videoId);
     query.addBindValue(AppDatabase::text(item.title));
@@ -644,6 +662,7 @@ void DownloadManager::recordStored(const DownloadQueueModel::Item &item, const Q
     query.addBindValue(item.durationMs);
     query.addBindValue(path);
     query.addBindValue(QFileInfo(path).size());
+    query.addBindValue(isVideo);
     if (!query.exec())
         qWarning("Monolist: could not record a download: %s", qPrintable(query.lastError().text()));
 
@@ -651,8 +670,10 @@ void DownloadManager::recordStored(const DownloadQueueModel::Item &item, const Q
     // the library without a restart: an existing row now points at the file,
     // and a new one is appended.
     QSqlQuery existing(AppDatabase::connection());
-    existing.prepare(QStringLiteral("UPDATE tracks SET source_url = ? WHERE source_id = ?"));
+    existing.prepare(QStringLiteral(
+        "UPDATE tracks SET source_url = ?, is_video = MAX(is_video, ?) WHERE source_id = ?"));
     existing.addBindValue(path);
+    existing.addBindValue(isVideo);
     existing.addBindValue(item.videoId);
     existing.exec();
 
@@ -661,8 +682,9 @@ void DownloadManager::recordStored(const DownloadQueueModel::Item &item, const Q
     // row even when the WHERE filtered everything out, and the guard would
     // insert a duplicate at position 0 instead of skipping.
     track.prepare(QStringLiteral(
-        "INSERT INTO tracks (position, title, artist, album, duration_ms, source_url, source_id, artwork, favourite)"
-        " SELECT (SELECT COALESCE(MAX(position) + 1, 0) FROM tracks), ?, ?, '', ?, ?, ?, ?, 0"
+        "INSERT INTO tracks (position, title, artist, album, duration_ms, source_url, source_id, artwork,"
+        " favourite, is_video)"
+        " SELECT (SELECT COALESCE(MAX(position) + 1, 0) FROM tracks), ?, ?, '', ?, ?, ?, ?, 0, ?"
         " WHERE NOT EXISTS (SELECT 1 FROM tracks WHERE source_id = ?)"));
     track.addBindValue(AppDatabase::text(item.title));
     track.addBindValue(AppDatabase::text(item.artist));
@@ -670,6 +692,7 @@ void DownloadManager::recordStored(const DownloadQueueModel::Item &item, const Q
     track.addBindValue(path);
     track.addBindValue(item.videoId);
     track.addBindValue(AppDatabase::text(item.artwork));
+    track.addBindValue(isVideo);
     track.addBindValue(item.videoId);
     if (!track.exec())
         qWarning("Monolist: could not add a download to the library: %s", qPrintable(track.lastError().text()));
