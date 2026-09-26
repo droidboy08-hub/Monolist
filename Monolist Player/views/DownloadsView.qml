@@ -6,15 +6,21 @@ import "../components"
 
 // The offline set, in three parts: how files are saved, what is in flight, and
 // what is on this device.
-Flickable {
+ScrollPage {
     id: root
 
-    contentWidth: width
     contentHeight: column.height
-    boundsBehavior: Flickable.StopAtBounds
-    clip: true
 
-    ScrollBar.vertical: MonoScrollBar {}
+    // A row's song menu (Menus), from its dots or a right click: the same as
+    // anywhere else, with the download's own entries at its foot.
+    function openMenu(videoId, title, artist, artwork, durationMs, isVideo) {
+        Menus.openTrack({ sourceId: videoId, title: title, artist: artist, artwork: artwork,
+                          durationMs: durationMs, isVideo: isVideo }, {})
+    }
+
+    // The note below says how to install yt-dlp; once that is done, opening
+    // this page again is enough for downloads to switch on.
+    onVisibleChanged: if (visible) Downloads.refreshToolsIfStale()
 
     component Caption: Text {
         font.family: Theme.fontFamily
@@ -119,12 +125,23 @@ Flickable {
                     required property string title
                     required property string artist
                     required property string artwork
+                    required property real durationMs
                     required property string phase
                     required property real progress
                     required property string detail
 
                     width: parent ? parent.width : 0
                     height: 64
+
+                    function openMenu() {
+                        root.openMenu(job.videoId, job.title, job.artist, job.artwork, job.durationMs, false)
+                    }
+
+                    HoverHandler { id: jobHover }
+                    TapHandler {
+                        acceptedButtons: Qt.RightButton
+                        onTapped: job.openMenu()
+                    }
 
                     Artwork {
                         id: jobArt
@@ -177,6 +194,13 @@ Flickable {
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: Theme.space1
 
+                        IconButton {
+                            visible: jobHover.hovered
+                            iconName: "dots"
+                            iconColor: Theme.neutral700
+                            iconSize: 15
+                            onClicked: job.openMenu()
+                        }
                         IconButton {
                             visible: job.phase === "failed"
                             iconName: "rotate-ccw"
@@ -236,9 +260,16 @@ Flickable {
                     required property string title
                     required property string artist
                     required property string artwork
+                    required property real durationMs
                     required property string durationText
                     required property string format
                     required property string sizeText
+                    required property bool isVideo
+
+                    function openMenu() {
+                        root.openMenu(saved.videoId, saved.title, saved.artist, saved.artwork,
+                                      saved.durationMs, saved.isVideo)
+                    }
 
                     readonly property bool isCurrent: Player.currentTrack.sourceId !== undefined
                                                       && Player.currentTrack.sourceId === videoId
@@ -284,10 +315,9 @@ Flickable {
                             font.weight: saved.isCurrent ? Font.Bold : Theme.weightRegular
                             color: saved.isCurrent ? Theme.accent700 : Theme.text
                         }
-                        Text {
+                        ArtistLine {
                             width: parent.width
-                            text: saved.artist
-                            elide: Text.ElideRight
+                            artist: saved.artist
                             font.family: Theme.fontFamily
                             font.pixelSize: 12
                             color: Theme.neutral700
@@ -330,6 +360,12 @@ Flickable {
                                 ToolTip.delay: saved.armed ? 0 : 600
                                 ToolTip.text: saved.armed ? "Click again to delete the file" : "Delete from this device"
                             }
+                            IconButton {
+                                iconName: "dots"
+                                iconColor: Theme.neutral700
+                                iconSize: 15
+                                onClicked: saved.openMenu()
+                            }
                         }
 
                         Text {
@@ -368,6 +404,10 @@ Flickable {
                     HoverHandler { id: savedHover; cursorShape: Qt.PointingHandCursor }
                     // The offline set becomes the queue, starting here.
                     TapHandler { onTapped: Player.playModel(Downloads.library, saved.index, "library") }
+                    TapHandler {
+                        acceptedButtons: Qt.RightButton
+                        onTapped: saved.openMenu()
+                    }
                 }
             }
         }

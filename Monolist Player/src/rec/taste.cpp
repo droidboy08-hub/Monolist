@@ -1,6 +1,7 @@
 #include "taste.h"
 
 #include "catalog.h"
+#include "matchkey.h"
 #include "../appdatabase.h"
 
 #include <QHash>
@@ -51,6 +52,7 @@ double sourceMultiplier(const QString &source)
     if (source == QLatin1String("search"))        return 1.0;
     if (source == QLatin1String("home"))          return 0.9;
     if (source == QLatin1String("queue"))         return 0.8;
+    if (source == QLatin1String("radio"))         return 0.8;   // autoplay: nobody chose it
     if (source == QLatin1String("playlist"))      return 0.7;
     if (source == QLatin1String("library"))       return 0.7;
     if (source == QLatin1String("resume"))        return 0.3;
@@ -87,8 +89,12 @@ bool isWeekend(const QDateTime &when)
     // The locale's weekend, not Saturday and Sunday: in much of the world it
     // is neither. Qt names the working days, so the weekend is what is left —
     // which also handles the locales whose weekend wraps the week end.
+    //
+    // And the listener's own day, not UTC's, which is what the events are
+    // stored in: a Friday night in New York is already Saturday in UTC, and a
+    // Saturday morning in Sydney still Friday.
     static const QList<Qt::DayOfWeek> working = QLocale::system().weekdays();
-    return !working.contains(Qt::DayOfWeek(when.date().dayOfWeek()));
+    return !working.contains(Qt::DayOfWeek(when.toLocalTime().date().dayOfWeek()));
 }
 
 void addScaled(QVector<double> &sum, const float *vector, int dims, double weight)
@@ -145,6 +151,25 @@ float TasteProfile::score(const float *vector, int dims) const
     return float(liked - weight * dot(negative, vector, dims));
 }
 
+QSet<quint64> likedSongs(const QVector<PlayEvent> &events)
+{
+    QSet<quint64> liked;
+    // A song is its text key, so "Halo" liked and "HALO" unliked are one song.
+    QSet<quint64> decided;
+    for (const PlayEvent &event : events) {
+        const bool like = event.kind == QLatin1String("like");
+        if (!like && event.kind != QLatin1String("unliked"))
+            continue;
+        const quint64 song = Rec::strictKey(event.title, event.artist);
+        if (decided.contains(song))
+            continue;                  // an older opinion, already overruled
+        decided.insert(song);
+        if (like)
+            liked.insert(song);
+    }
+    return liked;
+}
+
 TasteProfile buildTaste(const Catalog &catalog,
                         const QVector<PlayEvent> &events,
                         const QDateTime &now)
@@ -157,13 +182,12 @@ TasteProfile buildTaste(const Catalog &catalog,
 
     // A like that was taken back should stop counting. The iOS player writes
     // nothing when someone un-likes, so an old like keeps voting for ever;
-    // this app records a tombstone, and here it cancels the most recent like
-    // for that track.
-    QSet<QString> retracted;
-    for (const PlayEvent &event : events) {
-        if (event.kind == QLatin1String("unliked"))
-            retracted.insert(event.title + QLatin1Char('\u0001') + event.artist);
-    }
+    // this app records a tombstone. Whether a like still stands is the song's
+    // newest like or unlike (likedSongs), and the like that counts is that
+    // newest one: a song liked again after an unlike votes, with the age of
+    // the second like, and a song liked twice votes once.
+    const QSet<quint64> liked = likedSongs(events);
+    QSet<quint64> likeCounted;
 
     QVector<double> positive(dims, 0.0);
     QVector<double> negative(dims, 0.0);
@@ -177,9 +201,19 @@ TasteProfile buildTaste(const Catalog &catalog,
     for (const PlayEvent &event : events) {
         if (event.kind == QLatin1String("unliked"))
             continue;
-        if (event.kind == QLatin1String("like")
-            && retracted.contains(event.title + QLatin1Char('\u0001') + event.artist)) {
+        // "Don't suggest this artist" names no song and says nothing about a
+        // sound: the shelves leave the artist out (Exclusions), and the
+        // profile, which is about sounds, is not told. A song turned down,
+        // "notInterested", is the profile's strongest no, and counts below.
+        if (event.kind == QLatin1String("notInterestedArtist"))
             continue;
+        if (event.kind == QLatin1String("like")) {
+            // Newest first, so the first like met of a song liked now is the
+            // one that decided it.
+            const quint64 song = Rec::strictKey(event.title, event.artist);
+            if (!liked.contains(song) || likeCounted.contains(song))
+                continue;
+            likeCounted.insert(song);
         }
 
         ++considered;

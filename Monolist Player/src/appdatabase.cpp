@@ -134,7 +134,9 @@ void AppDatabase::createSchema()
     q.exec(QStringLiteral(
         "CREATE TABLE IF NOT EXISTS play_events ("
         " id INTEGER PRIMARY KEY AUTOINCREMENT,"
-        " kind TEXT NOT NULL DEFAULT 'play',"        // play | like | notInterested
+        // play | like | unliked | notInterested | notInterestedArtist (the
+        // last two are Search's "Not interested" and "Don't suggest")
+        " kind TEXT NOT NULL DEFAULT 'play',"
         " video_id TEXT NOT NULL DEFAULT '',"
         " title TEXT NOT NULL DEFAULT '',"
         " artist TEXT NOT NULL DEFAULT '',"
@@ -194,6 +196,42 @@ void AppDatabase::createSchema()
         " plain TEXT NOT NULL DEFAULT '',"
         " source TEXT NOT NULL DEFAULT '',"
         " fetched_at TEXT NOT NULL DEFAULT (datetime('now')))"));
+
+    // Scrobbles not yet accepted by Last.fm, oldest first. A row is written
+    // the moment a listen qualifies, before anything is sent, so a crash, a
+    // killed process or a week offline loses none of them; it is deleted
+    // only once Last.fm has answered for it. `account` is the Last.fm user it
+    // was heard under, so a backlog is never sent to someone else who
+    // connects later. `started_at` and `queued_at` are UTC seconds.
+    q.exec(QStringLiteral(
+        "CREATE TABLE IF NOT EXISTS scrobble_queue ("
+        " id INTEGER PRIMARY KEY AUTOINCREMENT,"
+        " account TEXT NOT NULL DEFAULT '',"
+        " artist TEXT NOT NULL DEFAULT '',"
+        " track TEXT NOT NULL DEFAULT '',"
+        " album TEXT NOT NULL DEFAULT '',"
+        " album_artist TEXT NOT NULL DEFAULT '',"
+        " duration_s INTEGER NOT NULL DEFAULT 0,"
+        " started_at INTEGER NOT NULL DEFAULT 0,"
+        " chosen_by_user INTEGER NOT NULL DEFAULT 1,"
+        " video_id TEXT NOT NULL DEFAULT '',"
+        " attempts INTEGER NOT NULL DEFAULT 0,"
+        " last_error TEXT NOT NULL DEFAULT '',"
+        " queued_at INTEGER NOT NULL DEFAULT 0)"));
+    q.exec(QStringLiteral(
+        "CREATE INDEX IF NOT EXISTS idx_scrobble_queue_account ON scrobble_queue(account, id)"));
+
+    // Which page an artist's name opens, as YouTube Music linked it the last
+    // time the name was seen (ArtistLinks). The songs kept above keep only
+    // the name; this is how a liked song's artist, or one in the history,
+    // still opens the right page. `artist_page` is 0 for a plain channel,
+    // which an artist's own page of the same name replaces.
+    q.exec(QStringLiteral(
+        "CREATE TABLE IF NOT EXISTS artist_links ("
+        " name TEXT PRIMARY KEY,"
+        " browse_id TEXT NOT NULL,"
+        " artist_page INTEGER NOT NULL DEFAULT 1,"
+        " seen_at TEXT NOT NULL DEFAULT (datetime('now')))"));
 }
 
 bool AppDatabase::hasColumn(const QString &table, const QString &column)
@@ -239,6 +277,17 @@ void AppDatabase::migrate()
     }
     if (!hasColumn(QStringLiteral("albums"), QStringLiteral("saved_at")))
         q.exec(QStringLiteral("ALTER TABLE albums ADD COLUMN saved_at TEXT NOT NULL DEFAULT ''"));
+
+    // Whether a song is a music video, with a picture worth showing. Only
+    // search and YouTube Music's own lists know it, so every copy of a song
+    // kept here carries it too — otherwise a video liked, saved to a playlist,
+    // downloaded or replayed from History would come back as sound alone,
+    // with no way to ask for its picture.
+    for (const QString &table : { QStringLiteral("tracks"), QStringLiteral("recent"),
+                                  QStringLiteral("playlist_tracks"), QStringLiteral("downloads") }) {
+        if (!hasColumn(table, QStringLiteral("is_video")))
+            q.exec(QStringLiteral("ALTER TABLE %1 ADD COLUMN is_video INTEGER NOT NULL DEFAULT 0").arg(table));
+    }
 
     removeSampleData();
 

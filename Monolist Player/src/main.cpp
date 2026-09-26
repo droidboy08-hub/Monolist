@@ -9,32 +9,49 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQuickStyle>
+#include <QQuickWindow>
 #include <QSqlError>
 #include <QSqlQuery>
+#include <QTimeZone>
 #include <QTimer>
 #include <QWindow>
 
 #include "appdatabase.h"
+#include "artistlinks.h"
+#include "artistselftest.h"
 #include "artworkcache.h"
 #include "catalog.h"
+#include "connectionselftest.h"
+#include "lastfm.h"
+#include "scrobbler.h"
+#include "scrobbleselftest.h"
+#include "secretstore.h"
 #include "downloadmanager.h"
+#include "downloadselftest.h"
 #include "innertube.h"
 #include "library.h"
+#include "libraryeditselftest.h"
 #include "lyrics.h"
 #include "mediaextractor.h"
 #include "mpvengine.h"
 #include "playbackcontroller.h"
+#include "scrollselftest.h"
 #include "streamresolver.h"
 #include "trackmodel.h"
 #include "videosurface.h"
 #include "windowchrome.h"
+#include "ytmselftest.h"
+#include "ytmsession.h"
 #include "appinfo.h"
 #include "rec/catalog.h"
 #include "rec/suitable.h"
 #include <QTextStream>
 #include <QFile>
+#include <QFileInfo>
 #include "rec/graph.h"
+#include "rec/matchkey.h"
 #include "rec/shelves.h"
+#include "recdata.h"
 #include "recommender.h"
 #include "rec/taste.h"
 #include "rec/vectorsearch.h"
@@ -45,6 +62,7 @@
 #endif
 
 #include <clocale>
+#include <functional>
 #include <memory>
 
 int main(int argc, char *argv[])
@@ -100,6 +118,18 @@ int main(int argc, char *argv[])
         }
     }
 
+    // --secret-test / --lastfm-test: the sign-in plumbing checked on its own,
+    // with no network and no window (connectionselftest.cpp). The exit code
+    // is 0 only when every check passed.
+    if (app.arguments().contains(QStringLiteral("--secret-test")))
+        return runSecretStoreSelfTest() == 0 ? 0 : 1;
+    if (app.arguments().contains(QStringLiteral("--lastfm-test")))
+        return runLastFmSelfTest() == 0 ? 0 : 1;
+    // --cookie-test: the YouTube Music import parser and the SAPISIDHASH
+    // known answers, on invented cookies (ytmselftest.cpp).
+    if (app.arguments().contains(QStringLiteral("--cookie-test")))
+        return runCookieImportSelfTest() == 0 ? 0 : 1;
+
     AppDatabase database;
     if (!database.open())
         qWarning("Monolist: local database unavailable, running with in-memory data only.");
@@ -108,6 +138,62 @@ int main(int argc, char *argv[])
 
     Library library;
     library.load();
+
+    // Scrobbling checked on its own (scrobbleselftest.cpp), in the data folder
+    // MONOLIST_DATA_DIR names, which each insists on: --listen-test,
+    // --scrobble-test and --lastfm-connect-test with no network;
+    // --scrobble-send-test [rows] [--expect-kept] against a stand-in server on
+    // this computer (MONOLIST_LASTFM_URL); --scrobble-kill-test queues two
+    // scrobbles and waits to be killed.
+    {
+        const QStringList arguments = app.arguments();
+        if (arguments.contains(QStringLiteral("--listen-test")))
+            return runListenSelfTest() == 0 ? 0 : 1;
+        if (arguments.contains(QStringLiteral("--scrobble-test")))
+            return runScrobbleSelfTest(&library) == 0 ? 0 : 1;
+        if (arguments.contains(QStringLiteral("--lastfm-connect-test")))
+            return runLastFmConnectSelfTest(&library) == 0 ? 0 : 1;
+        if (const int sendFlag = arguments.indexOf(QStringLiteral("--scrobble-send-test")); sendFlag >= 0) {
+            const int rows = sendFlag + 1 < arguments.size() ? arguments.at(sendFlag + 1).toInt() : 0;
+            return runScrobbleSendTest(&library, rows > 0 ? rows : 120,
+                                       arguments.contains(QStringLiteral("--expect-kept"))) == 0 ? 0 : 1;
+        }
+        if (arguments.contains(QStringLiteral("--scrobble-kill-test")))
+            return startScrobbleKillTest(&library) ? app.exec() : 1;
+        // The YouTube Music session and InnerTube's account path, against a
+        // stand-in server on this computer; in MONOLIST_DATA_DIR only.
+        if (arguments.contains(QStringLiteral("--ytm-session-test")))
+            return runYtmSessionSelfTest(&library) == 0 ? 0 : 1;
+        // What a failed or cancelled download may delete, on invented files,
+        // and where downloads go under a scratch data folder
+        // (downloadselftest.cpp); in MONOLIST_DATA_DIR only.
+        if (arguments.contains(QStringLiteral("--download-cleanup-test")))
+            return runDownloadCleanupSelfTest() == 0 ? 0 : 1;
+        // Artist links: credits read from canned answers, names split and
+        // kept, and the artist page's parser (artistselftest.cpp); no
+        // network, in MONOLIST_DATA_DIR only.
+        if (arguments.contains(QStringLiteral("--artist-links-test")))
+            return runArtistLinksSelfTest() == 0 ? 0 : 1;
+        // What the song and queue menus change — moves in the queue and in
+        // a playlist, Remove from library and from history, Copy link — on
+        // invented songs (libraryeditselftest.cpp); in MONOLIST_DATA_DIR only.
+        if (arguments.contains(QStringLiteral("--library-edit-test")))
+            return runLibraryEditSelfTest(&library) == 0 ? 0 : 1;
+    }
+
+    // Which page an artist's name opens: learnt from every answer that links
+    // one (InnerTube's hook) and kept, so a name the library kept without its
+    // link — Liked songs, the history, a suggestion — still opens its page.
+    // Made before anything that asks YouTube Music, and the hook taken away
+    // again before it goes (the guard below is destroyed first).
+    ArtistLinks artistLinks;
+    artistLinks.load();
+    InnerTube::setArtistHook([&artistLinks](const QString &name, const QString &browseId, bool artistPage) {
+        artistLinks.remember(name, browseId, artistPage);
+    });
+    struct ArtistHookGuard {
+        ~ArtistHookGuard() { InnerTube::setArtistHook({}); }
+    } artistHookGuard;
 
     // --set <key> <value>: writes one setting (region, lrclib_url,
     // piped_instances, invidious_instances) before anything reads it.
@@ -128,6 +214,20 @@ int main(int argc, char *argv[])
         library.dropRegion(code);
     });
 
+    // The YouTube Music account, if one was imported: restored from the
+    // secret store and checked a few seconds in. Made here, before anything
+    // that calls YouTube Music and so torn down after all of it, because it
+    // hands the account to the few calls that ask for it (InnerTube's hook).
+    // Until it is confirmed, and for everything but those calls, the app is
+    // exactly as signed out as it always was.
+    YtmSession ytmSession(&library);
+    ytmSession.start();
+    // --ytm-demo <state>[+file]: the Settings row in that state, with an
+    // invented account and no cookies, for a look or a screenshot.
+    if (const int demoFlag = app.arguments().indexOf(QStringLiteral("--ytm-demo"));
+        demoFlag >= 0 && demoFlag + 1 < app.arguments().size())
+        ytmSession.showDemo(app.arguments().at(demoFlag + 1));
+
     // — engines —
     MpvEngine engine;
     if (!engine.isValid())
@@ -147,6 +247,10 @@ int main(int argc, char *argv[])
 
     PlaybackController player(&engine, &resolver, &downloads);
     player.setLibrary(&library);
+    // Volume, shuffle, repeat and autoplay as they were left: before the
+    // queue below is built, so a shuffle left on shuffles it, and before QML
+    // reads any of them.
+    player.restoreSettings();
     player.setVideoHeight(library.videoQuality());
     QObject::connect(&library, &Library::videoQualityChanged, &player, [&player, &library]() {
         player.setVideoHeight(library.videoQuality());
@@ -161,13 +265,15 @@ int main(int argc, char *argv[])
     lyrics.setLrclibUrl(library.settingValue(QStringLiteral("lrclib_url")));
 
     // Home's content: YouTube Music's feed and new releases, fetched once at
-    // start, and the songs played lately, refreshed whenever one starts.
+    // start, and the songs played lately, refreshed whenever a play is
+    // recorded — which for a song only loaded is when Play is pressed, not
+    // when it became the current track.
     Catalog catalog;
     catalog.refresh();
     catalog.reloadRecent();
-    QObject::connect(&player, &PlaybackController::currentTrackChanged, &catalog, &Catalog::reloadRecent);
-    QObject::connect(&player, &PlaybackController::currentTrackChanged, &library, &Library::reloadHistory);
-    QObject::connect(&library, &Library::historyCleared, &catalog, &Catalog::reloadRecent);
+    QObject::connect(&player, &PlaybackController::playRecorded, &catalog, &Catalog::reloadRecent);
+    QObject::connect(&player, &PlaybackController::playRecorded, &library, &Library::reloadHistory);
+    QObject::connect(&library, &Library::historyChanged, &catalog, &Catalog::reloadRecent);
     // Another country's music is a different feed.
     QObject::connect(&library, &Library::regionChanged, &catalog, &Catalog::refresh);
 
@@ -198,16 +304,45 @@ int main(int argc, char *argv[])
     // Not "Palette": QtQuick has a type of that name, which would win.
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "CoverPalette", &palette);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Catalog",   &catalog);
+    qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Artists",   &artistLinks);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Lyrics",    &lyrics);
     WindowChrome chrome;
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Chrome",    &chrome);
     AppInfo appInfo;
+    // Tools installed or updated from Settings are used by downloads at once,
+    // not after a restart.
+    QObject::connect(&appInfo, &AppInfo::toolsUpdated, &downloads, &DownloadManager::refreshTools);
+    // And tools put in place any other way — the setup script run from a
+    // terminal, pip, a package manager, a copy into tools/ — are put there
+    // from outside the app, so coming back to its window is when to look.
+    QObject::connect(&app, &QGuiApplication::applicationStateChanged, &downloads,
+                     [&downloads](Qt::ApplicationState state) {
+                         if (state == Qt::ApplicationActive)
+                             downloads.refreshToolsIfStale();
+                     });
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "About",     &appInfo);
     Recommender recommender;
     recommender.setPlayer(&player);
     // "Popular in" follows the country the rest of the app browses as.
     QObject::connect(&library, &Library::regionChanged, &recommender, &Recommender::refresh);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Recs",      &recommender);
+    // What it recommends from, downloadable from Settings and from an empty
+    // Search page.
+    RecData recData;
+    recData.setRecommender(&recommender);
+    qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "RecData",   &recData);
+    // Whether this build can connect to Last.fm at all: a key built in, and
+    // somewhere safe to keep a session.
+    LastFmApi lastFm;
+    qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "LastFm",    &lastFm);
+    // Scrobbling: the Settings row's sign-in, and what the player hears,
+    // queued and sent while connected.
+    Scrobbler scrobbler(&lastFm, &library);
+    scrobbler.setPlayer(&player);
+    scrobbler.start();
+    qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Scrobbler", &scrobbler);
+    // The YouTube Music sign-in: the Settings row's import, check and sign-out.
+    qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Account",   &ytmSession);
     qmlRegisterUncreatableType<SearchResultModel>(
         "Monolist.Backend", 1, 0, "SearchResultModel",
         QStringLiteral("Obtained from Extractor.results"));
@@ -288,6 +423,11 @@ int main(int argc, char *argv[])
         // track will not play, so it is kept current without asking.
         QTimer::singleShot(10000, &appInfo, [&appInfo]() { appInfo.startToolChecks(); });
 #endif
+
+        // --scroll-test: the page --view opened, scrolled the ways a person
+        // does, with the frame times (scrollselftest.cpp).
+        if (app.arguments().contains(QStringLiteral("--scroll-test")))
+            startScrollSelfTest(qobject_cast<QQuickWindow *>(window));
     }
 
     // --play <videoId> [seconds]
@@ -304,6 +444,12 @@ int main(int argc, char *argv[])
         // --again plays the same track a second time halfway through, which
         // should start from the resolver's cache instead of from yt-dlp.
         const bool again = args.contains(QStringLiteral("--again"));
+        // --spoil hands the track's first sound-only stream over spoiled, so
+        // mpv is refused it and the recovery — the same track's muxed stream,
+        // then yt-dlp — runs on a real track, as it would for a link the CDN
+        // turned down.
+        if (args.contains(QStringLiteral("--spoil")))
+            resolver.spoilNextStream(videoId);
         auto clock = std::make_shared<QElapsedTimer>();
         // A library song plays under its own name, so the lyrics can be found.
         QVariantMap known;
@@ -395,12 +541,276 @@ int main(int argc, char *argv[])
         });
     }
 
+    // --queue-test <videoId> [<videoId> ...]
+    //
+    // The queue driven the way a listener drives it after a launch: the first
+    // song loaded paused, then played, then left with Next while its last
+    // second runs out, then gone back to with Previous twice, then paused and
+    // moved on with Next before Play is pressed again. What was
+    // recorded, and where the clock stood, is reported at each step, so a skip
+    // that lets the old song's sound, clock or ending reach the new one shows
+    // up as a wrong line. A single id checks the quiet half: a paused song
+    // that will not resolve says so on the status line, not in a toast, and
+    // Play then tries it again out loud. --early presses Play while the first
+    // song is still resolving, which must start it when it arrives. --recover
+    // runs the recovery script described below instead.
+    const int queueFlag = args.indexOf(QStringLiteral("--queue-test"));
+    if (queueFlag >= 0 && queueFlag + 1 < args.size()) {
+        QStringList ids;
+        for (int i = queueFlag + 1; i < args.size() && !args.at(i).startsWith(QLatin1String("--")); ++i)
+            ids << args.at(i);
+        const bool early = args.contains(QStringLiteral("--early"));
+        auto clock = std::make_shared<QElapsedTimer>();
+        clock->start();
+        auto toasts = std::make_shared<int>(0);
+        const auto say = [clock](const QString &text) {
+            qWarning("selftest: +%6lld ms  %s", (long long)clock->elapsed(), qPrintable(text));
+        };
+        const auto recorded = []() {
+            QSqlQuery q(AppDatabase::connection());
+            const qint64 plays = q.exec(QStringLiteral("SELECT COALESCE(SUM(play_count), 0) FROM recent"))
+                                         && q.next() ? q.value(0).toLongLong() : -1;
+            const qint64 events = q.exec(QStringLiteral("SELECT COUNT(*) FROM play_events"))
+                                          && q.next() ? q.value(0).toLongLong() : -1;
+            return QStringLiteral("recorded: %1 plays, %2 play events").arg(plays).arg(events);
+        };
+        const auto where = [&player]() {
+            return QStringLiteral("on \"%1\" at %2, %3")
+                .arg(player.currentTrack().value(QStringLiteral("title")).toString(),
+                     player.positionText(),
+                     player.playing() ? QStringLiteral("playing") : QStringLiteral("paused"));
+        };
+        // Polls until `ready` holds, or `limitMs` passes, then carries on.
+        const auto waitFor = [](std::function<bool()> ready, int limitMs, std::function<void()> then) {
+            auto *poll = new QTimer(qApp);
+            auto waited = std::make_shared<QElapsedTimer>();
+            waited->start();
+            QObject::connect(poll, &QTimer::timeout, qApp, [poll, waited, ready, limitMs, then]() {
+                if (!ready() && waited->elapsed() < limitMs)
+                    return;
+                poll->stop();
+                poll->deleteLater();
+                then();
+            });
+            poll->start(100);
+        };
+        // The clock four times a second while a skip is under way.
+        auto *sampler = new QTimer(&app);
+        sampler->setInterval(250);
+        QObject::connect(sampler, &QTimer::timeout, &app, [say, where]() { say(QStringLiteral("  ") + where()); });
+
+        QObject::connect(&player, &PlaybackController::playbackError, &app, [say, toasts](const QString &reason) {
+            ++*toasts;
+            say(QStringLiteral("ERROR TOAST: ") + reason);
+        });
+        QObject::connect(&player, &PlaybackController::notice, &app, [say](const QString &text) {
+            say(QStringLiteral("notice: ") + text);
+        });
+        QObject::connect(&player, &PlaybackController::statusChanged, &app, [say, &player]() {
+            say(QStringLiteral("status \"%1\"%2").arg(player.statusText(),
+                                                     player.statusError() ? QStringLiteral(" (error)") : QString()));
+        });
+        QObject::connect(&player, &PlaybackController::currentTrackChanged, &app, [say, &player]() {
+            say(QStringLiteral("current track: \"%1\", row %2")
+                    .arg(player.currentTrack().value(QStringLiteral("title")).toString())
+                    .arg(player.currentIndex()));
+        });
+
+        const auto finish = [say, recorded]() {
+            say(recorded());
+            QSqlQuery q(AppDatabase::connection());
+            q.exec(QStringLiteral("SELECT title, listened_ms, track_ms, label FROM play_events ORDER BY id"));
+            while (q.next()) {
+                say(QStringLiteral("  event \"%1\" heard %2 of %3 s, label %4")
+                        .arg(q.value(0).toString())
+                        .arg(q.value(1).toLongLong() / 1000).arg(q.value(2).toLongLong() / 1000)
+                        .arg(q.value(3).isNull() ? QStringLiteral("-") : q.value(3).toString()));
+            }
+            say(QStringLiteral("done, quitting"));
+            QTimer::singleShot(200, qApp, []() { QCoreApplication::quit(); });
+        };
+
+        // --recover <videoId that will not resolve>: the ways back from a
+        // failure, the first id being a song that plays. It plays; the broken
+        // one is played and fails for good; Play on it tries again and fails
+        // again, and neither attempt may record anything, since nothing was
+        // heard. Then the good song is played again: the bar must say playing,
+        // and Pause must pause it. Last, three copies of the good song are
+        // queued and paused, and Next is pressed twice, the second time while
+        // the first is still resolving: that stays paused and records nothing.
+        const int recoverFlag = args.indexOf(QStringLiteral("--recover"));
+        const QString broken = recoverFlag >= 0 && recoverFlag + 1 < args.size()
+                                   ? args.at(recoverFlag + 1) : QString();
+        const auto recover = [=, &player, &resolver]() {
+            if (ids.isEmpty()) {
+                say(QStringLiteral("--recover needs a video id that plays before it"));
+                finish();
+                return;
+            }
+            const QString good = ids.first();
+            // Only the songs asked for: no radio stepping in after a failure.
+            player.setAutoplay(false);
+            say(QStringLiteral("before: ") + recorded());
+            player.playSource(good, QStringLiteral("Good song"), QStringLiteral("Selftest"));
+            waitFor([&player]() { return player.position() >= 2000; }, 60000, [=, &player, &resolver]() {
+                say(QStringLiteral("playing: ") + where() + QStringLiteral("; ") + recorded());
+                player.playSource(broken, QStringLiteral("Broken song"), QStringLiteral("Selftest"));
+                waitFor([&player]() { return player.statusError(); }, 90000, [=, &player, &resolver]() {
+                    say(QStringLiteral("failed: ") + where() + QStringLiteral("; ") + recorded()
+                        + QStringLiteral(" (no more than when playing)"));
+                    say(QStringLiteral("Play on the song that failed"));
+                    player.play();
+                    waitFor([&player]() { return !player.resolving(); }, 90000, [=, &player, &resolver]() {
+                        say(QStringLiteral("failed again: ") + where() + QStringLiteral("; ") + recorded()
+                            + QStringLiteral("; %1 error toasts").arg(*toasts));
+                        player.playSource(good, QStringLiteral("Good song again"), QStringLiteral("Selftest"));
+                        waitFor([&player]() { return player.position() >= 2000; }, 60000, [=, &player, &resolver]() {
+                            say(QStringLiteral("good again: ") + where() + QStringLiteral(" (must be playing)"));
+                            say(QStringLiteral("Play/Pause"));
+                            player.togglePlay();
+                            QTimer::singleShot(1500, qApp, [=, &player, &resolver]() {
+                                const qint64 at = player.position();
+                                QTimer::singleShot(1000, qApp, [=, &player, &resolver]() {
+                                    say(QStringLiteral("after Play/Pause: %1; the clock moved %2 ms in a second"
+                                                       " (must be paused, and about 0)")
+                                            .arg(where()).arg(player.position() - at));
+                                    QVariantList three;
+                                    for (int i = 1; i <= 3; ++i) {
+                                        three.append(QVariantMap{
+                                            { QStringLiteral("sourceId"), good },
+                                            { QStringLiteral("title"), QStringLiteral("Recover test %1").arg(i) },
+                                            { QStringLiteral("artist"), QStringLiteral("Selftest") } });
+                                    }
+                                    player.playTracks(three, 0);
+                                    waitFor([&player]() { return player.position() >= 1000; }, 60000,
+                                            [=, &player, &resolver]() {
+                                        player.pause();
+                                        waitFor([&player]() { return !player.playing(); }, 5000,
+                                                [=, &player, &resolver]() {
+                                            say(QStringLiteral("paused: ") + where() + QStringLiteral("; ")
+                                                + recorded());
+                                            // Resolved afresh, so the first Next is still resolving when
+                                            // the second comes.
+                                            resolver.invalidate(good);
+                                            player.next();
+                                            say(QStringLiteral("Next while paused: ") + where()
+                                                + (player.resolving() ? QStringLiteral(", resolving") : QString()));
+                                            player.next();
+                                            say(QStringLiteral("Next again: ") + where());
+                                            waitFor([&player]() { return !player.resolving(); }, 90000, [=]() {
+                                                QTimer::singleShot(1500, qApp, [=]() {
+                                                    say(QStringLiteral("after both: ") + where() + QStringLiteral("; ")
+                                                        + recorded() + QStringLiteral(" (must be paused on Recover"
+                                                                                      " test 3, nothing new recorded)"));
+                                                    finish();
+                                                });
+                                            });
+                                        });
+                                    });
+                                });
+                            });
+                        });
+                    });
+                });
+            });
+        };
+
+        QTimer::singleShot(500, &app, [=, &player, &resolver]() {
+            if (!broken.isEmpty()) {
+                recover();
+                return;
+            }
+            say(QStringLiteral("before: ") + recorded());
+            // An empty queue takes its first song paused, as a launch loads
+            // the library.
+            for (int i = 0; i < ids.size(); ++i) {
+                player.addToQueue({ { QStringLiteral("sourceId"), ids.at(i) },
+                                    { QStringLiteral("title"), QStringLiteral("Queue test %1").arg(i + 1) },
+                                    { QStringLiteral("artist"), QStringLiteral("Selftest") } });
+            }
+            if (early) {
+                say(QStringLiteral("Play while it resolves: ") + where());
+                player.play();
+            }
+            waitFor([&player]() { return !player.resolving(); }, 90000, [=, &player, &resolver]() {
+                // Time for mpv to open it, still paused.
+                QTimer::singleShot(2000, qApp, [=, &player, &resolver]() {
+                    say(QStringLiteral("loaded: ") + where() + QStringLiteral("; ") + recorded()
+                        + QStringLiteral("; %1 error toasts").arg(*toasts));
+                    if (player.statusError()) {
+                        say(QStringLiteral("Play on the song that failed"));
+                        player.play();
+                        waitFor([&player]() { return !player.resolving(); }, 90000, [=]() {
+                            say(QStringLiteral("after Play: ") + where() + QStringLiteral("; ") + recorded()
+                                + QStringLiteral("; %1 error toasts").arg(*toasts));
+                            finish();
+                        });
+                        return;
+                    }
+                    if (early || ids.size() < 2) {
+                        finish();
+                        return;
+                    }
+                    player.play();
+                    QTimer::singleShot(300, qApp, [=]() { say(QStringLiteral("after Play: ") + recorded()); });
+                    waitFor([&player]() { return player.position() >= 4000; }, 60000, [=, &player, &resolver]() {
+                        say(QStringLiteral("playing: ") + where());
+                        player.setPosition(player.duration() - 1500);
+                        QTimer::singleShot(1000, qApp, [=, &player, &resolver]() {
+                            // Resolved afresh, not from the prefetch, so the
+                            // first song's end falls inside the wait.
+                            resolver.invalidate(ids.at(1));
+                            say(QStringLiteral("Next, half a second before the end: ") + where());
+                            sampler->start();
+                            player.next();
+                            QTimer::singleShot(7000, qApp, [=, &player]() {
+                                sampler->stop();
+                                say(QStringLiteral("after Next: ") + where() + QStringLiteral("; ") + recorded());
+                                player.previous();
+                                say(QStringLiteral("Previous once: ") + where());
+                                player.previous();
+                                sampler->start();
+                                QTimer::singleShot(4000, qApp, [=, &player]() {
+                                    sampler->stop();
+                                    say(QStringLiteral("after Previous twice: ") + where());
+                                    // Next while paused loads without playing:
+                                    // nothing recorded until Play. (Once mpv has
+                                    // said it paused, which the player follows.)
+                                    player.pause();
+                                    const auto thenPlay = [=, &player]() {
+                                        say(QStringLiteral("Next while paused: ") + where()
+                                            + QStringLiteral("; ") + recorded());
+                                        player.play();
+                                        QTimer::singleShot(1500, qApp, [=]() {
+                                            say(QStringLiteral("then Play: ") + where());
+                                            finish();
+                                        });
+                                    };
+                                    waitFor([&player]() { return !player.playing(); }, 5000, [=, &player]() {
+                                        player.next();
+                                        waitFor([&player]() { return !player.resolving(); }, 90000, [thenPlay]() {
+                                            QTimer::singleShot(1500, qApp, thenPlay);
+                                        });
+                                    });
+                                });
+                            });
+                        });
+                    });
+                });
+            });
+        });
+        QTimer::singleShot(150000, &app, []() {
+            qWarning("selftest: timed out");
+            QCoreApplication::exit(2);
+        });
+    }
+
     // --diag: what the local database holds, for support and for checking a
     // change end to end. Quits straight away.
     if (args.contains(QStringLiteral("--diag"))) {
         QSqlQuery count(AppDatabase::connection());
         for (const char *table : { "tracks", "downloads", "recent", "history", "settings",
-                                   "playlists", "playlist_tracks", "albums", "lyrics" }) {
+                                   "playlists", "playlist_tracks", "albums", "lyrics", "scrobble_queue" }) {
             const QString name = QString::fromLatin1(table);
             const bool ok = count.exec(QStringLiteral("SELECT COUNT(*) FROM %1").arg(name)) && count.next();
             qWarning("diag: %-9s %s", table, ok ? qPrintable(count.value(0).toString())
@@ -412,6 +822,36 @@ int main(int argc, char *argv[])
                  qPrintable(library.userName()), qPrintable(library.userInitials()),
                  library.liked()->rowCount(), library.playlists()->rowCount(),
                  library.albums()->rowCount(), library.savedPlaylists()->rowCount());
+        // Whether there is a key, never what it is.
+        qWarning("diag: Last.fm key %s; secret store: %s", lastFm.hasKey() ? "present" : "absent",
+                 qPrintable(SecretStore::available() ? SecretStore::backendName()
+                                                     : SecretStore::unavailableReason()));
+        // Never the session key: whether there is a sign-in, and what waits.
+        qWarning("diag: Last.fm %s%s, scrobbling %s, %d waiting", qPrintable(scrobbler.state()),
+                 scrobbler.accountName().isEmpty() ? "" : qPrintable(QStringLiteral(" as ") + scrobbler.accountName()),
+                 scrobbler.enabled() ? "on" : "off", scrobbler.pending());
+        // Never a value: the state, and the jar's size and cookie names.
+        qWarning("diag: YouTube Music %s%s, %s", qPrintable(ytmSession.state()),
+                 ytmSession.accountName().isEmpty() ? "" : qPrintable(QStringLiteral(" as ") + ytmSession.accountName()),
+                 ytmSession.jar().isEmpty()
+                     ? "no session held"
+                     : qPrintable(QStringLiteral("%1 cookies held (%2 bytes as stored): %3")
+                                      .arg(ytmSession.jar().size())
+                                      .arg(CookieImport::toJson(ytmSession.jar()).size())
+                                      .arg(CookieImport::names(ytmSession.jar()).join(QStringLiteral(", ")))));
+        QSqlQuery waiting(AppDatabase::connection());
+        waiting.exec(QStringLiteral("SELECT id, account, artist, track, started_at, chosen_by_user, attempts,"
+                                    " last_error FROM scrobble_queue ORDER BY id LIMIT 10"));
+        while (waiting.next()) {
+            qWarning("diag:   scrobble %lld for %s: %s - %s, started %s, chosen_by_user %d, %d attempts%s",
+                     waiting.value(0).toLongLong(), qPrintable(waiting.value(1).toString()),
+                     qPrintable(waiting.value(2).toString()), qPrintable(waiting.value(3).toString()),
+                     qPrintable(QDateTime::fromSecsSinceEpoch(waiting.value(4).toLongLong(), QTimeZone::UTC)
+                                    .toString(Qt::ISODate)),
+                     waiting.value(5).toInt(), waiting.value(6).toInt(),
+                     waiting.value(7).toString().isEmpty()
+                         ? "" : qPrintable(QStringLiteral(", last: ") + waiting.value(7).toString()));
+        }
         QTimer::singleShot(0, &app, []() { QCoreApplication::quit(); });
     }
 
@@ -551,6 +991,254 @@ int main(int argc, char *argv[])
                 }
             }
 
+            // What the page learns from, case by case: a like decided by the
+            // song's newest like or unlike, song shelves seeded only by plays
+            // that said yes, and weekends on the listener's own calendar.
+            {
+                const QDateTime now = QDateTime::currentDateTimeUtc();
+                const auto mark = [](const char *kind, const char *title, const char *artist,
+                                     const QDateTime &when) {
+                    Rec::PlayEvent event;
+                    event.kind = QString::fromLatin1(kind);
+                    event.title = QString::fromUtf8(title);
+                    event.artist = QString::fromUtf8(artist);
+                    event.source = QStringLiteral("search");
+                    event.when = when;
+                    return event;
+                };
+                // A label below zero stands for none.
+                const auto heard = [&mark](const char *title, const char *artist, const QDateTime &when,
+                                           double label, qint64 listenedMs) {
+                    Rec::PlayEvent event = mark("play", title, artist, when);
+                    event.hasLabel = label >= 0.0;
+                    event.label = qMax(0.0, label);
+                    event.listenedMs = listenedMs;
+                    event.trackMs = 220000;
+                    return event;
+                };
+
+                // Newest first, as the database reads them.
+                const QVector<Rec::PlayEvent> relike = {
+                    mark("like", "Kyoto", "Phoebe Bridgers", now.addDays(-1)),
+                    mark("unliked", "Kyoto", "Phoebe Bridgers", now.addDays(-2)),
+                    mark("like", "Kyoto", "Phoebe Bridgers", now.addDays(-3)) };
+                const QVector<Rec::PlayEvent> unliked = { relike.at(1), relike.at(2) };
+                const QVector<Rec::PlayEvent> twice = { relike.at(0), relike.at(2) };
+                qWarning("rec: likes: liked, unliked, liked again %s (must be liked); liked, unliked %s (must not be)",
+                         Rec::likedSongs(relike).isEmpty() ? "not liked" : "liked",
+                         Rec::likedSongs(unliked).isEmpty() ? "not liked" : "liked");
+                qWarning("rec: like mass: re-liked %.3f (must be > 0), liked twice %.3f (must be the same), "
+                         "unliked %.3f (must be 0)",
+                         Rec::buildTaste(*catalogue, relike, now).positiveMass,
+                         Rec::buildTaste(*catalogue, twice, now).positiveMass,
+                         Rec::buildTaste(*catalogue, unliked, now).positiveMass);
+
+                const QVector<Rec::PlayEvent> plays = {
+                    heard("Blinding Lights", "The Weeknd", now.addSecs(-600), 0.0, 5000),
+                    heard("Levitating", "Dua Lipa", now.addSecs(-1200), 0.0, 5000),
+                    heard("Save Your Tears", "The Weeknd", now.addSecs(-1800), -1.0, 10000),
+                    heard("Creep", "Radiohead", now.addSecs(-2400), -1.0, 45000),
+                    heard("Yellow", "Coldplay", now.addSecs(-3000), 0.6, 120000),
+                    mark("like", "Levitating", "Dua Lipa", now.addDays(-1)) };
+                QStringList seeded;
+                for (const Rec::Shelf &shelf : Rec::buildShelves(*catalogue, Rec::TasteProfile(), plays, 12)) {
+                    if (shelf.kind == QLatin1String("song"))
+                        seeded << shelf.title;
+                }
+                qWarning("rec: song shelves: %s (must be Levitating, skipped but liked; Creep, 45 s unlabelled; "
+                         "Yellow, 0.6 — not the skipped Blinding Lights or the 10-second Save Your Tears)",
+                         qPrintable(seeded.join(QStringLiteral(" | "))));
+
+                // A week back, so every day is past: that week's Friday to
+                // Monday, at hours that land on another day in UTC for most
+                // of the world.
+                const QDate today = QDate::currentDate();
+                const QDate friday = today.addDays(-7 - (today.dayOfWeek() + 2) % 7);
+                const auto at = [](const QDate &day, int hour) {
+                    return QDateTime(day, QTime(hour, 0)).toUTC();
+                };
+                const QVector<Rec::PlayEvent> weekend = {
+                    heard("Blinding Lights", "The Weeknd", at(friday.addDays(1), 1), 1.0, 200000),
+                    heard("Levitating", "Dua Lipa", at(friday.addDays(2), 22), 1.0, 200000) };
+                const QVector<Rec::PlayEvent> weekdays = {
+                    heard("Blinding Lights", "The Weeknd", at(friday, 22), 1.0, 200000),
+                    heard("Levitating", "Dua Lipa", at(friday.addDays(3), 1), 1.0, 200000) };
+                qWarning("rec: weekend mass: Saturday 01:00 and Sunday 22:00 local %.2f (must be > 0); "
+                         "Friday 22:00 and Monday 01:00 local %.2f (must be 0 where the weekend is Sat-Sun)",
+                         Rec::buildTaste(*catalogue, weekend, now).weekendMass,
+                         Rec::buildTaste(*catalogue, weekdays, now).weekendMass);
+            }
+
+            // The page's surface: rotation, what it may never show, and See
+            // all. Rotation 0 is the page as ranked, which every line above
+            // and --artist-test compare against and the app never builds; a
+            // rotation must give the same page every time it is asked for,
+            // and a different one from the next.
+            {
+                const QDateTime now = QDateTime::currentDateTimeUtc();
+                const QList<QPair<const char *, const char *>> liked = {
+                    { "Blinding Lights", "The Weeknd" }, { "Save Your Tears", "The Weeknd" },
+                    { "Levitating", "Dua Lipa" }, { "Don't Start Now", "Dua Lipa" },
+                    { "As It Was", "Harry Styles" }, { "Watermelon Sugar", "Harry Styles" },
+                    { "Kyoto", "Phoebe Bridgers" }, { "Motion Sickness", "Phoebe Bridgers" },
+                    { "Yellow", "Coldplay" }, { "The Scientist", "Coldplay" },
+                    { "Creep", "Radiohead" }, { "No Surprises", "Radiohead" },
+                };
+                QVector<Rec::PlayEvent> plays;
+                for (int i = 0; i < liked.size(); ++i) {
+                    Rec::PlayEvent event;
+                    event.kind = QStringLiteral("play");
+                    event.title = QString::fromUtf8(liked.at(i).first);
+                    event.artist = QString::fromUtf8(liked.at(i).second);
+                    event.source = QStringLiteral("search");
+                    event.when = now.addSecs(-3600 * (i + 1));
+                    event.hasLabel = true;
+                    event.label = 1.0;
+                    event.listenedMs = 200000;
+                    event.trackMs = 200000;
+                    plays.append(event);
+                }
+                const Rec::TasteProfile taste = Rec::buildTaste(*catalogue, plays, now);
+                const auto build = [&](const QVector<Rec::PlayEvent> &history, quint64 rotation,
+                                       const Rec::Exclusions &exclude) {
+                    return Rec::buildShelves(*catalogue, taste, history, 12, nullptr, QString(), false,
+                                             exclude, rotation);
+                };
+                const auto rowsOf = [](const QVector<Rec::Shelf> &page) {
+                    QStringList rows;
+                    for (const Rec::Shelf &shelf : page) {
+                        for (const Rec::Suggestion &row : shelf.rows)
+                            rows << row.title + QStringLiteral(" / ") + row.artist;
+                    }
+                    return rows;
+                };
+                const auto titlesOf = [](const QVector<Rec::Shelf> &page) {
+                    QStringList titles;
+                    for (const Rec::Shelf &shelf : page)
+                        titles << QStringLiteral("%1 (%2)").arg(shelf.title).arg(shelf.rows.size());
+                    return titles.join(QStringLiteral(" | "));
+                };
+                const auto fresh = [](const QStringList &after, const QStringList &before) {
+                    int count = 0;
+                    for (const QString &row : after)
+                        count += !before.contains(row);
+                    return count;
+                };
+
+                const QVector<Rec::Shelf> ranked = build(plays, 0, {});
+                const quint64 rotation = Rec::rotationFor(1000, 0);
+                const QVector<Rec::Shelf> rotated = build(plays, rotation, {});
+                const QStringList rankedRows = rowsOf(ranked);
+                const QStringList rotatedRows = rowsOf(rotated);
+                const QStringList again = rowsOf(build(plays, rotation, {}));
+                const QStringList nextPeriod = rowsOf(build(plays, Rec::rotationFor(1001, 0), {}));
+                const QStringList nextTurn = rowsOf(build(plays, Rec::rotationFor(1000, 1), {}));
+                qWarning("rec: ranked page: %s", qPrintable(titlesOf(ranked)));
+                qWarning("rec: rotated page: %s", qPrintable(titlesOf(rotated)));
+                qWarning("rec: rotation: the same rotation twice %s (must be the same); %d of %d rows not on the "
+                         "ranked page; the next 45 minutes %d of %d rows new, the next REFRESH %d of %d new "
+                         "(all three must be > 0)",
+                         again == rotatedRows ? "the same" : "DIFFERENT",
+                         fresh(rotatedRows, rankedRows), int(rotatedRows.size()),
+                         fresh(nextPeriod, rotatedRows), int(nextPeriod.size()),
+                         fresh(nextTurn, rotatedRows), int(nextTurn.size()));
+
+                // One song owned, one turned down (as the app records it: an
+                // event in the history and the list), and one artist turned
+                // down, all taken from the ranked page. None may come back.
+                int ownedAt = -1, downAt = -1;
+                QString blockedArtist;
+                QVector<Rec::Suggestion> rankedAll;
+                for (const Rec::Shelf &shelf : ranked)
+                    rankedAll += shelf.rows;
+                for (int i = 0; i < rankedAll.size(); ++i) {
+                    const QString key = Rec::suggestionArtistKey(rankedAll.at(i).artist);
+                    if (ownedAt < 0)
+                        ownedAt = i;
+                    else if (downAt < 0 && key != Rec::suggestionArtistKey(rankedAll.at(ownedAt).artist))
+                        downAt = i;
+                    else if (downAt >= 0 && blockedArtist.isEmpty()
+                             && key != Rec::suggestionArtistKey(rankedAll.at(ownedAt).artist)
+                             && key != Rec::suggestionArtistKey(rankedAll.at(downAt).artist))
+                        blockedArtist = rankedAll.at(i).artist;
+                }
+                if (ownedAt >= 0 && downAt >= 0 && !blockedArtist.isEmpty()) {
+                    const Rec::Suggestion owned = rankedAll.at(ownedAt);
+                    const Rec::Suggestion down = rankedAll.at(downAt);
+                    Rec::Exclusions exclude;
+                    exclude.owned.insert(Rec::strictKey(owned.title, owned.artist));
+                    exclude.turnedDown.insert(Rec::strictKey(down.title, down.artist));
+                    exclude.artists.insert(Rec::suggestionArtistKey(blockedArtist));
+                    QVector<Rec::PlayEvent> withDown = plays;
+                    Rec::PlayEvent event;
+                    event.kind = QStringLiteral("notInterested");
+                    event.source = QStringLiteral("notInterested");
+                    event.title = down.title;
+                    event.artist = down.artist;
+                    event.when = now;
+                    event.hasLabel = true;
+                    withDown.prepend(event);
+
+                    int ownedSeen = 0, downSeen = 0, artistSeen = 0, pages = 0;
+                    const auto sweep = [&](const QVector<Rec::Suggestion> &rows) {
+                        for (const Rec::Suggestion &row : rows) {
+                            ownedSeen += Rec::strictKey(row.title, row.artist)
+                                         == Rec::strictKey(owned.title, owned.artist);
+                            downSeen += Rec::strictKey(row.title, row.artist)
+                                        == Rec::strictKey(down.title, down.artist);
+                            artistSeen += Rec::suggestionArtistKey(row.artist)
+                                          == Rec::suggestionArtistKey(blockedArtist);
+                        }
+                    };
+                    for (const quint64 r : { quint64(0), rotation }) {
+                        for (const Rec::Shelf &shelf : build(withDown, r, exclude)) {
+                            sweep(shelf.rows);
+                            QVector<Rec::Suggestion> list = shelf.rows;
+                            for (int page = 0; page < 2; ++page) {
+                                const QVector<Rec::Suggestion> more = Rec::moreFrom(
+                                    catalogue, nullptr, shelf, withDown, exclude, list, 24);
+                                sweep(more);
+                                list += more;
+                                ++pages;
+                            }
+                        }
+                    }
+                    qWarning("rec: exclusions: owned \"%s\" seen %d, turned down \"%s\" seen %d, rows by %s %d, "
+                             "over the ranked and a rotated page and %d See all pages (all three must be 0)",
+                             qPrintable(owned.title), ownedSeen, qPrintable(down.title), downSeen,
+                             qPrintable(blockedArtist), artistSeen, pages);
+                    qWarning("rec: taste: negative mass %.2f without the turn-down, %.2f with it (must rise)",
+                             taste.negativeMass, Rec::buildTaste(*catalogue, withDown, now).negativeMass);
+                } else {
+                    qWarning("rec: exclusions: NOT CHECKED, the ranked page has too few artists");
+                }
+
+                // See all, shelf by shelf: two pages past the shelf, none of
+                // it repeating the shelf or itself.
+                QStringList seeAll;
+                int repeats = 0;
+                for (const Rec::Shelf &shelf : ranked) {
+                    QVector<Rec::Suggestion> list = shelf.rows;
+                    QStringList sizes;
+                    for (int page = 0; page < 2; ++page) {
+                        const QVector<Rec::Suggestion> more = Rec::moreFrom(catalogue, nullptr, shelf, plays, {},
+                                                                            list, 24);
+                        sizes << QStringLiteral("+%1").arg(more.size());
+                        list += more;
+                    }
+                    QSet<quint64> keys;
+                    for (const Rec::Suggestion &row : std::as_const(list)) {
+                        const quint64 key = Rec::strictKey(row.title, row.artist);
+                        repeats += keys.contains(key);
+                        keys.insert(key);
+                    }
+                    seeAll << QStringLiteral("%1 %2 %3").arg(shelf.title).arg(shelf.rows.size())
+                                  .arg(sizes.join(QLatin1Char(' ')));
+                }
+                qWarning("rec: see all: %s; %d repeated rows (must be 0)",
+                         qPrintable(seeAll.join(QStringLiteral(" | "))), repeats);
+            }
+
             const Rec::Catalog::Match seed =
                 catalogue->match(QStringLiteral("Blinding Lights"), QStringLiteral("The Weeknd"));
             if (seed.row >= 0) {
@@ -569,6 +1257,128 @@ int main(int argc, char *argv[])
         }
         delete catalogue;
         QTimer::singleShot(0, &app, []() { QCoreApplication::quit(); });
+    }
+
+    // --rec-download [--cancel-at <MB>]
+    //
+    // The recommendation data fetched exactly as Settings fetches it: into
+    // the data folder (MONOLIST_DATA_DIR), from MONOLIST_REC_DATA_URL when
+    // that is set. Reports each step and what became of every file, then the
+    // recommender loading from the download and the shelves it builds, and
+    // quits. --cancel-at stops it once that many megabytes are in, as Cancel.
+    //
+    // --rec-remove
+    //
+    // Remove, as Settings does it, a few seconds after launch so the
+    // recommender is holding the files: it must let go, and the folder go.
+    if (args.contains(QStringLiteral("--rec-download")) || args.contains(QStringLiteral("--rec-remove"))) {
+        auto clock = std::make_shared<QElapsedTimer>();
+        clock->start();
+        const auto say = [clock](const QString &text) {
+            qWarning("recdata: +%6lld ms  %s", (long long)clock->elapsed(), qPrintable(text));
+        };
+        const auto onDisk = [&recData]() {
+            return QStringLiteral("installed %1, partial %2, %3 on disk, in use %4")
+                .arg(recData.installed() ? QStringLiteral("yes") : QStringLiteral("no"),
+                     recData.partial() ? QStringLiteral("yes") : QStringLiteral("no"),
+                     recData.sizeText(),
+                     recData.inUse() ? QStringLiteral("yes") : QStringLiteral("no"));
+        };
+        say(QStringLiteral("from %1 into %2").arg(RecData::baseUrl(), recData.displayFolder()));
+        say(QStringLiteral("at launch: ") + onDisk());
+
+        auto lastStatus = std::make_shared<QString>();
+        auto lastTenth = std::make_shared<int>(-1);
+        const int cancelFlag = args.indexOf(QStringLiteral("--cancel-at"));
+        const qint64 cancelAt = cancelFlag >= 0 && cancelFlag + 1 < args.size()
+                                    ? args.at(cancelFlag + 1).toLongLong() << 20 : -1;
+        QObject::connect(&recData, &RecData::changed, &app,
+                         [&recData, say, lastStatus, lastTenth, cancelAt]() {
+            if (recData.status() != *lastStatus) {
+                *lastStatus = recData.status();
+                say(QStringLiteral("status: ") + recData.status());
+            }
+            const int tenth = int(recData.progress() * 10);
+            if (recData.busy() && tenth != *lastTenth) {
+                *lastTenth = tenth;
+                say(QStringLiteral("progress: ") + recData.progressText());
+            }
+            if (cancelAt >= 0 && recData.busy() && recData.doneBytes() >= cancelAt) {
+                say(QStringLiteral("cancelling at ") + recData.progressText());
+                recData.cancel();
+            }
+        });
+
+        // Polls until `ready` holds or `limitMs` passes.
+        const auto waitFor = [](std::function<bool()> ready, int limitMs, std::function<void()> then) {
+            auto *poll = new QTimer(qApp);
+            auto waited = std::make_shared<QElapsedTimer>();
+            waited->start();
+            QObject::connect(poll, &QTimer::timeout, qApp, [poll, waited, ready, limitMs, then]() {
+                if (!ready() && waited->elapsed() < limitMs)
+                    return;
+                poll->stop();
+                poll->deleteLater();
+                then();
+            });
+            poll->start(100);
+        };
+        const auto reportRecs = [&recommender, say]() {
+            QStringList titles;
+            for (const QVariant &shelf : recommender.shelves())
+                titles << shelf.toMap().value(QStringLiteral("title")).toString();
+            say(QStringLiteral("recommender: catalogue \"%1\", available %2, graph %3, %4 shelves: %5%6")
+                    .arg(recommender.dataDirectory(),
+                         recommender.available() ? QStringLiteral("yes") : QStringLiteral("no"),
+                         recommender.graphAvailable() ? QStringLiteral("yes") : QStringLiteral("no"))
+                    .arg(recommender.shelves().size())
+                    .arg(titles.join(QStringLiteral(" | ")),
+                         recommender.message().isEmpty() ? QString()
+                                                         : QStringLiteral("; says \"%1\"").arg(recommender.message())));
+        };
+
+        if (args.contains(QStringLiteral("--rec-download"))) {
+            QObject::connect(&recData, &RecData::finished, &app,
+                             [&recData, &recommender, say, onDisk, waitFor, reportRecs](bool ok) {
+                say(QStringLiteral("finished %1: %2 files kept, %3 downloaded, %4 refused; %5")
+                        .arg(ok ? QStringLiteral("whole") : QStringLiteral("NOT whole"))
+                        .arg(recData.keptFiles()).arg(recData.fetchedFiles()).arg(recData.refusedFiles())
+                        .arg(onDisk()));
+                if (!ok) {
+                    QTimer::singleShot(300, qApp, []() { QCoreApplication::quit(); });
+                    return;
+                }
+                // The download points the recommender at itself; the page it
+                // then builds is the proof the files are the ones it reads.
+                waitFor([&recommender]() {
+                            return !recommender.busy() && !recommender.shelves().isEmpty();
+                        }, 240000, [reportRecs, say]() {
+                            reportRecs();
+                            say(QStringLiteral("done, quitting"));
+                            QTimer::singleShot(200, qApp, []() { QCoreApplication::quit(); });
+                        });
+            });
+            QTimer::singleShot(500, &app, [&recData]() { recData.download(); });
+        } else {
+            QTimer::singleShot(4000, &app, [&recData, say, onDisk, waitFor, reportRecs]() {
+                reportRecs();
+                say(QStringLiteral("removing"));
+                recData.remove();
+                waitFor([&recData]() { return !recData.removing(); }, 240000,
+                        [&recData, say, onDisk, reportRecs]() {
+                    say(QStringLiteral("after: ") + onDisk() + QStringLiteral("; folder %1")
+                            .arg(QFileInfo::exists(RecData::folderPath()) ? QStringLiteral("STILL THERE")
+                                                                           : QStringLiteral("gone")));
+                    reportRecs();
+                    say(QStringLiteral("done, quitting"));
+                    QTimer::singleShot(200, qApp, []() { QCoreApplication::quit(); });
+                });
+            });
+        }
+        QTimer::singleShot(600000, &app, []() {
+            qWarning("recdata: timed out");
+            QCoreApplication::exit(2);
+        });
     }
 
     // --graph-test <catalogue directory> <graph directory>
@@ -869,7 +1679,8 @@ int main(int argc, char *argv[])
     // refuses, every refusal written to the report for review, and a fixed
     // list of cases it must get right in both directions — the hateful titles
     // review found, and the anti-fascist songs and innocent names a careless
-    // filter catches instead.
+    // filter catches instead. Then the same for "Hide explicit titles": what
+    // it would hide on top, and its own cases with the switch off and on.
     const int contentFlag = args.indexOf(QStringLiteral("--content-test"));
     if (contentFlag >= 0 && contentFlag + 2 < args.size()) {
         auto *catalogue = new Rec::Catalog;
@@ -888,6 +1699,23 @@ int main(int argc, char *argv[])
                 }
             }
             qWarning("content: %d of %d rows refused", refused, catalogue->count());
+
+            // What "Hide explicit titles" adds on top, written after the rest
+            // under a heading of its own, so every word on its list can be
+            // checked for what else it catches.
+            out << "# refused only with Hide explicit titles on\n";
+            int hidden = 0;
+            for (int row = 0; row < catalogue->count(); ++row) {
+                const QString title = catalogue->title(row);
+                const QString artist = catalogue->artist(row);
+                if (Rec::suitableForSuggestion(title, artist)
+                    && !Rec::suitableForSuggestion(title, artist, /*hideExplicit=*/true)) {
+                    ++hidden;
+                    out << row << '\t' << artist << '\t' << title << '\t' << catalogue->popularity(row) << '\n';
+                }
+            }
+            qWarning("content: with Hide explicit titles on, %d more of %d rows refused",
+                     hidden, catalogue->count());
 
             struct Case { const char *title; const char *artist; bool allowed; };
             const Case cases[] = {
@@ -927,26 +1755,88 @@ int main(int argc, char *argv[])
                 }
             }
             qWarning("content: %d of %d fixed cases wrong", wrong, int(std::size(cases)));
+
+            // "Hide explicit titles", each case twice: with the switch off,
+            // where every one of these must pass, and on, where only the
+            // clean ones may — the innocent words a careless list would
+            // catch, the clean edit beside the explicit one, and each shape
+            // of the explicit-version mark.
+            struct ExplicitCase { const char *title; const char *artist; bool hiddenWhenOn; };
+            const ExplicitCase explicitCases[] = {
+                { "Fuck You", "CeeLo Green", true },
+                { "Forget You", "CeeLo Green", false },
+                { "Bitch Better Have My Money", "Rihanna", true },
+                { "Motherfuckin' Hurricane", "Folk Band", true },
+                { "Lose Yourself (Explicit)", "Eminem", true },
+                { "HUMBLE. [Explicit]", "Kendrick Lamar", true },
+                { "In Da Club - Explicit Version", "50 Cent", true },
+                { "Gold Digger - Explicit", "Kanye West", true },
+                { "Lose Yourself (Clean)", "Eminem", false },
+                { "Explicit", "Folk Band", false },
+                { "Hijo de Puta", "Asspera", true },
+                { "Off With Her Tits", "Allie X", true },
+                { "Pussy Cat Pussy Cat", "Nursery Rhymes", false },
+                { "What's New Pussycat?", "Tom Jones", false },
+                // Caught by an earlier list, and wrongly: Swedish "slut" is
+                // an end, Serbo-Croatian "puta" is times, French "p'tits" small.
+                { "I ett hus vid skogens slut", "Barnens favoriter", false },
+                { "Sto puta", "Zdravko Čolić", false },
+                { "Trois p’tits chats", "HeyKids Comptine Pour Bébé", false },
+                { "Cum Sancto Spiritu", "Johann Sebastian Bach", false },
+                { "Jag fick feeling", "Linnea Henriksson", false },
+                { "Moby Dick", "Led Zeppelin", false },
+                { "Hoe-Down", "Aaron Copland", false },
+                { "Sex on Fire", "Kings of Leon", false },
+                { "Scunthorpe Shuffle", "Folk Band", false },
+            };
+            int explicitWrong = 0;
+            for (const ExplicitCase &c : explicitCases) {
+                const QString title = QString::fromUtf8(c.title);
+                const QString artist = QString::fromUtf8(c.artist);
+                const bool off = Rec::suitableForSuggestion(title, artist, /*hideExplicit=*/false);
+                const bool on = Rec::suitableForSuggestion(title, artist, /*hideExplicit=*/true);
+                if (!off) {
+                    ++explicitWrong;
+                    qWarning("content: WRONG  %s — %s  (refused with the switch off)", c.artist, c.title);
+                }
+                if (on == c.hiddenWhenOn) {
+                    ++explicitWrong;
+                    qWarning("content: WRONG  %s — %s  (%s with the switch on)", c.artist, c.title,
+                             on ? "allowed, should be hidden" : "hidden, should be allowed");
+                }
+            }
+            qWarning("content: %d of %d explicit checks wrong (%d cases, switch off and on)", explicitWrong,
+                     int(std::size(explicitCases)) * 2, int(std::size(explicitCases)));
         }
         delete catalogue;
         QTimer::singleShot(0, &app, []() { QCoreApplication::quit(); });
     }
 
-    // --library-test "<query>"
+    // --library-test "<query>" [--videos]
     //
     // The library end to end, on real songs: searches, makes a playlist of the
     // results, adds one twice, likes three, saves Home's newest album, then
     // removes, renames and reports. Meant for a scratch database
     // (MONOLIST_DATA_DIR), which it leaves filled for a look at the views.
+    // --videos searches music videos instead, and the report says how many of
+    // the rows read back from the database still know they are videos.
     const int libraryFlag = args.indexOf(QStringLiteral("--library-test"));
     if (libraryFlag >= 0 && libraryFlag + 1 < args.size()) {
         const QString query = args.at(libraryFlag + 1);
         auto done = std::make_shared<int>(0);   // the search and Home, both needed
+        if (args.contains(QStringLiteral("--videos")))
+            extractor.setFilter(QStringLiteral("videos"));
 
         QObject::connect(&library, &Library::notice, &app, [](const QString &text) {
             qWarning("selftest: notice \"%s\"", qPrintable(text));
         });
-        const auto report = [&library]() {
+        const auto videosIn = [](SearchResultModel *model) {
+            int videos = 0;
+            for (int row = 0; row < model->rowCount(); ++row)
+                videos += model->get(row).value(QStringLiteral("isVideo")).toBool() ? 1 : 0;
+            return videos;
+        };
+        const auto report = [&library, videosIn]() {
             const QVariantMap open = library.playlist();
             qWarning("selftest: playlist %d \"%s\": %d songs, %s; %d playlists, %d liked, %d saved albums",
                      open.value(QStringLiteral("playlistId")).toInt(),
@@ -955,6 +1845,9 @@ int main(int argc, char *argv[])
                      qPrintable(open.value(QStringLiteral("durationText")).toString()),
                      library.playlists()->rowCount(), library.liked()->rowCount(),
                      library.albums()->rowCount());
+            qWarning("selftest: music videos read back: %d of %d in the playlist, %d of %d liked",
+                     videosIn(library.playlistTracks()), library.playlistTracks()->rowCount(),
+                     videosIn(library.liked()), library.liked()->rowCount());
         };
         const auto finish = [&library, &catalog, report, done]() {
             if (++*done < 2)
@@ -974,7 +1867,13 @@ int main(int argc, char *argv[])
                 finish();
         });
         QObject::connect(&extractor, &MediaExtractor::searchFinished, &app,
-                         [&library, report, finish](const QVariantList &results) {
+                         [&library, &extractor, report, finish](const QVariantList &) {
+                             // The rows as the interface hands them on, from
+                             // the model: the signal's own list is a shorter
+                             // summary without the video flag.
+                             QVariantList results;
+                             for (int row = 0; row < extractor.results()->rowCount(); ++row)
+                                 results.append(extractor.results()->get(row));
                              const int id = library.createPlaylist(QStringLiteral("Selftest mix"));
                              library.openPlaylist(id);
                              library.addAllToPlaylist(id, results.mid(0, 8));
@@ -1156,15 +2055,44 @@ int main(int argc, char *argv[])
         });
     }
 
-    // --search "<query>"
+    // --search "<query>" [--filter songs|videos|albums|artists|playlists]
     //
     // One search as the interface would run it (YouTube Music first, yt-dlp
     // if that fails), timed, with the first results and the suggestions for
-    // the first half of the query.
+    // the first half of the query. --filter picks the chip: albums, artists
+    // and playlists print their cards, section by section.
     const int searchFlag = args.indexOf(QStringLiteral("--search"));
     if (searchFlag >= 0 && searchFlag + 1 < args.size()) {
         const QString query = args.at(searchFlag + 1);
         auto clock = std::make_shared<QElapsedTimer>();
+        const int filterFlag = args.indexOf(QStringLiteral("--filter"));
+        if (filterFlag >= 0 && filterFlag + 1 < args.size())
+            extractor.setFilter(args.at(filterFlag + 1));
+        qWarning("selftest: searching %s for \"%s\"", qPrintable(extractor.filter()), qPrintable(query));
+
+        QObject::connect(&extractor, &MediaExtractor::cardSearchFinished, &app, [&extractor, clock]() {
+            int total = 0;
+            for (const QVariant &value : extractor.cardSections())
+                total += int(value.toMap().value(QStringLiteral("items")).toList().size());
+            qWarning("selftest: %d cards from %s in %lld ms", total, qPrintable(extractor.source()),
+                     (long long)clock->elapsed());
+            for (const QVariant &value : extractor.cardSections()) {
+                const QVariantMap section = value.toMap();
+                const QVariantList items = section.value(QStringLiteral("items")).toList();
+                qWarning("selftest:   [%s] %lld", qPrintable(section.value(QStringLiteral("title")).toString()),
+                         (long long)items.size());
+                for (qsizetype i = 0; i < qMin<qsizetype>(6, items.size()); ++i) {
+                    const QVariantMap card = items.at(i).toMap();
+                    qWarning("selftest:     %s | %s | %s %s | art: %s",
+                             qPrintable(card.value(QStringLiteral("title")).toString()),
+                             qPrintable(card.value(QStringLiteral("subtitle")).toString()),
+                             qPrintable(card.value(QStringLiteral("type")).toString()),
+                             qPrintable(card.value(QStringLiteral("browseId")).toString()),
+                             qPrintable(card.value(QStringLiteral("artwork")).toString().left(50)));
+                }
+            }
+            QTimer::singleShot(400, qApp, []() { QCoreApplication::quit(); });
+        });
 
         QObject::connect(&extractor, &MediaExtractor::suggestionsChanged, &app, [&extractor, clock]() {
             qWarning("selftest: suggestions after %lld ms: %s", (long long)clock->elapsed(),
@@ -1202,13 +2130,326 @@ int main(int argc, char *argv[])
         });
     }
 
+    // --artist-page <channel id | name> [--mix shuffle|radio]
+    //
+    // One artist page as the interface opens it — by its id, or by a name
+    // looked up among YouTube Music's artists — printed: the header, the top
+    // songs with each credit's page, and every shelf. With --mix, that
+    // button's songs too.
+    const int artistPageFlag = args.indexOf(QStringLiteral("--artist-page"));
+    if (artistPageFlag >= 0 && artistPageFlag + 1 < args.size()) {
+        const QString wanted = args.at(artistPageFlag + 1);
+        const int mixFlag = args.indexOf(QStringLiteral("--mix"));
+        const QString mix = mixFlag >= 0 && mixFlag + 1 < args.size() ? args.at(mixFlag + 1) : QString();
+        auto clock = std::make_shared<QElapsedTimer>();
+        auto printed = std::make_shared<bool>(false);
+
+        QObject::connect(&catalog, &Catalog::artistResolved, &app,
+                         [clock](const QString &name, const QString &browseId) {
+                             qWarning("selftest: \"%s\" is %s (%lld ms)", qPrintable(name), qPrintable(browseId),
+                                      (long long)clock->elapsed());
+                         });
+        QObject::connect(&catalog, &Catalog::artistNotFound, &app, [](const QString &name) {
+            qWarning("selftest: no artist called \"%s\": the interface would search instead", qPrintable(name));
+            QTimer::singleShot(200, qApp, []() { QCoreApplication::quit(); });
+        });
+        QObject::connect(&catalog, &Catalog::artistChanged, &app,
+                         [&catalog, &artistLinks, clock, printed, mix]() {
+            if (catalog.artistLoading() || *printed)
+                return;
+            const QVariantMap artist = catalog.artist();
+            if (artist.value(QStringLiteral("lookingUp")).toBool() && artist.contains(QStringLiteral("error")))
+                return;   // artistNotFound says so
+            *printed = true;
+            if (artist.contains(QStringLiteral("error"))) {
+                qWarning("selftest: failed: %s", qPrintable(artist.value(QStringLiteral("error")).toString()));
+                QCoreApplication::exit(1);
+                return;
+            }
+            qWarning("selftest: %s | %s | %lld ms", qPrintable(artist.value(QStringLiteral("name")).toString()),
+                     qPrintable(artist.value(QStringLiteral("audience")).toString()), (long long)clock->elapsed());
+            qWarning("selftest:   about: %s", qPrintable(artist.value(QStringLiteral("description")).toString().left(90)));
+            qWarning("selftest:   picture: %s", qPrintable(artist.value(QStringLiteral("artwork")).toString().left(90)));
+            qWarning("selftest:   shuffle %s, radio %s, all songs %s",
+                     artist.value(QStringLiteral("canShuffle")).toBool() ? "yes" : "no",
+                     artist.value(QStringLiteral("canRadio")).toBool() ? "yes" : "no",
+                     qPrintable(artist.value(QStringLiteral("songsId")).toString()));
+            const SearchResultModel *songs = catalog.artistSongs();
+            qWarning("selftest:   %s: %d", qPrintable(artist.value(QStringLiteral("songsTitle")).toString()),
+                     songs->rowCount());
+            for (int row = 0; row < songs->rowCount(); ++row) {
+                const QVariantMap song = songs->get(row);
+                QStringList credits;
+                for (const QVariant &piece : artistLinks.credits(song.value(QStringLiteral("artist")).toString(),
+                                                                 song.value(QStringLiteral("credits")))) {
+                    const QVariantMap map = piece.toMap();
+                    credits << (map.value(QStringLiteral("link")).toBool()
+                                    ? QStringLiteral("[%1 -> %2]").arg(map.value(QStringLiteral("text")).toString(),
+                                                                       map.value(QStringLiteral("id")).toString())
+                                    : map.value(QStringLiteral("text")).toString());
+                }
+                qWarning("selftest:     %s | %s | %s (%s) | %s", qPrintable(song.value(QStringLiteral("title")).toString()),
+                         qPrintable(credits.join(QString())),
+                         qPrintable(song.value(QStringLiteral("album")).toString()),
+                         qPrintable(song.value(QStringLiteral("albumId")).toString()),
+                         qPrintable(song.value(QStringLiteral("durationText")).toString()));
+            }
+            for (const QVariant &value : artist.value(QStringLiteral("shelves")).toList()) {
+                const QVariantMap shelf = value.toMap();
+                const QVariantList items = shelf.value(QStringLiteral("items")).toList();
+                QStringList first;
+                for (qsizetype i = 0; i < qMin<qsizetype>(3, items.size()); ++i) {
+                    const QVariantMap card = items.at(i).toMap();
+                    first << QStringLiteral("%1 (%2 %3)").arg(card.value(QStringLiteral("title")).toString(),
+                                                              card.value(QStringLiteral("type")).toString(),
+                                                              card.value(QStringLiteral("browseId")).toString()
+                                                                  + card.value(QStringLiteral("videoId")).toString());
+                }
+                qWarning("selftest:   %s: %lld | %s", qPrintable(shelf.value(QStringLiteral("title")).toString()),
+                         (long long)items.size(), qPrintable(first.join(QStringLiteral(" / "))));
+            }
+            if (mix.isEmpty()) {
+                QTimer::singleShot(400, qApp, []() { QCoreApplication::quit(); });
+                return;
+            }
+            clock->restart();
+            catalog.loadArtistMix(mix);
+        });
+        QObject::connect(&catalog, &Catalog::artistMixReady, &app,
+                         [clock](const QString &kind, const QVariantList &tracks) {
+                             qWarning("selftest: %s: %lld songs in %lld ms", qPrintable(kind), (long long)tracks.size(),
+                                      (long long)clock->elapsed());
+                             for (qsizetype i = 0; i < qMin<qsizetype>(5, tracks.size()); ++i) {
+                                 const QVariantMap track = tracks.at(i).toMap();
+                                 qWarning("selftest:     %s | %s", qPrintable(track.value(QStringLiteral("title")).toString()),
+                                          qPrintable(track.value(QStringLiteral("artist")).toString()));
+                             }
+                             QTimer::singleShot(400, qApp, []() { QCoreApplication::quit(); });
+                         });
+        QObject::connect(&catalog, &Catalog::notice, &app, [](const QString &text) {
+            qWarning("selftest: %s", qPrintable(text));
+            QCoreApplication::exit(1);
+        });
+
+        QTimer::singleShot(300, &app, [&catalog, &artistLinks, wanted, clock]() {
+            clock->start();
+            const QString known = artistLinks.idFor(wanted);
+            if (wanted.startsWith(QLatin1String("UC")))
+                catalog.openArtist(wanted);
+            else if (!known.isEmpty()) {
+                qWarning("selftest: \"%s\" is known already: %s", qPrintable(wanted), qPrintable(known));
+                catalog.openArtist(known, wanted);
+            } else {
+                catalog.openArtistNamed(wanted);
+            }
+        });
+        QTimer::singleShot(30000, &app, []() {
+            qWarning("selftest: timed out");
+            QCoreApplication::exit(2);
+        });
+    }
+
+    // --page <browse id> [--all]
+    //
+    // An album's or a playlist's page as the interface opens it: the header,
+    // the first page of songs, then one more page as scrolling would ask for
+    // it, or with --all the whole rest as Play does, timed, with a count of
+    // rows that repeat a song already listed.
+    const int pageFlag = args.indexOf(QStringLiteral("--page"));
+    if (pageFlag >= 0 && pageFlag + 1 < args.size()) {
+        const QString browseId = args.at(pageFlag + 1);
+        const bool all = args.contains(QStringLiteral("--all"));
+        auto clock = std::make_shared<QElapsedTimer>();
+        // 0 waiting for the page, 1 its first rows going in, 2 more asked
+        // for, 3 done
+        auto stage = std::make_shared<int>(0);
+        // How long the interface takes to make each batch of rows, the song
+        // table's included (--view page:<id> shows it): countChanged follows
+        // the insertion, so it comes after every view has answered. The
+        // longest is what the reader would feel, as the page stopping.
+        auto making = std::make_shared<QElapsedTimer>();
+        auto longest = std::make_shared<qint64>(0);
+        auto batches = std::make_shared<int>(0);
+
+        const auto report = [&catalog, longest, batches](const char *what, qint64 ms) {
+            const SearchResultModel *tracks = catalog.pageTracks();
+            QSet<QString> ids;
+            for (int row = 0; row < tracks->rowCount(); ++row)
+                ids.insert(tracks->get(row).value(QStringLiteral("sourceId")).toString());
+            qWarning("selftest: %s: %d songs (%lld distinct), more to come: %s, %lld ms; rows made in %d "
+                     "batches, the longest %lld ms", what, tracks->rowCount(), (long long)ids.size(),
+                     catalog.pageHasMore() ? "yes" : "no", (long long)ms, *batches, (long long)*longest);
+            *longest = 0;
+            *batches = 0;
+            if (tracks->rowCount() > 0) {
+                const QVariantMap last = tracks->get(tracks->rowCount() - 1);
+                qWarning("selftest:   last: %s | %s | art: %s",
+                         qPrintable(last.value(QStringLiteral("title")).toString()),
+                         qPrintable(last.value(QStringLiteral("artist")).toString()),
+                         qPrintable(last.value(QStringLiteral("artwork")).toString().left(50)));
+            }
+        };
+        // The first page, once all its rows are in: more of it, or the end.
+        const auto firstPageIn = [&catalog, clock, stage, all, report]() {
+            report("first page", clock->elapsed());
+            if (!catalog.pageHasMore()) {
+                *stage = 3;
+                QTimer::singleShot(400, qApp, []() { QCoreApplication::quit(); });
+                return;
+            }
+            *stage = 2;
+            clock->restart();
+            if (all)
+                catalog.loadRestOfPage();
+            else
+                catalog.loadMorePage();
+        };
+
+        QObject::connect(&catalog, &Catalog::pageChanged, &app, [&catalog, stage, firstPageIn]() {
+            if (catalog.pageLoading() || *stage != 0)
+                return;
+            const QVariantMap page = catalog.page();
+            if (page.contains(QStringLiteral("error"))) {
+                qWarning("selftest: failed: %s", qPrintable(page.value(QStringLiteral("error")).toString()));
+                QCoreApplication::exit(1);
+                return;
+            }
+            qWarning("selftest: %s | %s | %s | %s", qPrintable(page.value(QStringLiteral("title")).toString()),
+                     qPrintable(page.value(QStringLiteral("subtitle")).toString()),
+                     qPrintable(page.value(QStringLiteral("artist")).toString()),
+                     qPrintable(page.value(QStringLiteral("details")).toString()));
+            *stage = 1;
+            if (!catalog.pageLoadingMore())
+                firstPageIn();
+        });
+        QObject::connect(&catalog, &Catalog::pageMoreChanged, &app, [&catalog, clock, stage, all, report,
+                                                                     firstPageIn]() {
+            if (catalog.pageLoadingMore())
+                return;
+            if (*stage == 1) {
+                firstPageIn();
+            } else if (*stage == 2) {
+                *stage = 3;
+                report(all ? "the rest" : "one more page", clock->elapsed());
+                QTimer::singleShot(400, qApp, []() { QCoreApplication::quit(); });
+            }
+        });
+        QObject::connect(&catalog, &Catalog::notice, &app, [](const QString &text) {
+            qWarning("selftest: %s", qPrintable(text));
+        });
+        QObject::connect(catalog.pageTracks(), &QAbstractItemModel::rowsAboutToBeInserted, &app,
+                         [making]() { making->start(); });
+        QObject::connect(catalog.pageTracks(), &QAbstractItemModel::modelAboutToBeReset, &app,
+                         [making]() { making->start(); });
+        QObject::connect(catalog.pageTracks(), &SearchResultModel::countChanged, &app,
+                         [making, longest, batches]() {
+            if (making->isValid()) {
+                *longest = qMax(*longest, making->elapsed());
+                ++*batches;
+            }
+            making->invalidate();
+        });
+
+        QTimer::singleShot(300, &app, [&catalog, browseId, clock]() {
+            clock->start();
+            catalog.openPage(browseId);
+        });
+        QTimer::singleShot(all ? 180000 : 45000, &app, []() {
+            qWarning("selftest: timed out");
+            QCoreApplication::exit(2);
+        });
+    }
+
+    // --shelf <browse id> [params]
+    //
+    // A shelf's "show all" page as the interface opens it: its title, each
+    // section's cards, its songs, and one more part where it has more.
+    const int shelfFlag = args.indexOf(QStringLiteral("--shelf"));
+    if (shelfFlag >= 0 && shelfFlag + 1 < args.size()) {
+        const QString browseId = args.at(shelfFlag + 1);
+        const QString params = shelfFlag + 2 < args.size() && !args.at(shelfFlag + 2).startsWith(QLatin1String("--"))
+                               ? args.at(shelfFlag + 2) : QString();
+        auto clock = std::make_shared<QElapsedTimer>();
+        auto stage = std::make_shared<int>(0);
+
+        const auto report = [&catalog](const char *what, qint64 ms) {
+            const QVariantMap listing = catalog.listing();
+            qWarning("selftest: %s: \"%s\" (above it: \"%s\"), %d songs, more to come: %s, %lld ms", what,
+                     qPrintable(listing.value(QStringLiteral("title")).toString()),
+                     qPrintable(listing.value(QStringLiteral("kicker")).toString()),
+                     catalog.listingSongs()->rowCount(), catalog.listingHasMore() ? "yes" : "no", (long long)ms);
+            for (const QVariant &value : listing.value(QStringLiteral("sections")).toList()) {
+                const QVariantMap section = value.toMap();
+                const QVariantList items = section.value(QStringLiteral("items")).toList();
+                QStringList first;
+                for (qsizetype i = 0; i < qMin<qsizetype>(3, items.size()); ++i) {
+                    const QVariantMap card = items.at(i).toMap();
+                    first << QStringLiteral("%1 (%2 %3)").arg(card.value(QStringLiteral("title")).toString(),
+                                                              card.value(QStringLiteral("type")).toString(),
+                                                              card.value(QStringLiteral("browseId")).toString()
+                                                                  + card.value(QStringLiteral("videoId")).toString());
+                }
+                qWarning("selftest:   [%s] %lld | %s", qPrintable(section.value(QStringLiteral("title")).toString()),
+                         (long long)items.size(), qPrintable(first.join(QStringLiteral(" / "))));
+            }
+        };
+
+        QObject::connect(&catalog, &Catalog::listingChanged, &app, [&catalog, clock, stage, report]() {
+            if (catalog.listingLoading() || *stage != 0)
+                return;
+            const QVariantMap listing = catalog.listing();
+            if (listing.contains(QStringLiteral("error"))) {
+                qWarning("selftest: failed: %s", qPrintable(listing.value(QStringLiteral("error")).toString()));
+                QCoreApplication::exit(1);
+                return;
+            }
+            report("first part", clock->elapsed());
+            if (!catalog.listingHasMore()) {
+                QTimer::singleShot(400, qApp, []() { QCoreApplication::quit(); });
+                return;
+            }
+            *stage = 1;
+            clock->restart();
+            catalog.loadMoreListing();
+        });
+        QObject::connect(&catalog, &Catalog::listingMoreChanged, &app, [&catalog, clock, stage, report]() {
+            if (*stage != 1 || catalog.listingLoadingMore())
+                return;
+            *stage = 2;
+            report("one more part", clock->elapsed());
+            QTimer::singleShot(400, qApp, []() { QCoreApplication::quit(); });
+        });
+        QObject::connect(&catalog, &Catalog::notice, &app, [](const QString &text) {
+            qWarning("selftest: %s", qPrintable(text));
+        });
+
+        QTimer::singleShot(300, &app, [&catalog, browseId, params, clock]() {
+            clock->start();
+            catalog.openListing(browseId, params, QString());
+        });
+        QTimer::singleShot(45000, &app, []() {
+            qWarning("selftest: timed out");
+            QCoreApplication::exit(2);
+        });
+    }
+
     // --download <videoId> [seconds]
     //
     // The same for the offline path: one download through yt-dlp and FFmpeg,
     // reporting progress, and quitting when the file is written, when it fails,
-    // or when the time runs out.
+    // or when the time runs out. Only on a scratch database: a finished
+    // download is written into the library (a downloads row and a tracks
+    // row), and MONOLIST_DOWNLOAD_DIR alone moves the folder but not the
+    // database, so the test song would stay in the real library, pointing at
+    // a scratch file. MONOLIST_DATA_DIR also keeps the file out of the real
+    // Music folder; MONOLIST_DOWNLOAD_DIR may still pick the folder on top.
     const int downloadFlag = args.indexOf(QStringLiteral("--download"));
     if (downloadFlag >= 0 && downloadFlag + 1 < args.size()) {
+        if (qEnvironmentVariableIsEmpty("MONOLIST_DATA_DIR")) {
+            qWarning("selftest: refusing to download without MONOLIST_DATA_DIR: the song would be written into"
+                     " the real library (downloads to %s)", qPrintable(downloads.downloadDirectory()));
+            return 1;
+        }
         const QString videoId = args.at(downloadFlag + 1);
         const int seconds = (downloadFlag + 2 < args.size()) ? args.at(downloadFlag + 2).toInt() : 120;
 
@@ -1235,8 +2476,9 @@ int main(int argc, char *argv[])
                          });
 
         QTimer::singleShot(500, &app, [&downloads, videoId]() {
-            qWarning("selftest: downloading %s as %s (tools: yt-dlp %s, ffmpeg %s, deno %s)",
+            qWarning("selftest: downloading %s as %s into %s (tools: yt-dlp %s, ffmpeg %s, deno %s)",
                      qPrintable(videoId), qPrintable(downloads.format()),
+                     qPrintable(downloads.downloadDirectory()),
                      downloads.available() ? "yes" : "no",
                      downloads.canConvert() ? "yes" : "no",
                      YtDlp::denoPath().isEmpty() ? "no" : "yes");
@@ -1248,6 +2490,108 @@ int main(int argc, char *argv[])
             downloads.enqueue(videoId, QString(), QString());
         });
         QTimer::singleShot(seconds * 1000, &app, []() {
+            qWarning("selftest: timed out");
+            QCoreApplication::exit(2);
+        });
+    }
+
+    // --audio-devices [<videoId>]
+    //
+    // The player bar's output menu as it stands: every device mpv lists, what
+    // the menu offers of them, the choice kept and the device in use. With a
+    // video id the song plays, and the output is switched to each device the
+    // menu offers in turn and then back to the choice it found, with the clock
+    // read after each switch to show the song carried on. Switching writes the
+    // choice, so that part runs only in MONOLIST_DATA_DIR.
+    const int devicesFlag = args.indexOf(QStringLiteral("--audio-devices"));
+    if (devicesFlag >= 0) {
+        const QString videoId = devicesFlag + 1 < args.size()
+                                        && !args.at(devicesFlag + 1).startsWith(QLatin1String("--"))
+                                    ? args.at(devicesFlag + 1) : QString();
+        if (!videoId.isEmpty() && qEnvironmentVariableIsEmpty("MONOLIST_DATA_DIR")) {
+            qWarning("selftest: switching the output writes the choice; set MONOLIST_DATA_DIR first");
+            return 1;
+        }
+        const auto report = [&engine, &player, &library]() {
+            const QVariantList listed = engine.audioDevices();
+            qWarning("selftest: mpv lists %d devices:", int(listed.size()));
+            for (const QVariant &value : listed) {
+                const QVariantMap device = value.toMap();
+                qWarning("selftest:   %s | %s", qPrintable(device.value(QStringLiteral("name")).toString()),
+                         qPrintable(device.value(QStringLiteral("description")).toString()));
+            }
+            qWarning("selftest: the output menu offers:");
+            for (const QVariant &value : player.audioDevices()) {
+                const QVariantMap device = value.toMap();
+                const QString name = device.value(QStringLiteral("name")).toString();
+                qWarning("selftest:   %s %s%s  (%s)", name == player.audioDevice() ? "[in use]" : "        ",
+                         qPrintable(device.value(QStringLiteral("description")).toString()),
+                         device.value(QStringLiteral("missing")).toBool() ? " · not connected" : "",
+                         qPrintable(name));
+            }
+            qWarning("selftest: kept choice \"%s\" (\"%s\"); in use: %s",
+                     qPrintable(library.settingValue(QStringLiteral("player.audio_device"))),
+                     qPrintable(library.settingValue(QStringLiteral("player.audio_device_name"))),
+                     qPrintable(player.audioDevice()));
+        };
+        // Polls until `ready` holds or `limitMs` passes, then carries on.
+        const auto waitFor = [](std::function<bool()> ready, int limitMs, std::function<void()> then) {
+            auto *poll = new QTimer(qApp);
+            auto waited = std::make_shared<QElapsedTimer>();
+            waited->start();
+            QObject::connect(poll, &QTimer::timeout, qApp, [poll, waited, ready, limitMs, then]() {
+                if (!ready() && waited->elapsed() < limitMs)
+                    return;
+                poll->stop();
+                poll->deleteLater();
+                then();
+            });
+            poll->start(100);
+        };
+        auto step = std::make_shared<std::function<void(int)>>();
+        auto names = std::make_shared<QStringList>();
+        auto original = std::make_shared<QString>();
+        *step = [&player, report, step, names, original](int i) {
+            if (i >= names->size()) {
+                qWarning("selftest: back to the choice it found");
+                player.setAudioDevice(*original);
+                QTimer::singleShot(1500, qApp, [report]() {
+                    report();
+                    qWarning("selftest: done, quitting");
+                    QCoreApplication::quit();
+                });
+                return;
+            }
+            const qint64 before = player.position();
+            player.setAudioDevice(names->at(i));
+            QTimer::singleShot(3000, qApp, [&player, step, names, i, before]() {
+                qWarning("selftest: chose %s: in use %s, the clock went %lld -> %lld ms (+%lld in 3 s), %s",
+                         qPrintable(names->at(i)), qPrintable(player.audioDevice()), (long long)before,
+                         (long long)player.position(), (long long)(player.position() - before),
+                         player.playing() ? "playing" : "not playing");
+                (*step)(i + 1);
+            });
+        };
+        QTimer::singleShot(300, &app, [=, &engine, &player, &library]() {
+            waitFor([&engine]() { return !engine.audioDevices().isEmpty(); }, 5000,
+                    [=, &player, &library]() {
+                report();
+                if (videoId.isEmpty()) {
+                    QCoreApplication::quit();
+                    return;
+                }
+                const QString kept = library.settingValue(QStringLiteral("player.audio_device"));
+                *original = kept.isEmpty() ? QStringLiteral("auto") : kept;
+                for (const QVariant &value : player.audioDevices()) {
+                    const QVariantMap device = value.toMap();
+                    if (!device.value(QStringLiteral("missing")).toBool())
+                        names->append(device.value(QStringLiteral("name")).toString());
+                }
+                player.playSource(videoId, QStringLiteral("Output test"), QStringLiteral("Selftest"));
+                waitFor([&player]() { return player.position() >= 2000; }, 60000, [step]() { (*step)(0); });
+            });
+        });
+        QTimer::singleShot(120000, &app, []() {
             qWarning("selftest: timed out");
             QCoreApplication::exit(2);
         });

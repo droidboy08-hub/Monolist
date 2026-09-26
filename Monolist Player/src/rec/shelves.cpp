@@ -8,12 +8,15 @@
 #include "vectorsearch.h"
 
 #include <QHash>
+#include <QPair>
 #include <QRegularExpression>
 #include <QSet>
+#include <QThread>
 
 #include <algorithm>
 #include <climits>
 #include <cmath>
+#include <functional>
 
 namespace Rec {
 namespace {
@@ -40,6 +43,15 @@ constexpr float kSongFloor = 0.85f;
 // one (38 of 50 at 0.25 and at 0.45). So the higher of the two.
 constexpr float kNeighbourFloor = 0.45f;
 
+// A rotated shelf is drawn from this many times as many rows as it shows:
+// enough that two rotations share only about half their rows, few enough that
+// the deepest row drawn is still plainly like the rest.
+constexpr int kRotationPool = 3;
+
+// Of the recent songs that could seed a "More like" shelf, how many a
+// rotation chooses among; the newest always seeds the first.
+constexpr int kSeedChoices = 9;
+
 // How deep to scan. Asking for more than a shelf holds leaves room for the
 // per-artist cap and the already-heard filter to throw rows away.
 int scanDepth(int wanted)
@@ -64,6 +76,119 @@ QSet<quint64> heardKeys(const QVector<PlayEvent> &history)
         keys.insert(Rec::strictKey(event.title, event.artist));
     }
     return keys;
+}
+
+// Everything a row may not be: heard, kept, turned down, or by an artist the
+// listener asked not to be suggested.
+struct Unwanted {
+    QSet<quint64> songs;
+    QSet<QString> artists;
+
+    bool has(const QString &title, const QString &artist) const
+    {
+        if (songs.contains(Rec::strictKey(title, artist)))
+            return true;
+        // Nothing to compare in the common case, so no key is worked out.
+        return !artists.isEmpty() && artists.contains(suggestionArtistKey(artist));
+    }
+    bool hasArtist(const QString &artist) const
+    {
+        return !artists.isEmpty() && artists.contains(suggestionArtistKey(artist));
+    }
+};
+
+Unwanted unwantedFrom(const QVector<PlayEvent> &history, const Exclusions &exclude)
+{
+    Unwanted unwanted;
+    unwanted.songs = heardKeys(history);
+    unwanted.songs.unite(exclude.owned);
+    unwanted.songs.unite(exclude.turnedDown);
+    unwanted.artists = exclude.artists;
+    return unwanted;
+}
+
+// — rotation —
+
+// SplitMix64's finaliser: any 64 bits in, well-mixed 64 bits out, the same on
+// every platform and in every run, which is the whole requirement.
+quint64 mixBits(quint64 x)
+{
+    x += 0x9e3779b97f4a7c15ULL;
+    x = (x ^ (x >> 30)) * 0xbf58476d1ce4e5b9ULL;
+    x = (x ^ (x >> 27)) * 0x94d049bb133111ebULL;
+    return x ^ (x >> 31);
+}
+
+// One item's draw under one rotation, strictly between 0 and 1.
+double drawOf(quint64 rotation, quint64 item)
+{
+    return (double(mixBits(rotation ^ mixBits(item)) >> 11) + 0.5) / 9007199254740992.0;   // 2^53
+}
+
+// Which `wanted` of a ranked list a rotation shows, as positions in ranked
+// order. Rotation 0 is simply the first `wanted`.
+//
+// Otherwise a weighted draw without replacement (Efraimidis and Spirakis:
+// the largest u^(1/w) wins), where the item ranked i weighs exp(-i / wanted).
+// The top of the ranking is the likeliest to be shown, and a row two shelves'
+// worth down still has a fair chance, which is what makes the next page
+// different rather than merely reordered. `keepFirst` items are shown whatever
+// the draw: the newest song played, say, which is the shelf a listener comes
+// back for.
+//
+// Each item's draw is keyed on `items` — the song, the artist — not on its
+// place, so a list that shifts by one after a new listen draws the same.
+QVector<int> rotatedPicks(const QVector<quint64> &items, int wanted, quint64 rotation, int keepFirst = 0)
+{
+    const int count = int(items.size());
+    QVector<int> picks;
+    if (rotation == 0 || count <= wanted) {
+        for (int i = 0; i < std::min(wanted, count); ++i)
+            picks.append(i);
+        return picks;
+    }
+    for (int i = 0; i < std::min(keepFirst, count); ++i)
+        picks.append(i);
+
+    QVector<QPair<double, int>> keyed;
+    keyed.reserve(count);
+    for (int i = int(picks.size()); i < count; ++i) {
+        const double weight = std::exp(-double(i) / double(std::max(1, wanted)));
+        // log(u^(1/w)) = log(u) / w, which orders the same and never underflows.
+        keyed.append({ std::log(drawOf(rotation, items.at(i))) / weight, i });
+    }
+    std::sort(keyed.begin(), keyed.end(), [](const QPair<double, int> &a, const QPair<double, int> &b) {
+        return a.first != b.first ? a.first > b.first : a.second < b.second;
+    });
+    for (int i = 0; i < keyed.size() && picks.size() < wanted; ++i)
+        picks.append(keyed.at(i).second);
+    std::sort(picks.begin(), picks.end());
+    return picks;
+}
+
+// The order a rotation tries a list of seeds in — recent songs, liked
+// artists — as positions. The first stays first; the rest are ordered by the
+// same weighted draw, weighted towards the top, and every one is still tried,
+// so a seed whose shelf comes out too short hands its place to the next.
+QVector<int> rotatedOrder(const QVector<quint64> &keys, quint64 rotation)
+{
+    QVector<int> order;
+    for (int i = 0; i < keys.size(); ++i)
+        order.append(i);
+    if (rotation == 0 || keys.size() < 3)
+        return order;
+    QVector<QPair<double, int>> keyed;
+    for (int i = 1; i < keys.size(); ++i) {
+        const double weight = std::exp(-double(i) / 3.0);
+        keyed.append({ std::log(drawOf(rotation, keys.at(i))) / weight, i });
+    }
+    std::sort(keyed.begin(), keyed.end(), [](const QPair<double, int> &a, const QPair<double, int> &b) {
+        return a.first != b.first ? a.first > b.first : a.second < b.second;
+    });
+    order.resize(1);
+    for (const auto &entry : std::as_const(keyed))
+        order.append(entry.second);
+    return order;
 }
 
 // What the page already holds: catalogue rows, songs by their text key, and
@@ -107,10 +232,11 @@ struct Shown {
 
 QVector<Suggestion> collect(const Catalog &catalog,
                             const QVector<Hit> &hits,
-                            const QSet<quint64> &heard,
+                            const Unwanted &unwanted,
                             Shown &shown,
                             int wanted,
-                            float floorScore)
+                            float floorScore,
+                            bool hideExplicit)
 {
     QVector<Suggestion> out;
     for (const Hit &hit : hits) {
@@ -120,12 +246,42 @@ QVector<Suggestion> collect(const Catalog &catalog,
             break;                     // hits arrive sorted, so the rest are worse
         const QString title = titleOf(catalog, hit.row);
         const QString artist = catalog.artist(hit.row);
-        if (title.isEmpty() || !Rec::suitableForSuggestion(title, artist))
+        if (title.isEmpty() || !Rec::suitableForSuggestion(title, artist, hideExplicit))
             continue;
-        if (heard.contains(Rec::strictKey(title, artist)) || shown.has(hit.row, title, artist))
+        if (unwanted.has(title, artist) || shown.has(hit.row, title, artist))
             continue;
         shown.add(hit.row, title, artist);
         out.append({ title, artist, hit.row, hit.score });
+    }
+    return out;
+}
+
+// collect(), under a rotation: the shelf's rows drawn from kRotationPool times
+// as many (rotatedPicks), still in ranked order. Only the rows shown are
+// marked shown, so the ones passed over are free for the shelves below.
+QVector<Suggestion> collectRotated(const Catalog &catalog,
+                                   const QVector<Hit> &hits,
+                                   const Unwanted &unwanted,
+                                   Shown &shown,
+                                   int wanted,
+                                   float floorScore,
+                                   bool hideExplicit,
+                                   quint64 rotation)
+{
+    if (rotation == 0)
+        return collect(catalog, hits, unwanted, shown, wanted, floorScore, hideExplicit);
+    Shown trial = shown;
+    const QVector<Suggestion> pool =
+        collect(catalog, hits, unwanted, trial, wanted * kRotationPool, floorScore, hideExplicit);
+    QVector<quint64> keys;
+    keys.reserve(pool.size());
+    for (const Suggestion &row : pool)
+        keys.append(Rec::strictKey(row.title, row.artist));
+    QVector<Suggestion> out;
+    for (const int pick : rotatedPicks(keys, wanted, rotation)) {
+        const Suggestion &row = pool.at(pick);
+        shown.add(row.row, row.title, row.artist);
+        out.append(row);
     }
     return out;
 }
@@ -403,9 +559,8 @@ QStringList likedArtists(const QVector<PlayEvent> &history, const TasteProfile &
         int firstSeen = 0;             // history is newest first, so lower is more recent
     };
     QHash<QString, Tally> tallies;
-    // The newest like-or-unlike per song decides whether it is liked now. A
-    // song is its text key, so "Halo" liked and "HALO" unliked are one song.
-    QSet<quint64> decided;
+    // The newest like-or-unlike per song decides whether it is liked now.
+    const QSet<quint64> liked = likedSongs(history);
 
     for (int i = 0; i < history.size(); ++i) {
         const PlayEvent &event = history.at(i);
@@ -418,13 +573,9 @@ QStringList likedArtists(const QVector<PlayEvent> &history, const TasteProfile &
             tally.name = credit;
             tally.firstSeen = i;
         }
-        const quint64 song = Rec::strictKey(event.title, credit);
-        if (event.kind == QLatin1String("like") || event.kind == QLatin1String("unliked")) {
-            if (!decided.contains(song)) {
-                decided.insert(song);
-                if (event.kind == QLatin1String("like"))
-                    tally.liked = true;
-            }
+        if (event.kind == QLatin1String("like")) {
+            if (liked.contains(Rec::strictKey(event.title, event.artist)))
+                tally.liked = true;
         } else if (event.kind == QLatin1String("play") && event.trackMs > 0
                    && event.listenedMs * 2 >= event.trackMs) {
             ++tally.goodPlays;
@@ -497,9 +648,20 @@ QStringList likedArtists(const QVector<PlayEvent> &history, const TasteProfile &
 // nothing like the seed, it is somebody else, and left out. The rest are
 // ordered by how close they sound. The seed is picked the same way, towards
 // the songs the listener actually played by them.
+// How far "Because you like" reads: how many of the graph's neighbours are
+// asked for, how many artists are kept, and how many songs each. The shelf is
+// eight artists, two songs apiece; its See all reads twice as far and takes
+// three apiece, which is still a spread of artists rather than discographies.
+struct Reach {
+    int neighbours = 24;
+    int artists = 8;
+    int perArtist = kPerArtistCap;
+};
+
 Shelf listenersAlso(const Catalog &catalog, const Graph &graph, const QString &artist,
                     const QVector<float> &heardSound, const QString &region,
-                    const QSet<quint64> &heard, Shown &shown, int perShelf)
+                    const Unwanted &unwanted, Shown &shown, int perShelf, bool hideExplicit,
+                    const Reach &reach = Reach(), quint64 rotation = 0)
 {
     Shelf shelf;
     // The whole credit first — "Simon & Garfunkel" is an artist — and its lead
@@ -510,7 +672,7 @@ Shelf listenersAlso(const Catalog &catalog, const Graph &graph, const QString &a
         if (!first.isEmpty() && first != artist)
             seed = graph.findArtist(first, region);
     }
-    if (seed.mbid.isEmpty() || blocked(seed.mbid) || placeholder(seed.name))
+    if (seed.mbid.isEmpty() || blocked(seed.mbid) || placeholder(seed.name) || unwanted.hasArtist(seed.name))
         return shelf;
 
     const QString seedRegion = seed.region.isEmpty() ? region : seed.region;
@@ -529,11 +691,11 @@ Shelf listenersAlso(const Catalog &catalog, const Graph &graph, const QString &a
     // iOS asks for twelve and uses eight. Twice that is read here, because the
     // sound check below turns away more than the old gates did, and a shelf
     // of three artists is not worth a heading.
-    for (const GraphNeighbour &neighbour : graph.neighbours(seed.mbid, seedRegion, 24)) {
+    for (const GraphNeighbour &neighbour : graph.neighbours(seed.mbid, seedRegion, reach.neighbours)) {
         if (blocked(neighbour.mbid))
             continue;
         const QString name = graph.artistName(neighbour.mbid, seedRegion);
-        if (name.isEmpty() || placeholder(name) || artistKey(name) == seedKey)
+        if (name.isEmpty() || placeholder(name) || artistKey(name) == seedKey || unwanted.hasArtist(name))
             continue;
         const QString plain = plainName(name);
         if (plain.isEmpty() || neighbourNames.contains(plain))
@@ -557,13 +719,13 @@ Shelf listenersAlso(const Catalog &catalog, const Graph &graph, const QString &a
         }
         Shown own;
         for (const int row : credited) {
-            if (candidate.rows.size() >= kPerArtistCap)
+            if (candidate.rows.size() >= reach.perArtist)
                 break;
             const QString title = catalog.title(row);
             const QString credit = catalog.artist(row);
-            if (title.isEmpty() || !Rec::suitableForSuggestion(title, credit))
+            if (title.isEmpty() || !Rec::suitableForSuggestion(title, credit, hideExplicit))
                 continue;
-            if (heard.contains(Rec::strictKey(title, credit)) || shown.has(row, title, credit)
+            if (unwanted.has(title, credit) || shown.has(row, title, credit)
                 || own.has(row, title, credit))
                 continue;
             own.add(row, title, credit);
@@ -584,14 +746,25 @@ Shelf listenersAlso(const Catalog &catalog, const Graph &graph, const QString &a
                              return a.closeness > b.closeness;
                          });
     }
-    if (candidates.size() > 8)
-        candidates.resize(8);
+    // A rotation takes its eight from the closest twelve.
+    if (rotation != 0 && candidates.size() > reach.artists) {
+        const int pool = std::min(int(candidates.size()), reach.artists + reach.artists / 2);
+        QVector<quint64> keys;
+        for (int i = 0; i < pool; ++i)
+            keys.append(Rec::fnv1a64(plainName(candidates.at(i).name).toUtf8()));
+        QVector<Candidate> kept;
+        for (const int pick : rotatedPicks(keys, reach.artists, rotation))
+            kept.append(candidates.at(pick));
+        candidates = kept;
+    }
+    if (candidates.size() > reach.artists)
+        candidates.resize(reach.artists);
 
     // Each neighbour's best song first, then their second, so the shelf is a
     // spread of artists rather than two apiece from the top three.
     bool anyListening = false;
     bool anyStructural = false;
-    for (int pass = 0; pass < kPerArtistCap; ++pass) {
+    for (int pass = 0; pass < reach.perArtist; ++pass) {
         for (const Candidate &candidate : std::as_const(candidates)) {
             if (pass >= candidate.rows.size() || shelf.rows.size() >= perShelf)
                 continue;
@@ -607,6 +780,10 @@ Shelf listenersAlso(const Catalog &catalog, const Graph &graph, const QString &a
     }
 
     shelf.kind = QStringLiteral("artist");
+    shelf.anchor.kind = Anchor::Neighbours;
+    shelf.anchor.artist = artist;
+    shelf.anchor.heardSound = heardSound;
+    shelf.anchor.region = region;
     // The name the graph knows them by, which is the one the lookup matched:
     // "Because you like Bruno Mars", not "…Bruno Mars & Anderson .Paak".
     shelf.title = QStringLiteral("Because you like %1").arg(seed.name);
@@ -624,81 +801,279 @@ Shelf listenersAlso(const Catalog &catalog, const Graph &graph, const QString &a
     return shelf;
 }
 
+// — a country's chart, shared by its shelves and their See all —
+
+// The country's artists that pass every gate (see buildRegionShelves), most
+// rated first; none at all when fewer than kMinArtists do.
+QVector<GraphArtist> countrySeeds(const Graph &graph, const Catalog &catalogue, const QString &region,
+                                  const Unwanted &unwanted)
+{
+    // Read deeper than the 40 iOS reads, because the gates below remove a good
+    // share. Reading deeper is only safe because of them — the band and the
+    // speeches are at ranks 40 and 81 in Germany.
+    QVector<GraphArtist> seeds;
+    for (const GraphArtist &artist : graph.artists(region, 120)) {
+        // Only the country's own shards. Asking for "JP" walks on to the
+        // global shard to top the list up, and a heading that says "From
+        // Japan" over The Beatles is exactly the mislabelling this avoids.
+        if (!artist.region.startsWith(region, Qt::CaseInsensitive))
+            continue;
+        if (blocked(artist.mbid) || placeholder(artist.name))
+            continue;
+        if (artist.popularity < kMinRatings || artist.confidence < kMinConfidence)
+            continue;
+        // Exactly this artist, not merely one sharing its key: the key cuts a
+        // name at " and " and the like, so a match on the key alone would let
+        // an unvetted graph artist through on a different artist's credit.
+        if (creditedRows(catalogue, artist.name, 1).isEmpty())
+            continue;
+        // Asked by the listener never to be suggested.
+        if (unwanted.hasArtist(artist.name))
+            continue;
+        seeds.append(artist);
+    }
+    if (seeds.size() < kMinArtists)
+        return {};
+
+    // SQLite returns ties in whatever order the rows were inserted, which a
+    // rebuilt shard would change. Ordering on the id as well makes the same
+    // shard give the same shelf every time.
+    std::stable_sort(seeds.begin(), seeds.end(), [](const GraphArtist &a, const GraphArtist &b) {
+        return a.popularity != b.popularity ? a.popularity > b.popularity : a.mbid < b.mbid;
+    });
+    return seeds;
+}
+
+// The chart itself: up to four tracks for each of the first `artistCount`
+// seeds, then one track per artist per pass for `passes` passes, so it reads
+// as a list of the country's artists. The shelves take 28 artists and two
+// passes — the iOS budget, and the two-per-artist rule every shelf keeps —
+// and See all everything the seeds have, four deep. Empty if asked to stop.
+QVector<Suggestion> countryChart(const Graph &graph, const QVector<GraphArtist> &seeds, const QString &region,
+                                 const Unwanted &unwanted, bool hideExplicit, int artistCount, int passes)
+{
+    static const QStringList eastAsianCountries = {
+        QStringLiteral("JP"), QStringLiteral("KR"), QStringLiteral("CN"),
+        QStringLiteral("TW"), QStringLiteral("HK")
+    };
+    const bool eastAsianRegion = eastAsianCountries.contains(region.left(2).toUpper());
+
+    // Kept per artist so the passes below can interleave them.
+    QVector<QVector<GraphTrack>> byArtist;
+    QSet<QString> seenRecordings;
+    QSet<quint64> seenKeys;
+    for (int i = 0; i < seeds.size() && i < artistCount; ++i) {
+        if (stopRequested())
+            return {};
+        // A recording's title is whatever its release called it, and the
+        // most-rated recordings of the German composers are East Asian
+        // editions: Bach's top track reads トッカータとフーガ ニ短調, Beethoven's
+        // is a Waldstein titled in Traditional Chinese. Under "From Germany"
+        // that reads as broken. So outside the East Asian countries, when the
+        // artist's own name is not in one of those scripts, a title that is
+        // comes last — preferred against, never dropped, so an artist with
+        // nothing else still gets a row. On a Japanese or Korean shelf those
+        // titles are the native ones, BABYMETAL's included, and nothing moves.
+        QVector<GraphTrack> candidates = graph.tracks(seeds.at(i).mbid, region, 8);
+        if (!eastAsianRegion && !eastAsian(seeds.at(i).name)) {
+            std::stable_partition(candidates.begin(), candidates.end(),
+                                  [](const GraphTrack &track) { return !eastAsian(track.title); });
+        }
+        QVector<GraphTrack> kept;
+        for (const GraphTrack &track : std::as_const(candidates)) {
+            if (kept.size() >= 4)
+                break;
+            if (track.title.isEmpty() || seenRecordings.contains(track.recordingMbid)
+                || !Rec::suitableForSuggestion(track.title, track.artistName, hideExplicit))
+                continue;
+            seenRecordings.insert(track.recordingMbid);
+            // The same song is often several MusicBrainz recordings — the single,
+            // the album cut, a remaster. By name they are one row.
+            const quint64 key = Rec::strictKey(track.title, track.artistName);
+            if (seenKeys.contains(key) || unwanted.has(track.title, track.artistName))
+                continue;
+            seenKeys.insert(key);
+            kept.append(track);
+        }
+        if (!kept.isEmpty())
+            byArtist.append(kept);
+    }
+
+    // First pass takes each artist's best track, the second their next.
+    QVector<Suggestion> chart;
+    for (int pass = 0; pass < passes; ++pass) {
+        for (const QVector<GraphTrack> &tracks : std::as_const(byArtist)) {
+            if (pass >= tracks.size())
+                continue;
+            const GraphTrack &track = tracks.at(pass);
+            Suggestion row;
+            row.title = track.title;
+            row.artist = track.artistName;
+            row.lengthMs = track.lengthMs;
+            chart.append(row);
+        }
+    }
+    return chart;
+}
+
 } // namespace
+
+QString suggestionArtistKey(const QString &credit)
+{
+    return artistKey(withoutTopic(credit));
+}
+
+quint64 rotationFor(qint64 period, int turn)
+{
+    const quint64 rotation = mixBits(mixBits(quint64(period)) ^ quint64(quint32(turn)));
+    return rotation != 0 ? rotation : 1;
+}
+
+bool stopRequested()
+{
+    return QThread::currentThread()->isInterruptionRequested();
+}
 
 QVector<Shelf> buildShelves(const Catalog &catalog,
                             const TasteProfile &taste,
                             const QVector<PlayEvent> &history,
                             int perShelf,
                             const Graph *graph,
-                            const QString &region)
+                            const QString &region,
+                            bool hideExplicit,
+                            const Exclusions &exclude,
+                            quint64 rotation)
 {
     QVector<Shelf> shelves;
     if (!catalog.isLoaded())
         return shelves;
 
-    const QSet<quint64> heard = heardKeys(history);
+    // Heard, kept, turned down, or by an artist turned down: never a row.
+    const Unwanted unwanted = unwantedFrom(history, exclude);
     // One song shows up on one shelf. The alternative — the same track under
     // three headings — reads as a bug however defensible each heading is.
     Shown shown;
+    // How many rows a shelf's scan must yield: a rotated shelf is drawn from a
+    // few times as many as it shows.
+    const int drawn = rotation != 0 ? perShelf * kRotationPool : perShelf;
 
     // — what they played, and what is like it —
     //
     // First because it needs no profile and no gate: one play is enough, and
     // it is the shelf a new listener sees on their second visit.
+    //
+    // One play that said yes, though. A song abandoned after five seconds
+    // counts against itself in the taste profile, and "More like it, because
+    // you played it" over a song they skipped reads as not listening. Yes is
+    // what the profile takes for yes: a label of 0.6 or better, a song liked
+    // now, or, for a listen never labelled, half a minute heard.
+    const QSet<quint64> liked = likedSongs(history);
+    const auto saidYes = [&liked](const PlayEvent &event) {
+        if (liked.contains(Rec::strictKey(event.title, event.artist)))
+            return true;
+        if (event.hasLabel)
+            return event.label >= 0.6;
+        return event.listenedMs >= 30000;
+    };
+    // A song turned down is no song to build "More like" on, however they once
+    // played it; nor is one by an artist they asked not to be suggested, whose
+    // name would head the shelf.
+    const auto seedable = [&](const PlayEvent &event) {
+        return event.kind == QLatin1String("play") && !event.title.isEmpty() && saidYes(event)
+               && !exclude.turnedDown.contains(Rec::strictKey(event.title, event.artist))
+               && !unwanted.hasArtist(event.artist);
+    };
     int songShelves = 0;
     QSet<int> seededRows;
-    for (const PlayEvent &event : history) {
-        if (songShelves >= 3)
-            break;
-        if (event.kind != QLatin1String("play") || event.title.isEmpty())
-            continue;
-        const Catalog::Match match = catalog.match(event.title, event.artist);
-        if (match.row < 0 || seededRows.contains(match.row))
-            continue;
-        seededRows.insert(match.row);
-
+    const auto songShelf = [&](const PlayEvent &event, int seedRow) {
         QVector<float> query(catalog.dims());
-        std::copy_n(catalog.vector(match.row), catalog.dims(), query.begin());
-        const int seedRow = match.row;
-        QVector<Hit> hits = topK(catalog, { query }, scanDepth(perShelf), 0,
+        std::copy_n(catalog.vector(seedRow), catalog.dims(), query.begin());
+        QVector<Hit> hits = topK(catalog, { query }, scanDepth(drawn), 0,
                                  [seedRow](int row) { return row != seedRow; }).value(0);
         hits = capPerArtist(catalog, hits, kPerArtistCap);
 
         Shelf shelf;
         shelf.kind = QStringLiteral("song");
-        shelf.title = QStringLiteral("More like %1").arg(catalog.title(match.row));
+        shelf.title = QStringLiteral("More like %1").arg(catalog.title(seedRow));
         shelf.reason = QStringLiteral("Because you played %1 by %2")
                            .arg(event.title, event.artist.isEmpty()
                                                  ? QStringLiteral("them") : event.artist);
-        shelf.rows = collect(catalog, hits, heard, shown, perShelf, kSongFloor);
+        shelf.rows = collectRotated(catalog, hits, unwanted, shown, perShelf, kSongFloor, hideExplicit,
+                                    rotation);
+        shelf.anchor.kind = Anchor::Vector;
+        shelf.anchor.query = query;
+        shelf.anchor.seedRow = seedRow;
+        shelf.anchor.floor = kSongFloor;
         if (shelf.rows.size() >= 4) {
             shelves.append(shelf);
             ++songShelves;
         }
+    };
+    if (rotation == 0) {
+        // The newest songs that said yes, in turn, until three have shelves.
+        for (const PlayEvent &event : history) {
+            if (songShelves >= 3 || stopRequested())
+                break;
+            if (!seedable(event))
+                continue;
+            const Catalog::Match match = catalog.match(event.title, event.artist);
+            if (match.row < 0 || seededRows.contains(match.row))
+                continue;
+            seededRows.insert(match.row);
+            songShelf(event, match.row);
+        }
+    } else {
+        // The newest still seeds the first; the others are drawn from the
+        // next several, so a page after a rotation is about other songs too.
+        QVector<QPair<PlayEvent, int>> seeds;
+        for (const PlayEvent &event : history) {
+            if (seeds.size() >= kSeedChoices || stopRequested())
+                break;
+            if (!seedable(event))
+                continue;
+            const Catalog::Match match = catalog.match(event.title, event.artist);
+            if (match.row < 0 || seededRows.contains(match.row))
+                continue;
+            seededRows.insert(match.row);
+            seeds.append({ event, match.row });
+        }
+        QVector<quint64> keys;
+        for (const auto &seed : std::as_const(seeds))
+            keys.append(quint64(seed.second));
+        for (const int i : rotatedOrder(keys, rotation)) {
+            if (songShelves >= 3 || stopRequested())
+                break;
+            songShelf(seeds.at(i).first, seeds.at(i).second);
+        }
     }
 
     // — the profile's own shelves —
+    if (stopRequested())
+        return shelves;
     if (taste.valid && !taste.positive.isEmpty()) {
-        QVector<Hit> hits = topK(catalog, { taste.positive }, scanDepth(perShelf), 0, {}).value(0);
+        QVector<Hit> hits = topK(catalog, { taste.positive }, scanDepth(drawn), 0, {}).value(0);
         hits = capPerArtist(catalog, hits, kPerArtistCap);
         Shelf shelf;
         shelf.kind = QStringLiteral("taste");
         shelf.title = QStringLiteral("Made for you");
         shelf.reason = QStringLiteral("From everything you have played, weighted towards what you finished");
-        shelf.rows = collect(catalog, hits, heard, shown, perShelf, 0.0f);
+        shelf.rows = collectRotated(catalog, hits, unwanted, shown, perShelf, 0.0f, hideExplicit, rotation);
+        shelf.anchor.kind = Anchor::Vector;
+        shelf.anchor.query = taste.positive;
         if (shelf.rows.size() >= 4)
             shelves.append(shelf);
     }
 
-    if (taste.valid && !taste.recent.isEmpty()) {
-        QVector<Hit> hits = topK(catalog, { taste.recent }, scanDepth(perShelf), 0, {}).value(0);
+    if (taste.valid && !taste.recent.isEmpty() && !stopRequested()) {
+        QVector<Hit> hits = topK(catalog, { taste.recent }, scanDepth(drawn), 0, {}).value(0);
         hits = capPerArtist(catalog, hits, kPerArtistCap);
         Shelf shelf;
         shelf.kind = QStringLiteral("recent");
         shelf.title = QStringLiteral("On repeat lately");
         shelf.reason = QStringLiteral("Weighted to the last few days rather than the last few months");
-        shelf.rows = collect(catalog, hits, heard, shown, perShelf, 0.0f);
+        shelf.rows = collectRotated(catalog, hits, unwanted, shown, perShelf, 0.0f, hideExplicit, rotation);
+        shelf.anchor.kind = Anchor::Vector;
+        shelf.anchor.query = taste.recent;
         if (shelf.rows.size() >= 4)
             shelves.append(shelf);
     }
@@ -716,16 +1091,29 @@ QVector<Shelf> buildShelves(const Catalog &catalog,
     // Each attempt works on a copy of `shown`, committed only if the shelf is
     // kept: a shelf thrown away for being too short must not have used up
     // songs the next one could have had.
-    int artistShelves = 0;
+    //
+    // The artist liked most always has the first; a rotation draws which of
+    // the others follow. None the listener asked not to be suggested.
+    QStringList artists;
+    QVector<quint64> artistKeys;
     for (const QString &artist : likedArtists(history, taste)) {
-        if (artistShelves >= 2)
+        if (unwanted.hasArtist(artist))
+            continue;
+        artists.append(artist);
+        artistKeys.append(Rec::fnv1a64(artistKey(withoutTopic(artist)).toUtf8()));
+    }
+    int artistShelves = 0;
+    for (const int turn : rotatedOrder(artistKeys, rotation)) {
+        const QString &artist = artists.at(turn);
+        if (artistShelves >= 2 || stopRequested())
             break;
 
         Shown trial = shown;
         Shelf shelf;
         const QVector<float> heardSound = heardSoundOf(catalog, history, artist);
         if (graph && graph->isOpen())
-            shelf = listenersAlso(catalog, *graph, artist, heardSound, region, heard, trial, perShelf);
+            shelf = listenersAlso(catalog, *graph, artist, heardSound, region, unwanted, trial, perShelf,
+                                  hideExplicit, Reach(), rotation);
 
         if (shelf.rows.size() < 4) {
             trial = shown;
@@ -751,7 +1139,7 @@ QVector<Shelf> buildShelves(const Catalog &catalog,
             // the lead is what is compared.
             const QString seedKey = artistKey(name);
             QVector<Hit> hits;
-            for (const Hit &hit : nearest(catalog, sound, perShelf * 4, 0, 0)) {
+            for (const Hit &hit : nearest(catalog, sound, drawn * 4, 0, 0)) {
                 if (artistKey(catalog.artist(hit.row)) != seedKey)
                     hits.append(hit);
             }
@@ -759,7 +1147,12 @@ QVector<Shelf> buildShelves(const Catalog &catalog,
             shelf.kind = QStringLiteral("artist");
             shelf.title = QStringLiteral("Sounds like %1").arg(name);
             shelf.reason = QStringLiteral("Artists whose sound sits closest to theirs");
-            shelf.rows = collect(catalog, hits, heard, trial, perShelf, 0.0f);
+            shelf.rows = collectRotated(catalog, hits, unwanted, trial, perShelf, 0.0f, hideExplicit, rotation);
+            // nearest() keeps one song per artist; so does its See all.
+            shelf.anchor.kind = Anchor::Vector;
+            shelf.anchor.query = sound;
+            shelf.anchor.skipArtist = seedKey;
+            shelf.anchor.perArtist = 1;
         }
 
         if (shelf.rows.size() >= 4) {
@@ -774,7 +1167,7 @@ QVector<Shelf> buildShelves(const Catalog &catalog,
     // Last, and only when nothing else filled the page. It is not a
     // recommendation and does not pretend to be: it is the catalogue's most
     // played, so a listener with no history has somewhere to begin.
-    if (shelves.isEmpty()) {
+    if (shelves.isEmpty() && !stopRequested()) {
         QVector<Hit> popular;
         popular.reserve(perShelf * 6);
         for (int row = 0; row < catalog.count() && popular.size() < perShelf * 6; ++row) {
@@ -787,7 +1180,8 @@ QVector<Shelf> buildShelves(const Catalog &catalog,
         shelf.kind = QStringLiteral("popular");
         shelf.title = QStringLiteral("Somewhere to start");
         shelf.reason = QStringLiteral("Not personal yet — play a few songs and this page becomes yours");
-        shelf.rows = collect(catalog, popular, heard, shown, perShelf, 0.0f);
+        shelf.rows = collectRotated(catalog, popular, unwanted, shown, perShelf, 0.0f, hideExplicit, rotation);
+        shelf.anchor.kind = Anchor::Popular;
         if (!shelf.rows.isEmpty())
             shelves.append(shelf);
     }
@@ -810,108 +1204,29 @@ QVector<Shelf> buildRegionShelves(const Graph &graph,
                                   const QString &region,
                                   const QString &regionName,
                                   const QVector<PlayEvent> &history,
-                                  int perShelf)
+                                  int perShelf,
+                                  bool hideExplicit,
+                                  const Exclusions &exclude,
+                                  quint64 rotation)
 {
     QVector<Shelf> shelves;
     // No catalogue, no shelf: it is what keeps the non-musicians out.
-    if (!graph.isOpen() || !catalogue || !catalogue->isLoaded())
+    if (!graph.isOpen() || !catalogue || !catalogue->isLoaded() || stopRequested())
         return shelves;
 
-    // Read deeper than the 40 iOS reads, because the gates below remove a good
-    // share. Reading deeper is only safe because of them — the band and the
-    // speeches are at ranks 40 and 81 in Germany.
-    QVector<GraphArtist> seeds;
-    for (const GraphArtist &artist : graph.artists(region, 120)) {
-        // Only the country's own shards. Asking for "JP" walks on to the
-        // global shard to top the list up, and a heading that says "From
-        // Japan" over The Beatles is exactly the mislabelling this avoids.
-        if (!artist.region.startsWith(region, Qt::CaseInsensitive))
-            continue;
-        if (blocked(artist.mbid) || placeholder(artist.name))
-            continue;
-        if (artist.popularity < kMinRatings || artist.confidence < kMinConfidence)
-            continue;
-        // Exactly this artist, not merely one sharing its key: the key cuts a
-        // name at " and " and the like, so a match on the key alone would let
-        // an unvetted graph artist through on a different artist's credit.
-        if (creditedRows(*catalogue, artist.name, 1).isEmpty())
-            continue;
-        seeds.append(artist);
-    }
-    if (seeds.size() < kMinArtists)
+    const Unwanted unwanted = unwantedFrom(history, exclude);
+    const QVector<GraphArtist> seeds = countrySeeds(graph, *catalogue, region, unwanted);
+    if (seeds.isEmpty())
         return shelves;
 
-    // SQLite returns ties in whatever order the rows were inserted, which a
-    // rebuilt shard would change. Ordering on the id as well makes the same
-    // shard give the same shelf every time.
-    std::stable_sort(seeds.begin(), seeds.end(), [](const GraphArtist &a, const GraphArtist &b) {
-        return a.popularity != b.popularity ? a.popularity > b.popularity : a.mbid < b.mbid;
-    });
-
-    const QSet<quint64> heard = heardKeys(history);
-    static const QStringList eastAsianCountries = {
-        QStringLiteral("JP"), QStringLiteral("KR"), QStringLiteral("CN"),
-        QStringLiteral("TW"), QStringLiteral("HK")
-    };
-    const bool eastAsianRegion = eastAsianCountries.contains(region.left(2).toUpper());
-
-    // Up to four tracks for each of the first 28 artists — the iOS budget —
-    // kept per artist so the passes below can interleave them.
-    QVector<QVector<GraphTrack>> byArtist;
-    QSet<QString> seenRecordings;
-    QSet<quint64> seenKeys;
-    for (int i = 0; i < seeds.size() && i < 28; ++i) {
-        // A recording's title is whatever its release called it, and the
-        // most-rated recordings of the German composers are East Asian
-        // editions: Bach's top track reads トッカータとフーガ ニ短調, Beethoven's
-        // is a Waldstein titled in Traditional Chinese. Under "From Germany"
-        // that reads as broken. So outside the East Asian countries, when the
-        // artist's own name is not in one of those scripts, a title that is
-        // comes last — preferred against, never dropped, so an artist with
-        // nothing else still gets a row. On a Japanese or Korean shelf those
-        // titles are the native ones, BABYMETAL's included, and nothing moves.
-        QVector<GraphTrack> candidates = graph.tracks(seeds.at(i).mbid, region, 8);
-        if (!eastAsianRegion && !eastAsian(seeds.at(i).name)) {
-            std::stable_partition(candidates.begin(), candidates.end(),
-                                  [](const GraphTrack &track) { return !eastAsian(track.title); });
-        }
-        QVector<GraphTrack> kept;
-        for (const GraphTrack &track : std::as_const(candidates)) {
-            if (kept.size() >= 4)
-                break;
-            if (track.title.isEmpty() || seenRecordings.contains(track.recordingMbid)
-                || !Rec::suitableForSuggestion(track.title, track.artistName))
-                continue;
-            seenRecordings.insert(track.recordingMbid);
-            // The same song is often several MusicBrainz recordings — the single,
-            // the album cut, a remaster. By name they are one row.
-            const quint64 key = Rec::strictKey(track.title, track.artistName);
-            if (seenKeys.contains(key) || heard.contains(key))
-                continue;
-            seenKeys.insert(key);
-            kept.append(track);
-        }
-        if (!kept.isEmpty())
-            byArtist.append(kept);
-    }
-
-    // First pass takes each artist's best track, the second their next.
-    // Two passes is the per-artist cap.
-    QVector<Suggestion> chart;
-    for (int pass = 0; pass < kPerArtistCap; ++pass) {
-        for (const QVector<GraphTrack> &tracks : byArtist) {
-            if (pass >= tracks.size())
-                continue;
-            const GraphTrack &track = tracks.at(pass);
-            Suggestion row;
-            row.title = track.title;
-            row.artist = track.artistName;
-            row.lengthMs = track.lengthMs;
-            chart.append(row);
-        }
-    }
+    const QVector<Suggestion> chart =
+        countryChart(graph, seeds, region, unwanted, hideExplicit, 28, kPerArtistCap);
     if (chart.size() < 4)
         return shelves;
+
+    Anchor anchor;
+    anchor.kind = Anchor::Country;
+    anchor.region = region;
 
     Shelf popular;
     popular.kind = QStringLiteral("region");
@@ -921,20 +1236,118 @@ QVector<Shelf> buildRegionShelves(const Graph &graph,
     // a listener finds that out instead of being left to assume.
     popular.reason = QStringLiteral("Artists from %1, the most-rated on MusicBrainz first").arg(regionName);
     popular.rows = chart.mid(0, perShelf);
+    popular.anchor = anchor;
     shelves.append(popular);
 
     // Starts where the first ended: the same song under two headings on one
-    // page is the thing iOS had to fix here.
-    const QVector<Suggestion> deeper = chart.mid(perShelf, perShelf);
+    // page is the thing iOS had to fix here. A rotation starts it further
+    // down, anywhere a full shelf still fits.
+    qsizetype start = perShelf;
+    if (rotation != 0) {
+        const qsizetype room = chart.size() - 2 * qsizetype(perShelf);
+        if (room > 0)
+            start += qsizetype(mixBits(rotation ^ 0x6d6f726546726f6dULL) % quint64(room + 1));
+    }
+    const QVector<Suggestion> deeper = chart.mid(start, perShelf);
     if (deeper.size() >= 4) {
         Shelf more;
         more.kind = QStringLiteral("region");
         more.title = QStringLiteral("More from %1").arg(regionName);
         more.reason = QStringLiteral("Further down the same list");
         more.rows = deeper;
+        more.anchor = anchor;
         shelves.append(more);
     }
     return shelves;
+}
+
+QVector<Suggestion> moreFrom(const Catalog *catalog,
+                             const Graph *graph,
+                             const Shelf &shelf,
+                             const QVector<PlayEvent> &history,
+                             const Exclusions &exclude,
+                             const QVector<Suggestion> &already,
+                             int count,
+                             bool hideExplicit)
+{
+    QVector<Suggestion> out;
+    const bool haveCatalogue = catalog && catalog->isLoaded();
+    if (count <= 0 || !haveCatalogue)
+        return out;
+
+    const Unwanted unwanted = unwantedFrom(history, exclude);
+    // The list so far, the shelf's own rows first: none of it comes again.
+    Shown shown;
+    for (const Suggestion &row : already)
+        shown.add(row.row, row.title, row.artist);
+    const Anchor &anchor = shelf.anchor;
+
+    switch (anchor.kind) {
+    case Anchor::Vector: {
+        if (anchor.query.size() != catalog->dims())
+            return out;
+        // Deep enough that the next page still has rows under it once the cap
+        // and the filters have had theirs; deeper again at one song an artist,
+        // where a whole discography sits between two artists.
+        const int reach = int(already.size()) + count;
+        const int depth = scanDepth(anchor.perArtist <= 1 ? reach * 3 : reach);
+        const int seedRow = anchor.seedRow;
+        std::function<bool(int)> keep;
+        if (seedRow >= 0)
+            keep = [seedRow](int row) { return row != seedRow; };
+        QVector<Hit> hits = topK(*catalog, { anchor.query }, depth, 0, keep).value(0);
+        // Afterwards rather than in `keep`: working out an artist's key for
+        // every one of 400,000 rows would cost more than the scan.
+        if (!anchor.skipArtist.isEmpty()) {
+            hits.erase(std::remove_if(hits.begin(), hits.end(),
+                                      [&](const Hit &hit) {
+                                          return artistKey(catalog->artist(hit.row)) == anchor.skipArtist;
+                                      }),
+                       hits.end());
+        }
+        hits = capPerArtist(*catalog, hits, anchor.perArtist);
+        return collect(*catalog, hits, unwanted, shown, count, anchor.floor, hideExplicit);
+    }
+    case Anchor::Neighbours: {
+        if (!graph || !graph->isOpen())
+            return out;
+        Reach reach;
+        reach.neighbours = 48;
+        reach.artists = 24;
+        reach.perArtist = 3;
+        return listenersAlso(*catalog, *graph, anchor.artist, anchor.heardSound, anchor.region, unwanted,
+                             shown, count, hideExplicit, reach).rows;
+    }
+    case Anchor::Country: {
+        if (!graph || !graph->isOpen())
+            return out;
+        const QVector<GraphArtist> seeds = countrySeeds(*graph, *catalog, anchor.region, unwanted);
+        for (const Suggestion &row :
+             countryChart(*graph, seeds, anchor.region, unwanted, hideExplicit, int(seeds.size()), 4)) {
+            if (out.size() >= count)
+                break;
+            if (shown.has(-1, row.title, row.artist))
+                continue;
+            shown.add(-1, row.title, row.artist);
+            out.append(row);
+        }
+        return out;
+    }
+    case Anchor::Popular: {
+        const int wanted = (int(already.size()) + count) * 6;
+        QVector<Hit> popular;
+        for (int row = 0; row < catalog->count() && popular.size() < wanted; ++row) {
+            if (catalog->popularity(row) < 90)
+                continue;
+            popular.append({ row, float(catalog->popularity(row)) });
+        }
+        popular = capPerArtist(*catalog, popular, 1);
+        return collect(*catalog, popular, unwanted, shown, count, 0.0f, hideExplicit);
+    }
+    case Anchor::None:
+        break;
+    }
+    return out;
 }
 
 } // namespace Rec

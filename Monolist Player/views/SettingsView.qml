@@ -1,12 +1,13 @@
 import QtQuick
 import QtQuick.Controls.Basic
+import QtQuick.Dialogs
 import Monolist
 import Monolist.Backend
 import "../components"
 
 // Settings: the country to browse, playback, how downloads are saved, and
 // what this copy of the app is.
-Flickable {
+ScrollPage {
     id: root
 
     // Every country, fetched once; the picker filters this list.
@@ -15,20 +16,50 @@ Flickable {
 
     readonly property bool automatic: Library.region.length === 0
 
-    contentWidth: width
+    // A part of the page to open on, for a link elsewhere that names one
+    // ("recommendations"): scrolled to once, then said done, so the same
+    // link works again later.
+    property string section: ""
+    signal sectionRevealed()
+
     contentHeight: column.implicitHeight
-    boundsBehavior: Flickable.StopAtBounds
-    clip: true
 
     Component.onCompleted: {
         allCountries = Library.countries()
         // Versions cost a process each to read, so they are asked for when
-        // this page opens rather than while the app is starting.
+        // this page first opens (Main.qml builds it then, not at launch), and
+        // in the background: "Reading versions…" shows until they answer.
         if (!About.componentsKnown)
             About.refreshComponents()
+        if (section.length > 0)
+            Qt.callLater(revealSection)
     }
 
-    ScrollBar.vertical: MonoScrollBar {}
+    onSectionChanged: if (section.length > 0) Qt.callLater(revealSection)
+
+    // After the page has been laid out, which a page built this moment has
+    // not been yet: the column is asked to place everything first.
+    function revealSection() {
+        if (section.length === 0)
+            return
+        column.forceLayout()
+        var target = section === "recommendations" ? recommendationsHeader : null
+        if (target)
+            contentY = Math.max(0, Math.min(target.y - Theme.space4, contentHeight - height))
+        sectionRevealed()
+    }
+
+    // The exported YouTube Music session. The system's own dialog, so the
+    // file is picked the way every other file is.
+    FileDialog {
+        id: cookieFileDialog
+        title: "Choose the exported cookies file"
+        nameFilters: ["Cookie files (*.txt *.cookies)", "All files (*)"]
+        onAccepted: {
+            if (Account.importFile(selectedFile))
+                ytmRow.importing = false
+        }
+    }
 
     function matches() {
         var text = filter.trim().toLowerCase()
@@ -306,9 +337,11 @@ Flickable {
         // — recommendations —
         //
         // The catalogue is not shipped with the app and cannot be: it is
-        // licensed for non-commercial use only. So it is pointed at rather
-        // than bundled, and the app works perfectly well without one.
+        // licensed for non-commercial use only. So it is downloaded from a
+        // repository of its own, or pointed at, rather than bundled, and the
+        // app works perfectly well without one.
         SectionHeader {
+            id: recommendationsHeader
             width: parent.width
             number: "04"
             title: "Recommendations"
@@ -320,6 +353,44 @@ Flickable {
                   : (Recs.message.length > 0
                      ? Recs.message
                      : "Point this at a folder holding the four embeat_v1_*.bin files to get suggestions in Search.")
+        }
+
+        // — the data, downloaded —
+        //
+        // Offered whenever there is nothing to recommend from, and kept in
+        // view once it is here, or part of it is, with Remove. Hidden while a
+        // folder of the listener's own is in use: that needs nothing from it.
+        Column {
+            visible: RecData.busy || RecData.removing || RecData.installed || RecData.partial
+                     || RecData.failed || (!Recs.available && !Recs.busy)
+            width: parent.width
+            spacing: Theme.space3
+
+            Text {
+                text: "DATA"
+                font.family: Theme.fontFamily
+                font.pixelSize: 11
+                font.weight: Font.Bold
+                font.letterSpacing: Theme.tracking(11, 0.08)
+                color: Theme.neutral700
+            }
+
+            RecDataPanel {
+                width: parent.width
+                inSettings: true
+            }
+        }
+
+        // The folders themselves, for a copy kept anywhere else. The download
+        // fills the first in when it is done; typing over it still works.
+        Text {
+            text: "CATALOGUE"
+            font.family: Theme.fontFamily
+            font.pixelSize: 11
+            font.weight: Font.Bold
+            font.letterSpacing: Theme.tracking(11, 0.08)
+            color: Theme.neutral700
+            topPadding: Theme.space2
         }
 
         Item {
@@ -388,13 +459,32 @@ Flickable {
             onEditingFinished: Recs.graphDirectory = text
         }
 
+        // Only the suggestions: what someone searches for, or opens, they
+        // asked for by name. The note says it goes by the title because the
+        // catalogue has no explicit flag, so a clean title can still hide an
+        // explicit song.
+        ToggleRow {
+            width: parent.width
+            label: "Hide explicit titles"
+            hint: "Keep songs whose titles are crude or sexual, or marked Explicit, off the suggestions in Search. "
+                  + "It goes by the title alone; search results and albums are left as they are."
+            checked: Recs.hideExplicit
+            onToggled: Recs.hideExplicit = !Recs.hideExplicit
+        }
+
+        // The licences ask for it wherever the data is used.
+        DataCredit {
+            width: parent.width
+        }
+
         HRule { width: parent.width }
 
         // — connections —
         //
-        // Designed, not built. The app works entirely without any of these and
-        // is meant to keep working that way; what an account buys is your own
-        // library and your own history, not a better player.
+        // Last.fm scrobbles; YouTube Music signs in, and what it brings comes
+        // next. The app works entirely without any of these and is meant to
+        // keep working that way; what an account buys is your own library
+        // and your own history, not a better player.
         SectionHeader {
             width: parent.width
             number: "05"
@@ -402,32 +492,236 @@ Flickable {
         }
 
         Note {
-            text: "Nothing is signed in. Monolist plays without an account, and keeps your library "
-                  + "on this computer. Connecting one would add what only an account can know."
+            // Follows the rows, so it cannot go on saying nothing is signed
+            // in once something is. Plain text: account names are not markup.
+            textFormat: Text.PlainText
+            text: {
+                var said = []
+                if (lastFmRow.connected)
+                    said.push("Last.fm is connected as " + lastFmRow.accountName)
+                // A session being checked is held, and its cookies go with
+                // the check: not "nothing signed in".
+                if (Account.state === "active")
+                    said.push("YouTube Music is signed in"
+                              + (Account.accountName.length > 0 ? " as " + Account.accountName : ""))
+                else if (Account.state === "checking")
+                    said.push("a YouTube Music sign-in is being checked")
+                else if (Account.state === "unreachable")
+                    said.push("a YouTube Music sign-in is held, waiting to be checked")
+                if (said.length > 0)
+                    said[0] = said[0].charAt(0).toUpperCase() + said[0].slice(1)
+                if (said.length === 0)
+                    return "Nothing is signed in. Monolist plays without an account, and keeps your library "
+                           + "on this computer. Connecting one would add what only an account can know."
+                return said.join("; ") + ". Everything else still works without an account, and your library "
+                       + "stays on this computer."
+            }
         }
 
         ServiceRow {
+            id: lastFmRow
             width: parent.width
             name: "Last.fm"
             detail: "Scrobble what you play, and see what you have been listening to."
+            // Where it stands comes from the Scrobbler: unavailable in a build
+            // with no key (CONNECT greyed, and the line says why), otherwise
+            // off, waiting on the browser, connected, or needing a reconnect.
+            built: true
+            serviceState: Scrobbler.state
+            accountName: Scrobbler.accountName
+            statusLine: Scrobbler.statusLine
+            confirmText: "I'VE APPROVED IT"
+            // A Disconnect that could not delete the key is tried again as a
+            // Disconnect; and an account that stopped working can be let go
+            // of rather than only reconnected.
+            errorAction: Scrobbler.disconnectFailed ? "disconnect" : "connect"
+            forgetText: Scrobbler.accountName.length > 0 ? "DISCONNECT" : ""
+            // Last.fm's terms ask for the credit, and for the account to link
+            // to its own page there.
+            credit: "powered by <a href=\"https://www.last.fm\">AudioScrobbler</a>"
+                    + (Scrobbler.accountName.length > 0
+                       ? " · <a href=\"https://www.last.fm/user/" + encodeURIComponent(Scrobbler.accountName)
+                         + "\">your Last.fm profile</a>"
+                       : "")
             steps: [
                 "Monolist opens Last.fm in your browser, where you approve it. Your password is never typed into this app.",
-                "Last.fm hands back a session key, which is stored on this computer and can be revoked from your Last.fm account at any time.",
-                "From then on, a track counts as played once you have heard half of it, and scrobbles go out in the background. Nothing else is sent."
+                "Last.fm hands back a session key, which is kept on this computer, encrypted with your Windows sign-in (the Keychain on a Mac), and can be revoked from your Last.fm account at any time.",
+                "A track counts as played once you have heard half of it or four minutes, whichever comes first; tracks of 30 seconds or less never count. "
+                + "While a track plays, Last.fm is also told what is playing now. Nothing else is sent."
             ]
+            onConnectRequested: Scrobbler.connectAccount()
+            onCancelRequested: Scrobbler.cancelConnect()
+            onConfirmRequested: Scrobbler.checkApproval()
+            onDisconnectRequested: Scrobbler.disconnectAccount()
         }
 
+        // Only once there is an account to scrobble to. Off, nothing is kept
+        // or sent; what was already waiting stays for when it is on again.
+        ToggleRow {
+            visible: Scrobbler.state === "connected" || Scrobbler.state === "expired"
+            width: parent.width
+            label: "Scrobble what I play"
+            hint: "Off, Last.fm is told nothing, not even what is playing now."
+            checked: Scrobbler.enabled
+            onToggled: Scrobbler.enabled = !Scrobbler.enabled
+        }
+
+        // YouTube Music: a session imported from the user's own browser, since
+        // Google allows no sign-in from inside an app like this one. The row
+        // says Connected only once YouTube Music has confirmed the session
+        // (Account checks it online); while that is under way, or YouTube
+        // Music cannot be reached, it offers SIGN OUT and names no one.
         ServiceRow {
+            id: ytmRow
+
+            // Open while the user imports: the steps, and where the file or
+            // the pasted header goes. CANCEL closes it, and so does an import
+            // that was read.
+            property bool importing: false
+            readonly property string account: Account.state
+
             width: parent.width
             name: "YouTube Music"
             detail: "Your own playlists, likes and listening history, instead of this computer's."
-            caution: "Use an account you can afford to lose. Google restricts accounts used by outside players, and that would take the account with it."
+            caution: "Use an account you can afford to lose: Google restricts accounts used by outside players, "
+                     + "and that would take the account with it. Sign in only on Google's own page, in a private "
+                     + "window of your own browser. Monolist never asks for your password."
+            built: true
+            serviceState: importing ? "waiting"
+                          : account === "active" || account === "checking" || account === "unreachable"
+                            ? "connected"
+                          : account === "rejected" ? "expired"
+                          : "off"
+            accountName: account === "active" ? Account.accountName : ""
+            statusLine: importing ? "" : Account.statusLine
+            actionText: serviceState === "connected" ? "SIGN OUT"
+                        : serviceState === "expired" ? "IMPORT AGAIN"
+                        : ""
+            // A session that ended can be forgotten, name and all, instead
+            // of imported again.
+            forgetText: "SIGN OUT"
             steps: [
-                "Sign in to YouTube Music in your own browser, in a private window, and export the cookies for that tab to a file.",
-                "Point Monolist at that file. It is read once, kept in this computer's keychain, and never written to the music database or to any log.",
-                "Your library, likes and history then come from your account. Sign out here and the file and the key are both deleted.",
-                "It buys none of the speed: playback is exactly as fast signed out, and signing in never becomes required for anything."
+                "In your own browser, open a private window and sign in at music.youtube.com, on Google's own page. Firefox is the safest choice.",
+                "Export that tab's youtube.com cookies to a file with a cookies.txt extension. Or open the developer tools, pick any browse request to music.youtube.com, and copy its cookie header, or the whole request as cURL.",
+                "Choose the file, or paste into the box below. It is read once, encrypted with your Windows sign-in (the Keychain on a Mac), and never written to the music database or to any log.",
+                "Monolist then asks YouTube Music, over the internet, whether the sign-in works: that is the only way to know. It says Connected only once YouTube Music does.",
+                "Close the private window without using it again. Monolist offers to delete the exported file as soon as it has read it, and never deletes it by itself.",
+                "A session lasts days to weeks; when it ends Monolist says so and keeps playing signed out. It buys none of the speed: playback, search, lyrics and radio always stay signed out."
             ]
+            // The last refusal's reason belongs to the last try: a panel
+            // opened or closed starts clean.
+            onConnectRequested: {
+                Account.clearImportError()
+                importing = true
+            }
+            onCancelRequested: {
+                importing = false
+                pasteField.clear()
+                Account.clearImportError()
+            }
+            onDisconnectRequested: Account.signOut()
+
+            // — the import, in the open panel —
+            Note {
+                visible: !Account.remembered
+                width: parent.width
+                text: "Keeping a sign-in safely is not available on this system yet, so Monolist holds it "
+                      + "only until it closes."
+            }
+
+            ActionButton {
+                text: "CHOOSE FILE…"
+                onClicked: cookieFileDialog.open()
+            }
+
+            // Masked, like a password: what is pasted is the session itself.
+            Item {
+                width: parent.width
+                height: Math.max(pasteField.implicitHeight, importButton.implicitHeight)
+
+                TextField {
+                    id: pasteField
+                    anchors.left: parent.left
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: parent.width - importButton.width - Theme.space4
+                    implicitHeight: 40
+                    echoMode: TextInput.Password
+                    inputMethodHints: Qt.ImhSensitiveData | Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase
+                    // A copied cURL command runs to several thousand characters.
+                    maximumLength: 1048576
+                    placeholderText: "…or paste the cookie header, or the request copied as cURL"
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 13
+                    color: Theme.text
+                    placeholderTextColor: Theme.neutral500
+                    selectionColor: Theme.accent
+                    selectedTextColor: Theme.accentForeground
+                    background: Rectangle {
+                        color: "transparent"
+                        border.width: Theme.ruleWidth
+                        border.color: pasteField.activeFocus ? Theme.accent : Theme.neutral300
+                    }
+                    onAccepted: if (importButton.enabled) importButton.clicked()
+                }
+
+                ActionButton {
+                    id: importButton
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "IMPORT"
+                    enabled: pasteField.text.length > 0
+                    onClicked: {
+                        if (Account.importText(pasteField.text)) {
+                            pasteField.clear()
+                            ytmRow.importing = false
+                        }
+                    }
+                }
+            }
+
+            Text {
+                visible: Account.importError.length > 0
+                width: parent.width
+                text: Account.importError
+                textFormat: Text.PlainText
+                wrapMode: Text.WordWrap
+                font.family: Theme.fontFamily
+                font.pixelSize: 13
+                color: Theme.accent
+            }
+        }
+
+        // Right after a file was read: from now on it is only a copy of the
+        // session in plain text, and whether it goes is the user's call.
+        // Nothing is ever deleted without this answer.
+        Column {
+            visible: Account.importedFileName.length > 0
+            width: parent.width
+            spacing: Theme.space3
+            leftPadding: Theme.space4
+
+            Note {
+                width: parent.width - Theme.space4
+                textFormat: Text.PlainText
+                color: Theme.text
+                text: "Monolist has read “" + Account.importedFileName + "” and keeps its own encrypted copy. "
+                      + "The file itself still holds your sign-in in plain text, so anyone who opens it can use "
+                      + "your account. Delete it now? It is deleted for good, not moved to the Recycle Bin or "
+                      + "Trash, where it could still be read."
+            }
+
+            Row {
+                spacing: Theme.space3
+
+                ActionButton {
+                    text: "DELETE THE FILE"
+                    onClicked: Account.deleteImportedFile()
+                }
+                ActionButton {
+                    text: "KEEP IT"
+                    onClicked: Account.keepImportedFile()
+                }
+            }
         }
 
         HRule { width: parent.width }
@@ -607,8 +901,18 @@ Flickable {
                       + " · Qt " + About.qtVersion
             }
             Note {
+                // Once an account is connected, "nothing is signed in" would
+                // no longer be true; nor while a YouTube Music session is
+                // held and being checked, which sends its cookies.
                 text: "Songs, search, lyrics and artwork come from YouTube Music, LRCLIB, yt-dlp and FFmpeg. "
-                      + "Nothing is signed in: no account, and nothing about you leaves this computer."
+                      + (Scrobbler.state === "connected" || Account.state === "active"
+                         || Account.state === "checking" || Account.state === "unreachable"
+                         ? "They are fetched without an account; what a connected account is told is set out "
+                           + "under Connections."
+                         : "Nothing is signed in: no account, and nothing about you leaves this computer.")
+            }
+            DataCredit {
+                width: parent.width
             }
         }
     }

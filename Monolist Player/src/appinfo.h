@@ -1,5 +1,7 @@
 #pragma once
 
+#include <QHash>
+#include <QList>
 #include <QObject>
 #include <QPointer>
 #include <QString>
@@ -33,8 +35,9 @@ class AppInfo : public QObject
     Q_PROPERTY(QString fullVersion READ fullVersion CONSTANT)
 
     // The open-source tools this plays through, each {name, version, role}.
-    // Empty until refreshComponents() has run: finding a version means
-    // starting a process, which is not something to do while the app launches.
+    // Empty until refreshComponents() has answered: finding a version means
+    // starting a process, which is not something to do while the app launches,
+    // nor anything to wait for.
     Q_PROPERTY(QVariantList components READ components NOTIFY componentsChanged)
     Q_PROPERTY(bool componentsKnown READ componentsKnown NOTIFY componentsChanged)
 
@@ -100,8 +103,9 @@ public:
     static int compareVersions(const QString &left, const QString &right);
 
 public Q_SLOTS:
-    // Asks the versions of the bundled tools, one process each. Cheap enough
-    // to do when the Settings page opens, too expensive to do at start-up.
+    // Asks the versions of the bundled tools, one process each, all at once
+    // and in the background; componentsChanged says when every one has
+    // answered. Done when the Settings page first opens, never at start-up.
     void refreshComponents();
     // Is there a newer Monolist? Answers NotConfigured when no feed is set,
     // which is the honest answer rather than a spinner that never resolves.
@@ -116,7 +120,9 @@ public Q_SLOTS:
     // For a bug report: the version line, the build, and every component.
     QString report() const;
     // The same, on the clipboard, because nobody retypes a build number
-    // correctly and a wrong one sends whoever reads it the wrong way.
+    // correctly and a wrong one sends whoever reads it the wrong way. Asked
+    // before the versions are in, it copies what is known at once and swaps
+    // in the whole report when they arrive, if nothing was copied since.
     void copyReport();
 
 Q_SIGNALS:
@@ -125,12 +131,17 @@ Q_SIGNALS:
     void toolsChanged();
     // A sentence for the toast: something was updated, or could be.
     void notice(const QString &text);
+    // The setup script has run, so the tools on disk may not be the ones the
+    // rest of the app looked for at launch.
+    void toolsUpdated();
 
 private:
     void setUpdate(int state, const QString &message, const QString &url = {});
     void setTools(int state, const QString &message);
-    // The version a tool prints, or empty when it cannot be run at all.
-    static QString toolVersion(const QString &program, const QStringList &arguments);
+    // Starts one tool's --version; its first line lands in m_versionAnswers
+    // under `tool`, or nothing when it cannot be run or does not answer.
+    void askVersion(const QString &tool, const QString &program, const QStringList &arguments);
+    void publishComponents();
     static QString setupScriptPath();
 
     QNetworkAccessManager *m_network = nullptr;
@@ -140,6 +151,15 @@ private:
 
     QVariantList m_components;
     bool m_componentsKnown = false;
+    // The version read in flight: which round it is (a newer one discards an
+    // older one's answers), how many processes are still out, what they said.
+    int m_versionRound = 0;
+    int m_versionsPending = 0;
+    QHash<QString, QString> m_versionAnswers;
+    QList<QPointer<QProcess>> m_versionProcesses;
+    // A report copied before the versions were in, exactly as copied; empty
+    // when there is none waiting to be completed.
+    QString m_partialReport;
 
     int m_updateState = Idle;
     QString m_updateMessage;

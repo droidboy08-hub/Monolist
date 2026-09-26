@@ -17,6 +17,10 @@ namespace {
 
 const QString kFormatKey = QStringLiteral("download_format");
 const QString kSkipNonMusicKey = QStringLiteral("download_skip_non_music");
+// How stale a look for the tools may be before it is taken again. Not on every
+// call: "Download all" enqueues a whole album in one go, and a tool that is not
+// bundled is looked for along the whole of PATH.
+constexpr qint64 kToolsRecheckMs = 3000;
 
 bool isKnownFormat(const QString &format)
 {
@@ -24,21 +28,38 @@ bool isKnownFormat(const QString &format)
         || format == QLatin1String("mp3");
 }
 
+// Whether a file is one yt-dlp has not finished with, judged by what follows
+// "[<id>]" in its name, in lower case. A finished download is "[<id>].<ext>"
+// and nothing else, so none of these is ever one: a download under way (.part,
+// .ytdl, and .part-Frag<n> for a fragment), one stream of several waiting to
+// be merged (.f<format>.<ext>), a post-processor's working copy (.temp.<ext>),
+// the chapter list FFmpeg reads (.meta), and the thumbnail fetched to embed.
+// ".orig.<ext>" is left out on purpose: it is the untouched original that
+// yt-dlp moves aside while it converts, complete audio in its own right.
+bool isIntermediate(const QString &tail)
+{
+    if (tail.endsWith(QLatin1String(".part")) || tail.endsWith(QLatin1String(".ytdl"))
+        || tail.contains(QLatin1String(".part-frag")))
+        return true;
+    static const QRegularExpression stream(QStringLiteral(R"(^\.f[0-9a-z_-]+\.[0-9a-z]+$)"));
+    if (stream.match(tail).hasMatch())
+        return true;
+    if (tail == QLatin1String(".temp") || tail.startsWith(QLatin1String(".temp."))
+        || tail == QLatin1String(".meta"))
+        return true;
+    return tail == QLatin1String(".jpg") || tail == QLatin1String(".jpeg")
+        || tail == QLatin1String(".png") || tail == QLatin1String(".webp");
+}
+
 } // namespace
 
 DownloadManager::DownloadManager(QObject *parent)
     : QObject(parent)
+    , m_directory(chooseDirectory())
     , m_available(YtDlp::isAvailable())
     , m_canConvert(!YtDlp::ffmpegPath().isEmpty())
 {
-    // Same convention Melody settled on: a named folder inside the user's real
-    // Music directory, so downloads survive reinstalls and are visible to other
-    // players rather than buried in app data.
-    const QString music = QStandardPaths::writableLocation(QStandardPaths::MusicLocation);
-    m_directory = QDir(music.isEmpty()
-                           ? QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
-                           : music)
-                      .filePath(QStringLiteral("Monolist"));
+    m_toolsChecked.start();
     QDir().mkpath(m_directory);
 
     const QString format = settingValue(kFormatKey, m_format);
@@ -143,14 +164,71 @@ void DownloadManager::touch()
     Q_EMIT revisionChanged();
 }
 
+void DownloadManager::touchProgress()
+{
+    ++m_progressRevision;
+    Q_EMIT progressRevisionChanged();
+}
+
+void DownloadManager::refreshTools()
+{
+    m_toolsChecked.start();
+    const bool available = YtDlp::isAvailable();
+    const bool canConvert = !YtDlp::ffmpegPath().isEmpty();
+    if (available == m_available && canConvert == m_canConvert)
+        return;
+    m_available = available;
+    m_canConvert = canConvert;
+    Q_EMIT toolsChanged();
+}
+
+void DownloadManager::refreshToolsIfStale()
+{
+    if (m_toolsChecked.elapsed() > kToolsRecheckMs)
+        refreshTools();
+}
+
 void DownloadManager::enqueue(const QString &videoId,
                               const QString &title,
                               const QString &artist,
                               const QString &artwork,
-                              qint64 durationMs)
+                              qint64 durationMs,
+                              bool isVideo)
+{
+    // What was found at launch is not the last word: tools put in place since
+    // then are used rather than refused until a restart, and one taken away
+    // is noticed here.
+    refreshToolsIfStale();
+    if (!queueOne(videoId, title, artist, artwork, durationMs, isVideo))
+        return;
+    touch();
+    pump();
+}
+
+void DownloadManager::enqueueAll(const QVariantList &tracks)
+{
+    refreshToolsIfStale();
+    bool queued = false;
+    for (const QVariant &value : tracks) {
+        const QVariantMap track = value.toMap();
+        queued |= queueOne(track.value(QStringLiteral("sourceId")).toString(),
+                           track.value(QStringLiteral("title")).toString(),
+                           track.value(QStringLiteral("artist")).toString(),
+                           track.value(QStringLiteral("artwork")).toString(),
+                           track.value(QStringLiteral("durationMs")).toLongLong(),
+                           track.value(QStringLiteral("isVideo")).toBool());
+    }
+    if (!queued)
+        return;
+    touch();
+    pump();
+}
+
+bool DownloadManager::queueOne(const QString &videoId, const QString &title, const QString &artist,
+                               const QString &artwork, qint64 durationMs, bool isVideo)
 {
     if (videoId.isEmpty() || !m_available || m_stored.contains(videoId) || isPending(videoId))
-        return;
+        return false;
 
     DownloadQueueModel::Item item;
     item.videoId = videoId;
@@ -158,16 +236,23 @@ void DownloadManager::enqueue(const QString &videoId,
     item.artist = YtDlp::cleanArtist(artist);
     item.artwork = artwork;
     item.durationMs = durationMs;
+    item.isVideo = isVideo;
     m_queue.upsert(item);   // replaces a failed attempt at the same track
     m_pending.append(videoId);
-    touch();
-    pump();
+    return true;
 }
 
 void DownloadManager::pump()
 {
-    while (!m_pending.isEmpty() && m_requests.size() < kMaxConcurrent)
+    bool began = false;
+    while (!m_pending.isEmpty() && m_requests.size() < kMaxConcurrent) {
         begin(m_pending.takeFirst());
+        began = true;
+    }
+    // Waiting has become downloading, which the rows show: they are told
+    // here, since what follows only moves the percentage.
+    if (began)
+        touch();
     Q_EMIT queueChanged();
 }
 
@@ -188,6 +273,10 @@ void DownloadManager::begin(const QString &videoId)
     item.error.clear();
     m_queue.upsert(item);
 
+    // What is already there for this track, before yt-dlp writes a byte: should
+    // this attempt fail, its cleanup may take only what the attempt wrote.
+    m_before.insert(videoId, filesFor(m_directory, videoId));
+
     // Without a title the stem is left to yt-dlp, which names the file from
     // the metadata it fetches.
     const QString stem = item.title.isEmpty() ? QString() : fileStem(videoId, item.title, item.artist);
@@ -207,6 +296,9 @@ void DownloadManager::begin(const QString &videoId)
                 if (item.state == DownloadQueueModel::State::Downloading && fraction < 1.0
                     && qAbs(fraction - item.progress) < 0.01)
                     return;
+                // Back from processing (a second stream, say) is a new state
+                // for the rows; another percent is only a new percentage.
+                const bool stateChanged = item.state != DownloadQueueModel::State::Downloading;
                 item.state = DownloadQueueModel::State::Downloading;
                 item.progress = fraction;
                 item.received = received;
@@ -214,7 +306,10 @@ void DownloadManager::begin(const QString &videoId)
                 item.speed = speed;
                 item.eta = eta;
                 m_queue.upsert(item);
-                touch();
+                if (stateChanged)
+                    touch();
+                else
+                    touchProgress();
                 Q_EMIT progressChanged(videoId, fraction);
             });
 
@@ -251,6 +346,7 @@ void DownloadManager::complete(const QString &videoId, const QString &reportedPa
     m_requests.remove(videoId);
     const DownloadQueueModel::Item *current = m_queue.find(videoId);
     if (!current) {
+        m_before.remove(videoId);
         pump();
         return;
     }
@@ -285,6 +381,7 @@ void DownloadManager::complete(const QString &videoId, const QString &reportedPa
         fail(videoId, QStringLiteral("The download finished, but no file was written."));
         return;
     }
+    m_before.remove(videoId);
 
     recordStored(item, path);
     m_stored.insert(videoId, path);
@@ -494,25 +591,105 @@ QString DownloadManager::findWrittenFile(const QString &videoId) const
 }
 
 // yt-dlp leaves .part, .ytdl, thumbnail and intermediate files behind when it
-// is stopped part-way. A finished download of the same track is never touched.
-void DownloadManager::removePartialFiles(const QString &videoId) const
+// is stopped part-way. A finished file of the same track is never touched,
+// whether or not the database knows about it: after app data is reset, or
+// when another run wrote to the same folder, the database is not the whole
+// story, and a file it has no row for is still somebody's music.
+void DownloadManager::removePartialFiles(const QString &videoId)
 {
+    // Without a record of what was there before (every download that ran
+    // has one), count everything as having been there: only yt-dlp's own
+    // leftovers go.
+    const QSet<QString> before = m_before.contains(videoId) ? m_before.take(videoId)
+                                                            : filesFor(m_directory, videoId);
+    removeLeftovers(m_directory, videoId, before, m_stored.value(videoId));
+}
+
+QString DownloadManager::chooseDirectory()
+{
+    // Named outright: for a test, or for keeping downloads somewhere else.
+    const QString named = qEnvironmentVariable("MONOLIST_DOWNLOAD_DIR");
+    if (!named.isEmpty())
+        return QDir::cleanPath(QDir(named).absolutePath());
+
+    // A scratch database means a test or a trial run, and its downloads are
+    // just as much scratch: beside that database, never among the user's
+    // music, where a later cleanup or a re-download could meet them.
+    const QString data = qEnvironmentVariable("MONOLIST_DATA_DIR");
+    if (!data.isEmpty())
+        return QDir::cleanPath(QDir(data).absoluteFilePath(QStringLiteral("downloads")));
+
+    // Same convention Melody settled on: a named folder inside the user's real
+    // Music directory, so downloads survive reinstalls and are visible to other
+    // players rather than buried in app data.
+    const QString music = QStandardPaths::writableLocation(QStandardPaths::MusicLocation);
+    return QDir(music.isEmpty() ? QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
+                                : music)
+        .filePath(QStringLiteral("Monolist"));
+}
+
+QSet<QString> DownloadManager::filesFor(const QString &directory, const QString &videoId)
+{
+    QSet<QString> names;
+    if (videoId.isEmpty())
+        return names;
     const QString marker = QLatin1Char('[') + videoId + QStringLiteral("].");
-    const QString kept = m_stored.value(videoId);
-    const QFileInfoList files = QDir(m_directory).entryInfoList(QDir::Files | QDir::Hidden);
+    const QFileInfoList files = QDir(directory).entryInfoList(QDir::Files | QDir::Hidden);
     for (const QFileInfo &file : files) {
-        const QString path = file.absoluteFilePath();
-        if (file.fileName().contains(marker) && path != kept)
-            QFile::remove(path);
+        if (file.fileName().contains(marker))
+            names.insert(file.fileName());
     }
+    return names;
+}
+
+QStringList DownloadManager::removeLeftovers(const QString &directory, const QString &videoId,
+                                             const QSet<QString> &before, const QString &kept)
+{
+    QStringList removed;
+    if (videoId.isEmpty())
+        return removed;
+    const QString marker = QLatin1Char('[') + videoId + QLatin1Char(']');
+    const QFileInfo keptFile(kept);
+    const QFileInfoList files = QDir(directory).entryInfoList(QDir::Files | QDir::Hidden);
+    for (const QFileInfo &file : files) {
+        const QString name = file.fileName();
+        // The last one: the id closes the stem, and a title could in theory
+        // carry the same text earlier on.
+        const qsizetype at = name.lastIndexOf(marker + QLatin1Char('.'));
+        if (at < 0)
+            continue;
+        if (!kept.isEmpty() && file == keptFile)
+            continue;
+        const QString tail = name.mid(at + marker.size()).toLower();
+        if (!isIntermediate(tail) && before.contains(name))
+            continue;   // finished before this attempt began
+        if (QFile::remove(file.absoluteFilePath()))
+            removed.append(name);
+    }
+    return removed;
 }
 
 void DownloadManager::recordStored(const DownloadQueueModel::Item &item, const QString &path)
 {
+    // Whether it is a music video: as the list it was downloaded from said,
+    // or as any copy of it the app already keeps says — the menus that queue
+    // a download do not all pass it on.
+    int isVideo = item.isVideo ? 1 : 0;
+    QSqlQuery known(AppDatabase::connection());
+    known.prepare(QStringLiteral(
+        "SELECT MAX(v) FROM (SELECT is_video AS v FROM recent WHERE video_id = ?"
+        " UNION ALL SELECT is_video FROM playlist_tracks WHERE video_id = ?"
+        " UNION ALL SELECT is_video FROM tracks WHERE source_id = ?)"));
+    known.addBindValue(item.videoId);
+    known.addBindValue(item.videoId);
+    known.addBindValue(item.videoId);
+    if (known.exec() && known.next() && known.value(0).toInt() > 0)
+        isVideo = 1;
+
     QSqlQuery query(AppDatabase::connection());
     query.prepare(QStringLiteral(
-        "INSERT INTO downloads (video_id, title, artist, artwork, duration_ms, file_path, bytes)"
-        " VALUES (?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO downloads (video_id, title, artist, artwork, duration_ms, file_path, bytes, is_video)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
         " ON CONFLICT(video_id) DO UPDATE SET"
         "   title = excluded.title,"
         "   artist = excluded.artist,"
@@ -520,6 +697,7 @@ void DownloadManager::recordStored(const DownloadQueueModel::Item &item, const Q
         "   duration_ms = excluded.duration_ms,"
         "   file_path = excluded.file_path,"
         "   bytes = excluded.bytes,"
+        "   is_video = MAX(is_video, excluded.is_video),"
         "   downloaded_at = datetime('now')"));
     query.addBindValue(item.videoId);
     query.addBindValue(AppDatabase::text(item.title));
@@ -528,6 +706,7 @@ void DownloadManager::recordStored(const DownloadQueueModel::Item &item, const Q
     query.addBindValue(item.durationMs);
     query.addBindValue(path);
     query.addBindValue(QFileInfo(path).size());
+    query.addBindValue(isVideo);
     if (!query.exec())
         qWarning("Monolist: could not record a download: %s", qPrintable(query.lastError().text()));
 
@@ -535,8 +714,10 @@ void DownloadManager::recordStored(const DownloadQueueModel::Item &item, const Q
     // the library without a restart: an existing row now points at the file,
     // and a new one is appended.
     QSqlQuery existing(AppDatabase::connection());
-    existing.prepare(QStringLiteral("UPDATE tracks SET source_url = ? WHERE source_id = ?"));
+    existing.prepare(QStringLiteral(
+        "UPDATE tracks SET source_url = ?, is_video = MAX(is_video, ?) WHERE source_id = ?"));
     existing.addBindValue(path);
+    existing.addBindValue(isVideo);
     existing.addBindValue(item.videoId);
     existing.exec();
 
@@ -545,8 +726,9 @@ void DownloadManager::recordStored(const DownloadQueueModel::Item &item, const Q
     // row even when the WHERE filtered everything out, and the guard would
     // insert a duplicate at position 0 instead of skipping.
     track.prepare(QStringLiteral(
-        "INSERT INTO tracks (position, title, artist, album, duration_ms, source_url, source_id, artwork, favourite)"
-        " SELECT (SELECT COALESCE(MAX(position) + 1, 0) FROM tracks), ?, ?, '', ?, ?, ?, ?, 0"
+        "INSERT INTO tracks (position, title, artist, album, duration_ms, source_url, source_id, artwork,"
+        " favourite, is_video)"
+        " SELECT (SELECT COALESCE(MAX(position) + 1, 0) FROM tracks), ?, ?, '', ?, ?, ?, ?, 0, ?"
         " WHERE NOT EXISTS (SELECT 1 FROM tracks WHERE source_id = ?)"));
     track.addBindValue(AppDatabase::text(item.title));
     track.addBindValue(AppDatabase::text(item.artist));
@@ -554,6 +736,7 @@ void DownloadManager::recordStored(const DownloadQueueModel::Item &item, const Q
     track.addBindValue(path);
     track.addBindValue(item.videoId);
     track.addBindValue(AppDatabase::text(item.artwork));
+    track.addBindValue(isVideo);
     track.addBindValue(item.videoId);
     if (!track.exec())
         qWarning("Monolist: could not add a download to the library: %s", qPrintable(track.lastError().text()));

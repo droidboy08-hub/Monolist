@@ -22,8 +22,54 @@ enum ObservedProperty : uint64_t {
     PropMediaTitle,
     PropMetaArtist,
     PropVideoWidth,
-    PropVideoHeight
+    PropVideoHeight,
+    PropAudioDeviceList
 };
+
+// The devices in mpv's audio-device-list: an array of maps, each with a
+// "name" and a "description".
+QVariantList audioDevicesOf(const mpv_node &list)
+{
+    QVariantList devices;
+    if (list.format != MPV_FORMAT_NODE_ARRAY || !list.u.list)
+        return devices;
+    for (int i = 0; i < list.u.list->num; ++i) {
+        const mpv_node &entry = list.u.list->values[i];
+        if (entry.format != MPV_FORMAT_NODE_MAP || !entry.u.list)
+            continue;
+        QString name;
+        QString description;
+        for (int k = 0; k < entry.u.list->num; ++k) {
+            const mpv_node &value = entry.u.list->values[k];
+            if (value.format != MPV_FORMAT_STRING)
+                continue;
+            if (qstrcmp(entry.u.list->keys[k], "name") == 0)
+                name = QString::fromUtf8(value.u.string);
+            else if (qstrcmp(entry.u.list->keys[k], "description") == 0)
+                description = QString::fromUtf8(value.u.string);
+        }
+        if (!name.isEmpty()) {
+            devices.append(QVariantMap{ { QStringLiteral("name"), name },
+                                        { QStringLiteral("description"), description } });
+        }
+    }
+    return devices;
+}
+
+// The playlist entry a loadfile made, from mpv's answer to it; -1 when the
+// answer does not say, as an older mpv's does not.
+qint64 playlistEntryOf(const mpv_node &result)
+{
+    if (result.format != MPV_FORMAT_NODE_MAP || !result.u.list)
+        return -1;
+    const mpv_node_list *map = result.u.list;
+    for (int i = 0; i < map->num; ++i) {
+        if (qstrcmp(map->keys[i], "playlist_entry_id") == 0
+            && map->values[i].format == MPV_FORMAT_INT64)
+            return map->values[i].u.int64;
+    }
+    return -1;
+}
 }
 
 MpvEngine::MpvEngine(QObject *parent)
@@ -93,6 +139,11 @@ void MpvEngine::applyBaseOptions()
     // decides what plays next.
     setOption("keep-open", "no");
     setOption("idle", "yes");
+    // Paused until something is played, as m_paused already assumes. mpv
+    // starts unpaused, which the controller would read as playing while the
+    // song a launch opens on is still resolving — so the first press of Play
+    // would pause it instead.
+    setOption("pause", "yes");
 
     // Network buffering. Generous enough that a hiccup on a remote stream does
     // not audibly drop out.
@@ -127,6 +178,10 @@ void MpvEngine::observeProperties()
     // is also how the surface knows a picture is there at all.
     mpv_observe_property(m_mpv, PropVideoWidth,     "dwidth",               MPV_FORMAT_INT64);
     mpv_observe_property(m_mpv, PropVideoHeight,    "dheight",              MPV_FORMAT_INT64);
+    // Observing the list is also what starts mpv watching for devices coming
+    // and going; the first answer arrives with the first events, well before
+    // anyone could reach the output menu.
+    mpv_observe_property(m_mpv, PropAudioDeviceList, "audio-device-list",   MPV_FORMAT_NODE);
 }
 
 // Called by libmpv from its own thread. Must not touch Qt state directly.
@@ -150,6 +205,16 @@ void MpvEngine::drainEvents()
         case MPV_EVENT_PROPERTY_CHANGE: {
             auto *prop = static_cast<mpv_event_property *>(event->data);
             if (!prop->data)
+                break;
+
+            // The clock, the length and the picture belong to one file. Until
+            // the file last asked for has started, they are still the old
+            // one's, running on under the new track's title.
+            const bool perFile = event->reply_userdata != PropPause
+                                 && event->reply_userdata != PropCoreIdle
+                                 && event->reply_userdata != PropCacheBuffering
+                                 && event->reply_userdata != PropAudioDeviceList;
+            if (perFile && !currentFileStarted())
                 break;
 
             switch (event->reply_userdata) {
@@ -205,14 +270,51 @@ void MpvEngine::drainEvents()
                 if (artist) mpv_free(artist);
                 break;
             }
+            case PropAudioDeviceList: {
+                if (prop->format != MPV_FORMAT_NODE)
+                    break;
+                const QVariantList devices = audioDevicesOf(*static_cast<mpv_node *>(prop->data));
+                if (devices != m_audioDevices) {
+                    m_audioDevices = devices;
+                    Q_EMIT audioDevicesChanged();
+                }
+                break;
+            }
             default:
                 break;
             }
             break;
         }
 
+        case MPV_EVENT_COMMAND_REPLY: {
+            // mpv's answer to a loadfile, naming the entry it made. Only the
+            // latest load's answer counts: an earlier one was replaced, or
+            // stopped, before it could matter. (stop() asks with 0, and no
+            // load is ever numbered 0.)
+            if (event->reply_userdata == 0 || event->reply_userdata != m_loadRequest)
+                break;
+            if (event->error < 0) {
+                Q_EMIT loadFailed(QString::fromUtf8(mpv_error_string(event->error)));
+                break;
+            }
+            m_currentEntry = playlistEntryOf(static_cast<mpv_event_command *>(event->data)->result);
+            break;
+        }
+
+        case MPV_EVENT_START_FILE: {
+            m_startedEntry = static_cast<mpv_event_start_file *>(event->data)->playlist_entry_id;
+            if (m_currentEntry < 0)
+                m_currentEntry = m_startedEntry;   // the answer did not say; this is it
+            break;
+        }
+
         case MPV_EVENT_END_FILE: {
             auto *end = static_cast<mpv_event_end_file *>(event->data);
+            // The end of a file that has since been replaced or stopped. Its
+            // natural end would skip the track that took its place, and its
+            // error would be blamed on it.
+            if (m_currentEntry <= 0 || end->playlist_entry_id != m_currentEntry)
+                break;
             if (end->reason == MPV_END_FILE_REASON_ERROR) {
                 Q_EMIT loadFailed(QString::fromUtf8(mpv_error_string(end->error)));
             } else if (end->reason == MPV_END_FILE_REASON_EOF) {
@@ -287,10 +389,13 @@ void MpvEngine::load(const QString &urlOrPath, bool startPlaying, const QString 
                                       : "none");
 
     const QByteArray target = urlOrPath.toUtf8();
-    // "replace" tears down the previous file; EndFile arrives with reason STOP,
-    // which drainEvents deliberately ignores so it is not mistaken for EOF.
+    // "replace" tears down the previous file. From here until mpv answers
+    // with the new entry, no file is current, so whatever the previous one
+    // still reports goes nowhere.
+    ++m_loadRequest;
+    m_currentEntry = 0;
     const char *args[] = { "loadfile", target.constData(), "replace", nullptr };
-    const int rc = mpv_command_async(m_mpv, 0, args);
+    const int rc = mpv_command_async(m_mpv, m_loadRequest, args);
     if (rc < 0) {
         Q_EMIT loadFailed(QString::fromUtf8(mpv_error_string(rc)));
         return;
@@ -298,10 +403,19 @@ void MpvEngine::load(const QString &urlOrPath, bool startPlaying, const QString 
     setPaused(!startPlaying);
 }
 
+// Silence now, while the next thing is found. Nothing the stopped file still
+// reports — its clock, its end, a late answer to its loadfile — is passed on.
 void MpvEngine::stop()
 {
     if (!m_mpv)
         return;
+    ++m_loadRequest;
+    m_currentEntry = 0;
+    m_duration = 0;
+    if (!m_videoSize.isEmpty()) {
+        m_videoSize = QSize();
+        Q_EMIT videoSizeChanged(m_videoSize);
+    }
     const char *args[] = { "stop", nullptr };
     mpv_command_async(m_mpv, 0, args);
 }
@@ -317,7 +431,19 @@ void MpvEngine::setVideoEnabled(bool enabled)
     // Hardware decoding where the driver offers it, copied back to memory
     // because the frames are rendered by the CPU into a Qt Quick texture.
     mpv_set_option_string(m_mpv, "hwdec", enabled ? "auto-copy-safe" : "no");
-    mpv_set_property_string(m_mpv, "vid", enabled ? "auto" : "no");
+    mpv_set_property_string(m_mpv, "vid", enabled && m_watched ? "auto" : "no");
+}
+
+void MpvEngine::setVideoWatched(bool watched)
+{
+    if (!m_mpv || watched == m_watched)
+        return;
+    m_watched = watched;
+    if (!m_video)
+        return;   // no picture either way; the next one starts as this says
+    mpv_set_property_string(m_mpv, "vid", watched ? "auto" : "no");
+    qInfo("video: %s", watched ? "on screen again, decoding (vid=auto)"
+                               : "nothing shows the picture, decoding stops (vid=no)");
 }
 
 void MpvEngine::setPaused(bool paused)
@@ -355,4 +481,16 @@ void MpvEngine::setSpeed(qreal speed)
 void MpvEngine::setReplayGainEnabled(bool enabled)
 {
     setOption("replaygain", enabled ? "track" : "no");
+}
+
+// Asked without waiting for the answer: during a song, mpv reopens the sound
+// output on the new device before it answers, which is long enough to be
+// felt if the interface stood still for it.
+void MpvEngine::setAudioDevice(const QString &name)
+{
+    if (!m_mpv)
+        return;
+    const QByteArray device = (name.isEmpty() ? QStringLiteral("auto") : name).toUtf8();
+    const char *value = device.constData();
+    mpv_set_property_async(m_mpv, 0, "audio-device", MPV_FORMAT_STRING, &value);
 }

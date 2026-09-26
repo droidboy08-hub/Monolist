@@ -32,6 +32,26 @@ Rectangle {
         searchActivated(text)
     }
 
+    // Search asked for by name — Ctrl+F, the sidebar's Search — means "I am
+    // about to type". The cursor goes to the field with what is there
+    // selected, so typing replaces the last search and an arrow key keeps it.
+    function focusSearch() {
+        searchField.forceActiveFocus()
+        searchField.selectAll()
+    }
+
+    // The X. Setting the text is not an edit, so what an emptied field does
+    // when typed away (onTextEdited) is done here by hand. The cursor stays
+    // in the field, for the next search.
+    function clearSearch() {
+        suggestTimer.stop()
+        suggesting = false
+        highlighted = -1
+        searchField.text = ""
+        Extractor.clearSuggestions()
+        searchField.forceActiveFocus()
+    }
+
     // The typed part stays regular and the completion goes bold, the way
     // YouTube Music sets its own suggestions.
     function suggestionMarkup(suggestion) {
@@ -57,20 +77,28 @@ Rectangle {
         color: Theme.divider
     }
 
+    // At the right, or — where the desktop keeps them on the left — at the
+    // left, but only with the sidebar folded away: otherwise the sidebar's
+    // brand holds them, in the window's corner.
     WindowButtons {
         id: windowButtons
-        visible: !Chrome.nativeButtons
+        visible: !Chrome.nativeButtons && (!Chrome.buttonsOnLeft || root.showMenuButton)
         anchors.top: parent.top
-        anchors.right: parent.right
+        anchors.right: Chrome.buttonsOnLeft ? undefined : parent.right
+        anchors.left: Chrome.buttonsOnLeft ? parent.left : undefined
         height: parent.height - Theme.ruleWidth
     }
+    readonly property bool buttonsAtRight: windowButtons.visible && !Chrome.buttonsOnLeft
+    readonly property real buttonsAtLeft: windowButtons.visible && Chrome.buttonsOnLeft
+                                         ? windowButtons.width : 0
 
     Row {
         id: leftGroup
         anchors.left: parent.left
         // With the sidebar folded away this bar starts at the window's edge,
         // where macOS keeps its traffic lights.
-        anchors.leftMargin: Theme.space8 + (root.showMenuButton ? Chrome.nativeButtonsInset : 0)
+        anchors.leftMargin: (root.buttonsAtLeft > 0 ? root.buttonsAtLeft + Theme.space2 : Theme.space8)
+                            + (root.showMenuButton ? Chrome.nativeButtonsInset : 0)
         anchors.verticalCenter: parent.verticalCenter
         spacing: Theme.space2
 
@@ -108,10 +136,19 @@ Rectangle {
 
     Rectangle {
         id: searchBox
-        anchors.right: windowButtons.visible ? windowButtons.left : parent.right
-        anchors.rightMargin: windowButtons.visible ? Theme.space6 : Theme.space8
+
+        // Where its right edge falls, worked out rather than read from x,
+        // which follows from the width being decided here.
+        readonly property real rightEdge: (root.buttonsAtRight ? windowButtons.x : root.width)
+                                          - anchors.rightMargin
+
+        anchors.right: root.buttonsAtRight ? windowButtons.left : parent.right
+        anchors.rightMargin: root.buttonsAtRight ? Theme.space6 : Theme.space8
         anchors.verticalCenter: parent.verticalCenter
-        width: Math.min(360, Math.max(200, root.width * 0.28))
+        // Its share of the bar, but never over the arrows: in a narrow window
+        // it takes what is left between them and the window buttons.
+        width: Math.max(0, Math.min(360, Math.max(200, root.width * 0.28),
+                                    rightEdge - (leftGroup.x + leftGroup.width) - Theme.space4))
         height: 36
         color: "transparent"
         border.width: Theme.ruleWidth
@@ -128,12 +165,30 @@ Rectangle {
             anchors.verticalCenter: parent.verticalCenter
         }
 
+        // Only there when there is something to clear. A glyph like every
+        // other icon: grey at rest, ink under the pointer, no plate behind it
+        // (DESIGN 2.6a). The glyph fills the button inside its padding, so
+        // the padding is what sizes it: a 10px cross, no heavier than the
+        // magnifier opposite, on a target still big enough to hit.
+        IconButton {
+            id: clearButton
+            visible: searchField.text.length > 0
+            anchors.right: parent.right
+            anchors.rightMargin: Theme.space1
+            anchors.verticalCenter: parent.verticalCenter
+            side: 28
+            padding: Theme.space1
+            iconName: "x"
+            iconColor: Theme.neutral700
+            onClicked: root.clearSearch()
+        }
+
         TextInput {
             id: searchField
             anchors.left: searchIcon.right
             anchors.leftMargin: Theme.space2
-            anchors.right: parent.right
-            anchors.rightMargin: Theme.space3
+            anchors.right: clearButton.visible ? clearButton.left : parent.right
+            anchors.rightMargin: clearButton.visible ? 0 : Theme.space3
             anchors.verticalCenter: parent.verticalCenter
             font.family: Theme.fontFamily
             font.pixelSize: 13
@@ -176,10 +231,13 @@ Rectangle {
             }
             Keys.onEscapePressed: root.suggesting = false
 
+            // Elided rather than cut through a letter when the box is narrow.
             Text {
                 anchors.verticalCenter: parent.verticalCenter
+                width: parent.width
                 visible: searchField.text.length === 0
                 text: "Artists, albums, tracks…"
+                elide: Text.ElideRight
                 font: searchField.font
                 color: Theme.neutral500
             }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QDateTime>
+#include <QSet>
 #include <QString>
 #include <QStringList>
 #include <QVector>
@@ -13,7 +14,7 @@ class Catalog;
 // independent of it so the profile can be built from an imported history or
 // from a fixed set in a test.
 struct PlayEvent {
-    QString kind;            // play | like | notInterested | unliked
+    QString kind;            // play | like | notInterested | notInterestedArtist | unliked
     QString title;
     QString artist;
     QString source;          // the surface it came from; empty counts as neutral
@@ -69,8 +70,16 @@ struct TasteProfile {
     float score(const float *vector, int dims) const;
 };
 
+// The songs the listener likes now, by their strict text key (matchkey.h).
+// Each song's newest like or unlike decides: liked, unliked and liked again is
+// liked; liked and then unliked is not. One rule for the profile and the
+// shelves alike, because two readings of the same history drifted apart once
+// already. `events` newest first.
+QSet<quint64> likedSongs(const QVector<PlayEvent> &events);
+
 // Builds the profile. `now` is passed rather than read so the same events
 // always give the same answer, which is what makes this testable at all.
+// `events` newest first, as readPlayEvents returns them.
 TasteProfile buildTaste(const Catalog &catalog,
                         const QVector<PlayEvent> &events,
                         const QDateTime &now);

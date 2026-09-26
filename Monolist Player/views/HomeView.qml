@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Controls.Basic
 import Monolist
 import Monolist.Backend
 import "../components"
@@ -7,18 +6,14 @@ import "../components"
 // Home: what is new, what to play next, and what you played. The content is
 // YouTube Music's own feed, set in the system's type — the newest release on
 // the red poster, then numbered sections in reading order.
-Flickable {
+ScrollPage {
     id: root
 
     signal pageRequested(string browseId)
-    signal searchRequested(string term)
+    // Another of the app's views by name: Recently played's SHOW ALL.
+    signal viewRequested(string view)
 
-    contentWidth: width
     contentHeight: column.implicitHeight
-    boundsBehavior: Flickable.StopAtBounds
-    clip: true
-
-    ScrollBar.vertical: MonoScrollBar {}
 
     // Sections are numbered in reading order, whichever of them have content.
     readonly property bool hasPicks: Catalog.quickPicks.count > 0
@@ -31,17 +26,28 @@ Flickable {
         if (card.type === "album" || card.type === "playlist")
             pageRequested(card.browseId)
         else if (card.type === "artist")
-            searchRequested(card.title)
+            Nav.openArtist(card.title, card.browseId)
+        // The credit read from the card, not its whole subtitle, which also
+        // holds a type label or a view count; the subtitle only when the card
+        // names no one, and then Last.fm is told nothing (Scrobbler).
         else if (card.videoId)
-            Player.playSource(card.videoId, card.title, card.subtitle, card.artwork, 0, "",
-                              card.type === "video", "home")
+            Player.playSource(card.videoId, card.title, card.artist ? card.artist : card.subtitle,
+                              card.artwork, 0, "", card.type === "video", "home",
+                              card.primaryArtist ? card.primaryArtist : "")
     }
 
-    // The number, the title and the table, with the rule under it.
+    // The number, the title and the table, with the rule under it, and the
+    // section's one link at the header's end.
     component TrackSection: Column {
+        id: section
         property string number: ""
         property string title: ""
         property var model: null
+        property string action: ""
+        // Recently played is the history's latest: its rows' menus can take
+        // a song out of it.
+        property bool history: false
+        signal actionTriggered()
 
         x: Theme.space8
         width: root.width - Theme.space8 * 2
@@ -51,13 +57,16 @@ Flickable {
 
         SectionHeader {
             width: parent.width
-            number: parent.number
-            title: parent.title
+            number: section.number
+            title: section.title
+            action: section.action
+            onActionTriggered: section.actionTriggered()
         }
 
         TrackTable {
             width: parent.width
             model: parent.model
+            history: section.history
             showDownloads: true
             onTrackActivated: function(index) { Player.playModel(model, index, "home") }
         }
@@ -118,11 +127,14 @@ Flickable {
         }
 
         // — quick picks —
+        // The whole list, in order; autoplay carries on after it.
         TrackSection {
             visible: root.hasPicks
             number: "01"
             title: Catalog.quickPicksTitle.length > 0 ? Catalog.quickPicksTitle : "Quick picks"
             model: Catalog.quickPicks
+            action: "PLAY ALL"
+            onActionTriggered: Player.playModel(Catalog.quickPicks, 0, "home")
         }
 
         HRule {
@@ -132,11 +144,15 @@ Flickable {
         }
 
         // — recently played —
+        // The last ten; everything played is the library's History.
         TrackSection {
             visible: root.hasRecent
             number: root.pad(root.hasPicks ? 2 : 1)
             title: "Recently played"
             model: Catalog.recent
+            history: true
+            action: "SHOW ALL"
+            onActionTriggered: root.viewRequested("library:history")
         }
 
         // — shelves: new releases, then the feed's own —
@@ -164,6 +180,8 @@ Flickable {
                     title: parent.modelData.title
                     strapline: parent.modelData.strapline
                     items: parent.modelData.items
+                    more: parent.modelData.more
+                    origin: "home"
                     onCardActivated: function(card) { root.openCard(card) }
                 }
 

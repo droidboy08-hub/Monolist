@@ -6,12 +6,84 @@ import Monolist.Backend
 Rectangle {
     id: root
 
-    readonly property bool showVolume: width >= 1040
+    // As the window narrows the bar gives things up in one order: the volume
+    // slider folds into a button, and the output button goes into its popup
+    // with it; then the progress line moves under the buttons, then the title
+    // goes. The video, Now Playing and queue buttons never go: nothing else
+    // opens any of them.
+    readonly property bool showVolume: width >= 1120
     readonly property bool showMeta: width >= 760
+    // Under the buttons once one line would leave the progress line too short
+    // to aim at. Without the title it stays under, so narrowing the window
+    // never puts it back on the line it has just left.
+    readonly property bool stacked: !showMeta || transport.width < 440
+    // In Now Playing this is whether its UP NEXT pane is showing.
     property bool queueOpen: false
     property bool nowPlayingOpen: false
     signal queueToggled()
     signal nowPlayingToggled()
+
+    // Muting is a volume of nothing. The level it had is kept here so unmuting
+    // brings it back; a restart finds the volume as it was left, muted or not.
+    property real volumeBeforeMute: 0.65
+    readonly property bool muted: Player.volume <= 0
+    readonly property string volumeIcon: muted ? "volume-x"
+                                       : Player.volume < 0.5 ? "volume-1" : "volume-2"
+
+    function toggleMute() {
+        if (muted) {
+            Player.setVolume(volumeBeforeMute > 0 ? volumeBeforeMute : 0.65)
+        } else {
+            volumeBeforeMute = Player.volume
+            Player.setVolume(0)
+        }
+    }
+
+    // Where the sound goes, by the name the system gives it. Auto follows the
+    // system's default device as that changes; a device picked from the menu
+    // is kept, and while it is unplugged Auto stands in for it.
+    readonly property string outputName: {
+        const devices = Player.audioDevices
+        for (let i = 0; i < devices.length; ++i) {
+            if (devices[i].name === Player.audioDevice)
+                return devices[i].name === "auto" ? "Auto" : devices[i].description
+        }
+        return "Auto"
+    }
+
+    // Stands on the bar's top rule, pulled up out of the bar as the volume
+    // popup is, its right edge under the button that opened it; and appears
+    // without motion, as every menu does.
+    function openOutputs(anchor) {
+        outputMenu.x = Math.round(anchor.mapToItem(root, anchor.width, 0).x) - outputMenu.width
+        outputMenu.open()
+    }
+
+    // The button it stands over moves when the slider folds or unfolds.
+    onShowVolumeChanged: outputMenu.close()
+
+    MonoMenu {
+        id: outputMenu
+        width: 320
+        y: Theme.ruleWidth - height
+
+        Instantiator {
+            model: Player.audioDevices
+            delegate: MonoMenuItem {
+                required property var modelData
+                // Never hidden, so the height need not follow `visible`,
+                // which the menu changes as it takes a replaced row out.
+                implicitHeight: 34
+                text: modelData.missing ? modelData.description + " · not connected"
+                                        : modelData.description
+                enabled: !modelData.missing
+                current: modelData.name === Player.audioDevice
+                onTriggered: Player.setAudioDevice(modelData.name)
+            }
+            onObjectAdded: function(index, object) { outputMenu.insertItem(index, object) }
+            onObjectRemoved: function(index, object) { outputMenu.removeItem(object) }
+        }
+    }
 
     color: Theme.bg
     implicitHeight: Theme.playerBarHeight
@@ -22,14 +94,27 @@ Rectangle {
         color: Theme.text
     }
 
+    // The song playing has the song menu, as it has anywhere else: from the
+    // dots beside the title, or a right click on the cover or the title.
+    readonly property bool hasSong: Player.currentTrack.title !== undefined
+    function openMenu() {
+        if (hasSong)
+            Menus.openTrack(Player.currentTrack, { playing: true })
+    }
+
     // — now playing —
     Item {
         id: nowPlaying
         anchors.left: parent.left
         anchors.leftMargin: Theme.space6
         anchors.verticalCenter: parent.verticalCenter
-        width: root.showMeta ? 320 : 120
+        width: root.showMeta ? 320 : 52
         height: 52
+
+        TapHandler {
+            acceptedButtons: Qt.RightButton
+            onTapped: root.openMenu()
+        }
 
         Row {
             anchors.fill: parent
@@ -49,8 +134,9 @@ Rectangle {
             Column {
                 visible: root.showMeta
                 anchors.verticalCenter: parent.verticalCenter
-                // artwork, then the heart and the download control beside the text
-                width: parent.width - 52 - 30 * 2 - Theme.space3 * 3
+                // artwork, then the heart, the download control and the dots
+                // beside the text
+                width: parent.width - 52 - 30 * 3 - Theme.space3 * 4
                 spacing: 1
 
                 HoverHandler { cursorShape: Qt.PointingHandCursor }
@@ -68,27 +154,46 @@ Rectangle {
                 // Doubles as the status line: while a source is resolving, or
                 // when the audio engine is missing entirely, that matters more
                 // than the artist and there is nowhere else it would be seen.
-                Text {
+                // Otherwise the artist, whose names open their pages; a click
+                // anywhere else on the line opens Now Playing, as before.
+                Item {
                     readonly property bool showStatus: !Player.engineAvailable || Player.resolving
                                                        || Player.statusError
 
                     width: parent.width
-                    text: showStatus
-                          ? Player.statusText
-                          : (Player.currentTrack.artist !== undefined
-                             ? Player.currentTrack.artist
-                               + (Player.currentTrack.album ? " — " + Player.currentTrack.album : "")
-                             : "")
-                    elide: Text.ElideRight
-                    font.family: Theme.fontFamily
-                    font.pixelSize: 12
-                    color: Player.engineAvailable && !Player.statusError ? Theme.neutral700
-                                                                        : Theme.accent
+                    height: statusLine.implicitHeight
+
+                    Text {
+                        id: statusLine
+                        visible: parent.showStatus
+                        width: parent.width
+                        text: Player.statusText
+                        elide: Text.ElideRight
+                        font.family: Theme.fontFamily
+                        font.pixelSize: 12
+                        color: Player.engineAvailable && !Player.statusError ? Theme.neutral700
+                                                                            : Theme.accent
+                    }
+
+                    ArtistLine {
+                        visible: !parent.showStatus
+                        width: parent.width
+                        artist: Player.currentTrack.artist !== undefined ? Player.currentTrack.artist : ""
+                        credits: Player.currentTrack.credits
+                        suffix: Player.currentTrack.album ? " — " + Player.currentTrack.album : ""
+                        font.family: Theme.fontFamily
+                        font.pixelSize: 12
+                        color: Theme.neutral700
+                    }
                 }
             }
 
             LikeButton {
                 visible: root.showMeta
+                // Nothing loaded, or a file with no video id: there is
+                // nothing a like could be kept against. Dimmed rather than
+                // hidden, so it is already in its place when a song arrives.
+                enabled: Player.currentSourceId.length > 0
                 anchors.verticalCenter: parent.verticalCenter
                 liked: Player.favourite
                 side: 30
@@ -111,6 +216,21 @@ Rectangle {
                 artist: Player.currentTrack.artist !== undefined ? Player.currentTrack.artist : ""
                 artwork: Player.currentTrack.artwork !== undefined ? Player.currentTrack.artwork : ""
                 durationMs: Player.duration
+                isVideo: Player.currentTrack.isVideo === true
+            }
+
+            // Dimmed with nothing loaded, like the heart, so it is in its
+            // place when a song arrives.
+            IconButton {
+                visible: root.showMeta
+                enabled: root.hasSong
+                opacity: enabled ? 1 : 0.4
+                anchors.verticalCenter: parent.verticalCenter
+                side: 30
+                iconName: "dots"
+                iconSize: 15
+                iconColor: Theme.neutral700
+                onClicked: root.openMenu()
             }
         }
     }
@@ -120,15 +240,14 @@ Rectangle {
         id: transport
         anchors.left: nowPlaying.right
         anchors.leftMargin: Theme.space6
-        anchors.right: rightControls.visible ? rightControls.left : parent.right
+        anchors.right: rightControls.left
         anchors.rightMargin: Theme.space6
         anchors.verticalCenter: parent.verticalCenter
-        height: 44
+        height: root.stacked ? buttons.height + Theme.space1 + timeline.height : buttons.height
 
         Row {
             id: buttons
-            anchors.left: parent.left
-            anchors.verticalCenter: parent.verticalCenter
+            x: root.stacked ? Math.round((parent.width - width) / 2) : 0
             spacing: Theme.space2
 
             IconButton {
@@ -183,49 +302,77 @@ Rectangle {
             }
         }
 
-        Text {
-            id: elapsed
-            anchors.left: buttons.right
-            anchors.leftMargin: Theme.space4
-            anchors.verticalCenter: parent.verticalCenter
-            text: Player.positionText
-            font.family: Theme.fontFamily
-            font.pixelSize: 12
-            color: Theme.neutral700
-        }
+        // The times and the progress line: beside the buttons, or under them
+        // across the whole width when beside would leave the line too short.
+        Item {
+            id: timeline
+            x: root.stacked ? 0 : buttons.width + Theme.space4
+            y: root.stacked ? buttons.height + Theme.space1 : Math.round((parent.height - height) / 2)
+            width: parent.width - x
+            height: elapsed.implicitHeight
 
-        ProgressSlider {
-            anchors.left: elapsed.right
-            anchors.right: total.left
-            anchors.leftMargin: Theme.space4
-            anchors.rightMargin: Theme.space4
-            anchors.verticalCenter: parent.verticalCenter
-            value: Player.progress
-            onMoved: function(v) { Player.seekFraction(v) }
-        }
+            Text {
+                id: elapsed
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                text: Player.positionText
+                font.family: Theme.fontFamily
+                font.pixelSize: 12
+                color: Theme.neutral700
+            }
 
-        Text {
-            id: total
-            anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
-            text: Player.durationText
-            font.family: Theme.fontFamily
-            font.pixelSize: 12
-            color: Theme.neutral700
+            ProgressSlider {
+                anchors.left: elapsed.right
+                anchors.right: total.left
+                anchors.leftMargin: Theme.space4
+                anchors.rightMargin: Theme.space4
+                anchors.verticalCenter: parent.verticalCenter
+                value: Player.progress
+                onMoved: function(v) { Player.seekFraction(v) }
+            }
+
+            Text {
+                id: total
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                text: Player.durationText
+                font.family: Theme.fontFamily
+                font.pixelSize: 12
+                color: Theme.neutral700
+            }
         }
     }
 
     // — output —
     Row {
         id: rightControls
-        visible: root.showVolume
         anchors.right: parent.right
         anchors.rightMargin: Theme.space6
         anchors.verticalCenter: parent.verticalCenter
         spacing: Theme.space2
 
+        // The picture, from anywhere: in Now Playing while that is open, and
+        // otherwise in the mini panel above this bar. Red while it is on, three
+        // dots while it loads, greyed for a song that has none, so it is
+        // there to be found before it is needed. Never folded away: nothing
+        // else turns the picture on while Now Playing is closed.
         IconButton {
-            iconName: "maximize-2"
+            readonly property bool waiting: Player.videoWanted && !Player.videoPlaying
+            enabled: Player.videoAvailable
+            opacity: enabled ? 1 : 0.4
+            iconName: waiting ? "dots" : "video"
+            iconColor: Player.videoWanted ? Theme.accent : Theme.neutral700
+            iconSize: 15
+            anchors.verticalCenter: parent.verticalCenter
+            onClicked: Player.videoWanted = !Player.videoWanted
+            ToolTip.visible: hovered
+            ToolTip.delay: 600
+            ToolTip.text: Player.videoWanted ? "Stop the video" : "Play the video"
+        }
+        IconButton {
+            // Open, it is the way back down: the same chevron as the close
+            // button beside the window buttons.
+            iconName: root.nowPlayingOpen ? "chevron-down" : "maximize-2"
             iconColor: root.nowPlayingOpen ? Theme.accent : Theme.neutral700
             iconSize: 15
             anchors.verticalCenter: parent.verticalCenter
@@ -242,29 +389,123 @@ Rectangle {
             onClicked: root.queueToggled()
             ToolTip.visible: hovered
             ToolTip.delay: 600
-            ToolTip.text: root.queueOpen ? "Hide queue" : "Queue"
+            ToolTip.text: root.nowPlayingOpen ? (root.queueOpen ? "Show lyrics" : "Up next")
+                                              : (root.queueOpen ? "Hide queue" : "Queue")
         }
         IconButton {
+            id: outputButton
+            visible: root.showVolume
             iconName: "monitor-speaker"
             iconColor: Theme.neutral700
             iconSize: 15
             anchors.verticalCenter: parent.verticalCenter
+            onClicked: root.openOutputs(outputButton)
+            ToolTip.visible: hovered && !outputMenu.visible
+            ToolTip.delay: 600
+            ToolTip.text: "Output: " + root.outputName
         }
 
-        Icon {
-            name: "volume-2"
-            width: 15
-            height: 15
-            color: Theme.neutral700
+        IconButton {
+            visible: root.showVolume
+            iconName: root.volumeIcon
+            iconColor: root.muted ? Theme.accent : Theme.neutral700
+            iconSize: 15
             anchors.verticalCenter: parent.verticalCenter
+            onClicked: root.toggleMute()
+            ToolTip.visible: hovered
+            ToolTip.delay: 600
+            ToolTip.text: root.muted ? "Unmute" : "Mute"
         }
 
         ProgressSlider {
+            visible: root.showVolume
             width: 90
             anchors.verticalCenter: parent.verticalCenter
             value: Player.volume
             fillColor: Theme.text
             onMoved: function(v) { Player.setVolume(v) }
+        }
+
+        // Too narrow for the slider: one button, and the slider and mute in a
+        // popup above it. Red while muted, so that still shows when folded.
+        // Grey while the popup is open, like any glyph the pointer has left:
+        // ink means the pointer is on it (DESIGN 2.6a), and the framed popup
+        // standing on it already shows what is open.
+        IconButton {
+            id: volumeButton
+            visible: !root.showVolume
+            iconName: root.volumeIcon
+            iconColor: root.muted ? Theme.accent : Theme.neutral700
+            iconSize: 15
+            anchors.verticalCenter: parent.verticalCenter
+            onClicked: volumePopup.visible ? volumePopup.close() : volumePopup.open()
+            onVisibleChanged: if (!visible) volumePopup.close()
+            ToolTip.visible: hovered && !volumePopup.visible
+            ToolTip.delay: 600
+            ToolTip.text: root.muted ? "Volume (muted)" : "Volume"
+
+            // It stands on the bar's top rule, as if pulled up out of the bar,
+            // and appears without motion: it answers a click, as a menu does.
+            Popup {
+                id: volumePopup
+                x: volumeButton.width - width
+                margins: Theme.space2
+                topPadding: Theme.space2
+                bottomPadding: Theme.space2
+                leftPadding: Theme.space2
+                rightPadding: Theme.space4
+                // A press on the button is its toggle, so it does not count as
+                // a press outside; the button closes it itself.
+                closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutsideParent
+                focus: true
+                onAboutToShow: y = -volumeButton.mapToItem(root, 0, 0).y - height + Theme.ruleWidth
+
+                background: Rectangle {
+                    color: Theme.bg
+                    border.width: Theme.ruleWidth
+                    border.color: Theme.text
+                }
+
+                contentItem: Row {
+                    spacing: Theme.space2
+
+                    // The output menu opens where this popup was, from the
+                    // button that is still on the bar: this one goes with
+                    // the popup it stands in.
+                    IconButton {
+                        anchors.verticalCenter: parent.verticalCenter
+                        iconName: "monitor-speaker"
+                        iconColor: Theme.neutral700
+                        iconSize: 15
+                        onClicked: {
+                            volumePopup.close()
+                            root.openOutputs(volumeButton)
+                        }
+                        ToolTip.visible: hovered
+                        ToolTip.delay: 600
+                        ToolTip.text: "Output: " + root.outputName
+                    }
+
+                    IconButton {
+                        anchors.verticalCenter: parent.verticalCenter
+                        iconName: root.volumeIcon
+                        iconColor: root.muted ? Theme.accent : Theme.neutral700
+                        iconSize: 15
+                        onClicked: root.toggleMute()
+                        ToolTip.visible: hovered
+                        ToolTip.delay: 600
+                        ToolTip.text: root.muted ? "Unmute" : "Mute"
+                    }
+
+                    ProgressSlider {
+                        width: 120
+                        anchors.verticalCenter: parent.verticalCenter
+                        value: Player.volume
+                        fillColor: Theme.text
+                        onMoved: function(v) { Player.setVolume(v) }
+                    }
+                }
+            }
         }
     }
 }

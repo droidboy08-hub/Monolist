@@ -1,6 +1,7 @@
 #include "windowchrome.h"
 
 #include <QCoreApplication>
+#include <QCursor>
 #include <QEvent>
 #include <QWindow>
 
@@ -12,6 +13,77 @@
 #  if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
 #    define MONOLIST_MAC_EXPANDED_TITLE_BAR 1
 #  endif
+#endif
+
+#if !defined(Q_OS_WIN) && !defined(Q_OS_MACOS)
+#include <QProcess>
+#include <QSettings>
+#include <QStandardPaths>
+
+namespace {
+
+// GTK's notation for where the window buttons go: "appmenu:minimize,maximize,
+// close" puts what is left of the colon at the left of the title bar and the
+// rest at the right. Everything below is turned into it.
+QString gtkLayout()
+{
+    QProcess gsettings;
+    gsettings.start(QStringLiteral("gsettings"),
+                    { QStringLiteral("get"), QStringLiteral("org.gnome.desktop.wm.preferences"),
+                      QStringLiteral("button-layout") });
+    // Not there at all (no GNOME), or not answering: the default, rather than
+    // a window that waits to open.
+    if (!gsettings.waitForFinished(500)) {
+        gsettings.kill();
+        gsettings.waitForFinished(100);
+        return {};
+    }
+    if (gsettings.exitStatus() != QProcess::NormalExit || gsettings.exitCode() != 0)
+        return {};
+    QString layout = QString::fromUtf8(gsettings.readAllStandardOutput()).trimmed();
+    if (layout.size() >= 2 && layout.startsWith(u'\'') && layout.endsWith(u'\''))
+        layout = layout.mid(1, layout.size() - 2);
+    return layout;
+}
+
+// KWin keeps its buttons as letters, one string per side: X close,
+// I minimise, A maximise, the rest (menu, pin, help) nothing drawn here.
+QString kdeLayout()
+{
+    const QString path = QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation)
+                         + QStringLiteral("/kwinrc");
+    QSettings kwin(path, QSettings::IniFormat);
+    kwin.beginGroup(QStringLiteral("org.kde.kdecoration2"));
+    const auto names = [](const QString &letters) {
+        QStringList out;
+        for (const QChar c : letters) {
+            if (c == u'X')
+                out << QStringLiteral("close");
+            else if (c == u'I')
+                out << QStringLiteral("minimize");
+            else if (c == u'A')
+                out << QStringLiteral("maximize");
+        }
+        return out.join(u',');
+    };
+    return names(kwin.value(QStringLiteral("ButtonsOnLeft"), QStringLiteral("MS")).toString())
+           + u':'
+           + names(kwin.value(QStringLiteral("ButtonsOnRight"), QStringLiteral("HIAX")).toString());
+}
+
+QStringList buttonsIn(const QString &side)
+{
+    QStringList out;
+    for (QString name : side.split(u',', Qt::SkipEmptyParts)) {
+        name = name.trimmed();
+        if ((name == QLatin1String("minimize") || name == QLatin1String("maximize")
+             || name == QLatin1String("close")) && !out.contains(name))
+            out << name;
+    }
+    return out;
+}
+
+} // namespace
 #endif
 
 #ifdef Q_OS_WIN
@@ -83,6 +155,76 @@ int WindowChrome::nativeButtonsInset() const
 #else
     return 0;
 #endif
+}
+
+bool WindowChrome::buttonsOnLeft() const
+{
+    readButtonLayout();
+    return m_buttonsOnLeft;
+}
+
+QStringList WindowChrome::windowButtons() const
+{
+    readButtonLayout();
+    return m_windowButtons;
+}
+
+bool WindowChrome::roundButtons() const
+{
+#if defined(Q_OS_WIN) || defined(Q_OS_MACOS)
+    return false;
+#else
+    return true;
+#endif
+}
+
+void WindowChrome::readButtonLayout() const
+{
+    if (m_layoutRead)
+        return;
+    m_layoutRead = true;
+
+    const QStringList all = { QStringLiteral("minimize"), QStringLiteral("maximize"),
+                              QStringLiteral("close") };
+    m_buttonsOnLeft = false;
+    m_windowButtons = all;
+
+#if defined(Q_OS_MACOS)
+    // The traffic lights, drawn by the system at the left.
+    m_buttonsOnLeft = true;
+    m_windowButtons.clear();
+#elif !defined(Q_OS_WIN)
+    const bool kde = qEnvironmentVariable("XDG_CURRENT_DESKTOP").contains(QLatin1String("KDE"),
+                                                                           Qt::CaseInsensitive);
+    const QString layout = kde ? kdeLayout() : gtkLayout();
+    const int colon = layout.indexOf(u':');
+    if (colon < 0)
+        return;                           // nothing read: the right, all three
+
+    const QStringList left = buttonsIn(layout.left(colon));
+    const QStringList right = buttonsIn(layout.mid(colon + 1));
+    if (left.isEmpty() && right.isEmpty())
+        return;                           // no buttons at all would leave no way to close
+
+    // The buttons go together, in the corner that has close: that is the
+    // corner people reach for. One the desktop put in the other corner joins
+    // them on the inner side.
+    m_buttonsOnLeft = left.contains(QLatin1String("close"))
+                      || (!right.contains(QLatin1String("close")) && right.isEmpty());
+    // Left to right, either way: on the left the other corner's come after
+    // the group, on the right before it.
+    m_windowButtons = left + right;
+    m_windowButtons.removeDuplicates();
+#endif
+}
+
+int WindowChrome::cursorShape() const
+{
+#if QT_CONFIG(cursor)
+    if (m_window)
+        return int(m_window->cursor().shape());
+#endif
+    return int(Qt::ArrowCursor);
 }
 
 void WindowChrome::attach(QWindow *window)
@@ -209,8 +351,10 @@ bool WindowChrome::nativeEventFilter(const QByteArray &eventType, void *message,
     case WM_NCHITTEST: {
         // The resize edges, now inside the window. Everything else is client
         // area: the title bar moves the window from QML (startSystemMove),
-        // which runs the native move loop, snapping included.
-        if (IsZoomed(msg->hwnd)) {
+        // which runs the native move loop, snapping included. A maximised or
+        // full-screen window has no edges to drag: in full screen the video
+        // runs to the screen's edge, and a resize cursor there would be a lie.
+        if (IsZoomed(msg->hwnd) || m_window->visibility() == QWindow::FullScreen) {
             *result = HTCLIENT;
             return true;
         }

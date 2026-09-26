@@ -59,8 +59,12 @@ private:
     void handleStderr();
     void handleLine(const QString &line);
     void handleFinished(int exitCode, QProcess::ExitStatus status);
+    // Ends yt-dlp and every process it started, and waits until they have gone.
+    void stopProcess();
 
     QProcess *m_process = nullptr;
+    // Windows: the job yt-dlp and its children run in (a HANDLE), or null.
+    void *m_job = nullptr;
     QByteArray m_stdout;
     QByteArray m_stderr;
     QByteArray m_stderrLine;
@@ -123,6 +127,11 @@ public:
 
     // Full metadata for one video, including a direct bestaudio URL.
     static YtDlpRequest *resolveAudio(const QString &videoIdOrUrl, QObject *parent);
+
+    // The muxed stream alone — itag 18, the sound with a small picture in one
+    // file, or failing that the best other stream that carries both — for a
+    // track whose sound-only streams the player would not play.
+    static YtDlpRequest *resolveMuxed(const QString &videoIdOrUrl, QObject *parent);
 
     // The picture as well as the sound, capped so a music video does not
     // arrive as 4K. One stream where YouTube still muxes both (up to 720p),

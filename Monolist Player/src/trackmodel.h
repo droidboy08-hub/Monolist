@@ -12,6 +12,7 @@ struct TrackItem {
     QString sourceId;    // upstream video id, when the track came from a search
     QString artwork;
     bool favourite = false;
+    bool isVideo = false;   // a music video, with a picture worth showing
 };
 
 class TrackModel : public QAbstractListModel
@@ -21,7 +22,7 @@ class TrackModel : public QAbstractListModel
 public:
     enum Roles { IdRole = Qt::UserRole + 1, TitleRole, ArtistRole, AlbumRole,
                  DurationRole, DurationTextRole, SourceRole, SourceIdRole,
-                 ArtworkRole, FavouriteRole };
+                 ArtworkRole, FavouriteRole, IsVideoRole };
 
     explicit TrackModel(QObject *parent = nullptr);
 

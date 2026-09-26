@@ -46,6 +46,8 @@ qt_add_executable(monolist
     src/main.cpp
     src/appdatabase.h              src/appdatabase.cpp
     src/library.h                  src/library.cpp
+    # What the song and queue menus change, and its test (--library-edit-test).
+    src/libraryeditselftest.h      src/libraryeditselftest.cpp
     src/playlistmodel.h            src/playlistmodel.cpp
     src/albummodel.h               src/albummodel.cpp
     src/trackmodel.h               src/trackmodel.cpp
@@ -54,6 +56,9 @@ qt_add_executable(monolist
     src/mediaextractor.h           src/mediaextractor.cpp
     src/innertube.h                src/innertube.cpp
     src/catalog.h                  src/catalog.cpp
+    # Which page an artist's name opens, and its test (--artist-links-test).
+    src/artistlinks.h              src/artistlinks.cpp
+    src/artistselftest.h           src/artistselftest.cpp
     src/lyrics.h                   src/lyrics.cpp
     src/windowchrome.h             src/windowchrome.cpp
     src/appinfo.h                  src/appinfo.cpp
@@ -69,13 +74,19 @@ qt_add_executable(monolist
     src/rec/suitable.h             src/rec/suitable.cpp
     src/rec/shelves.h              src/rec/shelves.cpp
     src/recommender.h              src/recommender.cpp
+    # Fetches those files from their own repository (Monolist-data), checked
+    # against its manifest, into the data folder.
+    src/recdata.h                  src/recdata.cpp
     # — backend merged in from the Melody player —
     ${MONOLIST_MPV_SOURCES}
     src/ytdlp.h                    src/ytdlp.cpp
     src/streamresolver.h           src/streamresolver.cpp
     src/downloadmanager.h          src/downloadmanager.cpp
     src/downloadmodels.h           src/downloadmodels.cpp
+    src/downloadselftest.h         src/downloadselftest.cpp
     src/artworkcache.h             src/artworkcache.cpp
+    # How scrolling behaves, measured (--scroll-test).
+    src/scrollselftest.h           src/scrollselftest.cpp
 )
 
 # The build's own identity: version, build number, commit, date. Regenerated
@@ -105,6 +116,62 @@ execute_process(COMMAND ${CMAKE_COMMAND}
     -DAPP_VERSION=${PROJECT_VERSION}
     -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/buildinfo.cmake)
 
+# — connections: Last.fm now, YouTube Music later —
+#
+# SecretStore keeps session keys and cookies out of the database, encrypted by
+# the system for the signed-in user: DPAPI on Windows (crypt32), the Keychain
+# on macOS once secretstore_mac.mm is added (it defines MONOLIST_HAVE_KEYCHAIN).
+# Anywhere else it reports that it is not available and stores nothing.
+target_sources(monolist PRIVATE
+    src/secretstore.h              src/secretstore.cpp
+    src/secretstore_win.cpp
+    src/lastfm.h                   src/lastfm.cpp
+    src/connectionselftest.h       src/connectionselftest.cpp
+    # Scrobbling: the heard-time rule, the queue and the sending, and their tests.
+    src/listentracker.h            src/listentracker.cpp
+    src/scrobbler.h                src/scrobbler.cpp
+    src/scrobbleselftest.h         src/scrobbleselftest.cpp)
+if(WIN32)
+    target_link_libraries(monolist PRIVATE crypt32)
+endif()
+
+# The Last.fm API account belongs to whoever builds the app and is never
+# committed. Set MONOLIST_LASTFM_API_KEY and MONOLIST_LASTFM_SHARED_SECRET in
+# the environment (or pass both with -D) and they are written to
+# generated/apicredentials.h in the build tree; without them the app builds all
+# the same and says it has no Last.fm key. Neither value is ever printed.
+set(MONOLIST_APICREDENTIALS "${CMAKE_CURRENT_BINARY_DIR}/generated/apicredentials.h")
+set(MONOLIST_APICREDENTIALS_SCRIPT
+    -DTEMPLATE=${CMAKE_CURRENT_SOURCE_DIR}/src/apicredentials.h.in
+    -DOUTPUT=${MONOLIST_APICREDENTIALS}
+    -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/apicredentials.cmake)
+if(DEFINED MONOLIST_LASTFM_API_KEY OR DEFINED MONOLIST_LASTFM_SHARED_SECRET)
+    # Given with -D: fixed at configure time, like any other cache value. The
+    # script still reads them from the environment, set here for it alone.
+    set(ENV{MONOLIST_LASTFM_API_KEY} "${MONOLIST_LASTFM_API_KEY}")
+    set(ENV{MONOLIST_LASTFM_SHARED_SECRET} "${MONOLIST_LASTFM_SHARED_SECRET}")
+    execute_process(COMMAND ${CMAKE_COMMAND} ${MONOLIST_APICREDENTIALS_SCRIPT})
+else()
+    # From the environment: written now, because lastfm.cpp needs the header
+    # before anything builds, and read again at every build.
+    execute_process(COMMAND ${CMAKE_COMMAND} ${MONOLIST_APICREDENTIALS_SCRIPT})
+    add_custom_target(monolist_apicredentials
+        BYPRODUCTS "${MONOLIST_APICREDENTIALS}"
+        COMMAND ${CMAKE_COMMAND} ${MONOLIST_APICREDENTIALS_SCRIPT}
+        COMMENT "Looking for a Last.fm API key"
+        VERBATIM)
+    add_dependencies(monolist monolist_apicredentials)
+endif()
+
+# YouTube Music sign-in: a session imported from the user's own browser
+# (cookies.txt, a Cookie header or a copied cURL command), kept in SecretStore,
+# checked with YouTube Music, and carried only by the calls that ask for it.
+# Plain Qt on every platform; its tests are --cookie-test and --ytm-session-test.
+target_sources(monolist PRIVATE
+    src/cookieimport.h             src/cookieimport.cpp
+    src/ytmsession.h               src/ytmsession.cpp
+    src/ytmselftest.h              src/ytmselftest.cpp)
+
 # components/ and views/ hold .qml files outside the module root. Qt 6.8+ wants
 # a qmldir in each so the directory imports in Main.qml and the views resolve
 # through the module rather than the old implicit-directory path. NEW makes Qt
@@ -114,6 +181,8 @@ if(QT_KNOWN_POLICY_QTP0004)
 endif()
 
 set_source_files_properties(Theme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
+set_source_files_properties(Nav.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
+set_source_files_properties(Menus.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 
 qt_add_qml_module(monolist
     URI Monolist
@@ -125,6 +194,8 @@ qt_add_qml_module(monolist
     QML_FILES
         Main.qml
         Theme.qml
+        Nav.qml
+        Menus.qml
         components/Icon.qml
         components/IconButton.qml
         components/LikeButton.qml
@@ -147,6 +218,8 @@ qt_add_qml_module(monolist
         components/TrackMenu.qml
         components/QueuePanel.qml
         components/CardShelf.qml
+        components/ShelfCard.qml
+        components/CardGrid.qml
         components/ActionButton.qml
         components/WindowButtons.qml
         components/WindowDragArea.qml
@@ -156,17 +229,32 @@ qt_add_qml_module(monolist
         components/MonoMenuItem.qml
         components/MonoMenuRule.qml
         components/PlaylistSubmenu.qml
+        components/ConfirmMenuItem.qml
+        components/CardMenu.qml
+        components/PlaylistMenu.qml
         components/MonoScrollBar.qml
+        components/ScrollPage.qml
+        components/SmoothWheel.qml
         components/LyricsPane.qml
         components/ToggleRow.qml
         components/DownloadOptions.qml
         components/ServiceRow.qml
         components/RecShelf.qml
+        components/RecRow.qml
+        components/RecDataPanel.qml
+        components/DataCredit.qml
+        components/PlateButton.qml
+        components/MiniVideo.qml
+        components/FullscreenVideo.qml
+        components/ArtistLine.qml
         views/HomeView.qml
         views/SearchView.qml
         views/LibraryView.qml
         views/DownloadsView.qml
         views/PageView.qml
+        views/ArtistView.qml
+        views/ShelfView.qml
+        views/RecsView.qml
         views/PlaylistView.qml
         views/NowPlayingView.qml
         views/SettingsView.qml

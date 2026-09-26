@@ -358,6 +358,15 @@ void Graph::buildNameIndex() const
         return;
     m_nameIndexBuilt = true;
     for (const QString &shard : installedCodes()) {
+        // Every shard, possibly over a network share, is the longest single
+        // step of a first build, so quitting is listened for here too (see
+        // Rec::stopRequested). Half an index would answer "not found" for
+        // good; a stopped one is dropped, to be built whole next time.
+        if (QThread::currentThread()->isInterruptionRequested()) {
+            m_nameIndex.clear();
+            m_nameIndexBuilt = false;
+            return;
+        }
         const QString connectionName = connection(shard);
         if (connectionName.isEmpty())
             continue;
@@ -418,6 +427,8 @@ GraphArtist Graph::findArtist(const QString &name, const QString &region) const
         return cached.value();
 
     buildNameIndex();
+    if (!m_nameIndexBuilt)
+        return {};                     // stopped part way: a miss, but not one to remember
     const QVector<NamedCopy> copies = m_nameIndex.value(wanted);
 
     // The listener's own country first, then every other country, and the

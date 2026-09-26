@@ -2,6 +2,8 @@
 #include "appdatabase.h"
 #include "innertube.h"
 
+#include <QClipboard>
+#include <QGuiApplication>
 #include <QLocale>
 #include <QRegularExpression>
 #include <QSqlError>
@@ -42,8 +44,8 @@ QString artworkOr(const QString &artwork, const QString &videoId)
     return QStringLiteral("https://i.ytimg.com/vi/%1/hqdefault.jpg").arg(videoId);
 }
 
-// Rows of video_id, title, artist, album, artwork, duration_ms and optionally
-// an entry id, as the song lists QML shows.
+// Rows of video_id, title, artist, album, artwork, duration_ms, is_video and
+// optionally an entry id, as the song lists QML shows.
 QList<SearchResultModel::Item> readSongs(QSqlQuery &query, bool withEntryId)
 {
     QList<SearchResultModel::Item> items;
@@ -55,8 +57,9 @@ QList<SearchResultModel::Item> readSongs(QSqlQuery &query, bool withEntryId)
         item.album = query.value(3).toString();
         item.artwork = artworkOr(query.value(4).toString(), item.sourceId);
         item.durationMs = query.value(5).toLongLong();
+        item.isVideo = query.value(6).toBool();
         if (withEntryId)
-            item.entryId = query.value(6).toInt();
+            item.entryId = query.value(7).toInt();
         items.append(item);
     }
     return items;
@@ -66,9 +69,10 @@ bool insertEntry(int playlistId, const QString &videoId, const QVariantMap &trac
 {
     QSqlQuery q(AppDatabase::connection());
     q.prepare(QStringLiteral(
-        "INSERT INTO playlist_tracks (playlist_id, position, video_id, title, artist, album, artwork, duration_ms)"
+        "INSERT INTO playlist_tracks (playlist_id, position, video_id, title, artist, album, artwork,"
+        " duration_ms, is_video)"
         " SELECT ?, (SELECT COALESCE(MAX(position) + 1, 0) FROM playlist_tracks WHERE playlist_id = ?),"
-        " ?, ?, ?, ?, ?, ?"));
+        " ?, ?, ?, ?, ?, ?, ?"));
     q.addBindValue(playlistId);
     q.addBindValue(playlistId);
     q.addBindValue(videoId);
@@ -77,6 +81,7 @@ bool insertEntry(int playlistId, const QString &videoId, const QVariantMap &trac
     q.addBindValue(AppDatabase::text(track.value(QStringLiteral("album")).toString()));
     q.addBindValue(AppDatabase::text(artworkOr(track.value(QStringLiteral("artwork")).toString(), videoId)));
     q.addBindValue(track.value(QStringLiteral("durationMs")).toLongLong());
+    q.addBindValue(track.value(QStringLiteral("isVideo")).toBool() ? 1 : 0);
     if (!q.exec()) {
         qWarning("Monolist: could not add to a playlist: %s", qPrintable(q.lastError().text()));
         return false;
@@ -104,6 +109,7 @@ void Library::load()
     reloadLiked();
     reloadSaved();
     reloadHistory();
+    reloadPlaylistSongs();
 }
 
 void Library::touch()
@@ -365,6 +371,7 @@ void Library::deletePlaylist(int playlistId)
     m_playlists.reload();
     if (playlistId == m_openPlaylistId)
         reloadOpenPlaylist();
+    reloadPlaylistSongs();
     Q_EMIT notice(QStringLiteral("Deleted “%1”").arg(name));
 }
 
@@ -400,6 +407,7 @@ bool Library::addToPlaylist(int playlistId, const QVariantMap &track)
     m_playlists.reload();
     if (playlistId == m_openPlaylistId)
         reloadOpenPlaylist();
+    reloadPlaylistSongs();
     Q_EMIT notice(QStringLiteral("Added to %1").arg(name));
     return true;
 }
@@ -439,6 +447,7 @@ int Library::addAllToPlaylist(int playlistId, const QVariantList &tracks)
         m_playlists.reload();
         if (playlistId == m_openPlaylistId)
             reloadOpenPlaylist();
+        reloadPlaylistSongs();
     }
     Q_EMIT notice(added == 0 ? QStringLiteral("Already in %1").arg(name)
                 : added == 1 ? QStringLiteral("Added to %1").arg(name)
@@ -458,7 +467,110 @@ void Library::removeFromPlaylist(int playlistId, int entryId)
     m_playlists.reload();
     if (playlistId == m_openPlaylistId)
         reloadOpenPlaylist();
+    reloadPlaylistSongs();
     Q_EMIT notice(QStringLiteral("Removed from %1").arg(playlistName(playlistId)));
+}
+
+// The playlist ends numbered 0, 1, 2… in its new order, rather than the one
+// row given a new number: positions written before could repeat (a playlist
+// filled in one go) or skip (a song taken out), and a move among repeats
+// would not hold once the list was read back ordered by position. Only the
+// rows whose number changes are written, though: once the numbers are dense,
+// those between `from` and `to` — two for a step up or down — where writing
+// every row made each step of a held Alt+Down cost the whole playlist.
+void Library::movePlaylistEntry(int playlistId, int entryId, int toIndex)
+{
+    QSqlDatabase db = AppDatabase::connection();
+    QSqlQuery read(db);
+    read.prepare(QStringLiteral(
+        "SELECT id, position FROM playlist_tracks WHERE playlist_id = ? ORDER BY position ASC, id ASC"));
+    read.addBindValue(playlistId);
+    if (!read.exec())
+        return;
+    // Each entry, with the position it has stored.
+    QList<std::pair<int, int>> entries;
+    int from = -1;
+    while (read.next()) {
+        const int id = read.value(0).toInt();
+        if (id == entryId)
+            from = int(entries.size());
+        entries.append({ id, read.value(1).toInt() });
+    }
+    if (from < 0)
+        return;
+    const int to = qBound(0, toIndex, int(entries.size()) - 1);
+    if (to == from)
+        return;
+    entries.move(from, to);
+
+    db.transaction();
+    QSqlQuery write(db);
+    write.prepare(QStringLiteral("UPDATE playlist_tracks SET position = ? WHERE id = ?"));
+    bool ok = true;
+    for (int position = 0; position < entries.size() && ok; ++position) {
+        if (entries.at(position).second == position)
+            continue;
+        write.addBindValue(position);
+        write.addBindValue(entries.at(position).first);
+        ok = write.exec();
+    }
+    if (!ok) {
+        qWarning("Monolist: could not reorder a playlist: %s", qPrintable(write.lastError().text()));
+        db.rollback();
+        return;
+    }
+    db.commit();
+    markUpdated(playlistId);
+
+    // The open list moves its one row, so a long playlist is not drawn again
+    // for every song dragged; were it out of step, it is read afresh. The
+    // mosaic on its card and in the sidebar is its first four covers, so the
+    // playlists are read again only when those have changed.
+    bool mosaicChanged = true;
+    if (playlistId == m_openPlaylistId) {
+        if (m_playlistTracks.get(from).value(QStringLiteral("entryId")).toInt() == entryId
+                && m_playlistTracks.rowCount() == entries.size()) {
+            m_playlistTracks.move(from, to);
+            const QStringList artworks = PlaylistModel::artworksFor(playlistId);
+            mosaicChanged = artworks != m_playlist.value(QStringLiteral("artworks")).toStringList();
+            if (mosaicChanged) {
+                m_playlist.insert(QStringLiteral("artworks"), artworks);
+                Q_EMIT playlistChanged();
+            }
+        } else {
+            reloadOpenPlaylist();
+        }
+    }
+    if (mosaicChanged)
+        m_playlists.reload();
+}
+
+QVariantList Library::playlistTracksFor(int playlistId) const
+{
+    QSqlQuery q(AppDatabase::connection());
+    q.prepare(QStringLiteral(
+        "SELECT video_id, title, artist, album, artwork, duration_ms, is_video, id FROM playlist_tracks"
+        " WHERE playlist_id = ? ORDER BY position ASC, id ASC"));
+    q.addBindValue(playlistId);
+    QVariantList list;
+    if (!q.exec())
+        return list;
+    const QList<SearchResultModel::Item> items = readSongs(q, /*withEntryId=*/true);
+    list.reserve(items.size());
+    for (const SearchResultModel::Item &item : items)
+        list.append(SearchResultModel::toMap(item));
+    return list;
+}
+
+void Library::reloadPlaylistSongs()
+{
+    m_playlistSongIds.clear();
+    QSqlQuery q(AppDatabase::connection());
+    if (q.exec(QStringLiteral("SELECT DISTINCT video_id FROM playlist_tracks WHERE video_id <> ''"))) {
+        while (q.next())
+            m_playlistSongIds.insert(q.value(0).toString());
+    }
+    touch();
 }
 
 void Library::openPlaylist(int playlistId)
@@ -474,7 +586,7 @@ void Library::reloadOpenPlaylist()
 
     QSqlQuery q(AppDatabase::connection());
     q.prepare(QStringLiteral(
-        "SELECT video_id, title, artist, album, artwork, duration_ms, id FROM playlist_tracks"
+        "SELECT video_id, title, artist, album, artwork, duration_ms, is_video, id FROM playlist_tracks"
         " WHERE playlist_id = ? ORDER BY position ASC, id ASC"));
     q.addBindValue(id);
     QList<SearchResultModel::Item> items;
@@ -519,7 +631,7 @@ void Library::reloadLiked()
 {
     QSqlQuery q(AppDatabase::connection());
     q.exec(QStringLiteral(
-        "SELECT source_id, title, artist, album, artwork, duration_ms FROM tracks"
+        "SELECT source_id, title, artist, album, artwork, duration_ms, is_video FROM tracks"
         " WHERE favourite = 1 AND source_id <> '' ORDER BY liked_at DESC, id DESC"));
     const QList<SearchResultModel::Item> items = readSongs(q, /*withEntryId=*/false);
     m_likedIds.clear();
@@ -539,9 +651,15 @@ bool Library::isLiked(const QString &videoId) const
 // downloaded and nothing else.
 void Library::setLiked(const QVariantMap &track, bool liked)
 {
+    if (storeLike(track, liked))
+        Q_EMIT notice(liked ? QStringLiteral("Added to Liked songs") : QStringLiteral("Removed from Liked songs"));
+}
+
+bool Library::storeLike(const QVariantMap &track, bool liked)
+{
     const QString videoId = trackVideoId(track);
     if (videoId.isEmpty() || liked == isLiked(videoId))
-        return;
+        return false;
 
     QSqlQuery find(AppDatabase::connection());
     find.prepare(QStringLiteral("SELECT COUNT(*) FROM tracks WHERE source_id = ?"));
@@ -564,23 +682,29 @@ void Library::setLiked(const QVariantMap &track, bool liked)
         }
     }
 
+    // Whether it is a music video: a row that already knows keeps knowing,
+    // whatever list the heart was pressed in.
+    const int isVideo = track.value(QStringLiteral("isVideo")).toBool() ? 1 : 0;
     QSqlQuery write(AppDatabase::connection());
     if (liked && inLibrary) {
         write.prepare(QStringLiteral(
-            "UPDATE tracks SET favourite = 1, liked_at = datetime('now') WHERE source_id = ?"));
+            "UPDATE tracks SET favourite = 1, liked_at = datetime('now'),"
+            " is_video = MAX(is_video, ?) WHERE source_id = ?"));
+        write.addBindValue(isVideo);
         write.addBindValue(videoId);
     } else if (liked) {
         write.prepare(QStringLiteral(
             "INSERT INTO tracks (position, title, artist, album, duration_ms, source_url, source_id,"
-            " artwork, favourite, liked_at)"
+            " artwork, favourite, liked_at, is_video)"
             " SELECT (SELECT COALESCE(MAX(position) + 1, 0) FROM tracks), ?, ?, ?, ?, '', ?, ?, 1,"
-            " datetime('now')"));
+            " datetime('now'), ?"));
         write.addBindValue(AppDatabase::text(track.value(QStringLiteral("title")).toString()));
         write.addBindValue(AppDatabase::text(track.value(QStringLiteral("artist")).toString()));
         write.addBindValue(AppDatabase::text(track.value(QStringLiteral("album")).toString()));
         write.addBindValue(track.value(QStringLiteral("durationMs")).toLongLong());
         write.addBindValue(videoId);
         write.addBindValue(AppDatabase::text(track.value(QStringLiteral("artwork")).toString()));
+        write.addBindValue(isVideo);
     } else {
         QSqlQuery drop(AppDatabase::connection());
         drop.prepare(QStringLiteral("DELETE FROM tracks WHERE source_id = ? AND source_url = ''"));
@@ -591,7 +715,7 @@ void Library::setLiked(const QVariantMap &track, bool liked)
     }
     if (!write.exec()) {
         qWarning("Monolist: could not save a like: %s", qPrintable(write.lastError().text()));
-        return;
+        return false;
     }
 
     // What the recommender learns from, recorded here because every heart in
@@ -614,7 +738,57 @@ void Library::setLiked(const QVariantMap &track, bool liked)
     reloadLiked();
     touch();
     Q_EMIT likesChanged();
-    Q_EMIT notice(liked ? QStringLiteral("Added to Liked songs") : QStringLiteral("Removed from Liked songs"));
+    return true;
+}
+
+bool Library::isInLibrary(const QString &videoId) const
+{
+    return !videoId.isEmpty() && (m_likedIds.contains(videoId) || m_playlistSongIds.contains(videoId));
+}
+
+// Every copy of the song the user keeps: the like, and each playlist's entry
+// for it, matched by video id. A downloaded file stays, and so does the
+// library row that plays it; deleting a file is Remove download's to do.
+void Library::removeFromLibrary(const QVariantMap &track)
+{
+    const QString videoId = trackVideoId(track);
+    if (!isInLibrary(videoId))
+        return;
+
+    storeLike(track, false);
+
+    QList<int> playlistIds;
+    QSqlQuery which(AppDatabase::connection());
+    which.prepare(QStringLiteral("SELECT DISTINCT playlist_id FROM playlist_tracks WHERE video_id = ?"));
+    which.addBindValue(videoId);
+    if (which.exec()) {
+        while (which.next())
+            playlistIds.append(which.value(0).toInt());
+    }
+    if (!playlistIds.isEmpty()) {
+        QSqlQuery drop(AppDatabase::connection());
+        drop.prepare(QStringLiteral("DELETE FROM playlist_tracks WHERE video_id = ?"));
+        drop.addBindValue(videoId);
+        if (!drop.exec())
+            qWarning("Monolist: could not remove from playlists: %s", qPrintable(drop.lastError().text()));
+        for (const int playlistId : std::as_const(playlistIds))
+            markUpdated(playlistId);
+        m_playlists.reload();
+        if (playlistIds.contains(m_openPlaylistId))
+            reloadOpenPlaylist();
+    }
+    reloadPlaylistSongs();
+    Q_EMIT notice(QStringLiteral("Removed from your library"));
+}
+
+void Library::copyLink(const QString &url)
+{
+    if (url.isEmpty())
+        return;
+    if (QClipboard *clipboard = QGuiApplication::clipboard()) {
+        clipboard->setText(url);
+        Q_EMIT notice(QStringLiteral("Link copied"));
+    }
 }
 
 // ------------------------------------------------------------ saved from YTM
@@ -660,6 +834,10 @@ void Library::setSaved(const QVariantMap &page, bool saved)
                 }
             }
         }
+        // A card from an artist's page or discography names nobody on its
+        // own line ("Album • 2019"): whose page it was on (Catalog's owner).
+        if (artist.isEmpty())
+            artist = page.value(QStringLiteral("owner")).toString();
         write.prepare(QStringLiteral(
             "INSERT INTO albums (position, title, artist, year, format, artwork, browse_id, saved_at)"
             " VALUES (0, ?, ?, ?, ?, ?, ?, datetime('now'))"));
@@ -689,7 +867,7 @@ void Library::reloadHistory()
 {
     QSqlQuery q(AppDatabase::connection());
     q.exec(QStringLiteral(
-        "SELECT video_id, title, artist, album, artwork, duration_ms FROM recent"
+        "SELECT video_id, title, artist, album, artwork, duration_ms, is_video FROM recent"
         " ORDER BY played_at DESC, rowid DESC LIMIT 200"));
     m_history.replace(readSongs(q, /*withEntryId=*/false));
 }
@@ -700,6 +878,28 @@ void Library::clearHistory()
     q.exec(QStringLiteral("DELETE FROM recent"));
     q.exec(QStringLiteral("DELETE FROM history"));
     reloadHistory();
-    Q_EMIT historyCleared();
+    Q_EMIT historyChanged();
     Q_EMIT notice(QStringLiteral("History cleared"));
+}
+
+// As Clear history does for everything, for one song: its row in Recently
+// played and the library's record of its plays. What the recommender learnt
+// from them is kept, as it is by Clear history.
+void Library::removeFromHistory(const QString &videoId)
+{
+    if (videoId.isEmpty())
+        return;
+    QSqlQuery recent(AppDatabase::connection());
+    recent.prepare(QStringLiteral("DELETE FROM recent WHERE video_id = ?"));
+    recent.addBindValue(videoId);
+    if (!recent.exec() || recent.numRowsAffected() == 0)
+        return;
+    QSqlQuery plays(AppDatabase::connection());
+    plays.prepare(QStringLiteral(
+        "DELETE FROM history WHERE track_id IN (SELECT id FROM tracks WHERE source_id = ?)"));
+    plays.addBindValue(videoId);
+    plays.exec();
+    reloadHistory();
+    Q_EMIT historyChanged();
+    Q_EMIT notice(QStringLiteral("Removed from your history"));
 }

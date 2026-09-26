@@ -25,6 +25,34 @@ constexpr int kRadioBatch = 25;
 // itself. Three is enough to step over a patch of unavailable songs and few
 // enough that a machine with no network gives up almost at once.
 constexpr int kMaxConsecutiveFailures = 3;
+// Previous restarts a song played for longer than this, and goes back to the
+// one before a song that has barely begun.
+constexpr qint64 kRestartAfterMs = 3000;
+
+// The player's own choices, kept in the settings table so a launch picks up
+// where the last one left off.
+const QString kVolumeKey = QStringLiteral("player.volume");
+const QString kShuffleKey = QStringLiteral("player.shuffle");
+const QString kRepeatKey = QStringLiteral("player.repeat");
+const QString kAutoplayKey = QStringLiteral("player.autoplay");
+const QString kAudioDeviceKey = QStringLiteral("player.audio_device");
+const QString kAudioDeviceNameKey = QStringLiteral("player.audio_device_name");
+const QString kAutoDevice = QStringLiteral("auto");
+// Long enough to outlast one drag of the slider.
+constexpr int kVolumeSaveDelayMs = 400;
+
+// Where a stream came from, as the status line and the log name it.
+QString tierLabel(int tier)
+{
+    switch (tier) {
+    case StreamResolver::TierInnerTube: return QStringLiteral("InnerTube");
+    case StreamResolver::TierYtDlp:     return QStringLiteral("yt-dlp");
+    case StreamResolver::TierMuxed:     return QStringLiteral("yt-dlp · muxed");
+    case StreamResolver::TierPiped:     return QStringLiteral("Piped");
+    case StreamResolver::TierInvidious: return QStringLiteral("Invidious");
+    default:                            return QStringLiteral("Stream");
+    }
+}
 
 QList<QueueTrack> tracksFromModel(QAbstractItemModel *model)
 {
@@ -60,7 +88,23 @@ PlaybackController::PlaybackController(MpvEngine *engine,
             if (ms == m_position)
                 return;
             m_position = ms;
+            // Heard time, for scrobbling: the tracker counts only the small
+            // forward steps of real playing. A seek from setPosition has
+            // already moved m_position, so the jump never arrives here as a
+            // step; nor does a picture's stream opening where the sound was.
+            m_listen.positionChanged(ms);
             Q_EMIT positionChanged();
+
+            // A song restarted with Previous is a listen again once it plays
+            // past the point where Previous would go back instead (see
+            // previous()). Only after mpv has reported the jump back: until
+            // then it may still say where the song was.
+            if (m_replay == Replay::Rewinding && ms <= kRestartAfterMs) {
+                m_replay = Replay::Replaying;
+            } else if (m_replay == Replay::Replaying && m_playing && ms > kRestartAfterMs) {
+                m_replay = Replay::None;
+                startListening();
+            }
         });
 
         connect(m_engine, &MpvEngine::durationChanged, this, &PlaybackController::setDuration);
@@ -73,6 +117,7 @@ PlaybackController::PlaybackController(MpvEngine *engine,
             if (buffering == m_buffering)
                 return;
             m_buffering = buffering;
+            m_listen.setBuffering(buffering);
             Q_EMIT bufferingChanged();
         });
 
@@ -89,44 +134,85 @@ PlaybackController::PlaybackController(MpvEngine *engine,
             // The picture would not open: keep the song, drop the picture.
             if (abandonVideo(QStringLiteral("This video would not play — back to audio")))
                 return;
+            // Whichever way this goes: the only place the player's own reason
+            // is written down.
+            if (m_streamTier >= 0) {
+                qWarning("playback: %s would not play from %s: %s", qPrintable(m_streamVideoId),
+                         qPrintable(tierLabel(m_streamTier)), qPrintable(reason));
+            }
             // A URL can resolve and still be refused when mpv opens it: a link
             // the CDN rejects now and then, or an instance serving an error
             // page. A remembered link that no longer opens is simply stale, so
-            // fetch a fresh one from the same tier; anything else goes to the
-            // next tier before giving up.
-            if (m_streamTier >= 0 && m_resolver && m_streamFromCache) {
-                const int sameTier = m_streamTier;
-                m_streamTier = -1;
-                m_resolver->invalidate(m_streamVideoId);
-                m_pendingVideoId = m_streamVideoId;
-                setStatus(QStringLiteral("Refreshing the source…"), QString(), true);
-                m_resolver->resolve(m_pendingVideoId, sameTier);
-                return;
-            }
-            if (m_streamTier >= 0 && m_resolver
-                && m_streamTier + 1 < StreamResolver::TierExhausted) {
-                const int nextTier = m_streamTier + 1;
-                m_streamTier = -1;
-                m_resolver->invalidate(m_streamVideoId);
-                m_pendingVideoId = m_streamVideoId;
-                setStatus(QStringLiteral("Trying another source…"), QString(), true);
-                m_resolver->resolve(m_pendingVideoId, nextTier);
-                return;
+            // a fresh one from the same tier comes first; after that, the
+            // tiers this track has not yet had refused, in the order the
+            // resolver gives for a refusal. After InnerTube's sound-only
+            // stream that is the track's muxed stream — itag 18, or the best
+            // other stream with the sound and a small picture in one file —
+            // fetched for this track alone, before anything else. Whichever
+            // it is, the song carries on from where it was: a stream refused
+            // part-way through does not start it again.
+            if (m_streamTier >= 0 && m_resolver) {
+                const int refused = std::exchange(m_streamTier, -1);
+                QList<int> tiers;
+                if (m_streamFromCache)
+                    tiers.append(refused);
+                else
+                    m_refusedTiers.insert(refused);
+                for (const int tier : StreamResolver::afterRefusal(refused)) {
+                    if (!m_refusedTiers.contains(tier) && !tiers.contains(tier))
+                        tiers.append(tier);
+                }
+                if (!tiers.isEmpty()) {
+                    m_resolver->invalidate(m_streamVideoId);
+                    m_pendingVideoId = m_streamVideoId;
+                    m_resumeAt = m_position;
+                    if (tiers.first() == StreamResolver::TierMuxed) {
+                        qInfo("playback: trying %s again as its muxed stream (itag 18), for this track alone",
+                              qPrintable(m_pendingVideoId));
+                    }
+                    setStatus(m_streamFromCache ? QStringLiteral("Refreshing the source…")
+                                                : QStringLiteral("Trying another source…"),
+                              QString(), true);
+                    m_resolver->resolveVia(m_pendingVideoId, tiers);
+                    return;
+                }
             }
             m_streamTier = -1;
-            setPlayingFlag(false);
+            haltPlayback();
             setStatus(QStringLiteral("Playback failed"), QString(), false, /*error=*/true);
-            Q_EMIT playbackError(reason);
+            // As for a failed resolve: a toast only for someone waiting to
+            // hear it.
+            if (m_autoPlayAfterResolve)
+                Q_EMIT playbackError(reason);
         });
 
         m_engine->setVolume(m_volume);
+
+        connect(m_engine, &MpvEngine::audioDevicesChanged, this, &PlaybackController::applyAudioDevice);
     }
+    applyAudioDevice();
+
+    connect(&m_listen, &ListenTracker::listenStarted, this, &PlaybackController::listenStarted);
+    connect(&m_listen, &ListenTracker::listenQualified, this, &PlaybackController::listenQualified);
+    connect(&m_listen, &ListenTracker::listenResumed, this, &PlaybackController::listenResumed);
+
+    m_volumeSave.setSingleShot(true);
+    m_volumeSave.setInterval(kVolumeSaveDelayMs);
+    connect(&m_volumeSave, &QTimer::timeout, this, &PlaybackController::saveVolume);
 
     // The last song of a session is the one nothing else closes, and it is the
     // most recent thing the listener chose — exactly the event a recommender
     // would miss most.
     if (QCoreApplication *app = QCoreApplication::instance()) {
-        connect(app, &QCoreApplication::aboutToQuit, this, [this]() { closePlayEvent(); });
+        connect(app, &QCoreApplication::aboutToQuit, this, [this]() {
+            closePlayEvent();
+            // A volume still settling as the app closes is written now
+            // rather than lost with the timer.
+            if (m_volumeSave.isActive()) {
+                m_volumeSave.stop();
+                saveVolume();
+            }
+        });
     }
 
     if (m_resolver) {
@@ -160,6 +246,10 @@ PlaybackController::PlaybackController(MpvEngine *engine,
                 for (const InnerTube::Track &song : found) {
                     if (song.videoId.isEmpty() || m_queue.containsVideo(song.videoId))
                         continue;   // the seed itself comes first, and no repeats
+                    // Turned down in Search, or by an artist turned down there:
+                    // "Not interested" holds for the radio too.
+                    if (m_radioUnwanted && m_radioUnwanted(song.videoId, song.title, song.artist))
+                        continue;
                     QueueTrack track;
                     track.videoId = song.videoId;
                     track.title = song.title;
@@ -167,19 +257,24 @@ PlaybackController::PlaybackController(MpvEngine *engine,
                     track.album = song.album;
                     track.artwork = song.artwork;
                     track.durationMs = song.durationMs;
+                    track.primaryArtist = song.primaryArtist;
+                    track.credits = InnerTube::creditsToVariant(song.credits);
+                    track.albumId = song.albumId;
+                    track.isVideo = song.isVideo;
                     track.fromRadio = true;
                     additions.append(track);
                     if (additions.size() >= kRadioBatch)
                         break;
                 }
                 m_queue.insert(m_queue.rowCount(), additions);
+                qInfo("autoplay: %d songs added after %s", int(additions.size()), qPrintable(seed));
 
                 if (m_waitingForRadio) {
                     m_waitingForRadio = false;
                     if (m_queue.upcomingCount() > 0) {
                         playIndex(m_queue.currentIndex() + 1);
                     } else {
-                        setPlayingFlag(false);
+                        haltPlayback();
                         setStatus(QStringLiteral("End of the queue"), QString(), false);
                     }
                 } else {
@@ -195,7 +290,7 @@ PlaybackController::PlaybackController(MpvEngine *engine,
                 qWarning("Monolist: autoplay has nothing to continue with: %s", qPrintable(reason));
                 if (m_waitingForRadio) {
                     m_waitingForRadio = false;
-                    setPlayingFlag(false);
+                    haltPlayback();
                     setStatus(QStringLiteral("End of the queue"), QString(), false);
                 }
             });
@@ -214,6 +309,143 @@ void PlaybackController::setLibrary(Library *library)
     if (m_library)
         connect(m_library, &Library::likesChanged, this, &PlaybackController::refreshFavourite);
     refreshFavourite();
+}
+
+// Straight into the members rather than through the setters: those write the
+// value back, and setShuffle would shuffle a queue that has not been loaded
+// yet. A value never saved, or one that does not read, keeps its default.
+void PlaybackController::restoreSettings()
+{
+    if (!m_library)
+        return;
+
+    bool ok = false;
+    const qreal volume = m_library->settingValue(kVolumeKey).toDouble(&ok);
+    if (ok) {
+        m_volume = qBound(0.0, volume, 1.0);
+        if (m_engine)
+            m_engine->setVolume(m_volume);
+        Q_EMIT volumeChanged();
+    }
+
+    const QString shuffle = m_library->settingValue(kShuffleKey);
+    if (!shuffle.isEmpty()) {
+        m_shuffle = shuffle == QLatin1String("1");
+        Q_EMIT shuffleChanged();
+    }
+
+    const int repeat = m_library->settingValue(kRepeatKey).toInt(&ok);
+    if (ok && repeat >= RepeatOff && repeat <= RepeatOne) {
+        m_repeatMode = repeat;
+        Q_EMIT repeatModeChanged();
+    }
+
+    const QString autoplay = m_library->settingValue(kAutoplayKey);
+    if (!autoplay.isEmpty()) {
+        m_autoplay = autoplay != QLatin1String("0");
+        Q_EMIT autoplayChanged();
+    }
+
+    // Used as soon as mpv has said which devices are there; until then, and
+    // for as long as the device is not among them, Auto plays.
+    const QString device = m_library->settingValue(kAudioDeviceKey);
+    if (!device.isEmpty()) {
+        m_audioChoice = device;
+        m_audioChoiceName = m_library->settingValue(kAudioDeviceNameKey);
+        if (!m_audioChoiceName.isEmpty())
+            m_deviceNames.insert(m_audioChoice, m_audioChoiceName);
+        applyAudioDevice();
+    }
+}
+
+void PlaybackController::saveSetting(const QString &key, const QString &value)
+{
+    if (m_library)
+        m_library->setSetting(key, value);
+}
+
+void PlaybackController::saveVolume()
+{
+    saveSetting(kVolumeKey, QString::number(m_volume, 'f', 3));
+}
+
+void PlaybackController::setAudioDevice(const QString &name)
+{
+    const QString chosen = name.isEmpty() ? kAutoDevice : name;
+    // What the system calls it, kept with the choice so the menu can still
+    // say which device it was once it has been unplugged.
+    const QString description = chosen == kAutoDevice ? QString() : m_deviceNames.value(chosen);
+    if (chosen != m_audioChoice || description != m_audioChoiceName) {
+        m_audioChoice = chosen;
+        m_audioChoiceName = description;
+        saveSetting(kAudioDeviceKey, chosen);
+        saveSetting(kAudioDeviceNameKey, description);
+    }
+    applyAudioDevice();
+}
+
+void PlaybackController::applyAudioDevice()
+{
+    const QVariantList found = m_engine ? m_engine->audioDevices() : QVariantList();
+    // mpv always lists "auto", so nothing at all means it has not looked yet,
+    // and a choice missing from nothing is not missing.
+    const bool known = !found.isEmpty();
+
+    QVariantList devices;
+    devices.append(QVariantMap{ { QStringLiteral("name"), kAutoDevice },
+                                { QStringLiteral("description"), QStringLiteral("Auto · system default") },
+                                { QStringLiteral("missing"), false } });
+
+    // mpv lists the devices of every sound driver it was built with, so on
+    // Windows the same speakers can come again through OpenAL or SDL. Only
+    // the first driver's are offered — mpv's own first choice, WASAPI on
+    // Windows and CoreAudio on a Mac, which is also what Auto plays through.
+    QString driver;
+    bool choiceHere = m_audioChoice == kAutoDevice;
+    for (const QVariant &value : found) {
+        const QVariantMap device = value.toMap();
+        const QString name = device.value(QStringLiteral("name")).toString();
+        const qsizetype slash = name.indexOf(QLatin1Char('/'));
+        if (name == kAutoDevice || slash <= 0)
+            continue;
+        if (driver.isEmpty())
+            driver = name.left(slash);
+        if (name.left(slash) != driver)
+            continue;
+        QString description = device.value(QStringLiteral("description")).toString();
+        if (description.isEmpty())
+            description = name.mid(slash + 1);
+        m_deviceNames.insert(name, description);
+        devices.append(QVariantMap{ { QStringLiteral("name"), name },
+                                    { QStringLiteral("description"), description },
+                                    { QStringLiteral("missing"), false } });
+        if (name == m_audioChoice)
+            choiceHere = true;
+    }
+    // Chosen before and unplugged since, or on another computer: still the
+    // choice, shown so the listener can see why Auto is playing instead.
+    if (known && !choiceHere) {
+        devices.append(QVariantMap{ { QStringLiteral("name"), m_audioChoice },
+                                    { QStringLiteral("description"),
+                                      m_audioChoiceName.isEmpty() ? m_audioChoice : m_audioChoiceName },
+                                    { QStringLiteral("missing"), true } });
+    }
+
+    const QString use = choiceHere ? m_audioChoice : kAutoDevice;
+    if (devices == m_audioDevices && use == m_audioDevice)
+        return;
+    if (known && !choiceHere) {
+        qInfo("audio: %s is not connected; Auto plays until it is",
+              qPrintable(m_audioChoiceName.isEmpty() ? m_audioChoice : m_audioChoiceName));
+    }
+    m_audioDevices = devices;
+    if (use != m_audioDevice) {
+        m_audioDevice = use;
+        if (m_engine)
+            m_engine->setAudioDevice(use);
+        qInfo("audio: playing through %s", qPrintable(use));
+    }
+    Q_EMIT audioDevicesChanged();
 }
 
 QString PlaybackController::currentSourceId() const
@@ -256,11 +488,28 @@ void PlaybackController::setPlayingFlag(bool playing)
     if (playing == m_playing)
         return;
     m_playing = playing;
+    m_listen.setPlaying(playing);
     Q_EMIT playingChanged();
+}
+
+// Stopped with nothing more on its way: a track that will not play, or a queue
+// that ran out. mpv is paused along with the flag. The flag follows mpv's pause
+// property, and a file that failed or ended leaves mpv idle but unpaused; were
+// only the flag cleared, the next load's "play" would change nothing in mpv,
+// no pause change would ever come back, and the bar would show Play over
+// music that Play/Pause could then not pause.
+void PlaybackController::haltPlayback()
+{
+    setPlayingFlag(false);
+    if (engineAvailable())
+        m_engine->setPaused(true);
 }
 
 void PlaybackController::setDuration(qint64 ms)
 {
+    // Told even when unchanged: a new listen starts from the track's listed
+    // length, and mpv's own may be the same number.
+    m_listen.setDuration(ms);
     if (ms == m_duration)
         return;
     m_duration = ms;
@@ -310,6 +559,7 @@ void PlaybackController::startQueue(QList<QueueTrack> tracks, int start, bool au
 
     if (tracks.isEmpty())
         return;
+    ++m_queueGeneration;
     start = qBound(0, start, int(tracks.size()) - 1);
 
     if (m_shuffle) {
@@ -346,6 +596,10 @@ bool PlaybackController::extendWithRadio()
         const QueueTrack *track = m_queue.at(row);
         if (track && !track->videoId.isEmpty()) {
             m_radioSeed = track->videoId;
+            // One line a request: the log is the only place that says where
+            // the radio took over, and from which song.
+            qInfo("autoplay: asking for songs like \"%s\" (%s), %d in the queue",
+                  qPrintable(track->title), qPrintable(m_radioSeed), int(m_queue.rowCount()));
             m_innerTube.radio(m_radioSeed);
             return true;
         }
@@ -397,7 +651,8 @@ void PlaybackController::playSource(const QString &videoId,
                                     qint64 durationMs,
                                     const QString &album,
                                     bool isVideo,
-                                    const QString &origin)
+                                    const QString &origin,
+                                    const QString &primaryArtist)
 {
     if (videoId.isEmpty())
         return;
@@ -406,6 +661,7 @@ void PlaybackController::playSource(const QString &videoId,
     track.videoId = videoId;
     track.title = title;
     track.artist = artist;
+    track.primaryArtist = primaryArtist;
     track.album = album;
     track.durationMs = durationMs;
     track.isVideo = isVideo;
@@ -413,9 +669,15 @@ void PlaybackController::playSource(const QString &videoId,
     startQueue({ track }, 0, /*autoPlay=*/true);
 }
 
+// Both of these are the listener's own choice, whatever the song was before:
+// a copy of something autoplay added (the player bar's menu on the song
+// playing, a queue row's) must not arrive marked as autoplay's, or it would
+// sit after the AUTOPLAY heading, be recorded as a radio play and go with the
+// next "Don't suggest".
 void PlaybackController::playNext(const QVariantMap &map)
 {
-    const QueueTrack track = QueueTrack::fromMap(map);
+    QueueTrack track = QueueTrack::fromMap(map);
+    track.fromRadio = false;
     if (track.videoId.isEmpty() && track.sourceUrl.isEmpty())
         return;
     if (m_queue.rowCount() == 0) {
@@ -428,7 +690,8 @@ void PlaybackController::playNext(const QVariantMap &map)
 
 void PlaybackController::addToQueue(const QVariantMap &map)
 {
-    const QueueTrack track = QueueTrack::fromMap(map);
+    QueueTrack track = QueueTrack::fromMap(map);
+    track.fromRadio = false;
     if (track.videoId.isEmpty() && track.sourceUrl.isEmpty())
         return;
     if (m_queue.rowCount() == 0) {
@@ -451,6 +714,34 @@ void PlaybackController::removeFromQueue(int index)
 {
     m_queue.removeAt(index);
     prefetchUpcoming();
+}
+
+// Only among what is still to come: what has played stays where it was, and
+// the song playing is not moved out from under itself. The next song may be
+// another one now, so it is the one fetched ahead.
+void PlaybackController::moveInQueue(int from, int to)
+{
+    const int first = m_queue.currentIndex() + 1;
+    if (from < first || to < first)
+        return;
+    if (m_queue.move(from, to))
+        prefetchUpcoming();
+}
+
+void PlaybackController::pruneRadio()
+{
+    if (!m_radioUnwanted)
+        return;
+    bool removed = false;
+    for (int row = m_queue.rowCount() - 1; row > m_queue.currentIndex(); --row) {
+        const QueueTrack *track = m_queue.at(row);
+        if (track && track->fromRadio && m_radioUnwanted(track->videoId, track->title, track->artist)) {
+            m_queue.removeAt(row);
+            removed = true;
+        }
+    }
+    if (removed)
+        prefetchUpcoming();
 }
 
 void PlaybackController::clearUpcoming()
@@ -499,13 +790,16 @@ void PlaybackController::recordHistory(const QVariantMap &track)
     // Every song played, in the library or not, for Home's "Recently played".
     if (videoId.isEmpty())
         return;
+    // A video stays one: replayed from somewhere that does not know it is
+    // (a download, a suggestion), it keeps the picture History offers.
     QSqlQuery recent(AppDatabase::connection());
     recent.prepare(QStringLiteral(
-        "INSERT INTO recent (video_id, title, artist, album, artwork, duration_ms)"
-        " VALUES (?, ?, ?, ?, ?, ?)"
+        "INSERT INTO recent (video_id, title, artist, album, artwork, duration_ms, is_video)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?)"
         " ON CONFLICT(video_id) DO UPDATE SET"
         "   title = excluded.title, artist = excluded.artist, album = excluded.album,"
         "   artwork = excluded.artwork, duration_ms = excluded.duration_ms,"
+        "   is_video = MAX(is_video, excluded.is_video),"
         "   played_at = datetime('now'), play_count = play_count + 1"));
     recent.addBindValue(videoId);
     recent.addBindValue(AppDatabase::text(track.value(QStringLiteral("title")).toString()));
@@ -513,11 +807,28 @@ void PlaybackController::recordHistory(const QVariantMap &track)
     recent.addBindValue(AppDatabase::text(track.value(QStringLiteral("album")).toString()));
     recent.addBindValue(AppDatabase::text(track.value(QStringLiteral("artwork")).toString()));
     recent.addBindValue(track.value(QStringLiteral("durationMs")).toLongLong());
+    recent.addBindValue(track.value(QStringLiteral("isVideo")).toBool() ? 1 : 0);
     if (!recent.exec())
         qWarning("Monolist: could not record a play: %s", qPrintable(recent.lastError().text()));
 }
 
 // ------------------------------------------------------------- play events
+
+// A listen begins when a track someone wants to hear has its sound on the way:
+// as it is loaded to play, for one started with Play, or at the first press of
+// Play for one that was only loaded; for one restarted with Previous, a few
+// seconds into hearing it again. Not when it is asked for — a track that
+// never resolves was never heard, and a play in History and a skip in the
+// taste profile would both be false. Either way it is written down once.
+void PlaybackController::startListening()
+{
+    if (!m_listenPending || m_currentTrack.isEmpty() || m_replay != Replay::None)
+        return;
+    m_listenPending = false;
+    recordHistory(m_currentTrack);
+    openPlayEvent(m_currentTrack);
+    Q_EMIT playRecorded();
+}
 
 void PlaybackController::openPlayEvent(const QVariantMap &track)
 {
@@ -527,12 +838,12 @@ void PlaybackController::openPlayEvent(const QVariantMap &track)
         return;                       // nothing a recommender could match on
 
     // Where this play came from, which the profile weights by. A track the
-    // radio added was not chosen by anyone, so it counts as the queue no
-    // matter which surface the queue began on — and the queue is the weakest
-    // signal there is short of a resume.
-    const int radioStart = m_queue.radioStartIndex();
-    const bool fromRadio = radioStart >= 0 && m_queue.currentIndex() >= radioStart;
-    const QString source = fromRadio ? QStringLiteral("queue") : m_source;
+    // radio added was not chosen by anyone, so it is "radio" no matter which
+    // surface the queue began on, and weighs as little as a queue running on.
+    // The row's own flag says so; QueueModel::radioStartIndex cannot, since
+    // it only looks ahead of the song playing, never at it.
+    const bool fromRadio = track.value(QStringLiteral("fromRadio")).toBool();
+    const QString source = fromRadio ? QStringLiteral("radio") : m_source;
 
     QSqlQuery event(AppDatabase::connection());
     event.prepare(QStringLiteral(
@@ -559,7 +870,7 @@ void PlaybackController::openPlayEvent(const QVariantMap &track)
 // Deliberately not "improved": a history imported from that player and one
 // recorded here have to mean the same thing, or a taste profile built from
 // both is built from two different measurements.
-void PlaybackController::closePlayEvent()
+void PlaybackController::closePlayEvent(bool restarting)
 {
     if (m_playEventId <= 0)
         return;
@@ -589,7 +900,10 @@ void PlaybackController::closePlayEvent()
         if (value > 0.0)
             label = 1.0;
     }
-    if (!m_playEventKey.isEmpty())
+    // A song restarted with Previous is not one returned to later in the
+    // sitting, which is what the upgrade above rewards: counted as one, a
+    // restart then skipped a few seconds in would read as a full listen.
+    if (!m_playEventKey.isEmpty() && !restarting)
         m_finalisedThisSession.insert(m_playEventKey);
 
     // The duration is written here, not when the event opened: a track picked
@@ -621,7 +935,15 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
         m_resolver->cancel(m_pendingVideoId);
     m_pendingVideoId.clear();
     m_streamTier = -1;
+    m_refusedTiers.clear();
     m_resumeAt = 0;
+
+    // The song being left stops now, not when the next one has resolved.
+    // Until then it would play on under the new title, and the engine passes
+    // on nothing more from it: not its clock, and not an ending that would
+    // skip the new track or an error that would be blamed on it.
+    if (engineAvailable())
+        m_engine->stop();
 
     // Every track starts as sound: the picture is asked for, never assumed.
     if (!m_videoPendingId.isEmpty() && m_resolver)
@@ -648,14 +970,20 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
 
     m_position = 0;
     m_autoPlayAfterResolve = autoPlay;
+    // A new listen for Last.fm, whether or not it will be heard: repeat-one
+    // arrives here too, and is a listen of its own. A song autoplay added was
+    // not chosen by anyone, which Last.fm is told. The queue row's own flag
+    // is read, not QueueModel::radioStartIndex, which only looks ahead of
+    // the current song.
+    m_listen.begin(m_currentTrack, !m_currentTrack.value(QStringLiteral("fromRadio")).toBool());
     setDuration(track.value(QStringLiteral("durationMs")).toLongLong());
 
-    // Before announcing the track, so anything that reloads history on the
-    // announcement already finds it there.
-    if (autoPlay) {
-        recordHistory(m_currentTrack);
-        openPlayEvent(m_currentTrack);
-    }
+    // Recorded below once there is something to play, and for a stream once
+    // it resolves (handleResolved). A track only loaded — the one a launch
+    // opens on, or one reached with Next while paused — is a listen once Play
+    // is pressed (see play()).
+    m_listenPending = true;
+    m_replay = Replay::None;
 
     Q_EMIT currentTrackChanged();
     Q_EMIT positionChanged();
@@ -671,20 +999,14 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
     const QString videoId = currentSourceId();
 
     // 1 — a downloaded copy, or any source that is already a local file.
-    QString localPath;
-    if (m_downloads && !videoId.isEmpty())
-        localPath = m_downloads->localPathFor(videoId);
-    if (localPath.isEmpty()) {
-        const QString source = track.value(QStringLiteral("sourceUrl")).toString();
-        if (!source.isEmpty() && QFileInfo::exists(source))
-            localPath = source;
-    }
-
+    const QString localPath = localCopyOf(track);
     if (!localPath.isEmpty()) {
         setStatus(QStringLiteral("Offline"), QStringLiteral("Local file"), false);
         m_engine->load(localPath, autoPlay);
-        if (autoPlay)
+        if (autoPlay) {
+            startListening();
             prefetchUpcoming();
+        }
         return;
     }
 
@@ -701,11 +1023,14 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
     if (!source.isEmpty()) {
         setStatus(QStringLiteral("Streaming"), QStringLiteral("Direct URL"), false);
         m_engine->load(source, autoPlay);
+        if (autoPlay)
+            startListening();
         return;
     }
 
     setStatus(QStringLiteral("No playable source"), QString(), false, /*error=*/true);
-    Q_EMIT playbackError(QStringLiteral("This track has no local file and no source id."));
+    if (autoPlay)
+        Q_EMIT playbackError(QStringLiteral("This track has no local file and no source id."));
 }
 
 void PlaybackController::handleResolved(const QString &videoId, const QString &url, int tier,
@@ -715,22 +1040,20 @@ void PlaybackController::handleResolved(const QString &videoId, const QString &u
         return;                       // a later track superseded this one
     m_pendingVideoId.clear();
 
-    QString label;
-    switch (tier) {
-    case StreamResolver::TierInnerTube: label = QStringLiteral("InnerTube"); break;
-    case StreamResolver::TierYtDlp:     label = QStringLiteral("yt-dlp");    break;
-    case StreamResolver::TierPiped:     label = QStringLiteral("Piped");     break;
-    case StreamResolver::TierInvidious: label = QStringLiteral("Invidious"); break;
-    default:                            label = QStringLiteral("Stream");    break;
-    }
-
-    setStatus(QStringLiteral("Streaming"), label, false);
+    setStatus(QStringLiteral("Streaming"), tierLabel(tier), false);
     m_consecutiveFailures = 0;
     m_streamVideoId = videoId;
     m_streamTier = tier;
     m_streamFromCache = fromCache;
+    // Someone is waiting to hear it, and now it can be heard: a listen. (Once
+    // only — a stream refreshed or re-resolved mid-song arrives here again.)
+    if (m_autoPlayAfterResolve)
+        startListening();
+    // A link some tiers only serve to the client that asked for it (the muxed
+    // stream's) comes with the headers to ask as.
     if (m_engine)
-        m_engine->load(url, m_autoPlayAfterResolve, QString(), m_resumeAt);
+        m_engine->load(url, m_autoPlayAfterResolve, QString(), m_resumeAt,
+                       m_resolver ? m_resolver->headersFor(videoId) : QVariantMap());
     m_resumeAt = 0;
     prefetchUpcoming();
 }
@@ -770,11 +1093,51 @@ void PlaybackController::handleResolveFailed(const QString &videoId, const QStri
         return;
     }
 
-    setPlayingFlag(false);
+    haltPlayback();
     setStatus(giveUp ? QStringLiteral("Nothing here will play")
                      : QStringLiteral("Source unavailable"),
               QString(), false, /*error=*/true);
-    Q_EMIT playbackError(reason);
+    // Out loud only to someone waiting for sound. A track nobody asked to
+    // play — the one a launch opens on, with the network down — says so on
+    // the status line alone, and Play tries it again.
+    if (wasGoingToPlay)
+        Q_EMIT playbackError(reason);
+}
+
+QString PlaybackController::localCopyOf(const QVariantMap &track) const
+{
+    const QString videoId = track.value(QStringLiteral("sourceId")).toString();
+    if (m_downloads && !videoId.isEmpty()) {
+        const QString downloaded = m_downloads->localPathFor(videoId);
+        if (!downloaded.isEmpty())
+            return downloaded;
+    }
+    const QString source = track.value(QStringLiteral("sourceUrl")).toString();
+    return !source.isEmpty() && QFileInfo::exists(source) ? source : QString();
+}
+
+// The picture has gone and the sound comes back, from the second it had
+// reached. A song kept on disk comes back from the file, as it began: the
+// picture was the only part of it that needed the network, and a stream in
+// its place would leave the rest of the song at the network's mercy.
+void PlaybackController::backToSound(bool keepPlaying, const QString &resolvingText)
+{
+    const QString localPath = localCopyOf(m_currentTrack);
+    if (!localPath.isEmpty()) {
+        m_pendingVideoId.clear();
+        setStatus(QStringLiteral("Offline"), QStringLiteral("Local file"), false);
+        if (m_engine)
+            m_engine->load(localPath, keepPlaying, QString(), m_position);
+        return;
+    }
+    const QString videoId = currentSourceId();
+    if (videoId.isEmpty() || !m_resolver)
+        return;
+    m_resumeAt = m_position;
+    m_autoPlayAfterResolve = keepPlaying;
+    m_pendingVideoId = videoId;
+    setStatus(resolvingText, QString(), true);
+    m_resolver->resolve(videoId);
 }
 
 // True when a video that never proved itself has just been dropped, and the
@@ -784,7 +1147,6 @@ bool PlaybackController::abandonVideo(const QString &reason)
     if (!m_videoPlaying || !m_videoUnproven)
         return false;
 
-    const QString videoId = currentSourceId();
     m_videoUnproven = false;
     m_videoWanted = false;
     m_videoPlaying = false;
@@ -793,13 +1155,7 @@ bool PlaybackController::abandonVideo(const QString &reason)
     Q_EMIT videoChanged();
     Q_EMIT notice(reason);
 
-    if (videoId.isEmpty() || !m_resolver)
-        return true;
-    m_resumeAt = m_position;
-    m_autoPlayAfterResolve = true;
-    m_pendingVideoId = videoId;
-    setStatus(QStringLiteral("Back to the sound…"), QString(), true);
-    m_resolver->resolve(videoId);
+    backToSound(/*keepPlaying=*/true, QStringLiteral("Back to the sound…"));
     return true;
 }
 
@@ -810,9 +1166,10 @@ void PlaybackController::handleEndOfFile()
     if (abandonVideo(QStringLiteral("This video would not play — back to audio")))
         return;
 
+    // The clock is left at the end for beginTrack to close the listen with, as
+    // for any song that ends: set back to 0 first, every repeat was written
+    // down as a skip. beginTrack puts it back to 0 itself.
     if (m_repeatMode == RepeatOne) {
-        m_position = 0;
-        Q_EMIT positionChanged();
         beginCurrent(/*autoPlay=*/true);
         return;
     }
@@ -830,11 +1187,26 @@ void PlaybackController::play()
             playIndex(qMax(0, m_queue.currentIndex()));
         return;
     }
+    // A track that would not load has nothing to unpause: try it again, now
+    // as one the listener is waiting for, which says so if it fails.
+    if (m_statusError) {
+        m_consecutiveFailures = 0;
+        beginCurrent(/*autoPlay=*/true);
+        return;
+    }
+    // Someone wants to hear this one now: if it is still resolving it starts
+    // when it arrives rather than landing paused, and is recorded then; if it
+    // was only loaded it counts as played from here.
+    m_autoPlayAfterResolve = true;
+    if (m_pendingVideoId.isEmpty())
+        startListening();
     m_engine->setPaused(false);
 }
 
 void PlaybackController::pause()
 {
+    // A track still resolving arrives paused, as asked.
+    m_autoPlayAfterResolve = false;
     if (engineAvailable())
         m_engine->setPaused(true);
 }
@@ -844,9 +1216,12 @@ void PlaybackController::togglePlay()
     m_playing ? pause() : play();
 }
 
+// A track still resolving counts as playing only if someone is waiting for its
+// sound: one reached with Next while paused is resolving too, and a second
+// Next on it must load the one after paused as well, not start it.
 void PlaybackController::next()
 {
-    advance(m_playing || m_resolving);
+    advance(m_playing || (m_resolving && m_autoPlayAfterResolve));
 }
 
 // `keepPlaying` is separate from m_playing because of one caller: a track that
@@ -884,12 +1259,27 @@ void PlaybackController::advance(bool keepPlaying)
 void PlaybackController::previous()
 {
     // Restart the current song first, the way every other player behaves.
-    if (m_position > 3000 || m_queue.currentIndex() <= 0) {
+    if (m_position > kRestartAfterMs || m_queue.currentIndex() <= 0) {
+        // The listen ends here, while the clock still says how much of it was
+        // heard. Left open, it was closed by whatever came next — and pressed
+        // twice, Previous goes back a song a second later, which recorded the
+        // song as heard for no time at all. Hearing it again is a listen of
+        // its own, but only once it is past this point again: until then
+        // Previous means "the song before", and the restart was on the way.
+        if (m_position > kRestartAfterMs) {
+            closePlayEvent(/*restarting=*/true);
+            m_listenPending = true;
+            m_replay = Replay::Rewinding;
+            // For Last.fm too: heard again from the start, it is a new
+            // listen, and counts again once enough of it has been heard.
+            m_listen.restart();
+        }
         setPosition(0);
         return;
     }
 
-    const bool wasPlaying = m_playing || m_resolving;
+    // As in next(): resolving is playing only for a track someone is waiting for.
+    const bool wasPlaying = m_playing || (m_resolving && m_autoPlayAfterResolve);
     const int target = m_queue.currentIndex() - 1;
     if (wasPlaying)
         playIndex(target);
@@ -902,6 +1292,7 @@ void PlaybackController::setPosition(qint64 ms)
     const qint64 clamped = m_duration > 0 ? qBound<qint64>(0, ms, m_duration)
                                           : qMax<qint64>(0, ms);
     m_position = clamped;
+    m_listen.seeked(clamped);
     if (engineAvailable())
         m_engine->seekAbsolute(clamped);
     Q_EMIT positionChanged();
@@ -921,6 +1312,7 @@ void PlaybackController::setVolume(qreal volume)
     if (m_engine)
         m_engine->setVolume(clamped);
     Q_EMIT volumeChanged();
+    m_volumeSave.start();
 }
 
 void PlaybackController::setShuffle(bool shuffle)
@@ -928,6 +1320,7 @@ void PlaybackController::setShuffle(bool shuffle)
     if (shuffle == m_shuffle)
         return;
     m_shuffle = shuffle;
+    saveSetting(kShuffleKey, shuffle ? QStringLiteral("1") : QStringLiteral("0"));
     if (shuffle)
         m_queue.shuffleUpcoming();
     else
@@ -939,6 +1332,7 @@ void PlaybackController::setShuffle(bool shuffle)
 void PlaybackController::cycleRepeat()
 {
     m_repeatMode = (m_repeatMode + 1) % 3;
+    saveSetting(kRepeatKey, QString::number(m_repeatMode));
     Q_EMIT repeatModeChanged();
 }
 
@@ -1000,11 +1394,7 @@ void PlaybackController::playWithVideo(bool video)
     if (!wasShowing)
         return;   // nothing was loaded with a picture; the sound plays on
     // Straight back to the sound, from the same second.
-    m_resumeAt = m_position;
-    m_autoPlayAfterResolve = m_playing || m_resolving;
-    m_pendingVideoId = videoId;
-    setStatus(QStringLiteral("Resolving source…"), QString(), true);
-    m_resolver->resolve(videoId);
+    backToSound(m_playing || m_resolving, QStringLiteral("Resolving source…"));
 }
 
 void PlaybackController::handleVideoResolved(const QString &videoId, const QString &videoUrl,
@@ -1032,6 +1422,7 @@ void PlaybackController::setAutoplay(bool autoplay)
     if (autoplay == m_autoplay)
         return;
     m_autoplay = autoplay;
+    saveSetting(kAutoplayKey, autoplay ? QStringLiteral("1") : QStringLiteral("0"));
     if (!autoplay) {
         m_innerTube.cancelRadio();
         m_radioSeed.clear();

@@ -18,6 +18,11 @@ struct QueueTrack {
     int trackId = 0;          // the library row; 0 when not in the library
     bool fromRadio = false;   // added by autoplay rather than chosen
     bool isVideo = false;     // has a picture worth showing
+    QString primaryArtist;    // the first credit alone, for Last.fm; may be empty
+    // The artist line with each name's page, and the album's page, where the
+    // list it came from knew them (SearchResultModel's credits and albumId).
+    QVariantList credits;
+    QString albumId;
     quint64 uid = 0;          // identity within the queue, stamped by QueueModel
 
     static QueueTrack fromMap(const QVariantMap &map);
@@ -43,7 +48,8 @@ class QueueModel : public QAbstractListModel
     Q_PROPERTY(int radioStartIndex READ radioStartIndex NOTIFY upcomingChanged)
 public:
     enum Roles { VideoIdRole = Qt::UserRole + 1, TitleRole, ArtistRole, AlbumRole, ArtworkRole,
-                 DurationRole, DurationTextRole, FromRadioRole, IsCurrentRole, IsPastRole };
+                 DurationRole, DurationTextRole, FromRadioRole, IsCurrentRole, IsPastRole,
+                 CreditsRole };
 
     explicit QueueModel(QObject *parent = nullptr);
 
@@ -62,6 +68,8 @@ public:
     void replace(QList<QueueTrack> tracks, int current);
     void insert(int row, QList<QueueTrack> tracks);
     void removeAt(int row);           // not the current row
+    // One row to `to`, where it then stands. False when nothing moved.
+    bool move(int from, int to);
     void clearUpcoming();
     void shuffleUpcoming();
     void restoreOrder();

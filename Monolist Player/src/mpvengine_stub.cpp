@@ -23,8 +23,8 @@ MpvEngine::MpvEngine(QObject *parent)
 
 MpvEngine::~MpvEngine() = default;
 
-void MpvEngine::load(const QString &urlOrPath, bool startPlaying, const QString &audioUrl,
-                     qint64 startAt, const QVariantMap &headers)
+void MpvEngine::load(const QString &urlOrPath, bool startPlaying, const QString &audioUrl, qint64 startAt,
+                     const QVariantMap &headers)
 {
     Q_UNUSED(urlOrPath)
     Q_UNUSED(startPlaying)
@@ -32,6 +32,18 @@ void MpvEngine::load(const QString &urlOrPath, bool startPlaying, const QString 
     Q_UNUSED(startAt)
     Q_UNUSED(headers)
     Q_EMIT loadFailed(m_lastError);
+}
+
+// Nothing plays, so there is never a picture: the switch is remembered and
+// changes nothing.
+void MpvEngine::setVideoEnabled(bool enabled)
+{
+    m_video = enabled;
+}
+
+void MpvEngine::setVideoWatched(bool watched)
+{
+    m_watched = watched;
 }
 
 void MpvEngine::stop() {}
@@ -61,11 +73,10 @@ void MpvEngine::setReplayGainEnabled(bool enabled)
     Q_UNUSED(enabled)
 }
 
-// Remembered, so the controller reads back what it asked for; there is still
-// no picture, and videoSize() stays empty, so no surface ever shows one.
-void MpvEngine::setVideoEnabled(bool enabled)
+// No devices are ever listed, so the output menu offers Auto alone.
+void MpvEngine::setAudioDevice(const QString &name)
 {
-    m_video = enabled;
+    Q_UNUSED(name)
 }
 
 // Never invoked — nothing installs a wakeup callback in this build — but moc

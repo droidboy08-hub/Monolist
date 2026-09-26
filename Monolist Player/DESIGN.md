@@ -34,6 +34,12 @@ pointer.
 type on every screen. Desaturating it makes colour mean "this is the subject" —
 which is also why the pointer bringing a card to colour reads as "this one".
 
+An artist's page keeps its portrait black and white. The page is about a
+person and a shelf of records, not about one photograph, and a coloured
+portrait above a row of grey covers would claim that the picture, rather than
+the music, is the subject. The records on it come to colour under the pointer,
+as cards do everywhere.
+
 **The window belongs to the system; everything inside belongs to the design.**
 The app draws its own title bar, but keeps Windows' corner radius, snapping,
 shadow, window menu and resize edges.
@@ -58,7 +64,7 @@ a slow machine.
 | Token | Time | For |
 | :--- | :--- | :--- |
 | `Theme.instant` | 0 ms | A pointer's own feedback: hover tints, pressed states |
-| `Theme.quick` | 120 ms | A colour or opacity changing in place: a like, a selected chip, a row leaving hover |
+| `Theme.quick` | 120 ms | A colour or opacity changing in place: a like, a selected chip, a row leaving hover; and a page gliding the length of a turn of the wheel |
 | `Theme.normal` | 220 ms | Something appearing or disappearing where it already is: a toast, a control fading in |
 | `Theme.page` | 320 ms | Something arriving from elsewhere: Now Playing, the queue panel |
 | `Theme.slow` | 520 ms | Long distances and atmosphere: the lyrics scrolling, the poster's colour field |
@@ -69,6 +75,16 @@ the eye can follow a movement without waiting for it; that is the working range
 for anything entering or leaving. Past 400ms the user is waiting, so it is
 reserved for a long scroll (where the distance justifies the time) and for the
 colour field (which nobody is waiting on).
+
+*The wheel.* A notch of the wheel moves a page as far as a browser on the same
+system would (the system's lines per notch, at 100/3 px a line), easing there
+over `quick`, and notches that come while it moves add to where it is going; a
+touchpad's fine steps and a trackpad's pixels are followed as they come
+(`SmoothWheel`). The page is the pointer's own feedback here, so it gets the
+shortest duration that still shows it travelled rather than jumped. Qt's own
+wheel handling made each event a new fling with a speed floor, so a quick spin
+went less far per notch than a slow one and a touchpad swipe was held to about
+600 px a second, which read as slow.
 
 ### 2.2 Easing
 
@@ -196,24 +212,86 @@ that gets blamed for the app being slow.
   tucks back behind it when closed — the bar is drawn on top throughout. Sliding
   *over* the bar and off the bottom would read as a page leaving, which is the
   wrong story: nothing left, the player is simply small again.
+* **Now Playing closes beside the window buttons, on whichever side they are.**
+  A **⌄ CLOSE** plate, with its key (Esc) printed on it, sits next to minimise:
+  on Windows at the right, the full height of the bar like the caption buttons
+  it joins; on Linux wherever the desktop's own button layout puts close
+  (GNOME's `button-layout`, KDE's `kwinrc`), left or right; on macOS after the
+  traffic lights. The player bar's Now Playing button turns to the same
+  chevron, in red, while the view is open.
+  *Why.* The close used to be a small chevron at the top left while Windows
+  keeps its buttons at the top right, so putting the player away meant
+  crossing the whole window. The corner with the window buttons is where the
+  hand already goes to deal with the window. It is a plate with a word, split
+  off by a rule, so it is not mistaken for one of the window's own buttons —
+  the red X is one button further on.
+* **The picture switch is COVER | VIDEO, above the picture it changes.** In the
+  strip at the poster's right edge, printed in the poster's ink. Both sides are
+  always there, so it never moves: a song without a video dims VIDEO and says
+  why under the pointer, and while a video loads VIDEO is already chosen and
+  shows dots, with the cover up until the first frame. `V` does the same. A
+  video takes the poster's full width, where a cover keeps its square.
+  *Why.* The old switch was a bare 40px glyph on the cover's corner; a glyph
+  that changes between "video" and "image" reads as a status, not a choice.
+  Two labelled sides say what there is to choose and which one is on.
+* **Window buttons follow the desktop.** Square caption buttons the height of
+  the bar on Windows; round ones, centred, on Linux, in the order and on the
+  side the desktop lists them. With them on the left, the sidebar's brand holds
+  them ahead of the name, or the top bar when the sidebar is folded away.
 * **The stack, bottom to top:** the page, the queue panel, Now Playing, the
   player bar, the narrow-window sidebar with its dimmed page, then the toast.
   *Why.* Each layer covers the one below only for as long as it is being used,
   and the two that are always true — the player bar, and the app's answer to
   what you just did — are never covered.
-* **The video plays where the cover is, and the switch sits on it.**
+* **The video plays where the cover is, and the switch is right above it.**
   *Why.* The video is the same song moving: it belongs in the place the still
   occupies, not in a panel of its own, and the control that swaps them belongs
-  on the thing it swaps. The plate keeps its width and loses height for a 16:9
-  picture rather than showing it in black bars — bars would be the only black
-  in a paper interface. Its bottom edge stays put, so the title below it does
-  not move. The cover stays up until the first frame arrives, so the panel is
-  never a black box, and the switch shows three dots while the picture is being
-  fetched. Songs with no video (YouTube Music's own audio tracks are a still
-  image) show the switch greyed rather than hidden, so the feature is findable.
+  next to the thing it swaps (COVER | VIDEO, in the strip; see above). The
+  picture takes the poster's width at its own 16:9 shape rather than sitting
+  in black bars — bars would be the only black in a paper interface. Its
+  bottom edge stays put, so the title below it does not move. The cover stays
+  up until the first frame arrives, so the panel is never a black box, and the
+  switch shows three dots while the picture is being fetched. Songs with no
+  video (YouTube Music's own audio tracks are a still image) show the switch
+  greyed rather than hidden, so the feature is findable. What stays on the
+  picture is full screen, once it plays: that one acts on the picture itself.
 * **Video is never fetched until it is asked for.**
   *Why.* It costs many times the bandwidth of audio and most listening does not
   want it. Asking is one click, and the song carries on from the same second.
+* **The picture is always in exactly one place: full screen, Now Playing, or a
+  small panel above the player bar.** Closing Now Playing moves it to the
+  panel, at the right, framed by a 2px ink rule; a click on the panel opens Now
+  Playing, and its close button turns the picture off while the song plays on
+  as sound. The player bar has the same switch, so the picture can be asked for
+  from anywhere. In a narrow window the switch ends the song's line and the
+  picture plays under it, full width and no taller than half the page.
+  *Why.* A picture nobody can see should not be decoded, and one that vanished
+  whenever Now Playing closed would make the switch mean "only in Now
+  Playing". So there is no hidden state: wherever the video is on, it is on
+  screen, and when nothing can show it (a minimised window) mpv stops decoding
+  it until something can.
+* **Full screen is ink.** F, or a double-click on the picture, fills the screen;
+  the strip along the top and the player bar fade once the pointer has been
+  still a moment and come back when it moves. Esc leaves.
+  *Why.* It is the one place the page is not paper. A moving picture on paper
+  reads as a photograph pasted on, and the margins beside it as bars; on ink
+  the margins are the frame, and the picture is the page.
+* **A card that opens a page can also be played where it stands.** Under the
+  pointer an album's or a playlist's cover takes a play plate in its corner;
+  the card still opens the page, the plate plays it. A song's card has no
+  plate, because pressing the card already plays it.
+  *Why.* "Play this album" is the commonest wish on a shelf, and opening the
+  page to press Play is a page load and a second click for it. The mark sits
+  on the picture, so it is a plate (paper square, ink glyph) rather than a
+  bare glyph, for the reason full screen on the video is (2.6a is about glyphs on
+  paper); and it is there only under the pointer, so a shelf at rest is still
+  covers and titles.
+* **A shelf says what it offers as a whole in its header**, as a section
+  does: SHOW ALL where YouTube Music has a page of everything the shelf shows
+  a few of, PLAY ALL where the shelf is songs. The same small tracked link,
+  at the header's end, beside the paging arrows.
+  *Why.* One place and one look for "this whole list", so it is found where
+  it was found last time, and it never competes with the page's own red Play.
 * **Lyrics sit at the right, the cover at the left.**
   *Why.* Lyrics are read left-to-right and change constantly; they need the side
   that is not interrupted by the cover's colour field, and they need to start at
@@ -231,6 +309,15 @@ that gets blamed for the app being slow.
 * A 2px rule separates regions; a 1px hairline separates rows within a region.
   *Why.* Two weights are enough to say "different thing" and "same thing, next
   one", and the difference is visible at a glance without colour.
+* Names are links without looking like links. An artist's name, anywhere it is
+  printed, opens that artist's page, and an album's title in a track table its
+  album; at rest they are the same type as the line around them, and the one
+  under the pointer takes a 1px rule in its own colour, arriving at once and
+  fading over `quick`. In a joint credit each name is its own link.
+  *Why.* Nearly every row carries a name, so a page of coloured or underlined
+  names would be a page of links rather than a list of songs, and the red would
+  stop meaning "here". A rule under a word is how print marks a reference; it
+  appears only where the pointer asks the question.
 
 ## 5. Copy
 
