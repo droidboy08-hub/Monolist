@@ -39,7 +39,11 @@ Column {
             durationMs: row.durationMs,
             // Carried into a like, a playlist and the queue, so a music video
             // keeps its picture wherever it is played from next.
-            isVideo: row.isVideo
+            isVideo: row.isVideo,
+            // And into the queue and the menu, so the names still open
+            // their pages from the player bar and "Go to artist".
+            credits: row.credits,
+            albumId: row.albumId
         }
     }
 
@@ -133,6 +137,10 @@ Column {
             required property real durationMs
             required property int entryId
             required property bool isVideo
+            // The artist line with each name's page, and the album's page,
+            // where the list kept them (see ArtistLine).
+            required property var credits
+            required property string albumId
 
             width: root.width
             height: 40
@@ -175,26 +183,30 @@ Column {
                 color: row.isActive ? Theme.accent700 : Theme.text
             }
 
-            Text {
+            // Each name opens its artist's page; a click anywhere else in
+            // the row still plays it.
+            ArtistLine {
                 visible: root.showArtist
                 x: root.indexWidth + root.titleColumnWidth
                 width: Math.max(0, root.artistColumnWidth - Theme.space4)
                 anchors.verticalCenter: parent.verticalCenter
-                text: row.artist
-                elide: Text.ElideRight
+                artist: row.artist
+                credits: row.credits
                 font.family: Theme.fontFamily
                 font.pixelSize: 14
                 font.weight: row.isActive ? Font.Bold : Theme.weightRegular
                 color: row.isActive ? Theme.accent700 : Theme.text
             }
 
-            Text {
+            // And the album its page, where the list knows which it is.
+            ArtistLine {
                 visible: root.showAlbum
                 x: root.indexWidth + root.titleColumnWidth + root.artistColumnWidth
                 width: Math.max(0, root.albumColumnWidth - Theme.space4)
                 anchors.verticalCenter: parent.verticalCenter
-                text: row.album
-                elide: Text.ElideRight
+                artist: row.album
+                opens: "page"
+                pageId: row.albumId
                 font.family: Theme.fontFamily
                 font.pixelSize: 14
                 color: Theme.neutral700
@@ -231,11 +243,13 @@ Column {
                 isVideo: row.isVideo
             }
 
+            // Blank rather than "0:00" where the list gave no length, as an
+            // artist's top songs do not.
             Text {
                 anchors.right: parent.right
                 anchors.rightMargin: root.moreWidth
                 anchors.verticalCenter: parent.verticalCenter
-                text: row.durationText
+                text: row.durationMs > 0 ? row.durationText : ""
                 font.family: Theme.fontFamily
                 font.pixelSize: 14
                 color: row.isActive ? Theme.accent700 : Theme.text

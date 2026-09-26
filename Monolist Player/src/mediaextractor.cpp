@@ -34,8 +34,26 @@ QVariant SearchResultModel::data(const QModelIndex &index, int role) const
     case EntryIdRole:      return item.entryId;
     case IsVideoRole:      return item.isVideo;
     case PrimaryArtistRole: return item.primaryArtist;
+    case CreditsRole:      return item.credits;
+    case AlbumIdRole:      return item.albumId;
     default:               return {};
     }
+}
+
+SearchResultModel::Item SearchResultModel::fromTrack(const InnerTube::Track &track)
+{
+    Item item;
+    item.sourceId = track.videoId;
+    item.title = track.title;
+    item.artist = track.artist;
+    item.album = track.album;
+    item.artwork = track.artwork;
+    item.durationMs = track.durationMs;
+    item.isVideo = track.isVideo;
+    item.primaryArtist = track.primaryArtist;
+    item.credits = InnerTube::creditsToVariant(track.credits);
+    item.albumId = track.albumId;
+    return item;
 }
 
 QHash<int, QByteArray> SearchResultModel::roleNames() const
@@ -50,7 +68,9 @@ QHash<int, QByteArray> SearchResultModel::roleNames() const
         { DurationTextRole, "durationText" },
         { EntryIdRole, "entryId" },
         { IsVideoRole, "isVideo" },
-        { PrimaryArtistRole, "primaryArtist" }
+        { PrimaryArtistRole, "primaryArtist" },
+        { CreditsRole, "credits" },
+        { AlbumIdRole, "albumId" }
     };
 }
 
@@ -82,7 +102,9 @@ QVariantMap SearchResultModel::get(int row) const
         { QStringLiteral("durationText"), TrackModel::formatDuration(item.durationMs) },
         { QStringLiteral("entryId"),      item.entryId },
         { QStringLiteral("isVideo"),      item.isVideo },
-        { QStringLiteral("primaryArtist"), item.primaryArtist }
+        { QStringLiteral("primaryArtist"), item.primaryArtist },
+        { QStringLiteral("credits"),      item.credits },
+        { QStringLiteral("albumId"),      item.albumId }
     };
 }
 
@@ -105,9 +127,7 @@ MediaExtractor::MediaExtractor(QObject *parent)
                 QList<SearchResultModel::Item> items;
                 items.reserve(tracks.size());
                 for (const InnerTube::Track &track : tracks)
-                    items.append({ track.videoId, track.title, track.artist, track.album,
-                                   track.artwork, track.durationMs, 0, track.isVideo,
-                                   track.primaryArtist });
+                    items.append(SearchResultModel::fromTrack(track));
                 finishSearch(items, QStringLiteral("YouTube Music"));
             });
 

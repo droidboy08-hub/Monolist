@@ -29,6 +29,8 @@ QueueTrack QueueTrack::fromMap(const QVariantMap &map)
     track.fromRadio = map.value(QStringLiteral("fromRadio")).toBool();
     track.isVideo = map.value(QStringLiteral("isVideo")).toBool();
     track.primaryArtist = map.value(QStringLiteral("primaryArtist")).toString();
+    track.credits = map.value(QStringLiteral("credits")).toList();
+    track.albumId = map.value(QStringLiteral("albumId")).toString();
     return track;
 }
 
@@ -46,7 +48,9 @@ QVariantMap QueueTrack::toMap() const
         { QStringLiteral("sourceUrl"), sourceUrl },
         { QStringLiteral("fromRadio"), fromRadio },
         { QStringLiteral("isVideo"), isVideo },
-        { QStringLiteral("primaryArtist"), primaryArtist }
+        { QStringLiteral("primaryArtist"), primaryArtist },
+        { QStringLiteral("credits"), credits },
+        { QStringLiteral("albumId"), albumId }
     };
 }
 
@@ -78,6 +82,7 @@ QVariant QueueModel::data(const QModelIndex &index, int role) const
     case FromRadioRole:    return track.fromRadio;
     case IsCurrentRole:    return index.row() == m_current;
     case IsPastRole:       return index.row() < m_current;
+    case CreditsRole:      return track.credits;
     default:               return {};
     }
 }
@@ -94,7 +99,8 @@ QHash<int, QByteArray> QueueModel::roleNames() const
         { DurationTextRole, "durationText" },
         { FromRadioRole, "fromRadio" },
         { IsCurrentRole, "isCurrent" },
-        { IsPastRole, "isPast" }
+        { IsPastRole, "isPast" },
+        { CreditsRole, "credits" }
     };
 }
 

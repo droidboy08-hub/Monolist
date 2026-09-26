@@ -104,11 +104,16 @@ Flickable {
                     color: Theme.text
                 }
 
-                Text {
+                // An album's artists, each opening their page. A playlist's
+                // line is its maker: a link only when YouTube Music linked
+                // it to a channel, since "YouTube Music" is no artist.
+                ArtistLine {
                     visible: text.length > 0
                     width: parent.width
-                    text: root.page.artist !== undefined ? root.page.artist : ""
-                    elide: Text.ElideRight
+                    artist: root.page.artist !== undefined ? root.page.artist : ""
+                    credits: root.page.credits
+                    linksEnabled: root.page.type === "album"
+                                  || (root.page.credits !== undefined && root.page.credits.length > 0)
                     font.family: Theme.fontFamily
                     font.pixelSize: 18
                     font.weight: Theme.weightMedium

@@ -94,22 +94,37 @@ Rectangle {
                 // Doubles as the status line: while a source is resolving, or
                 // when the audio engine is missing entirely, that matters more
                 // than the artist and there is nowhere else it would be seen.
-                Text {
+                // Otherwise the artist, whose names open their pages; a click
+                // anywhere else on the line opens Now Playing, as before.
+                Item {
                     readonly property bool showStatus: !Player.engineAvailable || Player.resolving
                                                        || Player.statusError
 
                     width: parent.width
-                    text: showStatus
-                          ? Player.statusText
-                          : (Player.currentTrack.artist !== undefined
-                             ? Player.currentTrack.artist
-                               + (Player.currentTrack.album ? " — " + Player.currentTrack.album : "")
-                             : "")
-                    elide: Text.ElideRight
-                    font.family: Theme.fontFamily
-                    font.pixelSize: 12
-                    color: Player.engineAvailable && !Player.statusError ? Theme.neutral700
-                                                                        : Theme.accent
+                    height: statusLine.implicitHeight
+
+                    Text {
+                        id: statusLine
+                        visible: parent.showStatus
+                        width: parent.width
+                        text: Player.statusText
+                        elide: Text.ElideRight
+                        font.family: Theme.fontFamily
+                        font.pixelSize: 12
+                        color: Player.engineAvailable && !Player.statusError ? Theme.neutral700
+                                                                            : Theme.accent
+                    }
+
+                    ArtistLine {
+                        visible: !parent.showStatus
+                        width: parent.width
+                        artist: Player.currentTrack.artist !== undefined ? Player.currentTrack.artist : ""
+                        credits: Player.currentTrack.credits
+                        suffix: Player.currentTrack.album ? " — " + Player.currentTrack.album : ""
+                        font.family: Theme.fontFamily
+                        font.pixelSize: 12
+                        color: Theme.neutral700
+                    }
                 }
             }
 

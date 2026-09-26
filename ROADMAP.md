@@ -102,7 +102,7 @@ Priority runs from 1 (first) to 9. Size: S under an hour, M a few hours, L a day
 
 ## Artist pages & search
 
-- [ ] **A01** Artist pages are not built, and artist names are never links *(P4, L)*
+- [x] **A01** Artist pages are not built, and artist names are never links *(P4, L)*
   Done when: An 'artist:<UC id>' view shows top songs, albums and singles, and related artists, with Play and Shuffle. Tracks carry artist and album browse IDs, so names link to those pages, and TrackMenu gains Go to artist and Go to album.
 - [ ] **A02** Search returns only songs or videos, though the field says 'Artists, albums, tracks…' *(P4, M)*
   Done when: ALBUMS and PLAYLISTS filters, and ARTISTS once A01 exists, show card grids that open PageView. Until then the placeholder no longer promises them.
@@ -239,6 +239,10 @@ Seen by the agents that fixed B01–B13 and by their reviewers, and not yet fixe
   Done when: a finished file already in the folder for that video id is taken into the library instead of being downloaded again, or the new copy is written under another name until it is complete.
 - [ ] **F23** The video sometimes fails at once with HTTP 403 on a freshly resolved yt-dlp link (2 of about a dozen runs on LrM_Y39Gmhk), and the app goes straight back to sound with "This video would not play" *(P4, S)*
   Done when: a refused picture is resolved once more (a fresh link, or the android/tv_simply clients, whose streams played whole in September 2026) before the app gives up on it.
+- [ ] **F24** Cards that open a page (albums, playlists, artists) carry the same red play triangle as cards that play (AlbumCard.qml footer), so an artist card promises to play and opens a page *(P8, S)*
+  Done when: the footer mark says what a click does: an arrow for a page, the triangle for a song or video.
+- [ ] **F25** A song queued from a track table's menu loses its first credit for Last.fm: TrackTable.trackOf leaves out `primaryArtist`, so "Play next" or "Add to queue" on "Lady Gaga & Bruno Mars" scrobbles the whole line as one artist (Scrobbler::scrobbleArtist falls back to `artist`) rather than "Lady Gaga" *(P6, S)*
+  Done when: trackOf carries primaryArtist, and a joint-credit song queued from the menu scrobbles its first credit.
 
 ## Connections
 

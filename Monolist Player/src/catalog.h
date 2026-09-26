@@ -32,6 +32,16 @@ class Catalog : public QObject
     Q_PROPERTY(QVariantMap page READ page NOTIFY pageChanged)
     Q_PROPERTY(SearchResultModel *pageTracks READ pageTracks CONSTANT)
     Q_PROPERTY(bool pageLoading READ pageLoading NOTIFY pageChanged)
+    // The artist page open now:
+    // { browseId, channel, name, description, audience, artwork, songsTitle,
+    //   songsId, canShuffle, canRadio, shelves: [{ title, items: [card] }], error }
+    // `channel` is set for a plain channel's page rather than an artist's.
+    // While a name is being looked up it holds only { name, lookingUp }.
+    Q_PROPERTY(QVariantMap artist READ artist NOTIFY artistChanged)
+    Q_PROPERTY(SearchResultModel *artistSongs READ artistSongs CONSTANT)
+    Q_PROPERTY(bool artistLoading READ artistLoading NOTIFY artistChanged)
+    // "shuffle" or "radio" while that is being fetched, otherwise empty.
+    Q_PROPERTY(QString artistMixLoading READ artistMixLoading NOTIFY artistMixLoadingChanged)
 public:
     explicit Catalog(QObject *parent = nullptr);
 
@@ -45,6 +55,10 @@ public:
     QVariantMap page() const { return m_page; }
     SearchResultModel *pageTracks() { return &m_pageTracks; }
     bool pageLoading() const { return m_pageLoading; }
+    QVariantMap artist() const { return m_artist; }
+    SearchResultModel *artistSongs() { return &m_artistSongs; }
+    bool artistLoading() const { return m_artistLoading; }
+    QString artistMixLoading() const { return m_mixLoading; }
 
 public Q_SLOTS:
     void refresh();
@@ -53,9 +67,29 @@ public Q_SLOTS:
     // The open page's songs as maps, for "Download all".
     QVariantList pageTrackList() const;
 
+    // An artist's page, by its channel id; `name`, where the caller knows
+    // it, heads the page while the rest loads.
+    void openArtist(const QString &browseId, const QString &name = QString());
+    // An artist known only by name — a song kept without its links, a
+    // suggestion from the catalogue. YouTube Music's artists are searched
+    // for it and the one of that name opened (artistResolved); when none
+    // has it, artistNotFound, and the interface searches instead.
+    void openArtistNamed(const QString &name);
+    // The open artist's Shuffle or Mix ("shuffle" or "radio"), fetched as
+    // YouTube Music would play it; artistMixReady hands the songs over.
+    void loadArtistMix(const QString &kind);
+    QVariantList artistSongList() const;
+
 Q_SIGNALS:
     void homeChanged();
     void pageChanged();
+    void artistChanged();
+    void artistMixLoadingChanged();
+    void artistResolved(const QString &name, const QString &browseId);
+    void artistNotFound(const QString &name);
+    void artistMixReady(const QString &kind, const QVariantList &tracks);
+    // Something the user should be told, for the toast.
+    void notice(const QString &text);
 
 private:
     // The two requests Home is made of. refresh() resets the retry count and
@@ -87,4 +121,16 @@ private:
     QString m_pageId;                 // the page whose answer is still wanted
     QVariantMap m_page;
     bool m_pageLoading = false;
+
+    void showArtist(const QString &browseId, const QString &name);
+    // The artist page whose answer is still wanted: a channel id, or
+    // "name:" and the name being looked up.
+    QString m_artistKey;
+    QVariantMap m_artist;
+    SearchResultModel m_artistSongs;
+    bool m_artistLoading = false;
+    InnerTube::Watch m_shuffle;       // the open artist's Shuffle and Mix
+    InnerTube::Watch m_radio;
+    QString m_mixLoading;
+    quint64 m_mixGeneration = 0;      // moves on for each Shuffle or Mix asked for
 };

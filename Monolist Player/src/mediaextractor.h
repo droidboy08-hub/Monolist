@@ -29,11 +29,18 @@ public:
         int entryId = 0;     // the row in a playlist, where a list is one
         bool isVideo = false;   // has a picture worth showing
         QString primaryArtist;  // the first credit alone, for Last.fm; may be empty
+        // The artist line piece by piece, each name with its page
+        // (InnerTube::creditsToVariant); empty where only the name was kept.
+        QVariantList credits;
+        QString albumId;        // the album's page, where known
     };
 
     enum Roles { SourceIdRole = Qt::UserRole + 1, TitleRole, ArtistRole, AlbumRole,
                  ArtworkRole, DurationRole, DurationTextRole, EntryIdRole, IsVideoRole,
-                 PrimaryArtistRole };
+                 PrimaryArtistRole, CreditsRole, AlbumIdRole };
+
+    // A song as YouTube Music sent it, as a row.
+    static Item fromTrack(const InnerTube::Track &track);
 
     explicit SearchResultModel(QObject *parent = nullptr);
 

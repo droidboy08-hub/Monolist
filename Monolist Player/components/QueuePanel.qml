@@ -81,8 +81,10 @@ Rectangle {
             required property string artist
             required property string artwork
             required property string durationText
+            required property real durationMs
             required property bool isCurrent
             required property bool isPast
+            required property var credits
 
             width: ListView.view ? ListView.view.width : 0
             visible: !isPast
@@ -152,10 +154,10 @@ Rectangle {
                         font.weight: entry.isCurrent ? Font.Bold : Theme.weightRegular
                         color: entry.isCurrent ? Theme.accent700 : Theme.text
                     }
-                    Text {
+                    ArtistLine {
                         width: parent.width
-                        text: entry.artist
-                        elide: Text.ElideRight
+                        artist: entry.artist
+                        credits: entry.credits
                         font.family: Theme.fontFamily
                         font.pixelSize: 12
                         color: Theme.neutral700
@@ -174,7 +176,7 @@ Rectangle {
                         anchors.right: parent.right
                         anchors.verticalCenter: parent.verticalCenter
                         visible: !removeButton.visible
-                        text: entry.durationText
+                        text: entry.durationMs > 0 ? entry.durationText : ""
                         font.family: Theme.fontFamily
                         font.pixelSize: 12
                         color: entry.isCurrent ? Theme.accent700 : Theme.neutral700

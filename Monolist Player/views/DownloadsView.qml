@@ -288,10 +288,9 @@ Flickable {
                             font.weight: saved.isCurrent ? Font.Bold : Theme.weightRegular
                             color: saved.isCurrent ? Theme.accent700 : Theme.text
                         }
-                        Text {
+                        ArtistLine {
                             width: parent.width
-                            text: saved.artist
-                            elide: Text.ElideRight
+                            artist: saved.artist
                             font.family: Theme.fontFamily
                             font.pixelSize: 12
                             color: Theme.neutral700

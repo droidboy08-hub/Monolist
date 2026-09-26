@@ -178,10 +178,11 @@ Rectangle {
                     lineHeightMode: Text.ProportionalHeight
                     color: root.posterInk
                 }
-                Text {
+                // Each name opens its page, and closes this view to show it.
+                ArtistLine {
                     width: parent.width
-                    text: root.hasTrack ? root.track.artist : ""
-                    elide: Text.ElideRight
+                    artist: root.hasTrack ? root.track.artist : ""
+                    credits: root.hasTrack ? root.track.credits : undefined
                     font.family: Theme.fontFamily
                     font.pixelSize: 20
                     font.weight: Theme.weightMedium
@@ -306,10 +307,10 @@ Rectangle {
                     font.weight: Theme.weightBlack
                     color: Theme.text
                 }
-                Text {
+                ArtistLine {
                     width: parent.width
-                    text: root.hasTrack ? root.track.artist : ""
-                    elide: Text.ElideRight
+                    artist: root.hasTrack ? root.track.artist : ""
+                    credits: root.hasTrack ? root.track.credits : undefined
                     font.family: Theme.fontFamily
                     font.pixelSize: 14
                     color: Theme.neutral700

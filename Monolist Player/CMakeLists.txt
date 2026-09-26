@@ -41,6 +41,9 @@ qt_add_executable(monolist
     src/mediaextractor.h           src/mediaextractor.cpp
     src/innertube.h                src/innertube.cpp
     src/catalog.h                  src/catalog.cpp
+    # Which page an artist's name opens, and its test (--artist-links-test).
+    src/artistlinks.h              src/artistlinks.cpp
+    src/artistselftest.h           src/artistselftest.cpp
     src/lyrics.h                   src/lyrics.cpp
     src/windowchrome.h             src/windowchrome.cpp
     src/appinfo.h                  src/appinfo.cpp
@@ -161,6 +164,7 @@ if(QT_KNOWN_POLICY_QTP0004)
 endif()
 
 set_source_files_properties(Theme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
+set_source_files_properties(Nav.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 
 qt_add_qml_module(monolist
     URI Monolist
@@ -172,6 +176,7 @@ qt_add_qml_module(monolist
     QML_FILES
         Main.qml
         Theme.qml
+        Nav.qml
         components/Icon.qml
         components/IconButton.qml
         components/LikeButton.qml
@@ -214,11 +219,13 @@ qt_add_qml_module(monolist
         components/PlateButton.qml
         components/MiniVideo.qml
         components/FullscreenVideo.qml
+        components/ArtistLine.qml
         views/HomeView.qml
         views/SearchView.qml
         views/LibraryView.qml
         views/DownloadsView.qml
         views/PageView.qml
+        views/ArtistView.qml
         views/PlaylistView.qml
         views/NowPlayingView.qml
         views/SettingsView.qml

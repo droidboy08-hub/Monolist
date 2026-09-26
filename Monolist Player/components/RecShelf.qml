@@ -87,12 +87,13 @@ Item {
                         color: Theme.text
                     }
 
-                    Text {
+                    // The catalogue keeps names only; Artists finds the page
+                    // for one YouTube Music has linked, and looks up the rest.
+                    ArtistLine {
                         x: parent.width * 0.55
                         anchors.verticalCenter: parent.verticalCenter
                         width: parent.width * 0.45
-                        text: row.modelData.artist
-                        elide: Text.ElideRight
+                        artist: row.modelData.artist
                         font.family: Theme.fontFamily
                         font.pixelSize: 13
                         color: Theme.neutral700

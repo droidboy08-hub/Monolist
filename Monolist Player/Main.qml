@@ -81,16 +81,52 @@ ApplicationWindow {
     }
 
     // Views are named: "home", "search", "downloads", "library[:tab]",
-    // "page:<browse id>" for an album or a YouTube Music playlist, and
-    // "playlist:<id>" or "playlist:liked" for the user's own. Back and
-    // forward step through them.
+    // "page:<browse id>" for an album or a YouTube Music playlist,
+    // "artist:<channel id>" for an artist, "artistname:<name>" for one known
+    // only by name until it is looked up, and "playlist:<id>" or
+    // "playlist:liked" for the user's own. Back and forward step through
+    // them.
     function openPage(browseId) {
+        nowPlayingOpen = false
         navigate("page:" + browseId)
+    }
+
+    // The name a link was showing, so the page it opens is headed with it
+    // before the rest has loaded.
+    property string pendingArtistName: ""
+
+    // An artist's name, clicked anywhere. Its page when the name came with
+    // one, or when an earlier answer linked that name; otherwise the page
+    // opens on the name and looks it up. Now Playing covers the page, so it
+    // closes, as it does for Search.
+    function openArtist(name, browseId) {
+        nowPlayingOpen = false
+        var id = browseId ? browseId : Artists.idFor(name)
+        // Read as the view changes (openCurrentPage), and not kept past
+        // this call: a link to the page already open changes nothing, and
+        // its name must not head the next artist opened some other way.
+        pendingArtistName = name ? name : ""
+        if (id)
+            navigate("artist:" + id)
+        else if (name)
+            navigate("artistname:" + name)
+        pendingArtistName = ""
+    }
+
+    // Swaps the entry being shown for another without adding a step to the
+    // history: a name that has been looked up becomes its page, so Back does
+    // not walk into the lookup again.
+    function replaceView(view) {
+        currentView = view
     }
 
     function openCurrentPage() {
         if (currentView.indexOf("page:") === 0)
             Catalog.openPage(currentView.substring(5))
+        else if (currentView.indexOf("artist:") === 0)
+            Catalog.openArtist(currentView.substring(7), pendingArtistName)
+        else if (currentView.indexOf("artistname:") === 0)
+            Catalog.openArtistNamed(currentView.substring(11))
         else if (currentView.indexOf("playlist:") === 0 && currentView !== "playlist:liked")
             Library.openPlaylist(parseInt(currentView.substring(9)))
     }
@@ -156,6 +192,7 @@ ApplicationWindow {
                   : currentView === "downloads" ? "DOWNLOADS"
                   : currentView === "settings" ? "SETTINGS"
                   : currentView.indexOf("page:") === 0 ? (Catalog.page.type === "playlist" ? "PLAYLIST" : "ALBUM")
+                  : currentView.indexOf("artist") === 0 ? "ARTIST"
                   : currentView === "playlist:liked" ? "YOUR LIBRARY / LIKED SONGS"
                   : currentView.indexOf("playlist:") === 0 ? "YOUR LIBRARY / PLAYLIST"
                   : "YOUR LIBRARY";
@@ -271,10 +308,6 @@ ApplicationWindow {
                     HomeView {
                         anchors.fill: parent
                         onPageRequested: function(browseId) { window.openPage(browseId) }
-                        onSearchRequested: function(term) {
-                            topBar.searchText = term
-                            window.navigate("search")
-                        }
                     }
                 }
 
@@ -283,6 +316,16 @@ ApplicationWindow {
 
                     PageView {
                         anchors.fill: parent
+                    }
+                }
+
+                ViewFade {
+                    shown: window.currentView.indexOf("artist:") === 0
+                           || window.currentView.indexOf("artistname:") === 0
+
+                    ArtistView {
+                        anchors.fill: parent
+                        onPageRequested: function(browseId) { window.openPage(browseId) }
                     }
                 }
 
@@ -517,6 +560,32 @@ ApplicationWindow {
     Connections {
         target: Library
         function onNotice(text) { toast.show(text) }
+    }
+
+    // — links —
+    // An artist's name or an album's title, clicked in any list, bar or page.
+    Connections {
+        target: Nav
+        function onArtistRequested(name, browseId) { window.openArtist(name, browseId) }
+        function onPageRequested(browseId) { window.openPage(browseId) }
+    }
+
+    Connections {
+        target: Catalog
+        function onNotice(text) { toast.show(text) }
+        // A name looked up: its page takes the lookup's place in the history.
+        function onArtistResolved(name, browseId) {
+            if (window.currentView === "artistname:" + name)
+                window.replaceView("artist:" + browseId)
+        }
+        // YouTube Music has no artist of that name: the search for it is the
+        // next best thing, in the lookup's place.
+        function onArtistNotFound(name) {
+            if (window.currentView !== "artistname:" + name)
+                return
+            topBar.searchText = name
+            window.replaceView("search")
+        }
     }
 
     Connections {

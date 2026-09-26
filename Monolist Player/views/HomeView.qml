@@ -11,7 +11,6 @@ Flickable {
     id: root
 
     signal pageRequested(string browseId)
-    signal searchRequested(string term)
 
     contentWidth: width
     contentHeight: column.implicitHeight
@@ -31,7 +30,7 @@ Flickable {
         if (card.type === "album" || card.type === "playlist")
             pageRequested(card.browseId)
         else if (card.type === "artist")
-            searchRequested(card.title)
+            Nav.openArtist(card.title, card.browseId)
         // The credit read from the card, not its whole subtitle, which also
         // holds a type label or a view count; the subtitle only when the card
         // names no one, and then Last.fm is told nothing (Scrobbler).

@@ -9,7 +9,8 @@ import Monolist.Backend
 MonoMenu {
     id: menu
 
-    // sourceId, title, artist, album, artwork, durationMs
+    // sourceId, title, artist, album, artwork, durationMs; credits and
+    // albumId where the list kept them
     property var track: ({})
     // The playlist the list is, for "Remove from this playlist"; 0 elsewhere.
     property int playlistId: 0
@@ -18,6 +19,24 @@ MonoMenu {
     readonly property string sourceId: track && track.sourceId ? track.sourceId : ""
     readonly property string downloadState: Downloads.revision >= 0 ? Downloads.stateFor(sourceId) : ""
     readonly property bool liked: Library.revision >= 0 && Library.isLiked(sourceId)
+    // The names in the artist line, each with its page where known, and the
+    // album's page: what "Go to" can open.
+    readonly property var artists: track && track.artist
+                                   ? Artists.credits(track.artist, track.credits).filter(function(piece) { return piece.link })
+                                   : []
+    readonly property string albumId: track && track.albumId ? track.albumId : ""
+
+    // One entry for one artist; for a joint credit, one per name, so each
+    // can be reached, up to three.
+    function goToText(index) {
+        if (artists.length === 1)
+            return "Go to artist"
+        return index < artists.length ? "Go to " + artists[index].text : ""
+    }
+    function goTo(index) {
+        if (index < artists.length)
+            Nav.openArtist(artists[index].text, artists[index].id)
+    }
 
     Action {
         text: "Play next"
@@ -48,6 +67,34 @@ MonoMenu {
         enabled: menu.playlistId > 0 && menu.entryId > 0
         text: "Remove from this playlist"
         onTriggered: Library.removeFromPlaylist(menu.playlistId, menu.entryId)
+    }
+
+    // — where the song comes from —
+    MonoMenuRule { visible: menu.artists.length > 0 || menu.albumId.length > 0 }
+
+    MonoMenuItem {
+        visible: menu.artists.length > 0
+        enabled: menu.artists.length > 0
+        text: menu.goToText(0)
+        onTriggered: menu.goTo(0)
+    }
+    MonoMenuItem {
+        visible: menu.artists.length > 1
+        enabled: menu.artists.length > 1
+        text: menu.goToText(1)
+        onTriggered: menu.goTo(1)
+    }
+    MonoMenuItem {
+        visible: menu.artists.length > 2
+        enabled: menu.artists.length > 2
+        text: menu.goToText(2)
+        onTriggered: menu.goTo(2)
+    }
+    MonoMenuItem {
+        visible: menu.albumId.length > 0
+        enabled: menu.albumId.length > 0
+        text: "Go to album"
+        onTriggered: Nav.openPage(menu.albumId)
     }
 
     MonoMenuRule {}

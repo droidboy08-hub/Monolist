@@ -218,6 +218,18 @@ void AppDatabase::createSchema()
         " queued_at INTEGER NOT NULL DEFAULT 0)"));
     q.exec(QStringLiteral(
         "CREATE INDEX IF NOT EXISTS idx_scrobble_queue_account ON scrobble_queue(account, id)"));
+
+    // Which page an artist's name opens, as YouTube Music linked it the last
+    // time the name was seen (ArtistLinks). The songs kept above keep only
+    // the name; this is how a liked song's artist, or one in the history,
+    // still opens the right page. `artist_page` is 0 for a plain channel,
+    // which an artist's own page of the same name replaces.
+    q.exec(QStringLiteral(
+        "CREATE TABLE IF NOT EXISTS artist_links ("
+        " name TEXT PRIMARY KEY,"
+        " browse_id TEXT NOT NULL,"
+        " artist_page INTEGER NOT NULL DEFAULT 1,"
+        " seen_at TEXT NOT NULL DEFAULT (datetime('now')))"));
 }
 
 bool AppDatabase::hasColumn(const QString &table, const QString &column)

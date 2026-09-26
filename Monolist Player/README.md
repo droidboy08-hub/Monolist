@@ -135,11 +135,13 @@ whichever contrasts better.
 
     Main.qml                 window, view switching, breakpoints, shortcuts
     Theme.qml                design tokens
+    Nav.qml                  where a link in any list asks to go (an artist, a page)
     Icons.js                 Lucide glyph outlines as path data
     components/              UI components: the prototype's, and the menus,
-                             cards, queue panel, lyrics pane, title bar parts
+                             cards, queue panel, lyrics pane, title bar parts,
+                             ArtistLine (an artist line whose names are links)
     views/                   Home, Search, Library, Downloads, Page (album or
-                             YouTube Music playlist), Playlist, Now Playing
+                             YouTube Music playlist), Artist, Playlist, Now Playing
 
     src/
       main.cpp               wiring; registers the QML singletons; self-tests
@@ -152,8 +154,11 @@ whichever contrasts better.
       mpvengine.*            libmpv wrapper, audio-only
       mediaextractor.*       search: InnerTube first, yt-dlp as fallback
       innertube.*            YouTube Music's API: search, suggestions, radio,
-                             browse pages, lyrics
-      catalog.*              Home's feed and album pages
+                             browse pages, artist pages, lyrics
+      catalog.*              Home's feed, album pages and artist pages
+      artistlinks.*          which page an artist's name opens, learnt from every
+                             answer that links one and kept in the database
+      artistselftest.*       --artist-links-test
       lyrics.*               LRCLIB and YouTube Music lyrics, synced to playback
       ytdlp.*                QProcess wrapper around yt-dlp; finds FFmpeg and Deno
       streamresolver.*       the tiered source ladder and its link cache
@@ -167,9 +172,23 @@ whichever contrasts better.
 
 ### QML singletons
 
-`Library`, `Player`, `Extractor`, `Downloads`, `Catalog`, `Lyrics`,
+`Library`, `Player`, `Extractor`, `Downloads`, `Catalog`, `Artists`, `Lyrics`,
 `CoverPalette` and `Chrome`. The image provider registers as
 `image://artwork/<url>`.
+
+### Artist links
+
+Every artist's name in the interface is a link: in track tables, the player
+bar, Now Playing, album pages, the queue, Downloads and the suggestion rows.
+A song fresh from YouTube Music carries its credits piece by piece with each
+name's page (`credits` in the song models), so a joint credit links each name
+to its own artist. A song kept by name only (Liked songs, playlists, History,
+downloads, the catalogue's suggestions) is matched by `Artists` against every
+name an answer has linked before, kept in the `artist_links` table; a line it
+cannot split wholly into known names stays one link, and a name nobody has
+linked is looked up among YouTube Music's artists, falling back to Search when
+there is no artist of that name. The view names are `artist:<channel id>` and
+`artistname:<name>` (a lookup, replaced by the page once found).
 
 ## Build
 
@@ -302,6 +321,15 @@ mpv's own messages.
                                                     says; and where MONOLIST_DATA_DIR and
                                                     MONOLIST_DOWNLOAD_DIR send downloads
     monolist --search "<query>"                     one timed search, with suggestions
+    monolist --artist-page <channel id | name> [--mix shuffle|radio]
+                                                    one artist page as the interface opens it (a name is
+                                                    looked up first): the header, the top songs with each
+                                                    credit's page, every shelf; --mix fetches that button's
+                                                    songs too, and the open window plays them
+    monolist --artist-links-test                    artist links with no network: credits from canned
+                                                    answers, names split and kept across a restart, the
+                                                    artist page's and artist search's parsers (needs
+                                                    MONOLIST_DATA_DIR; its invented rows are removed)
     monolist --lyrics "<query>"                     lyrics for the first three results, then one from the store
     monolist --library-test "<query>" [--videos]    a playlist, likes and a saved album from a real search;
                                                     --videos searches music videos, and says how many rows
@@ -344,7 +372,8 @@ Each quits by itself and reports on stderr. These open the window as it would
 be, for a look at a state:
 
     monolist --view <view>                          home, search, downloads, library[:albums|:history],
-                                                    page:<browse id>, playlist:<id>, playlist:liked
+                                                    page:<browse id>, artist:<channel id>,
+                                                    artistname:<name>, playlist:<id>, playlist:liked
     monolist --query "<text>"                       search, with the text typed in
     monolist --open-queue  /  --now-playing         with the queue, or Now Playing, open
     monolist --ytm-demo <state>[+file]              the YouTube Music row as active, checking, unreachable
@@ -388,12 +417,11 @@ in the folder stays, even one the database has no row for.
 Builds and runs on Windows 11 (ARM64, through x64 emulation) with Qt 6.11.2 and
 MinGW 13.1. Verified end to end: InnerTube search and suggestions, streaming
 through yt-dlp, the link cache, downloads with tags and cover art, offline
-playback, the queue and autoplay radio, Home and album pages, playlists, likes
-and saved albums, and synced and plain lyrics.
+playback, the queue and autoplay radio, Home, album and artist pages, artist
+links, playlists, likes and saved albums, and synced and plain lyrics.
 
 Known gaps:
 
-* Artist pages: an artist card searches for the name instead.
 * The device button in the player bar is styled but unwired.
 * Songs in a playlist cannot yet be reordered.
 * macOS and Linux build from the same code but have not been run.

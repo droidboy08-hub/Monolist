@@ -34,6 +34,12 @@ pointer.
 type on every screen. Desaturating it makes colour mean "this is the subject" —
 which is also why the pointer bringing a card to colour reads as "this one".
 
+An artist's page keeps its portrait black and white. The page is about a
+person and a shelf of records, not about one photograph, and a coloured
+portrait above a row of grey covers would claim that the picture, rather than
+the music, is the subject. The records on it come to colour under the pointer,
+as cards do everywhere.
+
 **The window belongs to the system; everything inside belongs to the design.**
 The app draws its own title bar, but keeps Windows' corner radius, snapping,
 shadow, window menu and resize edges.
@@ -249,6 +255,15 @@ that gets blamed for the app being slow.
 * A 2px rule separates regions; a 1px hairline separates rows within a region.
   *Why.* Two weights are enough to say "different thing" and "same thing, next
   one", and the difference is visible at a glance without colour.
+* Names are links without looking like links. An artist's name, anywhere it is
+  printed, opens that artist's page, and an album's title in a track table its
+  album; at rest they are the same type as the line around them, and the one
+  under the pointer takes a 1px rule in its own colour, arriving at once and
+  fading over `quick`. In a joint credit each name is its own link.
+  *Why.* Nearly every row carries a name, so a page of coloured or underlined
+  names would be a page of links rather than a list of songs, and the red would
+  stop meaning "here". A rule under a word is how print marks a reference; it
+  appears only where the pointer asks the question.
 
 ## 5. Copy
 

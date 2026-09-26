@@ -16,6 +16,8 @@
 #include <QWindow>
 
 #include "appdatabase.h"
+#include "artistlinks.h"
+#include "artistselftest.h"
 #include "artworkcache.h"
 #include "catalog.h"
 #include "connectionselftest.h"
@@ -142,7 +144,26 @@ int main(int argc, char *argv[])
         // (downloadselftest.cpp); in MONOLIST_DATA_DIR only.
         if (arguments.contains(QStringLiteral("--download-cleanup-test")))
             return runDownloadCleanupSelfTest() == 0 ? 0 : 1;
+        // Artist links: credits read from canned answers, names split and
+        // kept, and the artist page's parser (artistselftest.cpp); no
+        // network, in MONOLIST_DATA_DIR only.
+        if (arguments.contains(QStringLiteral("--artist-links-test")))
+            return runArtistLinksSelfTest() == 0 ? 0 : 1;
     }
+
+    // Which page an artist's name opens: learnt from every answer that links
+    // one (InnerTube's hook) and kept, so a name the library kept without its
+    // link — Liked songs, the history, a suggestion — still opens its page.
+    // Made before anything that asks YouTube Music, and the hook taken away
+    // again before it goes (the guard below is destroyed first).
+    ArtistLinks artistLinks;
+    artistLinks.load();
+    InnerTube::setArtistHook([&artistLinks](const QString &name, const QString &browseId, bool artistPage) {
+        artistLinks.remember(name, browseId, artistPage);
+    });
+    struct ArtistHookGuard {
+        ~ArtistHookGuard() { InnerTube::setArtistHook({}); }
+    } artistHookGuard;
 
     // --set <key> <value>: writes one setting (region, lrclib_url,
     // piped_instances, invidious_instances) before anything reads it.
@@ -248,6 +269,7 @@ int main(int argc, char *argv[])
     // Not "Palette": QtQuick has a type of that name, which would win.
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "CoverPalette", &palette);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Catalog",   &catalog);
+    qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Artists",   &artistLinks);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Lyrics",    &lyrics);
     WindowChrome chrome;
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Chrome",    &chrome);
@@ -1847,6 +1869,125 @@ int main(int argc, char *argv[])
             clock->start();
             extractor.suggest(query.left(qMax<qsizetype>(3, query.size() / 2)));
             extractor.search(query);
+        });
+        QTimer::singleShot(30000, &app, []() {
+            qWarning("selftest: timed out");
+            QCoreApplication::exit(2);
+        });
+    }
+
+    // --artist-page <channel id | name> [--mix shuffle|radio]
+    //
+    // One artist page as the interface opens it — by its id, or by a name
+    // looked up among YouTube Music's artists — printed: the header, the top
+    // songs with each credit's page, and every shelf. With --mix, that
+    // button's songs too.
+    const int artistPageFlag = args.indexOf(QStringLiteral("--artist-page"));
+    if (artistPageFlag >= 0 && artistPageFlag + 1 < args.size()) {
+        const QString wanted = args.at(artistPageFlag + 1);
+        const int mixFlag = args.indexOf(QStringLiteral("--mix"));
+        const QString mix = mixFlag >= 0 && mixFlag + 1 < args.size() ? args.at(mixFlag + 1) : QString();
+        auto clock = std::make_shared<QElapsedTimer>();
+        auto printed = std::make_shared<bool>(false);
+
+        QObject::connect(&catalog, &Catalog::artistResolved, &app,
+                         [clock](const QString &name, const QString &browseId) {
+                             qWarning("selftest: \"%s\" is %s (%lld ms)", qPrintable(name), qPrintable(browseId),
+                                      (long long)clock->elapsed());
+                         });
+        QObject::connect(&catalog, &Catalog::artistNotFound, &app, [](const QString &name) {
+            qWarning("selftest: no artist called \"%s\": the interface would search instead", qPrintable(name));
+            QTimer::singleShot(200, qApp, []() { QCoreApplication::quit(); });
+        });
+        QObject::connect(&catalog, &Catalog::artistChanged, &app,
+                         [&catalog, &artistLinks, clock, printed, mix]() {
+            if (catalog.artistLoading() || *printed)
+                return;
+            const QVariantMap artist = catalog.artist();
+            if (artist.value(QStringLiteral("lookingUp")).toBool() && artist.contains(QStringLiteral("error")))
+                return;   // artistNotFound says so
+            *printed = true;
+            if (artist.contains(QStringLiteral("error"))) {
+                qWarning("selftest: failed: %s", qPrintable(artist.value(QStringLiteral("error")).toString()));
+                QCoreApplication::exit(1);
+                return;
+            }
+            qWarning("selftest: %s | %s | %lld ms", qPrintable(artist.value(QStringLiteral("name")).toString()),
+                     qPrintable(artist.value(QStringLiteral("audience")).toString()), (long long)clock->elapsed());
+            qWarning("selftest:   about: %s", qPrintable(artist.value(QStringLiteral("description")).toString().left(90)));
+            qWarning("selftest:   picture: %s", qPrintable(artist.value(QStringLiteral("artwork")).toString().left(90)));
+            qWarning("selftest:   shuffle %s, radio %s, all songs %s",
+                     artist.value(QStringLiteral("canShuffle")).toBool() ? "yes" : "no",
+                     artist.value(QStringLiteral("canRadio")).toBool() ? "yes" : "no",
+                     qPrintable(artist.value(QStringLiteral("songsId")).toString()));
+            const SearchResultModel *songs = catalog.artistSongs();
+            qWarning("selftest:   %s: %d", qPrintable(artist.value(QStringLiteral("songsTitle")).toString()),
+                     songs->rowCount());
+            for (int row = 0; row < songs->rowCount(); ++row) {
+                const QVariantMap song = songs->get(row);
+                QStringList credits;
+                for (const QVariant &piece : artistLinks.credits(song.value(QStringLiteral("artist")).toString(),
+                                                                 song.value(QStringLiteral("credits")))) {
+                    const QVariantMap map = piece.toMap();
+                    credits << (map.value(QStringLiteral("link")).toBool()
+                                    ? QStringLiteral("[%1 -> %2]").arg(map.value(QStringLiteral("text")).toString(),
+                                                                       map.value(QStringLiteral("id")).toString())
+                                    : map.value(QStringLiteral("text")).toString());
+                }
+                qWarning("selftest:     %s | %s | %s (%s) | %s", qPrintable(song.value(QStringLiteral("title")).toString()),
+                         qPrintable(credits.join(QString())),
+                         qPrintable(song.value(QStringLiteral("album")).toString()),
+                         qPrintable(song.value(QStringLiteral("albumId")).toString()),
+                         qPrintable(song.value(QStringLiteral("durationText")).toString()));
+            }
+            for (const QVariant &value : artist.value(QStringLiteral("shelves")).toList()) {
+                const QVariantMap shelf = value.toMap();
+                const QVariantList items = shelf.value(QStringLiteral("items")).toList();
+                QStringList first;
+                for (qsizetype i = 0; i < qMin<qsizetype>(3, items.size()); ++i) {
+                    const QVariantMap card = items.at(i).toMap();
+                    first << QStringLiteral("%1 (%2 %3)").arg(card.value(QStringLiteral("title")).toString(),
+                                                              card.value(QStringLiteral("type")).toString(),
+                                                              card.value(QStringLiteral("browseId")).toString()
+                                                                  + card.value(QStringLiteral("videoId")).toString());
+                }
+                qWarning("selftest:   %s: %lld | %s", qPrintable(shelf.value(QStringLiteral("title")).toString()),
+                         (long long)items.size(), qPrintable(first.join(QStringLiteral(" / "))));
+            }
+            if (mix.isEmpty()) {
+                QTimer::singleShot(400, qApp, []() { QCoreApplication::quit(); });
+                return;
+            }
+            clock->restart();
+            catalog.loadArtistMix(mix);
+        });
+        QObject::connect(&catalog, &Catalog::artistMixReady, &app,
+                         [clock](const QString &kind, const QVariantList &tracks) {
+                             qWarning("selftest: %s: %lld songs in %lld ms", qPrintable(kind), (long long)tracks.size(),
+                                      (long long)clock->elapsed());
+                             for (qsizetype i = 0; i < qMin<qsizetype>(5, tracks.size()); ++i) {
+                                 const QVariantMap track = tracks.at(i).toMap();
+                                 qWarning("selftest:     %s | %s", qPrintable(track.value(QStringLiteral("title")).toString()),
+                                          qPrintable(track.value(QStringLiteral("artist")).toString()));
+                             }
+                             QTimer::singleShot(400, qApp, []() { QCoreApplication::quit(); });
+                         });
+        QObject::connect(&catalog, &Catalog::notice, &app, [](const QString &text) {
+            qWarning("selftest: %s", qPrintable(text));
+            QCoreApplication::exit(1);
+        });
+
+        QTimer::singleShot(300, &app, [&catalog, &artistLinks, wanted, clock]() {
+            clock->start();
+            const QString known = artistLinks.idFor(wanted);
+            if (wanted.startsWith(QLatin1String("UC")))
+                catalog.openArtist(wanted);
+            else if (!known.isEmpty()) {
+                qWarning("selftest: \"%s\" is known already: %s", qPrintable(wanted), qPrintable(known));
+                catalog.openArtist(known, wanted);
+            } else {
+                catalog.openArtistNamed(wanted);
+            }
         });
         QTimer::singleShot(30000, &app, []() {
             qWarning("selftest: timed out");

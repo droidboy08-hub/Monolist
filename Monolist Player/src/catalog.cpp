@@ -1,5 +1,6 @@
 #include "catalog.h"
 #include "appdatabase.h"
+#include "artistlinks.h"
 
 #include <QSqlQuery>
 #include <QTimer>
@@ -31,8 +32,7 @@ QList<SearchResultModel::Item> Catalog::toItems(const QList<InnerTube::Track> &t
     QList<SearchResultModel::Item> items;
     items.reserve(tracks.size());
     for (const InnerTube::Track &track : tracks)
-        items.append({ track.videoId, track.title, track.artist, track.album, track.artwork,
-                       track.durationMs, 0, track.isVideo, track.primaryArtist });
+        items.append(SearchResultModel::fromTrack(track));
     return items;
 }
 
@@ -198,6 +198,7 @@ void Catalog::openPage(const QString &browseId)
             { QStringLiteral("title"), collection.title },
             { QStringLiteral("subtitle"), collection.subtitle },
             { QStringLiteral("artist"), collection.artist },
+            { QStringLiteral("credits"), InnerTube::creditsToVariant(collection.artistCredits) },
             { QStringLiteral("details"), collection.details },
             { QStringLiteral("description"), collection.description },
             { QStringLiteral("artwork"), collection.artwork }
@@ -215,4 +216,181 @@ QVariantList Catalog::pageTrackList() const
     for (int row = 0; row < m_pageTracks.rowCount(); ++row)
         list.append(m_pageTracks.get(row));
     return list;
+}
+
+QVariantList Catalog::artistSongList() const
+{
+    QVariantList list;
+    for (int row = 0; row < m_artistSongs.rowCount(); ++row)
+        list.append(m_artistSongs.get(row));
+    return list;
+}
+
+void Catalog::openArtist(const QString &browseId, const QString &name)
+{
+    if (browseId.isEmpty())
+        return;
+    const bool alreadyHere = browseId == m_artistKey && !m_artist.contains(QStringLiteral("error"))
+                          && (m_artistLoading || m_artist.contains(QStringLiteral("name")));
+    if (alreadyHere)
+        return;   // open already, or on its way
+    showArtist(browseId, name);
+}
+
+void Catalog::showArtist(const QString &browseId, const QString &name)
+{
+    m_artistKey = browseId;
+    m_artistLoading = true;
+    // The name, where it is known already, so the page has its heading at
+    // once rather than after the answer.
+    const bool same = m_artist.value(QStringLiteral("browseId")).toString() == browseId;
+    const QString knownName = !name.isEmpty() ? name
+                            : same ? m_artist.value(QStringLiteral("name")).toString() : QString();
+    m_artist = { { QStringLiteral("browseId"), browseId } };
+    if (!knownName.isEmpty())
+        m_artist.insert(QStringLiteral("name"), knownName);
+    m_shuffle = {};
+    m_radio = {};
+    m_artistSongs.clear();
+    Q_EMIT artistChanged();
+
+    m_innerTube.browse(browseId, [this, browseId](const QJsonObject &root, const QString &error) {
+        if (browseId != m_artistKey)
+            return;   // another artist was opened meanwhile
+        m_artistLoading = false;
+        if (!error.isEmpty()) {
+            m_artist.insert(QStringLiteral("error"), error);
+            Q_EMIT artistChanged();
+            return;
+        }
+        const InnerTube::Artist artist = InnerTube::parseArtist(browseId, root);
+        QVariantList shelves;
+        for (const InnerTube::Shelf &shelf : artist.shelves) {
+            QVariantList items;
+            for (const InnerTube::Card &card : shelf.cards)
+                items.append(cardToMap(card));
+            shelves.append(QVariantMap{
+                { QStringLiteral("title"), shelf.title },
+                { QStringLiteral("strapline"), shelf.strapline },
+                { QStringLiteral("items"), items } });
+        }
+        m_shuffle = artist.shuffle;
+        m_radio = artist.radio;
+        m_artist = {
+            { QStringLiteral("browseId"), browseId },
+            { QStringLiteral("channel"), !artist.artistPage },
+            { QStringLiteral("name"), artist.name },
+            { QStringLiteral("description"), artist.description },
+            { QStringLiteral("audience"), artist.audience },
+            { QStringLiteral("artwork"), artist.artwork },
+            { QStringLiteral("songsTitle"), artist.songsTitle },
+            { QStringLiteral("songsId"), artist.songsId },
+            { QStringLiteral("canShuffle"), !artist.shuffle.playlistId.isEmpty() },
+            { QStringLiteral("canRadio"), !artist.radio.playlistId.isEmpty() },
+            { QStringLiteral("shelves"), shelves }
+        };
+        if (artist.name.isEmpty() && artist.songs.isEmpty() && shelves.isEmpty())
+            m_artist.insert(QStringLiteral("error"), QStringLiteral("YouTube Music did not return this artist."));
+        m_artistSongs.replace(toItems(artist.songs));
+        Q_EMIT artistChanged();
+    });
+}
+
+void Catalog::openArtistNamed(const QString &name)
+{
+    const QString wanted = name.trimmed();
+    if (wanted.isEmpty())
+        return;
+    const QString key = QStringLiteral("name:") + wanted;
+    if (key == m_artistKey && m_artistLoading)
+        return;   // being looked up already
+
+    m_artistKey = key;
+    m_artistLoading = true;
+    m_artist = { { QStringLiteral("name"), wanted }, { QStringLiteral("lookingUp"), true } };
+    m_shuffle = {};
+    m_radio = {};
+    m_artistSongs.clear();
+    Q_EMIT artistChanged();
+
+    m_innerTube.searchArtists(wanted, [this, key, wanted](const QList<InnerTube::ArtistHit> &hits,
+                                                          const QString &error) {
+        if (key != m_artistKey)
+            return;
+        // The search itself failed: no answer either way, so the page says
+        // so rather than going on looking.
+        if (!error.isEmpty()) {
+            m_artistLoading = false;
+            m_artist.insert(QStringLiteral("lookingUp"), false);
+            m_artist.insert(QStringLiteral("error"), error);
+            Q_EMIT artistChanged();
+            return;
+        }
+        // The artist of exactly that name, else the same name written
+        // another way ("Guns N’ Roses"). The first hit alone is not enough:
+        // a search for someone YouTube Music does not have still answers,
+        // with whoever sounds nearest, and that is the wrong page to open.
+        const InnerTube::ArtistHit *found = nullptr;
+        for (const InnerTube::ArtistHit &hit : hits) {
+            if (hit.name == wanted) {
+                found = &hit;
+                break;
+            }
+        }
+        if (!found) {
+            const QString loose = ArtistLinks::looseKey(wanted);
+            for (const InnerTube::ArtistHit &hit : hits) {
+                if (!loose.isEmpty() && ArtistLinks::looseKey(hit.name) == loose) {
+                    found = &hit;
+                    break;
+                }
+            }
+        }
+        if (!found) {
+            m_artistLoading = false;
+            m_artist.insert(QStringLiteral("error"),
+                            QStringLiteral("YouTube Music has no artist called %1.").arg(wanted));
+            Q_EMIT artistChanged();
+            Q_EMIT artistNotFound(wanted);
+            return;
+        }
+        const QString browseId = found->browseId;
+        showArtist(browseId, found->name);
+        Q_EMIT artistResolved(wanted, browseId);
+    });
+}
+
+void Catalog::loadArtistMix(const QString &kind)
+{
+    const InnerTube::Watch watch = kind == QLatin1String("radio") ? m_radio : m_shuffle;
+    const QString name = m_artist.value(QStringLiteral("name")).toString();
+    if (watch.playlistId.isEmpty())
+        return;
+    const quint64 generation = ++m_mixGeneration;
+    m_mixLoading = kind;
+    Q_EMIT artistMixLoadingChanged();
+
+    m_innerTube.watchPlaylist(watch, [this, kind, name, generation](const QList<InnerTube::Track> &tracks,
+                                                                    const QString &error) {
+        // Pressed again, or the other button: the newer press is what the
+        // listener is waiting for.
+        if (generation != m_mixGeneration)
+            return;
+        m_mixLoading.clear();
+        Q_EMIT artistMixLoadingChanged();
+        if (!error.isEmpty()) {
+            Q_EMIT notice(kind == QLatin1String("radio")
+                          ? QStringLiteral("%1's radio would not load: %2").arg(name, error)
+                          : QStringLiteral("%1's shuffle would not load: %2").arg(name, error));
+            return;
+        }
+        // As rows, in the shape every list hands the player.
+        SearchResultModel rows;
+        rows.replace(toItems(tracks));
+        QVariantList list;
+        list.reserve(rows.rowCount());
+        for (int row = 0; row < rows.rowCount(); ++row)
+            list.append(rows.get(row));
+        Q_EMIT artistMixReady(kind, list);
+    });
 }

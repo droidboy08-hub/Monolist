@@ -248,6 +248,8 @@ PlaybackController::PlaybackController(MpvEngine *engine,
                     track.artwork = song.artwork;
                     track.durationMs = song.durationMs;
                     track.primaryArtist = song.primaryArtist;
+                    track.credits = InnerTube::creditsToVariant(song.credits);
+                    track.albumId = song.albumId;
                     track.isVideo = song.isVideo;
                     track.fromRadio = true;
                     additions.append(track);
