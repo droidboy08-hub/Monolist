@@ -57,12 +57,15 @@ class Graph;
 // that listeners of theirs also play; without it that shelf falls back to the
 // catalogue's "Sounds like <artist>". `region` is the country the listener
 // browses as, which decides where an artist is looked up first.
+// `hideExplicit` is Settings' "Hide explicit titles": every row on every shelf
+// is then held to explicitTitle() as well (see suitable.h).
 QVector<Shelf> buildShelves(const Catalog &catalog,
                             const TasteProfile &taste,
                             const QVector<PlayEvent> &history,
                             int perShelf = 12,
                             const Graph *graph = nullptr,
-                            const QString &region = QString());
+                            const QString &region = QString(),
+                            bool hideExplicit = false);
 
 // "From <country>" and "More from <country>", out of the regional graph shards.
 //
@@ -83,11 +86,14 @@ QVector<Shelf> buildShelves(const Catalog &catalog,
 //
 // A country whose data cannot fill a shelf with artists that pass is left out
 // rather than padded with the worldwide list under its name.
+//
+// `hideExplicit` holds the graph's recording titles to explicitTitle() too.
 QVector<Shelf> buildRegionShelves(const Graph &graph,
                                   const Catalog *catalogue,
                                   const QString &region,
                                   const QString &regionName,
                                   const QVector<PlayEvent> &history,
-                                  int perShelf = 12);
+                                  int perShelf = 12,
+                                  bool hideExplicit = false);
 
 } // namespace Rec

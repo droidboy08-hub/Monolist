@@ -1188,7 +1188,8 @@ int main(int argc, char *argv[])
     // refuses, every refusal written to the report for review, and a fixed
     // list of cases it must get right in both directions — the hateful titles
     // review found, and the anti-fascist songs and innocent names a careless
-    // filter catches instead.
+    // filter catches instead. Then the same for "Hide explicit titles": what
+    // it would hide on top, and its own cases with the switch off and on.
     const int contentFlag = args.indexOf(QStringLiteral("--content-test"));
     if (contentFlag >= 0 && contentFlag + 2 < args.size()) {
         auto *catalogue = new Rec::Catalog;
@@ -1207,6 +1208,23 @@ int main(int argc, char *argv[])
                 }
             }
             qWarning("content: %d of %d rows refused", refused, catalogue->count());
+
+            // What "Hide explicit titles" adds on top, written after the rest
+            // under a heading of its own, so every word on its list can be
+            // checked for what else it catches.
+            out << "# refused only with Hide explicit titles on\n";
+            int hidden = 0;
+            for (int row = 0; row < catalogue->count(); ++row) {
+                const QString title = catalogue->title(row);
+                const QString artist = catalogue->artist(row);
+                if (Rec::suitableForSuggestion(title, artist)
+                    && !Rec::suitableForSuggestion(title, artist, /*hideExplicit=*/true)) {
+                    ++hidden;
+                    out << row << '\t' << artist << '\t' << title << '\t' << catalogue->popularity(row) << '\n';
+                }
+            }
+            qWarning("content: with Hide explicit titles on, %d more of %d rows refused",
+                     hidden, catalogue->count());
 
             struct Case { const char *title; const char *artist; bool allowed; };
             const Case cases[] = {
@@ -1246,6 +1264,58 @@ int main(int argc, char *argv[])
                 }
             }
             qWarning("content: %d of %d fixed cases wrong", wrong, int(std::size(cases)));
+
+            // "Hide explicit titles", each case twice: with the switch off,
+            // where every one of these must pass, and on, where only the
+            // clean ones may — the innocent words a careless list would
+            // catch, the clean edit beside the explicit one, and each shape
+            // of the explicit-version mark.
+            struct ExplicitCase { const char *title; const char *artist; bool hiddenWhenOn; };
+            const ExplicitCase explicitCases[] = {
+                { "Fuck You", "CeeLo Green", true },
+                { "Forget You", "CeeLo Green", false },
+                { "Bitch Better Have My Money", "Rihanna", true },
+                { "Motherfuckin' Hurricane", "Folk Band", true },
+                { "Lose Yourself (Explicit)", "Eminem", true },
+                { "HUMBLE. [Explicit]", "Kendrick Lamar", true },
+                { "In Da Club - Explicit Version", "50 Cent", true },
+                { "Gold Digger - Explicit", "Kanye West", true },
+                { "Lose Yourself (Clean)", "Eminem", false },
+                { "Explicit", "Folk Band", false },
+                { "Hijo de Puta", "Asspera", true },
+                { "Off With Her Tits", "Allie X", true },
+                { "Pussy Cat Pussy Cat", "Nursery Rhymes", false },
+                { "What's New Pussycat?", "Tom Jones", false },
+                // Caught by an earlier list, and wrongly: Swedish "slut" is
+                // an end, Serbo-Croatian "puta" is times, French "p'tits" small.
+                { "I ett hus vid skogens slut", "Barnens favoriter", false },
+                { "Sto puta", "Zdravko Čolić", false },
+                { "Trois p’tits chats", "HeyKids Comptine Pour Bébé", false },
+                { "Cum Sancto Spiritu", "Johann Sebastian Bach", false },
+                { "Jag fick feeling", "Linnea Henriksson", false },
+                { "Moby Dick", "Led Zeppelin", false },
+                { "Hoe-Down", "Aaron Copland", false },
+                { "Sex on Fire", "Kings of Leon", false },
+                { "Scunthorpe Shuffle", "Folk Band", false },
+            };
+            int explicitWrong = 0;
+            for (const ExplicitCase &c : explicitCases) {
+                const QString title = QString::fromUtf8(c.title);
+                const QString artist = QString::fromUtf8(c.artist);
+                const bool off = Rec::suitableForSuggestion(title, artist, /*hideExplicit=*/false);
+                const bool on = Rec::suitableForSuggestion(title, artist, /*hideExplicit=*/true);
+                if (!off) {
+                    ++explicitWrong;
+                    qWarning("content: WRONG  %s — %s  (refused with the switch off)", c.artist, c.title);
+                }
+                if (on == c.hiddenWhenOn) {
+                    ++explicitWrong;
+                    qWarning("content: WRONG  %s — %s  (%s with the switch on)", c.artist, c.title,
+                             on ? "allowed, should be hidden" : "hidden, should be allowed");
+                }
+            }
+            qWarning("content: %d of %d explicit checks wrong (%d cases, switch off and on)", explicitWrong,
+                     int(std::size(explicitCases)) * 2, int(std::size(explicitCases)));
         }
         delete catalogue;
         QTimer::singleShot(0, &app, []() { QCoreApplication::quit(); });

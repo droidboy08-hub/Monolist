@@ -27,7 +27,7 @@ public Q_SLOTS:
     // opened it, and the graph shards are SQLite.
     void load(const QString &catalogueDirectory, const QString &graphDirectory);
     void build(const QVector<Rec::PlayEvent> &history, const QString &region,
-               const QString &regionName, int perShelf);
+               const QString &regionName, int perShelf, bool hideExplicit);
 
 Q_SIGNALS:
     void loaded(bool ok, int rows, int graphShards, const QString &message);
@@ -61,6 +61,10 @@ class Recommender : public QObject
     // which is where the iOS project keeps them.
     Q_PROPERTY(QString graphDirectory READ graphDirectory WRITE setGraphDirectory NOTIFY stateChanged)
     Q_PROPERTY(bool graphAvailable READ graphAvailable NOTIFY stateChanged)
+    // Settings' "Hide explicit titles": crude or sexual titles, and songs
+    // marked as the explicit version, kept off every shelf (Rec::explicitTitle).
+    // Off until the listener turns it on; kept in the settings table.
+    Q_PROPERTY(bool hideExplicit READ hideExplicit WRITE setHideExplicit NOTIFY hideExplicitChanged)
 
 public:
     explicit Recommender(QObject *parent = nullptr);
@@ -78,6 +82,9 @@ public:
     QString graphDirectory() const;
     void setGraphDirectory(const QString &path);
     bool graphAvailable() const { return m_graphShards > 0; }
+    bool hideExplicit() const { return m_hideExplicit; }
+    // Rebuilds the page straight away, so the switch is seen to work.
+    void setHideExplicit(bool hide);
 
 public Q_SLOTS:
     // Brings the page up to date. Nothing at all when neither the listening
@@ -94,6 +101,7 @@ public Q_SLOTS:
 Q_SIGNALS:
     void stateChanged();
     void shelvesChanged();
+    void hideExplicitChanged();
     // Something worth a line in the toast: a suggestion that could not be
     // found, usually.
     void notice(const QString &text);
@@ -113,13 +121,15 @@ private:
     QVariantList m_shelves;
     bool m_personal = false;
     bool m_busy = false;
+    bool m_hideExplicit = false;
     int m_rows = 0;
     int m_graphShards = 0;
     // A refresh asked for while a build was running — a country changed in
     // Settings mid-scan, say. Dropping it would leave the page showing the old
     // country until something else happened to rebuild it.
     bool m_refreshQueued = false;
-    // What the page on screen was built from: the newest event and the country.
+    // What the page on screen was built from: the listening, the country and
+    // whether explicit titles were hidden.
     QString m_builtFrom;
     QString m_message;
     // The suggestion waiting on a search, so its answer is not mistaken for

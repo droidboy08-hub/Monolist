@@ -23,6 +23,7 @@ namespace {
 
 const QString kDataDirKey = QStringLiteral("rec.dataDir");
 const QString kGraphDirKey = QStringLiteral("rec.graphDir");
+const QString kHideExplicitKey = QStringLiteral("rec.hideExplicit");
 
 // Enough to fill a shelf without making the page a list to scroll rather than
 // a thing to look at.
@@ -196,7 +197,7 @@ void RecommenderWorker::load(const QString &catalogueDirectory, const QString &g
 }
 
 void RecommenderWorker::build(const QVector<Rec::PlayEvent> &history, const QString &region,
-                              const QString &regionName, int perShelf)
+                              const QString &regionName, int perShelf, bool hideExplicit)
 {
     // The builders check this between scans as well, and return early; a page
     // cut short that way is nobody's to show, so it is dropped here, unsent.
@@ -207,12 +208,12 @@ void RecommenderWorker::build(const QVector<Rec::PlayEvent> &history, const QStr
     if (m_catalog) {
         const Rec::TasteProfile taste =
             Rec::buildTaste(*m_catalog, history, QDateTime::currentDateTimeUtc());
-        shelves = Rec::buildShelves(*m_catalog, taste, history, perShelf, m_graph, region);
+        shelves = Rec::buildShelves(*m_catalog, taste, history, perShelf, m_graph, region, hideExplicit);
     }
 
     if (m_graph && !Rec::stopRequested()) {
-        QVector<Rec::Shelf> regional =
-            Rec::buildRegionShelves(*m_graph, m_catalog, region, regionName, history, perShelf);
+        QVector<Rec::Shelf> regional = Rec::buildRegionShelves(*m_graph, m_catalog, region, regionName,
+                                                               history, perShelf, hideExplicit);
         // The country shelves are built from the graph, apart from the rest,
         // so nothing stopped them repeating a song a personal shelf above had
         // already offered. Same text key as every other shelf uses.
@@ -276,6 +277,10 @@ Recommender::Recommender(QObject *parent)
     : QObject(parent)
 {
     qRegisterMetaType<QVector<Rec::PlayEvent>>("QVector<Rec::PlayEvent>");
+
+    // Read before the first build is asked for, below, so a launch never
+    // shows one page of explicit titles before the setting catches up.
+    m_hideExplicit = storedSetting(kHideExplicitKey) == QLatin1String("1");
 
     m_worker = new RecommenderWorker;
     m_worker->moveToThread(&m_thread);
@@ -377,6 +382,18 @@ void Recommender::setGraphDirectory(const QString &path)
     reload();
 }
 
+void Recommender::setHideExplicit(bool hide)
+{
+    if (hide == m_hideExplicit)
+        return;
+    m_hideExplicit = hide;
+    storeSetting(kHideExplicitKey, hide ? QStringLiteral("1") : QStringLiteral("0"));
+    Q_EMIT hideExplicitChanged();
+    // The switch is part of what a page is built from, so this rebuilds it —
+    // or, mid-build, queues the rebuild behind the one running.
+    refresh();
+}
+
 QString Recommender::resolvedGraphDirectory() const
 {
     const QString explicitDir = graphDirectory();
@@ -418,10 +435,11 @@ void Recommender::refresh()
     const QString region = InnerTube::region();
 
     // Called every time Search is opened, so it has to be nothing when nothing
-    // has happened. What a page depends on is the listening history and the
-    // country, so those are summarised and compared. Anything else — opening
-    // Search twice in a row — keeps the page exactly as it is, which also means
-    // it never rearranges itself under someone reading it.
+    // has happened. What a page depends on is the listening history, the
+    // country and the "Hide explicit titles" switch, so those are summarised
+    // and compared. Anything else — opening Search twice in a row — keeps the
+    // page exactly as it is, which also means it never rearranges itself under
+    // someone reading it.
     //
     // The newest event alone is not enough: a listen is written when it starts
     // and FINISHED by an update to the same row — the playhead, the label —
@@ -436,7 +454,8 @@ void Recommender::refresh()
                       .arg(summary.value(1).toLongLong())
                       .arg(summary.value(2).toLongLong());
     }
-    const QString fingerprint = listened + QLatin1Char('|') + region;
+    const QString fingerprint = listened + QLatin1Char('|') + region + QLatin1Char('|')
+                                + (m_hideExplicit ? QLatin1Char('1') : QLatin1Char('0'));
     if (fingerprint == m_builtFrom && !m_shelves.isEmpty())
         return;
     m_builtFrom = fingerprint;
@@ -447,7 +466,8 @@ void Recommender::refresh()
                               Q_ARG(QVector<Rec::PlayEvent>, history),
                               Q_ARG(QString, region),
                               Q_ARG(QString, regionDisplayName(region)),
-                              Q_ARG(int, kPerShelf));
+                              Q_ARG(int, kPerShelf),
+                              Q_ARG(bool, m_hideExplicit));
 }
 
 void Recommender::rebuild()

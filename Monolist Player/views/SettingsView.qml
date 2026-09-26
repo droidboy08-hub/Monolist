@@ -389,6 +389,19 @@ Flickable {
             onEditingFinished: Recs.graphDirectory = text
         }
 
+        // Only the suggestions: what someone searches for, or opens, they
+        // asked for by name. The note says it goes by the title because the
+        // catalogue has no explicit flag, so a clean title can still hide an
+        // explicit song.
+        ToggleRow {
+            width: parent.width
+            label: "Hide explicit titles"
+            hint: "Keep songs whose titles are crude or sexual, or marked Explicit, off the suggestions in Search. "
+                  + "It goes by the title alone; search results and albums are left as they are."
+            checked: Recs.hideExplicit
+            onToggled: Recs.hideExplicit = !Recs.hideExplicit
+        }
+
         HRule { width: parent.width }
 
         // — connections —

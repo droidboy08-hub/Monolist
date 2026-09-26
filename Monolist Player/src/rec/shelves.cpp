@@ -111,7 +111,8 @@ QVector<Suggestion> collect(const Catalog &catalog,
                             const QSet<quint64> &heard,
                             Shown &shown,
                             int wanted,
-                            float floorScore)
+                            float floorScore,
+                            bool hideExplicit)
 {
     QVector<Suggestion> out;
     for (const Hit &hit : hits) {
@@ -121,7 +122,7 @@ QVector<Suggestion> collect(const Catalog &catalog,
             break;                     // hits arrive sorted, so the rest are worse
         const QString title = titleOf(catalog, hit.row);
         const QString artist = catalog.artist(hit.row);
-        if (title.isEmpty() || !Rec::suitableForSuggestion(title, artist))
+        if (title.isEmpty() || !Rec::suitableForSuggestion(title, artist, hideExplicit))
             continue;
         if (heard.contains(Rec::strictKey(title, artist)) || shown.has(hit.row, title, artist))
             continue;
@@ -495,7 +496,7 @@ QStringList likedArtists(const QVector<PlayEvent> &history, const TasteProfile &
 // the songs the listener actually played by them.
 Shelf listenersAlso(const Catalog &catalog, const Graph &graph, const QString &artist,
                     const QVector<float> &heardSound, const QString &region,
-                    const QSet<quint64> &heard, Shown &shown, int perShelf)
+                    const QSet<quint64> &heard, Shown &shown, int perShelf, bool hideExplicit)
 {
     Shelf shelf;
     // The whole credit first — "Simon & Garfunkel" is an artist — and its lead
@@ -557,7 +558,7 @@ Shelf listenersAlso(const Catalog &catalog, const Graph &graph, const QString &a
                 break;
             const QString title = catalog.title(row);
             const QString credit = catalog.artist(row);
-            if (title.isEmpty() || !Rec::suitableForSuggestion(title, credit))
+            if (title.isEmpty() || !Rec::suitableForSuggestion(title, credit, hideExplicit))
                 continue;
             if (heard.contains(Rec::strictKey(title, credit)) || shown.has(row, title, credit)
                 || own.has(row, title, credit))
@@ -632,7 +633,8 @@ QVector<Shelf> buildShelves(const Catalog &catalog,
                             const QVector<PlayEvent> &history,
                             int perShelf,
                             const Graph *graph,
-                            const QString &region)
+                            const QString &region,
+                            bool hideExplicit)
 {
     QVector<Shelf> shelves;
     if (!catalog.isLoaded())
@@ -686,7 +688,7 @@ QVector<Shelf> buildShelves(const Catalog &catalog,
         shelf.reason = QStringLiteral("Because you played %1 by %2")
                            .arg(event.title, event.artist.isEmpty()
                                                  ? QStringLiteral("them") : event.artist);
-        shelf.rows = collect(catalog, hits, heard, shown, perShelf, kSongFloor);
+        shelf.rows = collect(catalog, hits, heard, shown, perShelf, kSongFloor, hideExplicit);
         if (shelf.rows.size() >= 4) {
             shelves.append(shelf);
             ++songShelves;
@@ -703,7 +705,7 @@ QVector<Shelf> buildShelves(const Catalog &catalog,
         shelf.kind = QStringLiteral("taste");
         shelf.title = QStringLiteral("Made for you");
         shelf.reason = QStringLiteral("From everything you have played, weighted towards what you finished");
-        shelf.rows = collect(catalog, hits, heard, shown, perShelf, 0.0f);
+        shelf.rows = collect(catalog, hits, heard, shown, perShelf, 0.0f, hideExplicit);
         if (shelf.rows.size() >= 4)
             shelves.append(shelf);
     }
@@ -715,7 +717,7 @@ QVector<Shelf> buildShelves(const Catalog &catalog,
         shelf.kind = QStringLiteral("recent");
         shelf.title = QStringLiteral("On repeat lately");
         shelf.reason = QStringLiteral("Weighted to the last few days rather than the last few months");
-        shelf.rows = collect(catalog, hits, heard, shown, perShelf, 0.0f);
+        shelf.rows = collect(catalog, hits, heard, shown, perShelf, 0.0f, hideExplicit);
         if (shelf.rows.size() >= 4)
             shelves.append(shelf);
     }
@@ -742,7 +744,8 @@ QVector<Shelf> buildShelves(const Catalog &catalog,
         Shelf shelf;
         const QVector<float> heardSound = heardSoundOf(catalog, history, artist);
         if (graph && graph->isOpen())
-            shelf = listenersAlso(catalog, *graph, artist, heardSound, region, heard, trial, perShelf);
+            shelf = listenersAlso(catalog, *graph, artist, heardSound, region, heard, trial, perShelf,
+                                  hideExplicit);
 
         if (shelf.rows.size() < 4) {
             trial = shown;
@@ -776,7 +779,7 @@ QVector<Shelf> buildShelves(const Catalog &catalog,
             shelf.kind = QStringLiteral("artist");
             shelf.title = QStringLiteral("Sounds like %1").arg(name);
             shelf.reason = QStringLiteral("Artists whose sound sits closest to theirs");
-            shelf.rows = collect(catalog, hits, heard, trial, perShelf, 0.0f);
+            shelf.rows = collect(catalog, hits, heard, trial, perShelf, 0.0f, hideExplicit);
         }
 
         if (shelf.rows.size() >= 4) {
@@ -804,7 +807,7 @@ QVector<Shelf> buildShelves(const Catalog &catalog,
         shelf.kind = QStringLiteral("popular");
         shelf.title = QStringLiteral("Somewhere to start");
         shelf.reason = QStringLiteral("Not personal yet — play a few songs and this page becomes yours");
-        shelf.rows = collect(catalog, popular, heard, shown, perShelf, 0.0f);
+        shelf.rows = collect(catalog, popular, heard, shown, perShelf, 0.0f, hideExplicit);
         if (!shelf.rows.isEmpty())
             shelves.append(shelf);
     }
@@ -827,7 +830,8 @@ QVector<Shelf> buildRegionShelves(const Graph &graph,
                                   const QString &region,
                                   const QString &regionName,
                                   const QVector<PlayEvent> &history,
-                                  int perShelf)
+                                  int perShelf,
+                                  bool hideExplicit)
 {
     QVector<Shelf> shelves;
     // No catalogue, no shelf: it is what keeps the non-musicians out.
@@ -899,7 +903,7 @@ QVector<Shelf> buildRegionShelves(const Graph &graph,
             if (kept.size() >= 4)
                 break;
             if (track.title.isEmpty() || seenRecordings.contains(track.recordingMbid)
-                || !Rec::suitableForSuggestion(track.title, track.artistName))
+                || !Rec::suitableForSuggestion(track.title, track.artistName, hideExplicit))
                 continue;
             seenRecordings.insert(track.recordingMbid);
             // The same song is often several MusicBrainz recordings — the single,

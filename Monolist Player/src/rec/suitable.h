@@ -28,9 +28,25 @@ namespace Rec {
 //   the Spanish short form of Enrique, and there is an artist called that.
 // - Not crude or sexual titles in general. Whether to hide explicit songs is
 //   a choice for the listener, not a safety question, and a grindcore fan's
-//   shelf being full of grindcore is the shelf working.
+//   shelf being full of grindcore is the shelf working. That choice is
+//   `hideExplicit` — Settings' "Hide explicit titles", off unless the listener
+//   turns it on — which adds explicitTitle() below to the checks.
 //
 // Nothing here stops anyone searching for anything.
-bool suitableForSuggestion(const QString &title, const QString &artist);
+bool suitableForSuggestion(const QString &title, const QString &artist, bool hideExplicit = false);
+
+// Whether a title is one a listener who asked to hide explicit songs would not
+// want put in front of them: a crude or sexual word in it, whole and in any
+// case, or a mark that it is the explicit version — "(Explicit)", "[Explicit]",
+// "Explicit Version".
+//
+// Titles only, because that is all there is: the catalogue and the graph
+// carry no explicit flag, so a song whose words are explicit under a clean
+// title passes. The word list is short on purpose, and every word on it was
+// run against the whole catalogue (--content-test) before it went in; a word
+// that also means something innocent stays off it, because hiding a Latin
+// mass or a Swedish pop song for someone else's swearing is the filter
+// failing, not erring on the safe side.
+bool explicitTitle(const QString &title);
 
 } // namespace Rec
