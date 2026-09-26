@@ -302,9 +302,16 @@ ApplicationWindow {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        queueOpen: window.queueOpen
+        // Now Playing covers the docked queue, so there the button shows the
+        // queue where it can be seen: the view's own UP NEXT pane.
+        queueOpen: window.nowPlayingOpen ? nowPlaying.pane === "queue" : window.queueOpen
         nowPlayingOpen: window.nowPlayingOpen
-        onQueueToggled: window.queueOpen = !window.queueOpen
+        onQueueToggled: {
+            if (window.nowPlayingOpen)
+                nowPlaying.pane = nowPlaying.pane === "queue" ? "lyrics" : "queue"
+            else
+                window.queueOpen = !window.queueOpen
+        }
         onNowPlayingToggled: window.nowPlayingOpen = !window.nowPlayingOpen
     }
 

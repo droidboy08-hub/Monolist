@@ -6,12 +6,38 @@ import Monolist.Backend
 Rectangle {
     id: root
 
-    readonly property bool showVolume: width >= 1040
+    // As the window narrows the bar gives things up in one order: the volume
+    // slider folds into a button (the output button, which has nothing to
+    // choose between yet, goes with it), then the progress line moves under
+    // the buttons, then the title goes. The Now Playing and queue buttons
+    // never go: nothing else opens either of them.
+    readonly property bool showVolume: width >= 1120
     readonly property bool showMeta: width >= 760
+    // Under the buttons once one line would leave the progress line too short
+    // to aim at. Without the title it stays under, so narrowing the window
+    // never puts it back on the line it has just left.
+    readonly property bool stacked: !showMeta || transport.width < 440
+    // In Now Playing this is whether its UP NEXT pane is showing.
     property bool queueOpen: false
     property bool nowPlayingOpen: false
     signal queueToggled()
     signal nowPlayingToggled()
+
+    // Muting is a volume of nothing. The level it had is kept here so unmuting
+    // brings it back; a restart finds the volume as it was left, muted or not.
+    property real volumeBeforeMute: 0.65
+    readonly property bool muted: Player.volume <= 0
+    readonly property string volumeIcon: muted ? "volume-x"
+                                       : Player.volume < 0.5 ? "volume-1" : "volume-2"
+
+    function toggleMute() {
+        if (muted) {
+            Player.setVolume(volumeBeforeMute > 0 ? volumeBeforeMute : 0.65)
+        } else {
+            volumeBeforeMute = Player.volume
+            Player.setVolume(0)
+        }
+    }
 
     color: Theme.bg
     implicitHeight: Theme.playerBarHeight
@@ -28,7 +54,7 @@ Rectangle {
         anchors.left: parent.left
         anchors.leftMargin: Theme.space6
         anchors.verticalCenter: parent.verticalCenter
-        width: root.showMeta ? 320 : 120
+        width: root.showMeta ? 320 : 52
         height: 52
 
         Row {
@@ -120,15 +146,14 @@ Rectangle {
         id: transport
         anchors.left: nowPlaying.right
         anchors.leftMargin: Theme.space6
-        anchors.right: rightControls.visible ? rightControls.left : parent.right
+        anchors.right: rightControls.left
         anchors.rightMargin: Theme.space6
         anchors.verticalCenter: parent.verticalCenter
-        height: 44
+        height: root.stacked ? buttons.height + Theme.space1 + timeline.height : buttons.height
 
         Row {
             id: buttons
-            anchors.left: parent.left
-            anchors.verticalCenter: parent.verticalCenter
+            x: root.stacked ? Math.round((parent.width - width) / 2) : 0
             spacing: Theme.space2
 
             IconButton {
@@ -183,42 +208,50 @@ Rectangle {
             }
         }
 
-        Text {
-            id: elapsed
-            anchors.left: buttons.right
-            anchors.leftMargin: Theme.space4
-            anchors.verticalCenter: parent.verticalCenter
-            text: Player.positionText
-            font.family: Theme.fontFamily
-            font.pixelSize: 12
-            color: Theme.neutral700
-        }
+        // The times and the progress line: beside the buttons, or under them
+        // across the whole width when beside would leave the line too short.
+        Item {
+            id: timeline
+            x: root.stacked ? 0 : buttons.width + Theme.space4
+            y: root.stacked ? buttons.height + Theme.space1 : Math.round((parent.height - height) / 2)
+            width: parent.width - x
+            height: elapsed.implicitHeight
 
-        ProgressSlider {
-            anchors.left: elapsed.right
-            anchors.right: total.left
-            anchors.leftMargin: Theme.space4
-            anchors.rightMargin: Theme.space4
-            anchors.verticalCenter: parent.verticalCenter
-            value: Player.progress
-            onMoved: function(v) { Player.seekFraction(v) }
-        }
+            Text {
+                id: elapsed
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                text: Player.positionText
+                font.family: Theme.fontFamily
+                font.pixelSize: 12
+                color: Theme.neutral700
+            }
 
-        Text {
-            id: total
-            anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
-            text: Player.durationText
-            font.family: Theme.fontFamily
-            font.pixelSize: 12
-            color: Theme.neutral700
+            ProgressSlider {
+                anchors.left: elapsed.right
+                anchors.right: total.left
+                anchors.leftMargin: Theme.space4
+                anchors.rightMargin: Theme.space4
+                anchors.verticalCenter: parent.verticalCenter
+                value: Player.progress
+                onMoved: function(v) { Player.seekFraction(v) }
+            }
+
+            Text {
+                id: total
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                text: Player.durationText
+                font.family: Theme.fontFamily
+                font.pixelSize: 12
+                color: Theme.neutral700
+            }
         }
     }
 
     // — output —
     Row {
         id: rightControls
-        visible: root.showVolume
         anchors.right: parent.right
         anchors.rightMargin: Theme.space6
         anchors.verticalCenter: parent.verticalCenter
@@ -242,29 +275,98 @@ Rectangle {
             onClicked: root.queueToggled()
             ToolTip.visible: hovered
             ToolTip.delay: 600
-            ToolTip.text: root.queueOpen ? "Hide queue" : "Queue"
+            ToolTip.text: root.nowPlayingOpen ? (root.queueOpen ? "Show lyrics" : "Up next")
+                                              : (root.queueOpen ? "Hide queue" : "Queue")
         }
         IconButton {
+            visible: root.showVolume
             iconName: "monitor-speaker"
             iconColor: Theme.neutral700
             iconSize: 15
             anchors.verticalCenter: parent.verticalCenter
         }
 
-        Icon {
-            name: "volume-2"
-            width: 15
-            height: 15
-            color: Theme.neutral700
+        IconButton {
+            visible: root.showVolume
+            iconName: root.volumeIcon
+            iconColor: root.muted ? Theme.accent : Theme.neutral700
+            iconSize: 15
             anchors.verticalCenter: parent.verticalCenter
+            onClicked: root.toggleMute()
+            ToolTip.visible: hovered
+            ToolTip.delay: 600
+            ToolTip.text: root.muted ? "Unmute" : "Mute"
         }
 
         ProgressSlider {
+            visible: root.showVolume
             width: 90
             anchors.verticalCenter: parent.verticalCenter
             value: Player.volume
             fillColor: Theme.text
             onMoved: function(v) { Player.setVolume(v) }
+        }
+
+        // Too narrow for the slider: one button, and the slider and mute in a
+        // popup above it. Red while muted, so that still shows when folded.
+        IconButton {
+            id: volumeButton
+            visible: !root.showVolume
+            iconName: root.volumeIcon
+            iconColor: root.muted ? Theme.accent : volumePopup.visible ? Theme.text : Theme.neutral700
+            iconSize: 15
+            anchors.verticalCenter: parent.verticalCenter
+            onClicked: volumePopup.visible ? volumePopup.close() : volumePopup.open()
+            onVisibleChanged: if (!visible) volumePopup.close()
+            ToolTip.visible: hovered && !volumePopup.visible
+            ToolTip.delay: 600
+            ToolTip.text: root.muted ? "Volume (muted)" : "Volume"
+
+            // It stands on the bar's top rule, as if pulled up out of the bar,
+            // and appears without motion: it answers a click, as a menu does.
+            Popup {
+                id: volumePopup
+                x: volumeButton.width - width
+                margins: Theme.space2
+                topPadding: Theme.space2
+                bottomPadding: Theme.space2
+                leftPadding: Theme.space2
+                rightPadding: Theme.space4
+                // A press on the button is its toggle, so it does not count as
+                // a press outside; the button closes it itself.
+                closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutsideParent
+                focus: true
+                onAboutToShow: y = -volumeButton.mapToItem(root, 0, 0).y - height + Theme.ruleWidth
+
+                background: Rectangle {
+                    color: Theme.bg
+                    border.width: Theme.ruleWidth
+                    border.color: Theme.text
+                }
+
+                contentItem: Row {
+                    spacing: Theme.space2
+
+                    IconButton {
+                        anchors.verticalCenter: parent.verticalCenter
+                        iconName: root.volumeIcon
+                        iconColor: root.muted ? Theme.accent : Theme.neutral700
+                        iconSize: 15
+                        onClicked: root.toggleMute()
+                        ToolTip.visible: hovered
+                        ToolTip.delay: 600
+                        ToolTip.text: root.muted ? "Unmute" : "Mute"
+                    }
+
+                    ProgressSlider {
+                        width: 120
+                        anchors.verticalCenter: parent.verticalCenter
+                        value: Player.volume
+                        fillColor: Theme.text
+                        onMoved: function(v) { Player.setVolume(v) }
+                    }
+                }
+            }
         }
     }
 }

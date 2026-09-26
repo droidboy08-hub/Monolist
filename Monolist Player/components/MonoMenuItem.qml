@@ -7,6 +7,9 @@ import Monolist
 MenuItem {
     id: entry
 
+    // Ink, unless the entry has something to warn about.
+    property color textColor: Theme.text
+
     implicitHeight: visible ? 34 : 0
     leftPadding: Theme.space4
     rightPadding: Theme.space4
@@ -18,7 +21,7 @@ MenuItem {
         elide: Text.ElideRight
         font.family: Theme.fontFamily
         font.pixelSize: 13
-        color: entry.enabled ? Theme.text : Theme.neutral500
+        color: entry.enabled ? entry.textColor : Theme.neutral500
     }
 
     arrow: Icon {
