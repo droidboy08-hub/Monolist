@@ -221,7 +221,7 @@ Seen by the agents that fixed B01–B13 and by their reviewers, and not yet fixe
   Done when: only yt-dlp's partial and intermediate files are removed, never a complete audio file, whatever the database says.
 - [x] **F14** Tests and self-tests download into the user's real Music folder even with a scratch data folder *(P2, S)*
   Done when: MONOLIST_DATA_DIR (or a MONOLIST_DOWNLOAD_DIR override) keeps test downloads out of the real Music folder.
-- [ ] **F15** Radio tracks are never marked as radio: openPlayEvent's fromRadio test can never be true, so play_events and Last.fm's chosenByUser treat autoplay songs as chosen *(P2, S)*
+- [x] **F15** Radio tracks are never marked as radio: openPlayEvent's fromRadio test can never be true, so play_events and Last.fm's chosenByUser treat autoplay songs as chosen *(P2, S)*
   Done when: songs added by autoplay radio are recorded with source "radio" and scrobbled with chosenByUser=0.
 - [ ] **F16** Pin the published manifest's SHA-256 in the app once Monolist-data v1 is pushed, so a moved tag cannot swap the data *(P3, S)*
   Done when: RecData refuses a manifest whose hash differs from the one built into the app for that version.

@@ -663,12 +663,12 @@ void PlaybackController::openPlayEvent(const QVariantMap &track)
         return;                       // nothing a recommender could match on
 
     // Where this play came from, which the profile weights by. A track the
-    // radio added was not chosen by anyone, so it counts as the queue no
-    // matter which surface the queue began on — and the queue is the weakest
-    // signal there is short of a resume.
-    const int radioStart = m_queue.radioStartIndex();
-    const bool fromRadio = radioStart >= 0 && m_queue.currentIndex() >= radioStart;
-    const QString source = fromRadio ? QStringLiteral("queue") : m_source;
+    // radio added was not chosen by anyone, so it is "radio" no matter which
+    // surface the queue began on, and weighs as little as a queue running on.
+    // The row's own flag says so; QueueModel::radioStartIndex cannot, since
+    // it only looks ahead of the song playing, never at it.
+    const bool fromRadio = track.value(QStringLiteral("fromRadio")).toBool();
+    const QString source = fromRadio ? QStringLiteral("radio") : m_source;
 
     QSqlQuery event(AppDatabase::connection());
     event.prepare(QStringLiteral(
