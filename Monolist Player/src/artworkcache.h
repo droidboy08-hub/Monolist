@@ -8,6 +8,7 @@
 #include <QQuickAsyncImageProvider>
 #include <QSize>
 #include <QString>
+#include <QThreadPool>
 
 #include <functional>
 
@@ -35,9 +36,16 @@ class ArtworkFetcher : public QObject
     Q_OBJECT
 public:
     explicit ArtworkFetcher(QObject *parent = nullptr);
+    // Waits for any cover still being decoded, since each hands its picture
+    // back through this object.
+    ~ArtworkFetcher() override;
 
     // With the artwork disk cache, for anything else that reads covers.
     QNetworkAccessManager *network() const { return m_network; }
+
+    // How many covers have been decoded, how long that took and on which
+    // thread, in one line: --scroll-test reports it beside the frame times.
+    static QString decodeReport();
 
 public Q_SLOTS:
     void fetch(ArtworkResponse *response, const QString &source, const QSize &requestedSize);
@@ -52,6 +60,10 @@ private:
                   const std::function<QImage(QImage)> &scaled);
 
     QNetworkAccessManager *m_network;
+    // Where covers are decoded and scaled: 10 to 20 ms each, which on this
+    // object's thread, the interface's, was a frame and a half it did not
+    // draw for every cover that arrived (--scroll-test counts them).
+    QThreadPool m_decoders;
 };
 
 class ArtworkCache : public QQuickAsyncImageProvider

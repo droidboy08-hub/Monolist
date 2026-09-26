@@ -1,6 +1,8 @@
 #include "artworkcache.h"
 
+#include <QCoreApplication>
 #include <QDir>
+#include <QElapsedTimer>
 #include <QFileInfo>
 #include <QMetaObject>
 #include <QMutex>
@@ -13,9 +15,11 @@
 #include <QQuickTextureFactory>
 #include <QRegularExpression>
 #include <QStandardPaths>
+#include <QThread>
 #include <QUrl>
 
 #include <array>
+#include <atomic>
 
 namespace {
 
@@ -67,7 +71,46 @@ QImage withoutLetterbox(const QImage &image, const QString &source)
     return image.copy(0, top, image.width(), bottom - top + 1);
 }
 
+// Decoding a cover is the one heavy thing done per picture, so it is counted:
+// how many, how long, and how many of them held up the interface's thread.
+struct DecodeTally {
+    std::atomic<int> count { 0 };
+    std::atomic<int> onGuiThread { 0 };
+    std::atomic<qint64> totalUs { 0 };
+    std::atomic<qint64> longestUs { 0 };
+};
+
+DecodeTally &tally()
+{
+    static DecodeTally decodes;
+    return decodes;
+}
+
+void countDecode(qint64 us)
+{
+    DecodeTally &t = tally();
+    ++t.count;
+    const QCoreApplication *app = QCoreApplication::instance();
+    if (app && QThread::currentThread() == app->thread())
+        ++t.onGuiThread;
+    t.totalUs += us;
+    qint64 longest = t.longestUs.load();
+    while (us > longest && !t.longestUs.compare_exchange_weak(longest, us)) {
+    }
+}
+
 } // namespace
+
+QString ArtworkFetcher::decodeReport()
+{
+    const DecodeTally &t = tally();
+    return QStringLiteral("%1 covers decoded, %2 ms in all, the longest %3 ms; %4 of them on the "
+                          "interface's thread")
+        .arg(t.count.load())
+        .arg(t.totalUs.load() / 1000.0, 0, 'f', 1)
+        .arg(t.longestUs.load() / 1000.0, 0, 'f', 1)
+        .arg(t.onGuiThread.load());
+}
 
 // ------------------------------------------------------------ ArtworkResponse
 
@@ -145,6 +188,16 @@ ArtworkFetcher::ArtworkFetcher(QObject *parent)
     cache->setCacheDirectory(dir);
     cache->setMaximumCacheSize(256LL * 1024 * 1024);
     m_network->setCache(cache);
+
+    // A shelf's worth of covers arrives at once; a few at a time is enough to
+    // keep up without crowding the audio and the render thread.
+    m_decoders.setMaxThreadCount(qBound(1, QThread::idealThreadCount() / 2, 4));
+}
+
+ArtworkFetcher::~ArtworkFetcher()
+{
+    m_decoders.clear();
+    m_decoders.waitForDone();
 }
 
 void ArtworkFetcher::fetch(ArtworkResponse *response,
@@ -171,11 +224,22 @@ void ArtworkFetcher::fetch(ArtworkResponse *response,
 
     if (isLocal) {
         const QString path = url.isLocalFile() ? url.toLocalFile() : source;
-        QImage image(path);
-        if (image.isNull())
-            response->fail(QStringLiteral("Could not read artwork: %1").arg(path));
-        else
-            response->succeed(scaled(image));
+        m_decoders.start([this, response, path, scaled]() {
+            QElapsedTimer decoding;
+            decoding.start();
+            QImage image(path);
+            if (!image.isNull()) {
+                image = scaled(image);
+                countDecode(decoding.nsecsElapsed() / 1000);
+            }
+            // Answered from this object's thread, as a network cover is.
+            QMetaObject::invokeMethod(this, [response, path, image]() {
+                if (image.isNull())
+                    response->fail(QStringLiteral("Could not read artwork: %1").arg(path));
+                else
+                    response->succeed(image);
+            }, Qt::QueuedConnection);
+        });
         return;
     }
 
@@ -251,12 +315,26 @@ void ArtworkFetcher::download(ArtworkResponse *response,
             return;
         }
 
-        QImage image;
-        if (!image.loadFromData(reply->readAll())) {
-            giveUp(QStringLiteral("Artwork data was not a readable image."));
-            return;
-        }
-        response->succeed(scaled(withoutLetterbox(image, source)));
+        // Only the bytes are read here. The decoding and scaling go to the
+        // pool, and the picture comes back to this thread to be handed over:
+        // that way nothing on the pool touches a response once the app has
+        // stopped answering events, and QML is never given one twice.
+        m_decoders.start([this, data = reply->readAll(), response, source, scaled, giveUp]() {
+            QElapsedTimer decoding;
+            decoding.start();
+            QImage image;
+            const bool readable = image.loadFromData(data);
+            if (readable) {
+                image = scaled(withoutLetterbox(image, source));
+                countDecode(decoding.nsecsElapsed() / 1000);
+            }
+            QMetaObject::invokeMethod(this, [response, image, readable, giveUp]() {
+                if (readable)
+                    response->succeed(image);
+                else
+                    giveUp(QStringLiteral("Artwork data was not a readable image."), true);
+            }, Qt::QueuedConnection);
+        });
     });
 }
 

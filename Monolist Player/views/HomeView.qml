@@ -7,19 +7,14 @@ import "../components"
 // Home: what is new, what to play next, and what you played. The content is
 // YouTube Music's own feed, set in the system's type — the newest release on
 // the red poster, then numbered sections in reading order.
-Flickable {
+ScrollPage {
     id: root
 
     signal pageRequested(string browseId)
     // Another of the app's views by name: Recently played's SHOW ALL.
     signal viewRequested(string view)
 
-    contentWidth: width
     contentHeight: column.implicitHeight
-    boundsBehavior: Flickable.StopAtBounds
-    clip: true
-
-    ScrollBar.vertical: MonoScrollBar {}
 
     // Sections are numbered in reading order, whichever of them have content.
     readonly property bool hasPicks: Catalog.quickPicks.count > 0

@@ -420,6 +420,21 @@ mpv's own messages.
                                                     this computer: signed-out requests byte for byte, the
                                                     check, rotation, 400/401/403, restart, sign-out, the
                                                     offer to delete the imported file, no value in the log
+    monolist --audio-devices [<videoId>]            the output menu: every device mpv lists, what the menu
+                                                    offers (Auto, then the WASAPI or CoreAudio devices, then
+                                                    a chosen one that is not connected), the kept choice and
+                                                    the one in use; with a video id it plays, switches to
+                                                    each device in turn with the clock read after each, and
+                                                    goes back to the choice it found (needs
+                                                    MONOLIST_DATA_DIR for that part)
+    monolist --view <view> --scroll-test [--scroll-away]
+                                                    that page scrolled as a person does (one notch, a quick
+                                                    spin, touchpad streams, a fling, the wheel to the end, a
+                                                    notch over a shelf): how far, how fast, the frame times
+                                                    and the longest hold-up of the interface's thread, the
+                                                    page's settings and make-up, and how many covers were
+                                                    decoded where; the pointer sits over the page, or off
+                                                    the window with --scroll-away
     monolist --diag                                 what the database holds, whether there is a Last.fm
                                                     key, the scrobbles waiting, and the YouTube Music session
                                                     (its state, size and cookie names, never a value)
@@ -479,8 +494,9 @@ links, playlists, likes and saved albums, and synced and plain lyrics.
 
 Known gaps:
 
-* The device button in the player bar is styled but unwired.
-* macOS and Linux build from the same code but have not been run.
+* macOS and Linux build from the same code but have not been run: the output
+  menu's CoreAudio devices and the wheel and trackpad scrolling there are
+  untested.
 
 ## About the Swift libraries
 

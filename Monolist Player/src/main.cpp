@@ -9,6 +9,7 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQuickStyle>
+#include <QQuickWindow>
 #include <QSqlError>
 #include <QSqlQuery>
 #include <QTimeZone>
@@ -34,6 +35,7 @@
 #include "mediaextractor.h"
 #include "mpvengine.h"
 #include "playbackcontroller.h"
+#include "scrollselftest.h"
 #include "streamresolver.h"
 #include "trackmodel.h"
 #include "videosurface.h"
@@ -380,6 +382,10 @@ int main(int argc, char *argv[])
     if (auto *window = qobject_cast<QWindow *>(qmlEngine.rootObjects().value(0))) {
         chrome.attach(window);
         window->show();
+        // --scroll-test: the page --view opened, scrolled the ways a person
+        // does, with the frame times (scrollselftest.cpp).
+        if (app.arguments().contains(QStringLiteral("--scroll-test")))
+            startScrollSelfTest(qobject_cast<QQuickWindow *>(window));
     }
 
     // --play <videoId> [seconds]
@@ -2439,6 +2445,108 @@ int main(int argc, char *argv[])
             downloads.enqueue(videoId, QString(), QString());
         });
         QTimer::singleShot(seconds * 1000, &app, []() {
+            qWarning("selftest: timed out");
+            QCoreApplication::exit(2);
+        });
+    }
+
+    // --audio-devices [<videoId>]
+    //
+    // The player bar's output menu as it stands: every device mpv lists, what
+    // the menu offers of them, the choice kept and the device in use. With a
+    // video id the song plays, and the output is switched to each device the
+    // menu offers in turn and then back to the choice it found, with the clock
+    // read after each switch to show the song carried on. Switching writes the
+    // choice, so that part runs only in MONOLIST_DATA_DIR.
+    const int devicesFlag = args.indexOf(QStringLiteral("--audio-devices"));
+    if (devicesFlag >= 0) {
+        const QString videoId = devicesFlag + 1 < args.size()
+                                        && !args.at(devicesFlag + 1).startsWith(QLatin1String("--"))
+                                    ? args.at(devicesFlag + 1) : QString();
+        if (!videoId.isEmpty() && qEnvironmentVariableIsEmpty("MONOLIST_DATA_DIR")) {
+            qWarning("selftest: switching the output writes the choice; set MONOLIST_DATA_DIR first");
+            return 1;
+        }
+        const auto report = [&engine, &player, &library]() {
+            const QVariantList listed = engine.audioDevices();
+            qWarning("selftest: mpv lists %d devices:", int(listed.size()));
+            for (const QVariant &value : listed) {
+                const QVariantMap device = value.toMap();
+                qWarning("selftest:   %s | %s", qPrintable(device.value(QStringLiteral("name")).toString()),
+                         qPrintable(device.value(QStringLiteral("description")).toString()));
+            }
+            qWarning("selftest: the output menu offers:");
+            for (const QVariant &value : player.audioDevices()) {
+                const QVariantMap device = value.toMap();
+                const QString name = device.value(QStringLiteral("name")).toString();
+                qWarning("selftest:   %s %s%s  (%s)", name == player.audioDevice() ? "[in use]" : "        ",
+                         qPrintable(device.value(QStringLiteral("description")).toString()),
+                         device.value(QStringLiteral("missing")).toBool() ? " · not connected" : "",
+                         qPrintable(name));
+            }
+            qWarning("selftest: kept choice \"%s\" (\"%s\"); in use: %s",
+                     qPrintable(library.settingValue(QStringLiteral("player.audio_device"))),
+                     qPrintable(library.settingValue(QStringLiteral("player.audio_device_name"))),
+                     qPrintable(player.audioDevice()));
+        };
+        // Polls until `ready` holds or `limitMs` passes, then carries on.
+        const auto waitFor = [](std::function<bool()> ready, int limitMs, std::function<void()> then) {
+            auto *poll = new QTimer(qApp);
+            auto waited = std::make_shared<QElapsedTimer>();
+            waited->start();
+            QObject::connect(poll, &QTimer::timeout, qApp, [poll, waited, ready, limitMs, then]() {
+                if (!ready() && waited->elapsed() < limitMs)
+                    return;
+                poll->stop();
+                poll->deleteLater();
+                then();
+            });
+            poll->start(100);
+        };
+        auto step = std::make_shared<std::function<void(int)>>();
+        auto names = std::make_shared<QStringList>();
+        auto original = std::make_shared<QString>();
+        *step = [&player, report, step, names, original](int i) {
+            if (i >= names->size()) {
+                qWarning("selftest: back to the choice it found");
+                player.setAudioDevice(*original);
+                QTimer::singleShot(1500, qApp, [report]() {
+                    report();
+                    qWarning("selftest: done, quitting");
+                    QCoreApplication::quit();
+                });
+                return;
+            }
+            const qint64 before = player.position();
+            player.setAudioDevice(names->at(i));
+            QTimer::singleShot(3000, qApp, [&player, step, names, i, before]() {
+                qWarning("selftest: chose %s: in use %s, the clock went %lld -> %lld ms (+%lld in 3 s), %s",
+                         qPrintable(names->at(i)), qPrintable(player.audioDevice()), (long long)before,
+                         (long long)player.position(), (long long)(player.position() - before),
+                         player.playing() ? "playing" : "not playing");
+                (*step)(i + 1);
+            });
+        };
+        QTimer::singleShot(300, &app, [=, &engine, &player, &library]() {
+            waitFor([&engine]() { return !engine.audioDevices().isEmpty(); }, 5000,
+                    [=, &player, &library]() {
+                report();
+                if (videoId.isEmpty()) {
+                    QCoreApplication::quit();
+                    return;
+                }
+                const QString kept = library.settingValue(QStringLiteral("player.audio_device"));
+                *original = kept.isEmpty() ? QStringLiteral("auto") : kept;
+                for (const QVariant &value : player.audioDevices()) {
+                    const QVariantMap device = value.toMap();
+                    if (!device.value(QStringLiteral("missing")).toBool())
+                        names->append(device.value(QStringLiteral("name")).toString());
+                }
+                player.playSource(videoId, QStringLiteral("Output test"), QStringLiteral("Selftest"));
+                waitFor([&player]() { return player.position() >= 2000; }, 60000, [step]() { (*step)(0); });
+            });
+        });
+        QTimer::singleShot(120000, &app, []() {
             qWarning("selftest: timed out");
             QCoreApplication::exit(2);
         });

@@ -48,6 +48,11 @@ public:
     // pointer, as a right click on a system title bar shows it. Windows only.
     Q_INVOKABLE void showSystemMenu();
 
+    // The pointer's shape over the window now (a Qt::CursorShape), as Qt Quick
+    // last set it from what is under it: a page moving under the wheel keeps
+    // it while hover is held still (ScrollPage).
+    Q_INVOKABLE int cursorShape() const;
+
     bool nativeEventFilter(const QByteArray &eventType, void *message, qintptr *result) override;
 
 private:

@@ -6,7 +6,7 @@ import "../components"
 
 // One of the user's playlists, or Liked songs: the same page as an album's,
 // with the cover a mosaic of the songs' own, and the title theirs to change.
-Flickable {
+ScrollPage {
     id: root
 
     // "liked", or a playlist's id.
@@ -32,12 +32,7 @@ Flickable {
     property bool renaming: false
     property bool confirmingDelete: false
 
-    contentWidth: width
     contentHeight: column.implicitHeight
-    boundsBehavior: Flickable.StopAtBounds
-    clip: true
-
-    ScrollBar.vertical: MonoScrollBar {}
 
     onKeyChanged: {
         renaming = false

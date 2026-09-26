@@ -16,7 +16,7 @@ import "../components"
 // page is about a person and many records, and no one photograph is what it
 // is about. The records on it come to colour under the pointer, as cards do
 // everywhere.
-Flickable {
+ScrollPage {
     id: root
 
     signal pageRequested(string browseId)
@@ -34,12 +34,7 @@ Flickable {
     // finishing loading does not throw the reader back up.
     property string shownId: ""
 
-    contentWidth: width
     contentHeight: column.implicitHeight
-    boundsBehavior: Flickable.StopAtBounds
-    clip: true
-
-    ScrollBar.vertical: MonoScrollBar {}
 
     function pad(n) { return n < 10 ? "0" + n : String(n) }
 

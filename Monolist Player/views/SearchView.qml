@@ -8,7 +8,7 @@ import "../components"
 // videos, and cards for albums, artists and playlists. Results come from
 // YouTube Music's own API; songs and videos fall back to youtube.com and then
 // yt-dlp.
-Flickable {
+ScrollPage {
     id: root
 
     property string term: ""
@@ -47,12 +47,7 @@ Flickable {
         onTriggered: Extractor.search(root.term)
     }
 
-    contentWidth: width
     contentHeight: column.height
-    boundsBehavior: Flickable.StopAtBounds
-    clip: true
-
-    ScrollBar.vertical: MonoScrollBar {}
 
     Column {
         id: column

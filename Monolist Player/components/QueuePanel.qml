@@ -146,6 +146,7 @@ Rectangle {
         model: Player.queue
 
         ScrollBar.vertical: MonoScrollBar { width: 8 }
+        SmoothWheel { flickable: list }
 
         // Where the song held would go: a red rule in the gap. In the list's
         // content, so it scrolls with the rows.

@@ -7,7 +7,7 @@ import "../components"
 // Your Library: what you made, what you saved, what you played, one tab each.
 // The tab is part of the view's name ("library:albums"), so back and forward
 // step through tabs like pages.
-Flickable {
+ScrollPage {
     id: root
 
     // "playlists", "albums" or "history"
@@ -23,17 +23,12 @@ Flickable {
     readonly property int columns: Math.max(1, Math.min(5, Math.floor((column.width + Theme.space6) / (200 + Theme.space6))))
     readonly property int cardWidth: Math.floor((column.width - (columns - 1) * Theme.space6) / columns)
 
-    contentWidth: width
     contentHeight: column.implicitHeight
-    boundsBehavior: Flickable.StopAtBounds
-    clip: true
 
     onTabChanged: {
         clearArmed = false
         contentY = 0
     }
-
-    ScrollBar.vertical: MonoScrollBar {}
 
     Timer {
         id: disarm

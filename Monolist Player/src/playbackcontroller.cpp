@@ -35,6 +35,9 @@ const QString kVolumeKey = QStringLiteral("player.volume");
 const QString kShuffleKey = QStringLiteral("player.shuffle");
 const QString kRepeatKey = QStringLiteral("player.repeat");
 const QString kAutoplayKey = QStringLiteral("player.autoplay");
+const QString kAudioDeviceKey = QStringLiteral("player.audio_device");
+const QString kAudioDeviceNameKey = QStringLiteral("player.audio_device_name");
+const QString kAutoDevice = QStringLiteral("auto");
 // Long enough to outlast one drag of the slider.
 constexpr int kVolumeSaveDelayMs = 400;
 
@@ -184,7 +187,10 @@ PlaybackController::PlaybackController(MpvEngine *engine,
         });
 
         m_engine->setVolume(m_volume);
+
+        connect(m_engine, &MpvEngine::audioDevicesChanged, this, &PlaybackController::applyAudioDevice);
     }
+    applyAudioDevice();
 
     connect(&m_listen, &ListenTracker::listenStarted, this, &PlaybackController::listenStarted);
     connect(&m_listen, &ListenTracker::listenQualified, this, &PlaybackController::listenQualified);
@@ -339,6 +345,17 @@ void PlaybackController::restoreSettings()
         m_autoplay = autoplay != QLatin1String("0");
         Q_EMIT autoplayChanged();
     }
+
+    // Used as soon as mpv has said which devices are there; until then, and
+    // for as long as the device is not among them, Auto plays.
+    const QString device = m_library->settingValue(kAudioDeviceKey);
+    if (!device.isEmpty()) {
+        m_audioChoice = device;
+        m_audioChoiceName = m_library->settingValue(kAudioDeviceNameKey);
+        if (!m_audioChoiceName.isEmpty())
+            m_deviceNames.insert(m_audioChoice, m_audioChoiceName);
+        applyAudioDevice();
+    }
 }
 
 void PlaybackController::saveSetting(const QString &key, const QString &value)
@@ -350,6 +367,85 @@ void PlaybackController::saveSetting(const QString &key, const QString &value)
 void PlaybackController::saveVolume()
 {
     saveSetting(kVolumeKey, QString::number(m_volume, 'f', 3));
+}
+
+void PlaybackController::setAudioDevice(const QString &name)
+{
+    const QString chosen = name.isEmpty() ? kAutoDevice : name;
+    // What the system calls it, kept with the choice so the menu can still
+    // say which device it was once it has been unplugged.
+    const QString description = chosen == kAutoDevice ? QString() : m_deviceNames.value(chosen);
+    if (chosen != m_audioChoice || description != m_audioChoiceName) {
+        m_audioChoice = chosen;
+        m_audioChoiceName = description;
+        saveSetting(kAudioDeviceKey, chosen);
+        saveSetting(kAudioDeviceNameKey, description);
+    }
+    applyAudioDevice();
+}
+
+void PlaybackController::applyAudioDevice()
+{
+    const QVariantList found = m_engine ? m_engine->audioDevices() : QVariantList();
+    // mpv always lists "auto", so nothing at all means it has not looked yet,
+    // and a choice missing from nothing is not missing.
+    const bool known = !found.isEmpty();
+
+    QVariantList devices;
+    devices.append(QVariantMap{ { QStringLiteral("name"), kAutoDevice },
+                                { QStringLiteral("description"), QStringLiteral("Auto · system default") },
+                                { QStringLiteral("missing"), false } });
+
+    // mpv lists the devices of every sound driver it was built with, so on
+    // Windows the same speakers can come again through OpenAL or SDL. Only
+    // the first driver's are offered — mpv's own first choice, WASAPI on
+    // Windows and CoreAudio on a Mac, which is also what Auto plays through.
+    QString driver;
+    bool choiceHere = m_audioChoice == kAutoDevice;
+    for (const QVariant &value : found) {
+        const QVariantMap device = value.toMap();
+        const QString name = device.value(QStringLiteral("name")).toString();
+        const qsizetype slash = name.indexOf(QLatin1Char('/'));
+        if (name == kAutoDevice || slash <= 0)
+            continue;
+        if (driver.isEmpty())
+            driver = name.left(slash);
+        if (name.left(slash) != driver)
+            continue;
+        QString description = device.value(QStringLiteral("description")).toString();
+        if (description.isEmpty())
+            description = name.mid(slash + 1);
+        m_deviceNames.insert(name, description);
+        devices.append(QVariantMap{ { QStringLiteral("name"), name },
+                                    { QStringLiteral("description"), description },
+                                    { QStringLiteral("missing"), false } });
+        if (name == m_audioChoice)
+            choiceHere = true;
+    }
+    // Chosen before and unplugged since, or on another computer: still the
+    // choice, shown so the listener can see why Auto is playing instead.
+    if (known && !choiceHere) {
+        devices.append(QVariantMap{ { QStringLiteral("name"), m_audioChoice },
+                                    { QStringLiteral("description"),
+                                      m_audioChoiceName.isEmpty() ? m_audioChoice : m_audioChoiceName },
+                                    { QStringLiteral("missing"), true } });
+    }
+
+    const QString use = choiceHere ? m_audioChoice : kAutoDevice;
+    if (devices == m_audioDevices && use == m_audioDevice)
+        return;
+    if (known && !choiceHere) {
+        qInfo("audio: %s is not connected; Auto plays until it is",
+              qPrintable(m_audioChoiceName.isEmpty() ? m_audioChoice : m_audioChoiceName));
+    }
+    m_audioDevices = devices;
+    if (use != m_audioDevice) {
+        m_audioDevice = use;
+        if (m_engine)
+            m_engine->setAudioDevice(use);
+        qInfo("audio: playing through %s", qPrintable(use));
+    }
+    Q_EMIT audioDevicesChanged();
 }
 
 QString PlaybackController::currentSourceId() const

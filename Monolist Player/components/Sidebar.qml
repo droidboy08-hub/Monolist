@@ -215,6 +215,7 @@ Rectangle {
         }
 
         ScrollBar.vertical: MonoScrollBar {}
+        SmoothWheel { flickable: playlistList }
     }
 
     // — the user —

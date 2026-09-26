@@ -7,10 +7,10 @@ Rectangle {
     id: root
 
     // As the window narrows the bar gives things up in one order: the volume
-    // slider folds into a button (the output button, which has nothing to
-    // choose between yet, goes with it), then the progress line moves under
-    // the buttons, then the title goes. The video, Now Playing and queue
-    // buttons never go: nothing else opens any of them.
+    // slider folds into a button, and the output button goes into its popup
+    // with it; then the progress line moves under the buttons, then the title
+    // goes. The video, Now Playing and queue buttons never go: nothing else
+    // opens any of them.
     readonly property bool showVolume: width >= 1120
     readonly property bool showMeta: width >= 760
     // Under the buttons once one line would leave the progress line too short
@@ -36,6 +36,52 @@ Rectangle {
         } else {
             volumeBeforeMute = Player.volume
             Player.setVolume(0)
+        }
+    }
+
+    // Where the sound goes, by the name the system gives it. Auto follows the
+    // system's default device as that changes; a device picked from the menu
+    // is kept, and while it is unplugged Auto stands in for it.
+    readonly property string outputName: {
+        const devices = Player.audioDevices
+        for (let i = 0; i < devices.length; ++i) {
+            if (devices[i].name === Player.audioDevice)
+                return devices[i].name === "auto" ? "Auto" : devices[i].description
+        }
+        return "Auto"
+    }
+
+    // Stands on the bar's top rule, pulled up out of the bar as the volume
+    // popup is, its right edge under the button that opened it; and appears
+    // without motion, as every menu does.
+    function openOutputs(anchor) {
+        outputMenu.x = Math.round(anchor.mapToItem(root, anchor.width, 0).x) - outputMenu.width
+        outputMenu.open()
+    }
+
+    // The button it stands over moves when the slider folds or unfolds.
+    onShowVolumeChanged: outputMenu.close()
+
+    MonoMenu {
+        id: outputMenu
+        width: 320
+        y: Theme.ruleWidth - height
+
+        Instantiator {
+            model: Player.audioDevices
+            delegate: MonoMenuItem {
+                required property var modelData
+                // Never hidden, so the height need not follow `visible`,
+                // which the menu changes as it takes a replaced row out.
+                implicitHeight: 34
+                text: modelData.missing ? modelData.description + " · not connected"
+                                        : modelData.description
+                enabled: !modelData.missing
+                current: modelData.name === Player.audioDevice
+                onTriggered: Player.setAudioDevice(modelData.name)
+            }
+            onObjectAdded: function(index, object) { outputMenu.insertItem(index, object) }
+            onObjectRemoved: function(index, object) { outputMenu.removeItem(object) }
         }
     }
 
@@ -346,11 +392,16 @@ Rectangle {
                                               : (root.queueOpen ? "Hide queue" : "Queue")
         }
         IconButton {
+            id: outputButton
             visible: root.showVolume
             iconName: "monitor-speaker"
             iconColor: Theme.neutral700
             iconSize: 15
             anchors.verticalCenter: parent.verticalCenter
+            onClicked: root.openOutputs(outputButton)
+            ToolTip.visible: hovered && !outputMenu.visible
+            ToolTip.delay: 600
+            ToolTip.text: "Output: " + root.outputName
         }
 
         IconButton {
@@ -416,6 +467,23 @@ Rectangle {
 
                 contentItem: Row {
                     spacing: Theme.space2
+
+                    // The output menu opens where this popup was, from the
+                    // button that is still on the bar: this one goes with
+                    // the popup it stands in.
+                    IconButton {
+                        anchors.verticalCenter: parent.verticalCenter
+                        iconName: "monitor-speaker"
+                        iconColor: Theme.neutral700
+                        iconSize: 15
+                        onClicked: {
+                            volumePopup.close()
+                            root.openOutputs(volumeButton)
+                        }
+                        ToolTip.visible: hovered
+                        ToolTip.delay: 600
+                        ToolTip.text: "Output: " + root.outputName
+                    }
 
                     IconButton {
                         anchors.verticalCenter: parent.verticalCenter

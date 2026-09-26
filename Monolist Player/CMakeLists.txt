@@ -72,6 +72,8 @@ qt_add_executable(monolist
     src/downloadmodels.h           src/downloadmodels.cpp
     src/downloadselftest.h         src/downloadselftest.cpp
     src/artworkcache.h             src/artworkcache.cpp
+    # How scrolling behaves, measured (--scroll-test).
+    src/scrollselftest.h           src/scrollselftest.cpp
 )
 
 # The build's own identity: version, build number, commit, date. Regenerated
@@ -218,6 +220,8 @@ qt_add_qml_module(monolist
         components/CardMenu.qml
         components/PlaylistMenu.qml
         components/MonoScrollBar.qml
+        components/ScrollPage.qml
+        components/SmoothWheel.qml
         components/LyricsPane.qml
         components/ToggleRow.qml
         components/DownloadOptions.qml

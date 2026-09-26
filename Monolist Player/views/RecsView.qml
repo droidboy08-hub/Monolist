@@ -9,17 +9,12 @@ import "../components"
 // the same country's list — as the reader nears the end, until that place
 // has nothing more worth suggesting. Every row answers as it does on the
 // shelf: pressed, it plays; its X turns it down; its dots are the song menu.
-Flickable {
+ScrollPage {
     id: root
 
     readonly property var info: Recs.more
 
-    contentWidth: width
     contentHeight: column.implicitHeight
-    boundsBehavior: Flickable.StopAtBounds
-    clip: true
-
-    ScrollBar.vertical: MonoScrollBar {}
 
     // A model of its own rather than Recs.moreRows itself, so a page of more
     // adds its rows to the end instead of making every row again.

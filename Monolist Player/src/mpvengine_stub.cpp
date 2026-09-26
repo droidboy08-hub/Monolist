@@ -57,6 +57,12 @@ void MpvEngine::setReplayGainEnabled(bool enabled)
     Q_UNUSED(enabled)
 }
 
+// No devices are ever listed, so the output menu offers Auto alone.
+void MpvEngine::setAudioDevice(const QString &name)
+{
+    Q_UNUSED(name)
+}
+
 // Never invoked — nothing installs a wakeup callback in this build — but moc
 // emits a call into drainEvents for the private slot, so it needs a body.
 void MpvEngine::drainEvents() {}

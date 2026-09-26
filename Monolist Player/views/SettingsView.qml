@@ -7,7 +7,7 @@ import "../components"
 
 // Settings: the country to browse, playback, how downloads are saved, and
 // what this copy of the app is.
-Flickable {
+ScrollPage {
     id: root
 
     // Every country, fetched once; the picker filters this list.
@@ -22,10 +22,7 @@ Flickable {
     property string section: ""
     signal sectionRevealed()
 
-    contentWidth: width
     contentHeight: column.implicitHeight
-    boundsBehavior: Flickable.StopAtBounds
-    clip: true
 
     Component.onCompleted: {
         allCountries = Library.countries()
@@ -51,8 +48,6 @@ Flickable {
             contentY = Math.max(0, Math.min(target.y - Theme.space4, contentHeight - height))
         sectionRevealed()
     }
-
-    ScrollBar.vertical: MonoScrollBar {}
 
     // The exported YouTube Music session. The system's own dialog, so the
     // file is picked the way every other file is.

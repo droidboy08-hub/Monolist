@@ -6,15 +6,10 @@ import "../components"
 
 // The offline set, in three parts: how files are saved, what is in flight, and
 // what is on this device.
-Flickable {
+ScrollPage {
     id: root
 
-    contentWidth: width
     contentHeight: column.height
-    boundsBehavior: Flickable.StopAtBounds
-    clip: true
-
-    ScrollBar.vertical: MonoScrollBar {}
 
     // A row's song menu (Menus), from its dots or a right click: the same as
     // anywhere else, with the download's own entries at its foot.

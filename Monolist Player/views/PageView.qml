@@ -7,18 +7,13 @@ import "../components"
 // An album or playlist: its cover — the one photograph in the system allowed
 // its colour, since the whole page is about it — the title set large, the
 // page's actions, and its songs.
-Flickable {
+ScrollPage {
     id: root
 
     readonly property var page: Catalog.page
     readonly property bool wide: width >= 900
 
-    contentWidth: width
     contentHeight: column.implicitHeight
-    boundsBehavior: Flickable.StopAtBounds
-    clip: true
-
-    ScrollBar.vertical: MonoScrollBar {}
 
     // The page it was showing, so a new one starts at the top rather than
     // wherever the last was left, and a page finishing loading, or growing,

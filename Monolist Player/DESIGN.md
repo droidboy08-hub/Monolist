@@ -64,7 +64,7 @@ a slow machine.
 | Token | Time | For |
 | :--- | :--- | :--- |
 | `Theme.instant` | 0 ms | A pointer's own feedback: hover tints, pressed states |
-| `Theme.quick` | 120 ms | A colour or opacity changing in place: a like, a selected chip, a row leaving hover |
+| `Theme.quick` | 120 ms | A colour or opacity changing in place: a like, a selected chip, a row leaving hover; and a page gliding the length of a turn of the wheel |
 | `Theme.normal` | 220 ms | Something appearing or disappearing where it already is: a toast, a control fading in |
 | `Theme.page` | 320 ms | Something arriving from elsewhere: Now Playing, the queue panel |
 | `Theme.slow` | 520 ms | Long distances and atmosphere: the lyrics scrolling, the poster's colour field |
@@ -75,6 +75,16 @@ the eye can follow a movement without waiting for it; that is the working range
 for anything entering or leaving. Past 400ms the user is waiting, so it is
 reserved for a long scroll (where the distance justifies the time) and for the
 colour field (which nobody is waiting on).
+
+*The wheel.* A notch of the wheel moves a page as far as a browser on the same
+system would (the system's lines per notch, at 100/3 px a line), easing there
+over `quick`, and notches that come while it moves add to where it is going; a
+touchpad's fine steps and a trackpad's pixels are followed as they come
+(`SmoothWheel`). The page is the pointer's own feedback here, so it gets the
+shortest duration that still shows it travelled rather than jumped. Qt's own
+wheel handling made each event a new fling with a speed floor, so a quick spin
+went less far per notch than a slow one and a touchpad swipe was held to about
+600 px a second, which read as slow.
 
 ### 2.2 Easing
 

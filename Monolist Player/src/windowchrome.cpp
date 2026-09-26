@@ -1,6 +1,7 @@
 #include "windowchrome.h"
 
 #include <QCoreApplication>
+#include <QCursor>
 #include <QWindow>
 
 #ifdef Q_OS_WIN
@@ -66,6 +67,15 @@ bool WindowChrome::nativeButtons() const
 int WindowChrome::nativeButtonsInset() const
 {
     return nativeButtons() ? 78 : 0;   // the traffic lights and their margin
+}
+
+int WindowChrome::cursorShape() const
+{
+#if QT_CONFIG(cursor)
+    if (m_window)
+        return int(m_window->cursor().shape());
+#endif
+    return int(Qt::ArrowCursor);
 }
 
 void WindowChrome::attach(QWindow *window)

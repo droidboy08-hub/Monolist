@@ -8,7 +8,7 @@ import "../components"
 // albums, the week's new releases — as a grid of cards under the shelf's own
 // title, with the page's name (the artist's, say) above it. More comes as the
 // reader nears the end, where YouTube Music has more to give.
-Flickable {
+ScrollPage {
     id: root
 
     readonly property var listing: Catalog.listing
@@ -17,12 +17,7 @@ Flickable {
     // The listing it was showing, so a new one starts at the top.
     property string shownKey: ""
 
-    contentWidth: width
     contentHeight: column.implicitHeight
-    boundsBehavior: Flickable.StopAtBounds
-    clip: true
-
-    ScrollBar.vertical: MonoScrollBar {}
 
     function openCard(card) {
         if (card.type === "album" || card.type === "playlist")

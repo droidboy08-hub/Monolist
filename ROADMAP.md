@@ -42,7 +42,7 @@ Priority runs from 1 (first) to 9. Size: S under an hour, M a few hours, L a day
   Done when: The Now Playing and queue toggles stay visible at every width, and only volume collapses to a button with a popup slider and mute. In Now Playing the queue button switches the right pane to UP NEXT.
 - [x] **U01** The itag 18 fallback doesn't run when a track actually fails to play (user request) *(P3, S)*
   Done when: When mpv fails on an InnerTube adaptive URL, the same track is retried once with its best progressive format (itag 18) before yt-dlp. This is exercised on a real track, with the itag logged.
-- [ ] **P01** The output-device button in the player bar does nothing *(P4, M)*
+- [x] **P01** The output-device button in the player bar does nothing *(P4, M)*
   Done when: MpvEngine observes audio-device-list and sets audio-device. The button opens a menu of outputs (WASAPI on Windows, CoreAudio on macOS) with the current one marked, and the choice is saved.
 - [ ] **P02** No media keys and no system Now Playing (Windows media flyout, macOS Control Center, AirPods) *(P4, L)*
   Done when: A small platform layer publishes title, artist, artwork and position, and handles play, pause, next, previous and seek. It uses the MediaPlayer framework through Objective-C++ on macOS and SMTC (or a WM_APPCOMMAND fallback) on Windows, with MPRIS later for Linux.
@@ -76,7 +76,7 @@ Priority runs from 1 (first) to 9. Size: S under an hour, M a few hours, L a day
 
 ## Polish
 
-- [ ] **U02** Slow-feeling scrolling was never investigated (user request) *(P3, S)*
+- [x] **U02** Slow-feeling scrolling was never investigated (user request) *(P3, S)*
   Done when: Scrolling is compared on a Release build and natively on the Mac. If it is still sluggish, wheel step and flick velocity are tuned once in a shared scroll component used by every view.
 - [ ] **L06** Missing feedback and empty states: no page retry, silent download failures, a blank or bare Search page, 'Art' in an empty player bar *(P5, M)*
   Done when: Page errors get RETRY. Download failures, 'Download all' and 'Copy for a bug report' each show a toast. Search explains an empty or not-yet-personal page. The empty player bar says 'Nothing playing', with the heart, download and transport controls disabled.
@@ -255,6 +255,10 @@ Seen by the agents that fixed B01–B13 and by their reviewers, and not yet fixe
   Done when: both answer in the toast ("Playing next: <title>", "Added to queue"), or the queue button shows that something was added.
 - [ ] **F31** "Not interested" and "Don't suggest <artist>" can be taken back only from their toast: once it has gone they hold for good (they are play_events rows), and nothing lists them or clears them *(P5, S)*
   Done when: Settings lists the songs and artists turned down, each removable, with a Clear all, and the page rebuilds after a change.
+- [ ] **F32** Two lists still scroll with Qt's own wheel handling, capped at about 600 px a second: Settings' country list and the lyrics in Now Playing. They sit inside something else that scrolls or swallows the wheel, and SmoothWheel, which the pages, the queue and the sidebar now use, keeps every wheel event it gets, so at the country list's ends the wheel would no longer move on to the page *(P6, S)*
+  Done when: both use SmoothWheel, the country list passes the wheel on to the Settings page at its ends, and the lyrics still stop following the song when scrolled by hand (LyricsPane uses onMovementStarted, which a wheel glide does not raise).
+- [ ] **F33** Now Playing's colour field decodes its cover on the interface's thread: PaletteTool::request reads, scales and measures the image in the network reply's slot (artworkcache.cpp), the same 10-190 ms per cover that --scroll-test measured for covers before they moved to a thread pool *(P6, S)*
+  Done when: the decode and the histogram run on ArtworkFetcher's pool and only the colour comes back.
 
 ## Connections
 

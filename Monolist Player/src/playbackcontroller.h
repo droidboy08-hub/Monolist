@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QHash>
 #include <QObject>
 #include <QSet>
 #include <QString>
@@ -72,6 +73,14 @@ class PlaybackController : public QObject
     Q_PROPERTY(bool videoWanted READ videoWanted WRITE setVideoWanted NOTIFY videoChanged)
     Q_PROPERTY(bool videoPlaying READ videoPlaying NOTIFY videoChanged)
     Q_PROPERTY(int videoHeight READ videoHeight WRITE setVideoHeight NOTIFY videoChanged)
+    // Where the sound goes: the player bar's output menu. `audioDevices` is
+    // what it offers, each {name, description, missing}: Auto first, then the
+    // devices of the sound driver mpv plays through (WASAPI, CoreAudio), and
+    // last, marked missing, the device chosen before while it is not
+    // connected. `audioDevice` is the name of the one in use: the choice, or
+    // "auto" while the choice is not there.
+    Q_PROPERTY(QVariantList audioDevices READ audioDevices NOTIFY audioDevicesChanged)
+    Q_PROPERTY(QString audioDevice READ audioDevice NOTIFY audioDevicesChanged)
 public:
     enum RepeatMode { RepeatOff = 0, RepeatAll = 1, RepeatOne = 2 };
     Q_ENUM(RepeatMode)
@@ -130,6 +139,8 @@ public:
     bool videoPlaying() const { return m_videoPlaying; }
     int videoHeight() const { return m_videoHeight; }
     void setVideoHeight(int height);
+    QVariantList audioDevices() const { return m_audioDevices; }
+    QString audioDevice() const { return m_audioDevice; }
 
 public Q_SLOTS:
     void play();
@@ -174,6 +185,9 @@ public Q_SLOTS:
     // Swaps what is playing for the same track with, or without, its picture,
     // carrying on from the same second.
     void setVideoWanted(bool wanted);
+    // A name from audioDevices, or "auto". Kept, and used again whenever the
+    // device is there; until then, Auto plays.
+    void setAudioDevice(const QString &name);
 
     // Plays one track on its own; autoplay carries on from it.
     // `primaryArtist` is the first credit alone, for Last.fm, where the
@@ -206,6 +220,7 @@ Q_SIGNALS:
     void bufferingChanged();
     void statusChanged();
     void videoChanged();
+    void audioDevicesChanged();
     void playbackError(const QString &reason);
     // Something the user should be told, in their words, for the toast.
     void notice(const QString &text);
@@ -251,6 +266,10 @@ private:
     void recordHistory(const QVariantMap &track);
     void saveSetting(const QString &key, const QString &value);
     void saveVolume();
+    // Rebuilds the output menu from mpv's list and plays through the choice
+    // if it is there, Auto if not: at launch, on a choice, on a device
+    // plugged in or taken out.
+    void applyAudioDevice();
 
     MpvEngine *m_engine = nullptr;
     StreamResolver *m_resolver = nullptr;
@@ -326,4 +345,14 @@ private:
     qint64 m_resumeAt = 0;         // where the next load should begin
     int m_videoHeight = 720;
     QString m_videoPendingId;      // a picture being resolved for this track
+
+    // The output the listener chose ("auto" or a device's name) and what the
+    // system called it, so the menu can still name it while it is unplugged;
+    // the one in use; and the menu.
+    QString m_audioChoice = QStringLiteral("auto");
+    QString m_audioChoiceName;
+    QString m_audioDevice = QStringLiteral("auto");
+    QVariantList m_audioDevices;
+    // What the system called each device seen since launch, and the one kept.
+    QHash<QString, QString> m_deviceNames;
 };
