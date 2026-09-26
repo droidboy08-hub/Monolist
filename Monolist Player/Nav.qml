@@ -10,6 +10,8 @@ QtObject {
     signal artistRequested(string name, string browseId)
     // An album's or a YouTube Music playlist's page.
     signal pageRequested(string browseId)
+    // A shelf's "show all" page of cards, headed `title` while it loads.
+    signal listingRequested(string browseId, string params, string title)
 
     function openArtist(name, browseId) {
         artistRequested(name ? name : "", browseId ? browseId : "")
@@ -18,5 +20,18 @@ QtObject {
     function openPage(browseId) {
         if (browseId)
             pageRequested(browseId)
+    }
+
+    // A shelf's SHOW ALL, by where its `more` says it goes (Catalog.shelves):
+    // a playlist's or an album's page, an artist's, or a page of cards.
+    function openMore(more, title) {
+        if (!more || !more.browseId)
+            return
+        if (more.kind === "page")
+            pageRequested(more.browseId)
+        else if (more.kind === "artist")
+            artistRequested("", more.browseId)
+        else if (more.kind === "browse")
+            listingRequested(more.browseId, more.params ? more.params : "", title ? title : "")
     }
 }

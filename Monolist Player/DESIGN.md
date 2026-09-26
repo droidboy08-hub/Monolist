@@ -238,6 +238,22 @@ that gets blamed for the app being slow.
   *Why.* It is the one place the page is not paper. A moving picture on paper
   reads as a photograph pasted on, and the margins beside it as bars; on ink
   the margins are the frame, and the picture is the page.
+* **A card that opens a page can also be played where it stands.** Under the
+  pointer an album's or a playlist's cover takes a play plate in its corner;
+  the card still opens the page, the plate plays it. A song's card has no
+  plate, because pressing the card already plays it.
+  *Why.* "Play this album" is the commonest wish on a shelf, and opening the
+  page to press Play is a page load and a second click for it. The mark sits
+  on the picture, so it is a plate (paper square, ink glyph) rather than a
+  bare glyph, for the reason the video switch is (2.6a is about glyphs on
+  paper); and it is there only under the pointer, so a shelf at rest is still
+  covers and titles.
+* **A shelf says what it offers as a whole in its header**, as a section
+  does: SHOW ALL where YouTube Music has a page of everything the shelf shows
+  a few of, PLAY ALL where the shelf is songs. The same small tracked link,
+  at the header's end, beside the paging arrows.
+  *Why.* One place and one look for "this whole list", so it is found where
+  it was found last time, and it never competes with the page's own red Play.
 * **Lyrics sit at the right, the cover at the left.**
   *Why.* Lyrics are read left-to-right and change constantly; they need the side
   that is not interrupted by the cover's colour field, and they need to start at

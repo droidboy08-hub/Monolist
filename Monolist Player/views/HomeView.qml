@@ -11,6 +11,8 @@ Flickable {
     id: root
 
     signal pageRequested(string browseId)
+    // Another of the app's views by name: Recently played's SHOW ALL.
+    signal viewRequested(string view)
 
     contentWidth: width
     contentHeight: column.implicitHeight
@@ -40,11 +42,15 @@ Flickable {
                               card.primaryArtist ? card.primaryArtist : "")
     }
 
-    // The number, the title and the table, with the rule under it.
+    // The number, the title and the table, with the rule under it, and the
+    // section's one link at the header's end.
     component TrackSection: Column {
+        id: section
         property string number: ""
         property string title: ""
         property var model: null
+        property string action: ""
+        signal actionTriggered()
 
         x: Theme.space8
         width: root.width - Theme.space8 * 2
@@ -54,8 +60,10 @@ Flickable {
 
         SectionHeader {
             width: parent.width
-            number: parent.number
-            title: parent.title
+            number: section.number
+            title: section.title
+            action: section.action
+            onActionTriggered: section.actionTriggered()
         }
 
         TrackTable {
@@ -121,11 +129,14 @@ Flickable {
         }
 
         // — quick picks —
+        // The whole list, in order; autoplay carries on after it.
         TrackSection {
             visible: root.hasPicks
             number: "01"
             title: Catalog.quickPicksTitle.length > 0 ? Catalog.quickPicksTitle : "Quick picks"
             model: Catalog.quickPicks
+            action: "PLAY ALL"
+            onActionTriggered: Player.playModel(Catalog.quickPicks, 0, "home")
         }
 
         HRule {
@@ -135,11 +146,14 @@ Flickable {
         }
 
         // — recently played —
+        // The last ten; everything played is the library's History.
         TrackSection {
             visible: root.hasRecent
             number: root.pad(root.hasPicks ? 2 : 1)
             title: "Recently played"
             model: Catalog.recent
+            action: "SHOW ALL"
+            onActionTriggered: root.viewRequested("library:history")
         }
 
         // — shelves: new releases, then the feed's own —
@@ -167,6 +181,8 @@ Flickable {
                     title: parent.modelData.title
                     strapline: parent.modelData.strapline
                     items: parent.modelData.items
+                    more: parent.modelData.more
+                    origin: "home"
                     onCardActivated: function(card) { root.openCard(card) }
                 }
 

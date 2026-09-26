@@ -240,6 +240,8 @@ Flickable {
                     title: shelf.modelData.title
                     strapline: shelf.modelData.strapline
                     items: shelf.modelData.items
+                    more: shelf.modelData.more
+                    origin: "explore"
                     onCardActivated: function(card) { root.openCard(card) }
                 }
             }

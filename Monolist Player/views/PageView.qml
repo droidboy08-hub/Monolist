@@ -20,6 +20,66 @@ Flickable {
 
     ScrollBar.vertical: MonoScrollBar {}
 
+    // The page it was showing, so a new one starts at the top rather than
+    // wherever the last was left, and a page finishing loading, or growing,
+    // does not throw the reader back up.
+    property string shownId: ""
+
+    // A long playlist comes a hundred songs at a time. The next hundred is
+    // asked for while the reader is still a screen away from the end, so
+    // the list keeps ahead of the scrolling; a new hundred landing while the
+    // end is still in sight asks for the one after.
+    function loadMoreIfNear() {
+        if (visible && Catalog.pageHasMore && !Catalog.pageLoadingMore
+                && contentY + height * 2 >= contentHeight)
+            Catalog.loadMorePage()
+    }
+    onContentYChanged: loadMoreIfNear()
+    onContentHeightChanged: loadMoreIfNear()
+    onVisibleChanged: loadMoreIfNear()
+
+    // What takes the whole playlist — Play, Shuffle, Download all, Add all —
+    // waits for the rest of a long one to arrive first (Catalog.loadRestOfPage),
+    // and then runs, with all of it or, if the rest would not load, with what
+    // did (Catalog says why). `waiting` names the button, so it shows dots.
+    property var afterLoad: null
+    property string waiting: ""
+
+    function withWholePage(name, action) {
+        if (!Catalog.pageHasMore && !Catalog.pageLoadingMore) {
+            action()
+            return
+        }
+        afterLoad = action
+        waiting = name
+        Catalog.loadRestOfPage()
+    }
+
+    Connections {
+        target: Catalog
+        function onPageMoreChanged() {
+            if (root.afterLoad === null || Catalog.pageLoadingMore) {
+                // A part just in, with the end still in sight: the next.
+                root.loadMoreIfNear()
+                return
+            }
+            const action = root.afterLoad
+            root.afterLoad = null
+            root.waiting = ""
+            action()
+        }
+        function onPageChanged() {
+            // Another page: what was waiting was for the last one.
+            const id = Catalog.page.browseId !== undefined ? Catalog.page.browseId : ""
+            if (id === root.shownId)
+                return
+            root.shownId = id
+            root.afterLoad = null
+            root.waiting = ""
+            root.contentY = 0
+        }
+    }
+
     function downloadAll() {
         var tracks = Catalog.pageTrackList()
         for (var i = 0; i < tracks.length; ++i) {
@@ -35,17 +95,21 @@ Flickable {
 
         Action {
             text: "Add all to queue"
-            enabled: Catalog.pageTracks.count > 0
-            onTriggered: {
+            enabled: Catalog.pageTracks.count > 0 && root.waiting.length === 0
+            onTriggered: root.withWholePage("queue", function() {
                 var tracks = Catalog.pageTrackList()
                 for (var i = 0; i < tracks.length; ++i)
                     Player.addToQueue(tracks[i])
-            }
+            })
         }
         PlaylistSubmenu {
             title: "Add all to playlist"
-            enabled: Catalog.pageTracks.count > 0
-            onPicked: function(playlistId) { Library.addAllToPlaylist(playlistId, Catalog.pageTrackList()) }
+            enabled: Catalog.pageTracks.count > 0 && root.waiting.length === 0
+            onPicked: function(playlistId) {
+                root.withWholePage("playlist", function() {
+                    Library.addAllToPlaylist(playlistId, Catalog.pageTrackList())
+                })
+            }
         }
     }
 
@@ -135,19 +199,21 @@ Flickable {
 
                     ActionButton {
                         primary: true
-                        iconName: "play"
+                        iconName: root.waiting === "play" ? "dots" : "play"
                         text: "Play"
                         enabled: Catalog.pageTracks.count > 0
-                        onClicked: Player.playModel(Catalog.pageTracks, 0, "playlist")
+                        onClicked: root.withWholePage("play", function() {
+                            Player.playModel(Catalog.pageTracks, 0, "playlist")
+                        })
                     }
                     ActionButton {
-                        iconName: "shuffle"
+                        iconName: root.waiting === "shuffle" ? "dots" : "shuffle"
                         text: "Shuffle"
                         enabled: Catalog.pageTracks.count > 1
-                        onClicked: {
+                        onClicked: root.withWholePage("shuffle", function() {
                             Player.shuffle = true
                             Player.playModel(Catalog.pageTracks, Math.floor(Math.random() * Catalog.pageTracks.count), "playlist")
-                        }
+                        })
                     }
                     ActionButton {
                         iconName: root.saved ? "check" : "plus"
@@ -157,10 +223,10 @@ Flickable {
                     }
                     ActionButton {
                         visible: Downloads.available
-                        iconName: "download"
+                        iconName: root.waiting === "download" ? "dots" : "download"
                         text: "Download all"
                         enabled: Catalog.pageTracks.count > 0
-                        onClicked: root.downloadAll()
+                        onClicked: root.withWholePage("download", root.downloadAll)
                     }
                     ActionButton {
                         id: moreButton
@@ -195,12 +261,26 @@ Flickable {
             color: Theme.accent700
         }
 
+        // A row plays at once, with the songs loaded so far after it: it is
+        // one song asked for, and waiting on the rest of a long playlist
+        // would make the click look broken.
         TrackTable {
             visible: Catalog.pageTracks.count > 0
             width: parent.width
             model: Catalog.pageTracks
             showDownloads: true
             onTrackActivated: function(index) { Player.playModel(Catalog.pageTracks, index, "playlist") }
+        }
+
+        Text {
+            visible: Catalog.pageLoadingMore
+            width: parent.width
+            text: root.waiting.length > 0
+                  ? "Loading the rest of the playlist… " + Catalog.pageTracks.count + " songs so far"
+                  : "Loading more songs…"
+            font.family: Theme.fontFamily
+            font.pixelSize: 13
+            color: Theme.neutral700
         }
     }
 }

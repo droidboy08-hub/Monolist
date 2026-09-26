@@ -199,6 +199,8 @@ qt_add_qml_module(monolist
         components/TrackMenu.qml
         components/QueuePanel.qml
         components/CardShelf.qml
+        components/ShelfCard.qml
+        components/CardGrid.qml
         components/ActionButton.qml
         components/WindowButtons.qml
         components/WindowDragArea.qml
@@ -226,6 +228,7 @@ qt_add_qml_module(monolist
         views/DownloadsView.qml
         views/PageView.qml
         views/ArtistView.qml
+        views/ShelfView.qml
         views/PlaylistView.qml
         views/NowPlayingView.qml
         views/SettingsView.qml

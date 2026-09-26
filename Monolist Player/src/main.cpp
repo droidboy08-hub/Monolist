@@ -1830,15 +1830,44 @@ int main(int argc, char *argv[])
         });
     }
 
-    // --search "<query>"
+    // --search "<query>" [--filter songs|videos|albums|artists|playlists]
     //
     // One search as the interface would run it (YouTube Music first, yt-dlp
     // if that fails), timed, with the first results and the suggestions for
-    // the first half of the query.
+    // the first half of the query. --filter picks the chip: albums, artists
+    // and playlists print their cards, section by section.
     const int searchFlag = args.indexOf(QStringLiteral("--search"));
     if (searchFlag >= 0 && searchFlag + 1 < args.size()) {
         const QString query = args.at(searchFlag + 1);
         auto clock = std::make_shared<QElapsedTimer>();
+        const int filterFlag = args.indexOf(QStringLiteral("--filter"));
+        if (filterFlag >= 0 && filterFlag + 1 < args.size())
+            extractor.setFilter(args.at(filterFlag + 1));
+        qWarning("selftest: searching %s for \"%s\"", qPrintable(extractor.filter()), qPrintable(query));
+
+        QObject::connect(&extractor, &MediaExtractor::cardSearchFinished, &app, [&extractor, clock]() {
+            int total = 0;
+            for (const QVariant &value : extractor.cardSections())
+                total += int(value.toMap().value(QStringLiteral("items")).toList().size());
+            qWarning("selftest: %d cards from %s in %lld ms", total, qPrintable(extractor.source()),
+                     (long long)clock->elapsed());
+            for (const QVariant &value : extractor.cardSections()) {
+                const QVariantMap section = value.toMap();
+                const QVariantList items = section.value(QStringLiteral("items")).toList();
+                qWarning("selftest:   [%s] %lld", qPrintable(section.value(QStringLiteral("title")).toString()),
+                         (long long)items.size());
+                for (qsizetype i = 0; i < qMin<qsizetype>(6, items.size()); ++i) {
+                    const QVariantMap card = items.at(i).toMap();
+                    qWarning("selftest:     %s | %s | %s %s | art: %s",
+                             qPrintable(card.value(QStringLiteral("title")).toString()),
+                             qPrintable(card.value(QStringLiteral("subtitle")).toString()),
+                             qPrintable(card.value(QStringLiteral("type")).toString()),
+                             qPrintable(card.value(QStringLiteral("browseId")).toString()),
+                             qPrintable(card.value(QStringLiteral("artwork")).toString().left(50)));
+                }
+            }
+            QTimer::singleShot(400, qApp, []() { QCoreApplication::quit(); });
+        });
 
         QObject::connect(&extractor, &MediaExtractor::suggestionsChanged, &app, [&extractor, clock]() {
             qWarning("selftest: suggestions after %lld ms: %s", (long long)clock->elapsed(),
@@ -1990,6 +2019,190 @@ int main(int argc, char *argv[])
             }
         });
         QTimer::singleShot(30000, &app, []() {
+            qWarning("selftest: timed out");
+            QCoreApplication::exit(2);
+        });
+    }
+
+    // --page <browse id> [--all]
+    //
+    // An album's or a playlist's page as the interface opens it: the header,
+    // the first page of songs, then one more page as scrolling would ask for
+    // it, or with --all the whole rest as Play does, timed, with a count of
+    // rows that repeat a song already listed.
+    const int pageFlag = args.indexOf(QStringLiteral("--page"));
+    if (pageFlag >= 0 && pageFlag + 1 < args.size()) {
+        const QString browseId = args.at(pageFlag + 1);
+        const bool all = args.contains(QStringLiteral("--all"));
+        auto clock = std::make_shared<QElapsedTimer>();
+        // 0 waiting for the page, 1 its first rows going in, 2 more asked
+        // for, 3 done
+        auto stage = std::make_shared<int>(0);
+        // How long the interface takes to make each batch of rows, the song
+        // table's included (--view page:<id> shows it): countChanged follows
+        // the insertion, so it comes after every view has answered. The
+        // longest is what the reader would feel, as the page stopping.
+        auto making = std::make_shared<QElapsedTimer>();
+        auto longest = std::make_shared<qint64>(0);
+        auto batches = std::make_shared<int>(0);
+
+        const auto report = [&catalog, longest, batches](const char *what, qint64 ms) {
+            const SearchResultModel *tracks = catalog.pageTracks();
+            QSet<QString> ids;
+            for (int row = 0; row < tracks->rowCount(); ++row)
+                ids.insert(tracks->get(row).value(QStringLiteral("sourceId")).toString());
+            qWarning("selftest: %s: %d songs (%lld distinct), more to come: %s, %lld ms; rows made in %d "
+                     "batches, the longest %lld ms", what, tracks->rowCount(), (long long)ids.size(),
+                     catalog.pageHasMore() ? "yes" : "no", (long long)ms, *batches, (long long)*longest);
+            *longest = 0;
+            *batches = 0;
+            if (tracks->rowCount() > 0) {
+                const QVariantMap last = tracks->get(tracks->rowCount() - 1);
+                qWarning("selftest:   last: %s | %s | art: %s",
+                         qPrintable(last.value(QStringLiteral("title")).toString()),
+                         qPrintable(last.value(QStringLiteral("artist")).toString()),
+                         qPrintable(last.value(QStringLiteral("artwork")).toString().left(50)));
+            }
+        };
+        // The first page, once all its rows are in: more of it, or the end.
+        const auto firstPageIn = [&catalog, clock, stage, all, report]() {
+            report("first page", clock->elapsed());
+            if (!catalog.pageHasMore()) {
+                *stage = 3;
+                QTimer::singleShot(400, qApp, []() { QCoreApplication::quit(); });
+                return;
+            }
+            *stage = 2;
+            clock->restart();
+            if (all)
+                catalog.loadRestOfPage();
+            else
+                catalog.loadMorePage();
+        };
+
+        QObject::connect(&catalog, &Catalog::pageChanged, &app, [&catalog, stage, firstPageIn]() {
+            if (catalog.pageLoading() || *stage != 0)
+                return;
+            const QVariantMap page = catalog.page();
+            if (page.contains(QStringLiteral("error"))) {
+                qWarning("selftest: failed: %s", qPrintable(page.value(QStringLiteral("error")).toString()));
+                QCoreApplication::exit(1);
+                return;
+            }
+            qWarning("selftest: %s | %s | %s | %s", qPrintable(page.value(QStringLiteral("title")).toString()),
+                     qPrintable(page.value(QStringLiteral("subtitle")).toString()),
+                     qPrintable(page.value(QStringLiteral("artist")).toString()),
+                     qPrintable(page.value(QStringLiteral("details")).toString()));
+            *stage = 1;
+            if (!catalog.pageLoadingMore())
+                firstPageIn();
+        });
+        QObject::connect(&catalog, &Catalog::pageMoreChanged, &app, [&catalog, clock, stage, all, report,
+                                                                     firstPageIn]() {
+            if (catalog.pageLoadingMore())
+                return;
+            if (*stage == 1) {
+                firstPageIn();
+            } else if (*stage == 2) {
+                *stage = 3;
+                report(all ? "the rest" : "one more page", clock->elapsed());
+                QTimer::singleShot(400, qApp, []() { QCoreApplication::quit(); });
+            }
+        });
+        QObject::connect(&catalog, &Catalog::notice, &app, [](const QString &text) {
+            qWarning("selftest: %s", qPrintable(text));
+        });
+        QObject::connect(catalog.pageTracks(), &QAbstractItemModel::rowsAboutToBeInserted, &app,
+                         [making]() { making->start(); });
+        QObject::connect(catalog.pageTracks(), &QAbstractItemModel::modelAboutToBeReset, &app,
+                         [making]() { making->start(); });
+        QObject::connect(catalog.pageTracks(), &SearchResultModel::countChanged, &app,
+                         [making, longest, batches]() {
+            if (making->isValid()) {
+                *longest = qMax(*longest, making->elapsed());
+                ++*batches;
+            }
+            making->invalidate();
+        });
+
+        QTimer::singleShot(300, &app, [&catalog, browseId, clock]() {
+            clock->start();
+            catalog.openPage(browseId);
+        });
+        QTimer::singleShot(all ? 180000 : 45000, &app, []() {
+            qWarning("selftest: timed out");
+            QCoreApplication::exit(2);
+        });
+    }
+
+    // --shelf <browse id> [params]
+    //
+    // A shelf's "show all" page as the interface opens it: its title, each
+    // section's cards, its songs, and one more part where it has more.
+    const int shelfFlag = args.indexOf(QStringLiteral("--shelf"));
+    if (shelfFlag >= 0 && shelfFlag + 1 < args.size()) {
+        const QString browseId = args.at(shelfFlag + 1);
+        const QString params = shelfFlag + 2 < args.size() && !args.at(shelfFlag + 2).startsWith(QLatin1String("--"))
+                               ? args.at(shelfFlag + 2) : QString();
+        auto clock = std::make_shared<QElapsedTimer>();
+        auto stage = std::make_shared<int>(0);
+
+        const auto report = [&catalog](const char *what, qint64 ms) {
+            const QVariantMap listing = catalog.listing();
+            qWarning("selftest: %s: \"%s\" (above it: \"%s\"), %d songs, more to come: %s, %lld ms", what,
+                     qPrintable(listing.value(QStringLiteral("title")).toString()),
+                     qPrintable(listing.value(QStringLiteral("kicker")).toString()),
+                     catalog.listingSongs()->rowCount(), catalog.listingHasMore() ? "yes" : "no", (long long)ms);
+            for (const QVariant &value : listing.value(QStringLiteral("sections")).toList()) {
+                const QVariantMap section = value.toMap();
+                const QVariantList items = section.value(QStringLiteral("items")).toList();
+                QStringList first;
+                for (qsizetype i = 0; i < qMin<qsizetype>(3, items.size()); ++i) {
+                    const QVariantMap card = items.at(i).toMap();
+                    first << QStringLiteral("%1 (%2 %3)").arg(card.value(QStringLiteral("title")).toString(),
+                                                              card.value(QStringLiteral("type")).toString(),
+                                                              card.value(QStringLiteral("browseId")).toString()
+                                                                  + card.value(QStringLiteral("videoId")).toString());
+                }
+                qWarning("selftest:   [%s] %lld | %s", qPrintable(section.value(QStringLiteral("title")).toString()),
+                         (long long)items.size(), qPrintable(first.join(QStringLiteral(" / "))));
+            }
+        };
+
+        QObject::connect(&catalog, &Catalog::listingChanged, &app, [&catalog, clock, stage, report]() {
+            if (catalog.listingLoading() || *stage != 0)
+                return;
+            const QVariantMap listing = catalog.listing();
+            if (listing.contains(QStringLiteral("error"))) {
+                qWarning("selftest: failed: %s", qPrintable(listing.value(QStringLiteral("error")).toString()));
+                QCoreApplication::exit(1);
+                return;
+            }
+            report("first part", clock->elapsed());
+            if (!catalog.listingHasMore()) {
+                QTimer::singleShot(400, qApp, []() { QCoreApplication::quit(); });
+                return;
+            }
+            *stage = 1;
+            clock->restart();
+            catalog.loadMoreListing();
+        });
+        QObject::connect(&catalog, &Catalog::listingMoreChanged, &app, [&catalog, clock, stage, report]() {
+            if (*stage != 1 || catalog.listingLoadingMore())
+                return;
+            *stage = 2;
+            report("one more part", clock->elapsed());
+            QTimer::singleShot(400, qApp, []() { QCoreApplication::quit(); });
+        });
+        QObject::connect(&catalog, &Catalog::notice, &app, [](const QString &text) {
+            qWarning("selftest: %s", qPrintable(text));
+        });
+
+        QTimer::singleShot(300, &app, [&catalog, browseId, params, clock]() {
+            clock->start();
+            catalog.openListing(browseId, params, QString());
+        });
+        QTimer::singleShot(45000, &app, []() {
             qWarning("selftest: timed out");
             QCoreApplication::exit(2);
         });

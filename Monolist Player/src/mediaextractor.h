@@ -49,6 +49,10 @@ public:
     QHash<int, QByteArray> roleNames() const override;
 
     void replace(const QList<Item> &items);
+    // Adds rows at the end, as rows rather than a reset: a view keeps the
+    // rows it has already made and makes only the new ones, which is what
+    // lets a long playlist grow under the reader without redrawing it.
+    void append(const QList<Item> &items);
     void clear();
 
     Q_INVOKABLE QVariantMap get(int row) const;
@@ -77,8 +81,14 @@ class MediaExtractor : public QObject
     Q_PROPERTY(bool available READ available NOTIFY availableChanged)
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
     Q_PROPERTY(SearchResultModel *results READ results CONSTANT)
-    // "songs" or "videos": which YouTube Music section to search.
+    // Which YouTube Music section to search: "songs", "videos", "albums",
+    // "artists" or "playlists".
     Q_PROPERTY(QString filter READ filter WRITE setFilter NOTIFY filterChanged)
+    // Albums, artists and playlists come back as cards rather than songs, in
+    // titled sections: [{ title, items: [card] }] (InnerTube::cardToVariant).
+    // A playlist search has two, YouTube Music's own playlists and its
+    // listeners'. Empty while songs or videos are shown.
+    Q_PROPERTY(QVariantList cardSections READ cardSections NOTIFY cardSectionsChanged)
     // Where the current results came from: "YouTube Music" or "yt-dlp".
     Q_PROPERTY(QString source READ source NOTIFY resultsSourceChanged)
     Q_PROPERTY(QStringList suggestions READ suggestions NOTIFY suggestionsChanged)
@@ -93,6 +103,7 @@ public:
     void setFilter(const QString &filter);
     QString source() const { return m_source; }
     QStringList suggestions() const { return m_suggestions; }
+    QVariantList cardSections() const { return m_cardSections; }
 
 public Q_SLOTS:
     void search(const QString &query);
@@ -108,12 +119,17 @@ Q_SIGNALS:
     void filterChanged();
     void resultsSourceChanged();
     void suggestionsChanged();
+    void cardSectionsChanged();
     void searchFinished(const QVariantList &results);
+    // A search for albums, artists or playlists answered: cardSections.
+    void cardSearchFinished();
     void resolved(const QVariantMap &stream);
     void failed(const QString &reason);
 
 private:
     void searchWithYtDlp(const QString &query);
+    void searchCards(const QString &query);
+    void setCardSections(const QVariantList &sections);
     void finishSearch(const QList<SearchResultModel::Item> &items, const QString &source);
     void setBusy(bool busy);
     void setLastError(const QString &error);
@@ -128,5 +144,10 @@ private:
     QString m_source;
     QString m_lastError;
     QStringList m_suggestions;
+    QVariantList m_cardSections;
+    // Moves on with every card search and every cancel: a card search is
+    // not cancellable in flight, so an answer for an older one is dropped
+    // by this instead.
+    quint64 m_cardGeneration = 0;
     bool m_busy = false;
 };

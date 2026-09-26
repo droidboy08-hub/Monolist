@@ -45,6 +45,26 @@ back empty, the same query runs through yt-dlp. The API is unofficial and
 changes without notice; the parsers are written to degrade to "nothing found"
 rather than crash, and the fallback covers the gap.
 
+The chips over the results pick what to search for: songs and videos come back
+as rows, albums, artists and playlists as cards that open their pages (a
+playlist search shows YouTube Music's own playlists and its listeners' as two
+sections). Cards exist only on YouTube Music, so they have no fallback.
+
+### Long lists and shelves
+
+A YouTube Music playlist arrives a hundred songs at a time. The page asks for
+the next hundred as the reader scrolls towards the end (`Catalog::loadMorePage`),
+and anything that takes the whole playlist — Play, Shuffle, Download all, Add
+all — first loads the rest (`loadRestOfPage`, up to YouTube's 5,000). A part
+that repeats songs already listed ends the list: some of YouTube Music's own
+playlists answer every "more" with their first hundred again.
+
+A shelf's header offers SHOW ALL where YouTube Music has a page of the whole
+shelf (a playlist, an artist's albums, the week's new releases, opened as
+`shelf:<browse id>[|<params>]`) and PLAY ALL where the shelf is songs. An
+album's or a playlist's card plays from a plate on its cover, without opening
+the page.
+
 ### The source ladder
 
 `PlaybackController::beginTrack` decides where audio comes from:
@@ -141,7 +161,8 @@ whichever contrasts better.
                              cards, queue panel, lyrics pane, title bar parts,
                              ArtistLine (an artist line whose names are links)
     views/                   Home, Search, Library, Downloads, Page (album or
-                             YouTube Music playlist), Artist, Playlist, Now Playing
+                             YouTube Music playlist), Artist, Shelf (a shelf's
+                             "show all"), Playlist, Now Playing
 
     src/
       main.cpp               wiring; registers the QML singletons; self-tests
@@ -155,7 +176,8 @@ whichever contrasts better.
       mediaextractor.*       search: InnerTube first, yt-dlp as fallback
       innertube.*            YouTube Music's API: search, suggestions, radio,
                              browse pages, artist pages, lyrics
-      catalog.*              Home's feed, album pages and artist pages
+      catalog.*              Home's feed, album, playlist, artist and "show all"
+                             pages, and a card's play button
       artistlinks.*          which page an artist's name opens, learnt from every
                              answer that links one and kept in the database
       artistselftest.*       --artist-links-test
@@ -320,7 +342,15 @@ mpv's own messages.
                                                     files, never a finished file, whatever the database
                                                     says; and where MONOLIST_DATA_DIR and
                                                     MONOLIST_DOWNLOAD_DIR send downloads
-    monolist --search "<query>"                     one timed search, with suggestions
+    monolist --search "<query>" [--filter <kind>]   one timed search, with suggestions; --filter songs,
+                                                    videos, albums, artists or playlists picks the chip,
+                                                    and the last three print their cards by section
+    monolist --page <browse id> [--all]             an album or playlist page: the header, the first
+                                                    hundred songs, then one more hundred as scrolling asks
+                                                    for it, or with --all the whole rest as Play loads it,
+                                                    timed, with how many rows are distinct songs
+    monolist --shelf <browse id> [params]           a shelf's "show all" page: its title, each section's
+                                                    cards, its songs, and one more part where it has more
     monolist --artist-page <channel id | name> [--mix shuffle|radio]
                                                     one artist page as the interface opens it (a name is
                                                     looked up first): the header, the top songs with each
@@ -373,7 +403,8 @@ be, for a look at a state:
 
     monolist --view <view>                          home, search, downloads, library[:albums|:history],
                                                     page:<browse id>, artist:<channel id>,
-                                                    artistname:<name>, playlist:<id>, playlist:liked
+                                                    artistname:<name>, shelf:<browse id>[|<params>],
+                                                    playlist:<id>, playlist:liked
     monolist --query "<text>"                       search, with the text typed in
     monolist --open-queue  /  --now-playing         with the queue, or Now Playing, open
     monolist --ytm-demo <state>[+file]              the YouTube Music row as active, checking, unreachable

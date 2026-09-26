@@ -104,11 +104,11 @@ Priority runs from 1 (first) to 9. Size: S under an hour, M a few hours, L a day
 
 - [x] **A01** Artist pages are not built, and artist names are never links *(P4, L)*
   Done when: An 'artist:<UC id>' view shows top songs, albums and singles, and related artists, with Play and Shuffle. Tracks carry artist and album browse IDs, so names link to those pages, and TrackMenu gains Go to artist and Go to album.
-- [ ] **A02** Search returns only songs or videos, though the field says 'Artists, albums, tracks…' *(P4, M)*
+- [x] **A02** Search returns only songs or videos, though the field says 'Artists, albums, tracks…' *(P4, M)*
   Done when: ALBUMS and PLAYLISTS filters, and ARTISTS once A01 exists, show card grids that open PageView. Until then the placeholder no longer promises them.
-- [ ] **A03** Long YouTube Music playlists stop at the first page *(P4, M)*
+- [x] **A03** Long YouTube Music playlists stop at the first page *(P4, M)*
   Done when: Catalog::openPage follows continuation tokens, either as the user scrolls or up to a cap, so pageTracks holds the whole playlist.
-- [ ] **A04** Shelves have no See all or Play all, cards can't be played without opening them, and Recently played has no Show all *(P5, M)*
+- [x] **A04** Shelves have no See all or Play all, cards can't be played without opening them, and Recently played has no Show all *(P5, M)*
   Done when: A shelf header opens a full view that loads more pages. Song shelves get Play all, album and playlist cards get a hover play button, and Recently played links to library:history.
 - [ ] **A05** Search with nothing typed has no recent searches or moods & genres *(P5, M)*
   Done when: Recent searches (capped at about 50, each removable, with Clear all) appear under the empty field and on an idle Search page, along with YouTube Music's moods & genres as cards. The recommender shelves sit above them when a catalogue is set.
@@ -243,6 +243,14 @@ Seen by the agents that fixed B01–B13 and by their reviewers, and not yet fixe
   Done when: the footer mark says what a click does: an arrow for a page, the triangle for a song or video.
 - [ ] **F25** A song queued from a track table's menu loses its first credit for Last.fm: TrackTable.trackOf leaves out `primaryArtist`, so "Play next" or "Add to queue" on "Lady Gaga & Bruno Mars" scrobbles the whole line as one artist (Scrobbler::scrobbleArtist falls back to `artist`) rather than "Lady Gaga" *(P6, S)*
   Done when: trackOf carries primaryArtist, and a joint-credit song queued from the menu scrobbles its first credit.
+- [ ] **F26** YouTube Music's own playlists (RDCLAK…) stop at about a hundred songs: asked anonymously, every continuation answers the first hundred again ("'90s Alternative" lists 126 songs and 101 load; the page stops there rather than looping) *(P5, S)*
+  Done when: the rest comes another way (the watch playlist, /next with the playlist id, or the signed-in session), or the page says how many of the total it could load.
+- [ ] **F27** Home shows only the first two or three shelves of YouTube Music's feed: the feed's own continuation is never followed, and asked anonymously it answers an empty page (token in the body, in the URL, or both) *(P5, M)*
+  Done when: Home follows the feed's continuation as the reader scrolls (probably with the visitor cookie or the signed-in session), and shows the shelves below the first few.
+- [ ] **F28** Track tables make every row up front (a Repeater in a Column): 100 rows cost 250-300 ms in the Debug build here, so a 5,000-song playlist would hold 5,000 heavy rows. Pages now add them 25 at a time (at most ~90 ms a batch), which keeps scrolling smooth but not the memory *(P5, M)*
+  Done when: rows are made only near what is on screen (a ListView kept in step with the page's scroll, or rows that load their controls lazily), measured with --page <id> --all.
+- [ ] **F29** The library's cards (Liked songs, your playlists, saved albums and playlists) have no play plate, while YouTube Music's cards on Home, artist pages, search and "show all" now do *(P6, S)*
+  Done when: every album and playlist card plays from its plate, your own playlists and Liked songs included.
 
 ## Connections
 

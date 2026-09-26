@@ -6,6 +6,8 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 
+#include <memory>
+
 // ------------------------------------------------------------ SearchResultModel
 
 SearchResultModel::SearchResultModel(QObject *parent)
@@ -79,6 +81,17 @@ void SearchResultModel::replace(const QList<Item> &items)
     beginResetModel();
     m_items = items;
     endResetModel();
+    Q_EMIT countChanged();
+}
+
+void SearchResultModel::append(const QList<Item> &items)
+{
+    if (items.isEmpty())
+        return;
+    const int first = int(m_items.size());
+    beginInsertRows(QModelIndex(), first, first + int(items.size()) - 1);
+    m_items += items;
+    endInsertRows();
     Q_EMIT countChanged();
 }
 
@@ -205,14 +218,34 @@ void MediaExtractor::setSource(const QString &source)
     Q_EMIT resultsSourceChanged();
 }
 
+namespace {
+
+bool isCardFilter(const QString &filter)
+{
+    return filter == QLatin1String("albums") || filter == QLatin1String("artists")
+        || filter == QLatin1String("playlists");
+}
+
+} // namespace
+
 void MediaExtractor::setFilter(const QString &filter)
 {
-    if (filter == m_filter || (filter != QLatin1String("songs") && filter != QLatin1String("videos")))
+    if (filter == m_filter)
+        return;
+    if (filter != QLatin1String("songs") && filter != QLatin1String("videos") && !isCardFilter(filter))
         return;
     m_filter = filter;
     Q_EMIT filterChanged();
     if (!m_query.isEmpty())
         search(m_query);
+}
+
+void MediaExtractor::setCardSections(const QVariantList &sections)
+{
+    if (sections.isEmpty() && m_cardSections.isEmpty())
+        return;
+    m_cardSections = sections;
+    Q_EMIT cardSectionsChanged();
 }
 
 void MediaExtractor::search(const QString &query)
@@ -228,13 +261,86 @@ void MediaExtractor::search(const QString &query)
 
     if (trimmed.isEmpty()) {
         m_results.clear();
+        setCardSections({});
         Q_EMIT searchFinished({});
         return;
     }
 
     setBusy(true);
+    // Songs and cards are never shown together: the other kind's answers
+    // go as soon as the filter changes, not when the new ones arrive.
+    if (isCardFilter(m_filter)) {
+        m_results.clear();
+        searchCards(trimmed);
+        return;
+    }
+    setCardSections({});
     m_innerTube.search(trimmed, m_filter == QLatin1String("videos") ? InnerTube::Filter::Videos
                                                                      : InnerTube::Filter::Songs);
+}
+
+// Albums, artists or playlists: YouTube Music is the only place that has
+// them, so there is no youtube.com or yt-dlp to fall back on, and a failure
+// is said as one. Playlists are two searches, YouTube Music's own and its
+// listeners', run side by side and shown together once both have answered.
+void MediaExtractor::searchCards(const QString &query)
+{
+    struct Part {
+        InnerTube::Filter filter;
+        QString title;
+        QList<InnerTube::Card> cards;
+        QString error;
+    };
+    auto parts = std::make_shared<QList<Part>>();
+    if (m_filter == QLatin1String("albums")) {
+        parts->append({ InnerTube::Filter::Albums, QString(), {}, {} });
+    } else if (m_filter == QLatin1String("artists")) {
+        parts->append({ InnerTube::Filter::Artists, QString(), {}, {} });
+    } else {
+        parts->append({ InnerTube::Filter::FeaturedPlaylists, QStringLiteral("From YouTube Music"), {}, {} });
+        parts->append({ InnerTube::Filter::CommunityPlaylists, QStringLiteral("From listeners"), {}, {} });
+    }
+
+    const quint64 generation = ++m_cardGeneration;
+    auto waiting = std::make_shared<int>(int(parts->size()));
+    for (int i = 0; i < parts->size(); ++i) {
+        m_innerTube.searchCards(query, parts->at(i).filter,
+                                [this, generation, parts, waiting, i](const QList<InnerTube::Card> &cards,
+                                                                      const QString &error) {
+            if (generation != m_cardGeneration)
+                return;   // a newer search, or none
+            (*parts)[i].cards = cards;
+            (*parts)[i].error = error;
+            if (--*waiting > 0)
+                return;
+
+            QVariantList sections;
+            QString failure;
+            for (const Part &part : std::as_const(*parts)) {
+                if (!part.error.isEmpty())
+                    failure = part.error;
+                if (part.cards.isEmpty())
+                    continue;
+                QVariantList items;
+                for (const InnerTube::Card &card : part.cards)
+                    items.append(InnerTube::cardToVariant(card));
+                sections.append(QVariantMap{ { QStringLiteral("title"), part.title },
+                                             { QStringLiteral("items"), items } });
+            }
+            setCardSections(sections);
+            setSource(QStringLiteral("YouTube Music"));
+            setBusy(false);
+            // Half an answer is still worth showing; nothing at all because
+            // the request failed is said, rather than "No results".
+            if (sections.isEmpty() && !failure.isEmpty()) {
+                const QString reason = QStringLiteral("YouTube Music did not answer: %1").arg(failure);
+                setLastError(reason);
+                Q_EMIT failed(reason);
+                return;
+            }
+            Q_EMIT cardSearchFinished();
+        });
+    }
 }
 
 void MediaExtractor::finishSearch(const QList<SearchResultModel::Item> &items, const QString &source)
@@ -370,6 +476,7 @@ void MediaExtractor::resolve(const QString &videoIdOrUrl)
 void MediaExtractor::cancel()
 {
     m_innerTube.cancelSearch();
+    ++m_cardGeneration;
     if (m_request && m_request->isRunning())
         m_request->cancel();
     m_request.clear();

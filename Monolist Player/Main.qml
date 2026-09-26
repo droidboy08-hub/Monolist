@@ -83,12 +83,23 @@ ApplicationWindow {
     // Views are named: "home", "search", "downloads", "library[:tab]",
     // "page:<browse id>" for an album or a YouTube Music playlist,
     // "artist:<channel id>" for an artist, "artistname:<name>" for one known
-    // only by name until it is looked up, and "playlist:<id>" or
-    // "playlist:liked" for the user's own. Back and forward step through
-    // them.
+    // only by name until it is looked up, "shelf:<browse id>[|<params>]" for
+    // a shelf's "show all", and "playlist:<id>" or "playlist:liked" for the
+    // user's own. Back and forward step through them.
     function openPage(browseId) {
         nowPlayingOpen = false
         navigate("page:" + browseId)
+    }
+
+    // The shelf's own title, which heads its page while the page loads. Read
+    // as the view changes and not kept, as pendingArtistName is.
+    property string pendingListingTitle: ""
+
+    function openListing(browseId, params, title) {
+        nowPlayingOpen = false
+        pendingListingTitle = title ? title : ""
+        navigate("shelf:" + browseId + (params ? "|" + params : ""))
+        pendingListingTitle = ""
     }
 
     // The name a link was showing, so the page it opens is headed with it
@@ -127,6 +138,12 @@ ApplicationWindow {
             Catalog.openArtist(currentView.substring(7), pendingArtistName)
         else if (currentView.indexOf("artistname:") === 0)
             Catalog.openArtistNamed(currentView.substring(11))
+        else if (currentView.indexOf("shelf:") === 0) {
+            const key = currentView.substring(6)
+            const bar = key.indexOf("|")
+            Catalog.openListing(bar < 0 ? key : key.substring(0, bar), bar < 0 ? "" : key.substring(bar + 1),
+                                pendingListingTitle)
+        }
         else if (currentView.indexOf("playlist:") === 0 && currentView !== "playlist:liked")
             Library.openPlaylist(parseInt(currentView.substring(9)))
     }
@@ -193,6 +210,7 @@ ApplicationWindow {
                   : currentView === "settings" ? "SETTINGS"
                   : currentView.indexOf("page:") === 0 ? (Catalog.page.type === "playlist" ? "PLAYLIST" : "ALBUM")
                   : currentView.indexOf("artist") === 0 ? "ARTIST"
+                  : currentView.indexOf("shelf:") === 0 ? "SHOW ALL"
                   : currentView === "playlist:liked" ? "YOUR LIBRARY / LIKED SONGS"
                   : currentView.indexOf("playlist:") === 0 ? "YOUR LIBRARY / PLAYLIST"
                   : "YOUR LIBRARY";
@@ -308,6 +326,7 @@ ApplicationWindow {
                     HomeView {
                         anchors.fill: parent
                         onPageRequested: function(browseId) { window.openPage(browseId) }
+                        onViewRequested: function(view) { window.navigate(view) }
                     }
                 }
 
@@ -326,6 +345,14 @@ ApplicationWindow {
                     ArtistView {
                         anchors.fill: parent
                         onPageRequested: function(browseId) { window.openPage(browseId) }
+                    }
+                }
+
+                ViewFade {
+                    shown: window.currentView.indexOf("shelf:") === 0
+
+                    ShelfView {
+                        anchors.fill: parent
                     }
                 }
 
@@ -568,11 +595,18 @@ ApplicationWindow {
         target: Nav
         function onArtistRequested(name, browseId) { window.openArtist(name, browseId) }
         function onPageRequested(browseId) { window.openPage(browseId) }
+        function onListingRequested(browseId, params, title) { window.openListing(browseId, params, title) }
     }
 
     Connections {
         target: Catalog
         function onNotice(text) { toast.show(text) }
+        // A card's play button: its album or playlist, fetched, played from
+        // the top.
+        function onCollectionReady(origin, tracks) {
+            if (tracks.length > 0)
+                Player.playTracks(tracks, 0, origin)
+        }
         // A name looked up: its page takes the lookup's place in the history.
         function onArtistResolved(name, browseId) {
             if (window.currentView === "artistname:" + name)
