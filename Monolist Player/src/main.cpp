@@ -17,6 +17,9 @@
 #include "appdatabase.h"
 #include "artworkcache.h"
 #include "catalog.h"
+#include "connectionselftest.h"
+#include "lastfm.h"
+#include "secretstore.h"
 #include "downloadmanager.h"
 #include "innertube.h"
 #include "library.h"
@@ -81,6 +84,14 @@ int main(int argc, char *argv[])
                      "to the default sans and the design will not match.");
         }
     }
+
+    // --secret-test / --lastfm-test: the sign-in plumbing checked on its own,
+    // with no network and no window (connectionselftest.cpp). The exit code
+    // is 0 only when every check passed.
+    if (app.arguments().contains(QStringLiteral("--secret-test")))
+        return runSecretStoreSelfTest() == 0 ? 0 : 1;
+    if (app.arguments().contains(QStringLiteral("--lastfm-test")))
+        return runLastFmSelfTest() == 0 ? 0 : 1;
 
     AppDatabase database;
     if (!database.open())
@@ -207,6 +218,10 @@ int main(int argc, char *argv[])
     RecData recData;
     recData.setRecommender(&recommender);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "RecData",   &recData);
+    // Whether this build can connect to Last.fm at all: a key built in, and
+    // somewhere safe to keep a session.
+    LastFmApi lastFm;
+    qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "LastFm",    &lastFm);
     qmlRegisterUncreatableType<SearchResultModel>(
         "Monolist.Backend", 1, 0, "SearchResultModel",
         QStringLiteral("Obtained from Extractor.results"));
@@ -660,6 +675,10 @@ int main(int argc, char *argv[])
                  qPrintable(library.userName()), qPrintable(library.userInitials()),
                  library.liked()->rowCount(), library.playlists()->rowCount(),
                  library.albums()->rowCount(), library.savedPlaylists()->rowCount());
+        // Whether there is a key, never what it is.
+        qWarning("diag: Last.fm key %s; secret store: %s", lastFm.hasKey() ? "present" : "absent",
+                 qPrintable(SecretStore::available() ? SecretStore::backendName()
+                                                     : SecretStore::unavailableReason()));
         QTimer::singleShot(0, &app, []() { QCoreApplication::quit(); });
     }
 

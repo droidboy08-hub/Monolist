@@ -95,6 +95,49 @@ execute_process(COMMAND ${CMAKE_COMMAND}
     -DAPP_VERSION=${PROJECT_VERSION}
     -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/buildinfo.cmake)
 
+# — connections: Last.fm now, YouTube Music later —
+#
+# SecretStore keeps session keys and cookies out of the database, encrypted by
+# the system for the signed-in user: DPAPI on Windows (crypt32), the Keychain
+# on macOS once secretstore_mac.mm is added (it defines MONOLIST_HAVE_KEYCHAIN).
+# Anywhere else it reports that it is not available and stores nothing.
+target_sources(monolist PRIVATE
+    src/secretstore.h              src/secretstore.cpp
+    src/secretstore_win.cpp
+    src/lastfm.h                   src/lastfm.cpp
+    src/connectionselftest.h       src/connectionselftest.cpp)
+if(WIN32)
+    target_link_libraries(monolist PRIVATE crypt32)
+endif()
+
+# The Last.fm API account belongs to whoever builds the app and is never
+# committed. Set MONOLIST_LASTFM_API_KEY and MONOLIST_LASTFM_SHARED_SECRET in
+# the environment (or pass both with -D) and they are written to
+# generated/apicredentials.h in the build tree; without them the app builds all
+# the same and says it has no Last.fm key. Neither value is ever printed.
+set(MONOLIST_APICREDENTIALS "${CMAKE_CURRENT_BINARY_DIR}/generated/apicredentials.h")
+set(MONOLIST_APICREDENTIALS_SCRIPT
+    -DTEMPLATE=${CMAKE_CURRENT_SOURCE_DIR}/src/apicredentials.h.in
+    -DOUTPUT=${MONOLIST_APICREDENTIALS}
+    -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/apicredentials.cmake)
+if(DEFINED MONOLIST_LASTFM_API_KEY OR DEFINED MONOLIST_LASTFM_SHARED_SECRET)
+    # Given with -D: fixed at configure time, like any other cache value. The
+    # script still reads them from the environment, set here for it alone.
+    set(ENV{MONOLIST_LASTFM_API_KEY} "${MONOLIST_LASTFM_API_KEY}")
+    set(ENV{MONOLIST_LASTFM_SHARED_SECRET} "${MONOLIST_LASTFM_SHARED_SECRET}")
+    execute_process(COMMAND ${CMAKE_COMMAND} ${MONOLIST_APICREDENTIALS_SCRIPT})
+else()
+    # From the environment: written now, because lastfm.cpp needs the header
+    # before anything builds, and read again at every build.
+    execute_process(COMMAND ${CMAKE_COMMAND} ${MONOLIST_APICREDENTIALS_SCRIPT})
+    add_custom_target(monolist_apicredentials
+        BYPRODUCTS "${MONOLIST_APICREDENTIALS}"
+        COMMAND ${CMAKE_COMMAND} ${MONOLIST_APICREDENTIALS_SCRIPT}
+        COMMENT "Looking for a Last.fm API key"
+        VERBATIM)
+    add_dependencies(monolist monolist_apicredentials)
+endif()
+
 # components/ and views/ hold .qml files outside the module root. Qt 6.8+ wants
 # a qmldir in each so the directory imports in Main.qml and the views resolve
 # through the module rather than the old implicit-directory path. NEW makes Qt

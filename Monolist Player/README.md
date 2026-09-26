@@ -232,6 +232,16 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$(brew --pref
 cmake --build build
 ```
 
+### Last.fm key
+
+Scrobbling needs a Last.fm API account, which belongs to whoever builds the app
+and is never committed. Set `MONOLIST_LASTFM_API_KEY` and
+`MONOLIST_LASTFM_SHARED_SECRET` in the environment before building (or pass
+both with `-D`), and they are written to `generated/apicredentials.h` in the
+build tree, read again at every build. Without them the app builds all the same,
+and Settings says the build has no Last.fm key. CMake reports only whether there
+is a key, never its value; `monolist --lastfm-test` and `--diag` say the same.
+
 ### Typeface
 
 **Archivo (400/600/800) is bundled** in `fonts/` and registered from Qt
@@ -286,7 +296,12 @@ mpv's own messages.
                                                     each file kept, fetched or refused, then the shelves
                                                     built from it; --cancel-at stops part-way
     monolist --rec-remove                           Remove, as Settings does it, with the data in use
-    monolist --diag                                 what the database holds
+    monolist --secret-test                          the secret store: round trips, damaged files refused,
+                                                    delete; exits 0 when every check passes
+    monolist --lastfm-test                          Last.fm signing, the request body and every answer,
+                                                    on invented keys and canned replies; no network
+    monolist --diag                                 what the database holds, and whether there is a
+                                                    Last.fm key
 
 Each quits by itself and reports on stderr. These open the window as it would
 be, for a look at a state:
@@ -308,6 +323,7 @@ the pinned tag on GitHub.
     downloads         <Music>/Monolist/<artist> - <title> [<id>].<ext>
     database          <AppData>/monolist.db  (library, playlists, history, lyrics, settings)
     recommendations   <AppData>/recommendations/v1  (downloaded from Settings; Remove deletes it)
+    secrets           <AppData>/secrets  (sign-in keys, encrypted with DPAPI for the Windows user)
     artwork           <Cache>/artwork  (256 MB cap)
 
 Downloads live in the user's real Music folder, the convention Melody settled

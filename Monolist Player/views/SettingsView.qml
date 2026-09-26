@@ -449,9 +449,9 @@ Flickable {
 
         // — connections —
         //
-        // Designed, not built. The app works entirely without any of these and
-        // is meant to keep working that way; what an account buys is your own
-        // library and your own history, not a better player.
+        // Being built, Last.fm first. The app works entirely without any of
+        // these and is meant to keep working that way; what an account buys
+        // is your own library and your own history, not a better player.
         SectionHeader {
             width: parent.width
             number: "05"
@@ -459,18 +459,31 @@ Flickable {
         }
 
         Note {
-            text: "Nothing is signed in. Monolist plays without an account, and keeps your library "
-                  + "on this computer. Connecting one would add what only an account can know."
+            // Follows the rows, so it cannot go on saying nothing is signed
+            // in once something is.
+            text: lastFmRow.connected
+                  ? "Last.fm is connected as " + lastFmRow.accountName + ". Everything else still works "
+                    + "without an account, and your library stays on this computer."
+                  : "Nothing is signed in. Monolist plays without an account, and keeps your library "
+                    + "on this computer. Connecting one would add what only an account can know."
         }
 
         ServiceRow {
+            id: lastFmRow
             width: parent.width
             name: "Last.fm"
             detail: "Scrobble what you play, and see what you have been listening to."
+            // The sign-in itself is not built yet; whether this build could
+            // use one (it has a key, and somewhere safe to keep the session)
+            // already shows.
+            built: false
+            serviceState: LastFm.available ? "off" : "unavailable"
+            statusLine: LastFm.unavailableReason
             steps: [
                 "Monolist opens Last.fm in your browser, where you approve it. Your password is never typed into this app.",
-                "Last.fm hands back a session key, which is stored on this computer and can be revoked from your Last.fm account at any time.",
-                "From then on, a track counts as played once you have heard half of it, and scrobbles go out in the background. Nothing else is sent."
+                "Last.fm hands back a session key, which is kept on this computer, encrypted with your Windows sign-in (the Keychain on a Mac), and can be revoked from your Last.fm account at any time.",
+                "A track counts as played once you have heard half of it or four minutes, whichever comes first; tracks of 30 seconds or less never count. "
+                + "While a track plays, Last.fm is also told what is playing now. Nothing else is sent."
             ]
         }
 
@@ -481,8 +494,9 @@ Flickable {
             caution: "Use an account you can afford to lose. Google restricts accounts used by outside players, and that would take the account with it."
             steps: [
                 "Sign in to YouTube Music in your own browser, in a private window, and export the cookies for that tab to a file.",
-                "Point Monolist at that file. It is read once, kept in this computer's keychain, and never written to the music database or to any log.",
-                "Your library, likes and history then come from your account. Sign out here and the file and the key are both deleted.",
+                "Point Monolist at that file. It is read once, encrypted with your Windows sign-in (the Keychain on a Mac), and never written to the music database or to any log.",
+                "Your library, likes and history then come from your account. Sign out here and Monolist's encrypted copy is deleted; it offers to delete your exported file as soon as it has read it.",
+                "A session lasts days to weeks; when it ends Monolist says so and keeps playing signed out.",
                 "It buys none of the speed: playback is exactly as fast signed out, and signing in never becomes required for anything."
             ]
         }
