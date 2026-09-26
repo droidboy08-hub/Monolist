@@ -12,6 +12,13 @@ QtObject {
     signal pageRequested(string browseId)
     // A shelf's "show all" page of cards, headed `title` while it loads.
     signal listingRequested(string browseId, string params, string title)
+    // A suggestion shelf's SHOW ALL, by its index in Recs.shelves.
+    signal suggestionsRequested(int shelf)
+
+    function openSuggestions(shelf) {
+        if (shelf >= 0)
+            suggestionsRequested(shelf)
+    }
 
     function openArtist(name, browseId) {
         artistRequested(name ? name : "", browseId ? browseId : "")

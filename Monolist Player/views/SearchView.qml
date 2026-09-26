@@ -168,6 +168,44 @@ Flickable {
             color: Theme.neutral700
         }
 
+        // What the shelves are, and the way to a fresh set: the page draws
+        // new rows by itself every 45 minutes, and REFRESH does it now.
+        Item {
+            visible: root.term.length === 0 && Recs.available && Recs.shelves.length > 0
+            width: parent.width
+            height: suggestionsLabel.implicitHeight
+
+            Text {
+                id: suggestionsLabel
+                width: Math.max(0, parent.width - refreshLink.width - Theme.space4)
+                text: Recs.personal ? "SUGGESTED FOR YOU" : "SUGGESTIONS"
+                elide: Text.ElideRight
+                font.family: Theme.fontFamily
+                font.pixelSize: 11
+                font.weight: Font.Bold
+                font.letterSpacing: Theme.tracking(11, 0.14)
+                color: Theme.neutral700
+            }
+
+            Text {
+                id: refreshLink
+                anchors.right: parent.right
+                anchors.baseline: suggestionsLabel.baseline
+                text: Recs.busy ? "REFRESHING…" : "REFRESH"
+                font.family: Theme.fontFamily
+                font.pixelSize: 12
+                font.weight: Font.Bold
+                font.letterSpacing: Theme.tracking(12, 0.12)
+                color: refreshHover.hovered && !Recs.busy ? Theme.accent700 : Theme.neutral700
+
+                HoverHandler { id: refreshHover; cursorShape: Recs.busy ? Qt.ArrowCursor : Qt.PointingHandCursor }
+                TapHandler {
+                    enabled: !Recs.busy
+                    onTapped: Recs.rebuild()
+                }
+            }
+        }
+
         Repeater {
             model: root.term.length === 0 && Recs.available ? Recs.shelves : []
 
@@ -179,8 +217,8 @@ Flickable {
                 title: modelData.title
                 reason: modelData.reason
                 rows: modelData.rows
+                hasMore: modelData.more === true
                 shelfIndex: index
-                onRowActivated: function(row) { Recs.play(index, row) }
             }
         }
 

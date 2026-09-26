@@ -59,13 +59,13 @@ Priority runs from 1 (first) to 9. Size: S under an hour, M a few hours, L a day
   Done when: The worker checks a stop flag between scans, and the destructor waits until it stops, so quitting mid-build exits cleanly.
 - [x] **B11** The recommender learns the wrong things: re-liked songs never count, skipped songs seed 'More like…', weekends use the UTC day *(P2, S)*
   Done when: The newest like or unlike per song decides. Only positively labelled plays seed song rails (label ≥0.6, liked, or unlabelled but heard for ≥30 s). The weekend check uses the local date.
-- [ ] **R01** 'Not interested' is read by the taste profile, but nothing can record it *(P3, M)*
+- [x] **R01** 'Not interested' is read by the taste profile, but nothing can record it *(P3, M)*
   Done when: 'Not interested' appears on suggestion rows, in TrackMenu and in Now Playing. It records a notInterested event, removes the row, keeps the song out of shelves and autoplay radio, and can be undone from the toast.
 - [ ] **R02** Search is missing rails and scoring: weekend and 'back to' rails, Liked/playlist/genre rails, and skipped songs never count against *(P3, M)*
   Done when: Search shows 'Your weekend sound' and 'Back to a couple of months ago' when their minimum listening is met, plus 'More like your Liked songs', 'More like <playlist>' and genre shelves. Taste shelves rank with profile.score, so sounds the user skips sink.
-- [ ] **R03** *(Partly done: rows have the song menu, from their dots or a right click, which looks the song up first.)* Suggestion shelves are tap-to-play only: no Play all, row menu, loading state or See all *(P3, M)*
+- [x] **R03** Suggestion shelves are tap-to-play only: no Play all, row menu, loading state or See all *(P3, M)*
   Done when: Each shelf header has Play all, which resolves the songs lazily in order, and See all, which loads more rows from the same source. Rows get TrackMenu on right-click and a spinner while resolving.
-- [ ] **R04** Suggestions never rotate, and they include songs the user already owns *(P3, M)*
+- [x] **R04** Suggestions never rotate, and they include songs the user already owns *(P3, M)*
   Done when: A refresh on the Search page brings up different rows, and the page rebuilds after about 45 minutes. Songs in the library, playlists and downloads are left out, and that set is part of the rebuild check.
 - [ ] **R05** Every suggestion press searches YouTube, even for songs already in the library, and the answer isn't remembered *(P5, M)*
   Done when: play() first plays a library or download copy of the song if one exists. Otherwise it searches and caches the pick for a while, and later presses and Play all use the cache.
@@ -253,6 +253,8 @@ Seen by the agents that fixed B01–B13 and by their reviewers, and not yet fixe
   Done when: every album and playlist card plays from its plate, your own playlists and Liked songs included.
 - [ ] **F30** Play next and Add to queue say nothing: with the queue closed there is no sign either worked, and from a suggestion's menu the song is first looked up, so nothing happens for a second and then still nothing is said *(P5, S)*
   Done when: both answer in the toast ("Playing next: <title>", "Added to queue"), or the queue button shows that something was added.
+- [ ] **F31** "Not interested" and "Don't suggest <artist>" can be taken back only from their toast: once it has gone they hold for good (they are play_events rows), and nothing lists them or clears them *(P5, S)*
+  Done when: Settings lists the songs and artists turned down, each removable, with a Clear all, and the page rebuilds after a change.
 
 ## Connections
 

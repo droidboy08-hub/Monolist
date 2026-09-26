@@ -3,36 +3,60 @@ import Monolist
 import Monolist.Backend
 
 // One shelf of suggestions: a heading, the reason it exists, and the songs.
-//
-// Text rows rather than cards, because a catalogue row is a name and nothing
-// else — there is no artwork to show without first resolving every one of
-// them, which would cost a search each. The names are the honest thing to
-// show, and pressing one is what turns it into a song.
+// Its header offers what the shelf offers as a whole, as every shelf's does:
+// PLAY ALL, and SHOW ALL for more from the same place.
 Item {
     id: root
 
     property string title: ""
     property string reason: ""
     property var rows: []
-    // Which of Recs.shelves this is, for the row menu's look-ups.
+    // Which of Recs.shelves this is: what PLAY ALL plays and SHOW ALL opens.
     property int shelfIndex: -1
-
-    signal rowActivated(int index)
+    // Whether the shelf has somewhere to carry on from (Recs: `more`).
+    property bool hasMore: true
 
     implicitHeight: body.implicitHeight
+    // Every row turned down: nothing left to head.
+    visible: rows.length > 0
 
     // The song menu, for a row that is still only a name: what needs the
     // song itself (Play next, Add to playlist, Copy link…) looks it up first,
     // as pressing the row does, and TrackMenu is handed the answer (Main).
     function openMenu(index) {
-        const row = rows[index]
-        if (!row)
+        const song = rows[index]
+        if (!song)
             return
-        Menus.openTrack({ title: row.title, artist: row.artist }, {
+        Menus.openTrack({ title: song.title, artist: song.artist }, {
+            suggestion: true,
             resolve: function(action, argument) {
-                Recs.resolve(root.shelfIndex, index, action + "|" + argument)
+                Recs.resolve(song, action + "|" + argument)
             }
         })
+    }
+
+    // A row turned down, or brought back by Undo, changes this shelf alone;
+    // the page is not rebuilt around it.
+    Connections {
+        target: Recs
+        function onRowsEdited(shelf) {
+            if (shelf >= 0 && shelf === root.shelfIndex)
+                root.rows = Recs.rowsOf(shelf)
+        }
+    }
+
+    // A header link, set as SectionHeader and CardShelf set theirs.
+    component HeaderLink: Text {
+        id: link
+        signal triggered()
+        font.family: Theme.fontFamily
+        font.pixelSize: 12
+        font.weight: Font.Bold
+        font.letterSpacing: Theme.tracking(12, 0.12)
+        color: linkHover.hovered ? Theme.accent700 : Theme.neutral700
+
+        HoverHandler { id: linkHover; cursorShape: Qt.PointingHandCursor }
+        TapHandler { onTapped: link.triggered() }
     }
 
     Column {
@@ -40,14 +64,39 @@ Item {
         width: parent.width
         spacing: Theme.space3
 
-        Text {
+        Item {
             width: parent.width
-            text: root.title
-            elide: Text.ElideRight
-            font.family: Theme.fontFamily
-            font.pixelSize: 19
-            font.weight: Theme.weightBlack
-            color: Theme.text
+            height: heading.implicitHeight
+
+            Text {
+                id: heading
+                width: Math.max(0, parent.width - links.width - Theme.space4)
+                text: root.title
+                elide: Text.ElideRight
+                font.family: Theme.fontFamily
+                font.pixelSize: 19
+                font.weight: Theme.weightBlack
+                color: Theme.text
+            }
+
+            Row {
+                id: links
+                anchors.right: parent.right
+                anchors.baseline: heading.baseline
+                baselineOffset: playAll.y + playAll.baselineOffset
+                spacing: Theme.space4
+
+                HeaderLink {
+                    id: playAll
+                    text: "PLAY ALL"
+                    onTriggered: Recs.playAll(root.shelfIndex)
+                }
+                HeaderLink {
+                    visible: root.hasMore
+                    text: "SHOW ALL"
+                    onTriggered: Nav.openSuggestions(root.shelfIndex)
+                }
+            }
         }
 
         Text {
@@ -67,81 +116,15 @@ Item {
             Repeater {
                 model: root.rows
 
-                Item {
-                    id: row
-
+                RecRow {
                     required property var modelData
                     required property int index
 
                     width: list.width
-                    height: 40
-
-                    Rectangle {
-                        anchors.fill: parent
-                        color: hover.hovered ? Theme.rowHover : "transparent"
-                    }
-
-                    Text {
-                        anchors.left: parent.left
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: 28
-                        text: String(row.index + 1).padStart(2, "0")
-                        font.family: Theme.fontFamily
-                        font.pixelSize: 12
-                        color: hover.hovered ? Theme.accent : Theme.neutral700
-                    }
-
-                    Text {
-                        x: 28
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: Math.max(0, parent.width * 0.55 - 28)
-                        text: row.modelData.title
-                        elide: Text.ElideRight
-                        font.family: Theme.fontFamily
-                        font.pixelSize: 14
-                        font.weight: Theme.weightBlack
-                        color: Theme.text
-                    }
-
-                    // The catalogue keeps names only; Artists finds the page
-                    // for one YouTube Music has linked, and looks up the rest.
-                    // It leaves room at the end for the row's dots.
-                    ArtistLine {
-                        x: parent.width * 0.55
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: Math.max(0, parent.width * 0.45 - 36)
-                        artist: row.modelData.artist
-                        font.family: Theme.fontFamily
-                        font.pixelSize: 13
-                        color: Theme.neutral700
-                    }
-
-                    // A button, so its click is not also taken as a tap on
-                    // the row.
-                    IconButton {
-                        visible: hover.hovered
-                        anchors.right: parent.right
-                        anchors.verticalCenter: parent.verticalCenter
-                        side: 30
-                        iconName: "dots"
-                        iconSize: 16
-                        iconColor: Theme.neutral700
-                        onClicked: root.openMenu(row.index)
-                    }
-
-                    Rectangle {
-                        width: parent.width
-                        height: Theme.ruleWidth
-                        anchors.bottom: parent.bottom
-                        color: Theme.neutral300
-                    }
-
-                    HoverHandler { id: hover; cursorShape: Qt.PointingHandCursor }
-                    TapHandler { onTapped: root.rowActivated(row.index) }
-                    TapHandler {
-                        acceptedButtons: Qt.RightButton
-                        onTapped: root.openMenu(row.index)
-                    }
+                    song: modelData
+                    number: index + 1
+                    onActivated: Recs.play(modelData)
+                    onMenuRequested: root.openMenu(index)
                 }
             }
         }

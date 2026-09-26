@@ -6,6 +6,8 @@
 #include <QTimer>
 #include <QVariantMap>
 
+#include <functional>
+
 #include "innertube.h"
 #include "listentracker.h"
 #include "queuemodel.h"
@@ -86,6 +88,21 @@ public:
     // library is set, before a queue is loaded or the interface reads them;
     // each is written back whenever it changes.
     void restoreSettings();
+
+    // What autoplay's radio may not add: a song the listener said "Not
+    // interested" to, or one by an artist they asked not to be suggested
+    // (Recommender::unwanted). True means leave it out.
+    using RadioFilter = std::function<bool(const QString &videoId, const QString &title,
+                                           const QString &artist)>;
+    void setRadioFilter(RadioFilter unwanted) { m_radioUnwanted = std::move(unwanted); }
+    // Takes out the upcoming songs the radio already added that the filter
+    // now refuses: turned down after they were queued. What the listener
+    // queued themselves stays, and so does the song playing.
+    void pruneRadio();
+    // Moves on each time a new queue replaces the old one — a list played, a
+    // song picked — and never otherwise. Play all feeds the suggestions it
+    // finds into the queue it started, and stops once that queue is gone.
+    quint64 queueGeneration() const { return m_queueGeneration; }
 
     bool playing() const { return m_playing; }
     QVariantMap currentTrack() const { return m_currentTrack; }
@@ -273,6 +290,8 @@ private:
 
     QString m_radioSeed;             // the song the radio request in flight is for
     bool m_waitingForRadio = false;  // the queue ran out and is waiting on it
+    RadioFilter m_radioUnwanted;     // what the radio may not add
+    quint64 m_queueGeneration = 0;
 
     bool m_playing = false;
     bool m_buffering = false;

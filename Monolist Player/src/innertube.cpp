@@ -1651,6 +1651,22 @@ void InnerTube::searchCards(const QString &query, Filter filter,
          });
 }
 
+void InnerTube::searchTracks(const QString &query, Filter filter,
+                             std::function<void(const QList<Track> &, const QString &)> done)
+{
+    const QJsonObject body{
+        { QStringLiteral("query"), query },
+        { QStringLiteral("params"), filter == Filter::Videos ? kVideosFilter : kSongsFilter }
+    };
+    send(Client::Music, QStringLiteral("search"), body, kSearchTimeoutMs, /*slot=*/nullptr,
+         [done](const QJsonObject &root, const QString &error) {
+             if (!error.isEmpty())
+                 done({}, error);
+             else
+                 done(parseSearch(root), QString());
+         });
+}
+
 void InnerTube::searchArtists(const QString &query,
                               std::function<void(const QList<ArtistHit> &, const QString &)> done)
 {

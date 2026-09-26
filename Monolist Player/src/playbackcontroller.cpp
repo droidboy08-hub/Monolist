@@ -240,6 +240,10 @@ PlaybackController::PlaybackController(MpvEngine *engine,
                 for (const InnerTube::Track &song : found) {
                     if (song.videoId.isEmpty() || m_queue.containsVideo(song.videoId))
                         continue;   // the seed itself comes first, and no repeats
+                    // Turned down in Search, or by an artist turned down there:
+                    // "Not interested" holds for the radio too.
+                    if (m_radioUnwanted && m_radioUnwanted(song.videoId, song.title, song.artist))
+                        continue;
                     QueueTrack track;
                     track.videoId = song.videoId;
                     track.title = song.title;
@@ -459,6 +463,7 @@ void PlaybackController::startQueue(QList<QueueTrack> tracks, int start, bool au
 
     if (tracks.isEmpty())
         return;
+    ++m_queueGeneration;
     start = qBound(0, start, int(tracks.size()) - 1);
 
     if (m_shuffle) {
@@ -617,6 +622,22 @@ void PlaybackController::moveInQueue(int from, int to)
     if (from < first || to < first)
         return;
     if (m_queue.move(from, to))
+        prefetchUpcoming();
+}
+
+void PlaybackController::pruneRadio()
+{
+    if (!m_radioUnwanted)
+        return;
+    bool removed = false;
+    for (int row = m_queue.rowCount() - 1; row > m_queue.currentIndex(); --row) {
+        const QueueTrack *track = m_queue.at(row);
+        if (track && track->fromRadio && m_radioUnwanted(track->videoId, track->title, track->artist)) {
+            m_queue.removeAt(row);
+            removed = true;
+        }
+    }
+    if (removed)
         prefetchUpcoming();
 }
 

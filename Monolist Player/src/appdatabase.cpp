@@ -134,7 +134,9 @@ void AppDatabase::createSchema()
     q.exec(QStringLiteral(
         "CREATE TABLE IF NOT EXISTS play_events ("
         " id INTEGER PRIMARY KEY AUTOINCREMENT,"
-        " kind TEXT NOT NULL DEFAULT 'play',"        // play | like | notInterested
+        // play | like | unliked | notInterested | notInterestedArtist (the
+        // last two are Search's "Not interested" and "Don't suggest")
+        " kind TEXT NOT NULL DEFAULT 'play',"
         " video_id TEXT NOT NULL DEFAULT '',"
         " title TEXT NOT NULL DEFAULT '',"
         " artist TEXT NOT NULL DEFAULT '',"

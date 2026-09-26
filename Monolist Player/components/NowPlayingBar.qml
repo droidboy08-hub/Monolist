@@ -53,7 +53,7 @@ Rectangle {
     readonly property bool hasSong: Player.currentTrack.title !== undefined
     function openMenu() {
         if (hasSong)
-            Menus.openTrack(Player.currentTrack, {})
+            Menus.openTrack(Player.currentTrack, { playing: true })
     }
 
     // — now playing —

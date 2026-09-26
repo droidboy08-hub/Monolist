@@ -14,7 +14,7 @@ class Catalog;
 // independent of it so the profile can be built from an imported history or
 // from a fixed set in a test.
 struct PlayEvent {
-    QString kind;            // play | like | notInterested | unliked
+    QString kind;            // play | like | notInterested | notInterestedArtist | unliked
     QString title;
     QString artist;
     QString source;          // the surface it came from; empty counts as neutral

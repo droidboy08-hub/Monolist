@@ -201,6 +201,12 @@ TasteProfile buildTaste(const Catalog &catalog,
     for (const PlayEvent &event : events) {
         if (event.kind == QLatin1String("unliked"))
             continue;
+        // "Don't suggest this artist" names no song and says nothing about a
+        // sound: the shelves leave the artist out (Exclusions), and the
+        // profile, which is about sounds, is not told. A song turned down,
+        // "notInterested", is the profile's strongest no, and counts below.
+        if (event.kind == QLatin1String("notInterestedArtist"))
+            continue;
         if (event.kind == QLatin1String("like")) {
             // Newest first, so the first like met of a song liked now is the
             // one that decided it.

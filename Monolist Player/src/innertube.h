@@ -306,6 +306,12 @@ public:
     // Not cancellable either: the caller drops an answer it no longer wants.
     void searchCards(const QString &query, Filter filter,
                      std::function<void(const QList<Card> &cards, const QString &error)> done);
+    // Songs or videos matching a query, as search() finds them, answered to
+    // `done` rather than by signal. Not cancellable, so several can be in
+    // flight at once: the recommender looks a suggestion up for a press, for
+    // a menu and for Play all, and none of them may silence another.
+    void searchTracks(const QString &query, Filter filter,
+                      std::function<void(const QList<Track> &tracks, const QString &error)> done);
     // The songs behind a Watch — an artist's Shuffle or Mix — as the queue
     // YouTube Music would play, the first song first.
     void watchPlaylist(const Watch &watch,

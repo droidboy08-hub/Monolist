@@ -21,6 +21,8 @@ MonoMenu {
     //   resolve              function(action, argument): for a suggestion
     //                        that is only a name, looked up before any
     //                        action that needs the song itself (Recs.resolve)
+    //   suggestion           a row of Search's suggestions
+    //   playing              the song playing, from the player bar
     //   anchor               an item to open under, for a menu asked for
     //                        from the keyboard
     property var context: ({})
@@ -61,6 +63,28 @@ MonoMenu {
     // The groups the rules sit between; see the rules below.
     readonly property bool playGroup: !inQueue
     readonly property bool orderGroup: canMoveUp || canMoveDown || canLeaveQueue
+
+    // "Not interested" is offered where a song was put in front of the
+    // listener rather than picked by them: a suggestion, the queue (where
+    // autoplay adds its songs), and the song playing, which autoplay may have
+    // chosen. In their own lists it would make no sense: they chose those.
+    readonly property bool offerNotInterested: (context.suggestion === true || inQueue || context.playing === true)
+                                               && track !== null && track !== undefined
+                                               && (track.title || "").length > 0
+    // Who "Don't suggest" names and turns down: the first name of the
+    // credit, as YouTube Music gave it or as Artists can split it.
+    readonly property string leadArtist: {
+        if (!track || !track.artist)
+            return ""
+        if (track.primaryArtist)
+            return track.primaryArtist
+        const pieces = Artists.credits(track.artist, track.credits)
+        for (let i = 0; i < pieces.length; ++i) {
+            if (pieces[i].link)
+                return pieces[i].text
+        }
+        return track.artist.replace(/\s+-\s+topic\s*$/i, "")
+    }
 
     function show(newTrack, newContext) {
         track = newTrack ? newTrack : ({})
@@ -284,5 +308,23 @@ MonoMenu {
         text: "Remove download"
         armedText: "Click again to delete the file"
         onConfirmed: Downloads.remove(menu.sourceId)
+    }
+
+    // — what suggestions should leave out —
+    // Last, as the one answer that is about the suggestions rather than the
+    // song. Both can be undone from the toast.
+    MonoMenuRule { visible: menu.offerNotInterested }
+
+    MonoMenuItem {
+        visible: menu.offerNotInterested
+        enabled: menu.offerNotInterested
+        text: "Not interested"
+        onTriggered: Recs.notInterested(menu.track)
+    }
+    MonoMenuItem {
+        visible: menu.offerNotInterested && menu.leadArtist.length > 0
+        enabled: menu.offerNotInterested && menu.leadArtist.length > 0
+        text: "Don't suggest " + menu.leadArtist
+        onTriggered: Recs.dontSuggestArtist(menu.leadArtist)
     }
 }

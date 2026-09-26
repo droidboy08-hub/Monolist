@@ -223,6 +223,7 @@ qt_add_qml_module(monolist
         components/DownloadOptions.qml
         components/ServiceRow.qml
         components/RecShelf.qml
+        components/RecRow.qml
         components/RecDataPanel.qml
         components/DataCredit.qml
         components/PlateButton.qml
@@ -236,6 +237,7 @@ qt_add_qml_module(monolist
         views/PageView.qml
         views/ArtistView.qml
         views/ShelfView.qml
+        views/RecsView.qml
         views/PlaylistView.qml
         views/NowPlayingView.qml
         views/SettingsView.qml

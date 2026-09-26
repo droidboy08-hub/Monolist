@@ -88,11 +88,17 @@ ApplicationWindow {
     // "page:<browse id>" for an album or a YouTube Music playlist,
     // "artist:<channel id>" for an artist, "artistname:<name>" for one known
     // only by name until it is looked up, "shelf:<browse id>[|<params>]" for
-    // a shelf's "show all", and "playlist:<id>" or "playlist:liked" for the
-    // user's own. Back and forward step through them.
+    // a shelf's "show all", "recs:<index>" for a suggestion shelf's, and
+    // "playlist:<id>" or "playlist:liked" for the user's own. Back and forward
+    // step through them.
     function openPage(browseId) {
         nowPlayingOpen = false
         navigate("page:" + browseId)
+    }
+
+    function openSuggestions(shelf) {
+        nowPlayingOpen = false
+        navigate("recs:" + shelf)
     }
 
     // The shelf's own title, which heads its page while the page loads. Read
@@ -150,6 +156,8 @@ ApplicationWindow {
         }
         else if (currentView.indexOf("playlist:") === 0 && currentView !== "playlist:liked")
             Library.openPlaylist(parseInt(currentView.substring(9)))
+        else if (currentView.indexOf("recs:") === 0)
+            Recs.openMore(parseInt(currentView.substring(5)))
     }
 
     function createPlaylist() {
@@ -229,6 +237,7 @@ ApplicationWindow {
                   : currentView.indexOf("page:") === 0 ? (Catalog.page.type === "playlist" ? "PLAYLIST" : "ALBUM")
                   : currentView.indexOf("artist") === 0 ? "ARTIST"
                   : currentView.indexOf("shelf:") === 0 ? "SHOW ALL"
+                  : currentView.indexOf("recs:") === 0 ? "SEARCH / SHOW ALL"
                   : currentView === "playlist:liked" ? "YOUR LIBRARY / LIKED SONGS"
                   : currentView.indexOf("playlist:") === 0 ? "YOUR LIBRARY / PLAYLIST"
                   : "YOUR LIBRARY";
@@ -370,6 +379,14 @@ ApplicationWindow {
                     shown: window.currentView.indexOf("shelf:") === 0
 
                     ShelfView {
+                        anchors.fill: parent
+                    }
+                }
+
+                ViewFade {
+                    shown: window.currentView.indexOf("recs:") === 0
+
+                    RecsView {
                         anchors.fill: parent
                     }
                 }
@@ -634,6 +651,7 @@ ApplicationWindow {
         function onArtistRequested(name, browseId) { window.openArtist(name, browseId) }
         function onPageRequested(browseId) { window.openPage(browseId) }
         function onListingRequested(browseId, params, title) { window.openListing(browseId, params, title) }
+        function onSuggestionsRequested(shelf) { window.openSuggestions(shelf) }
     }
 
     Connections {
@@ -663,6 +681,10 @@ ApplicationWindow {
     Connections {
         target: Recs
         function onNotice(text) { toast.show(text) }
+        // "Not interested" and "Don't suggest", which can be taken back.
+        function onUndoable(text) {
+            toast.show(text, "UNDO", function() { Recs.undoNotInterested() })
+        }
         // A suggestion's menu entry, once the name has been found as a song:
         // "<action>|<argument>", as TrackMenu asked (RecShelf).
         function onResolved(purpose, track) {

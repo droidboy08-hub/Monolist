@@ -47,6 +47,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include "rec/graph.h"
+#include "rec/matchkey.h"
 #include "rec/shelves.h"
 #include "recdata.h"
 #include "recommender.h"
@@ -1018,6 +1019,176 @@ int main(int argc, char *argv[])
                          "Friday 22:00 and Monday 01:00 local %.2f (must be 0 where the weekend is Sat-Sun)",
                          Rec::buildTaste(*catalogue, weekend, now).weekendMass,
                          Rec::buildTaste(*catalogue, weekdays, now).weekendMass);
+            }
+
+            // The page's surface: rotation, what it may never show, and See
+            // all. Rotation 0 is the page as ranked, which every line above
+            // and --artist-test compare against and the app never builds; a
+            // rotation must give the same page every time it is asked for,
+            // and a different one from the next.
+            {
+                const QDateTime now = QDateTime::currentDateTimeUtc();
+                const QList<QPair<const char *, const char *>> liked = {
+                    { "Blinding Lights", "The Weeknd" }, { "Save Your Tears", "The Weeknd" },
+                    { "Levitating", "Dua Lipa" }, { "Don't Start Now", "Dua Lipa" },
+                    { "As It Was", "Harry Styles" }, { "Watermelon Sugar", "Harry Styles" },
+                    { "Kyoto", "Phoebe Bridgers" }, { "Motion Sickness", "Phoebe Bridgers" },
+                    { "Yellow", "Coldplay" }, { "The Scientist", "Coldplay" },
+                    { "Creep", "Radiohead" }, { "No Surprises", "Radiohead" },
+                };
+                QVector<Rec::PlayEvent> plays;
+                for (int i = 0; i < liked.size(); ++i) {
+                    Rec::PlayEvent event;
+                    event.kind = QStringLiteral("play");
+                    event.title = QString::fromUtf8(liked.at(i).first);
+                    event.artist = QString::fromUtf8(liked.at(i).second);
+                    event.source = QStringLiteral("search");
+                    event.when = now.addSecs(-3600 * (i + 1));
+                    event.hasLabel = true;
+                    event.label = 1.0;
+                    event.listenedMs = 200000;
+                    event.trackMs = 200000;
+                    plays.append(event);
+                }
+                const Rec::TasteProfile taste = Rec::buildTaste(*catalogue, plays, now);
+                const auto build = [&](const QVector<Rec::PlayEvent> &history, quint64 rotation,
+                                       const Rec::Exclusions &exclude) {
+                    return Rec::buildShelves(*catalogue, taste, history, 12, nullptr, QString(), false,
+                                             exclude, rotation);
+                };
+                const auto rowsOf = [](const QVector<Rec::Shelf> &page) {
+                    QStringList rows;
+                    for (const Rec::Shelf &shelf : page) {
+                        for (const Rec::Suggestion &row : shelf.rows)
+                            rows << row.title + QStringLiteral(" / ") + row.artist;
+                    }
+                    return rows;
+                };
+                const auto titlesOf = [](const QVector<Rec::Shelf> &page) {
+                    QStringList titles;
+                    for (const Rec::Shelf &shelf : page)
+                        titles << QStringLiteral("%1 (%2)").arg(shelf.title).arg(shelf.rows.size());
+                    return titles.join(QStringLiteral(" | "));
+                };
+                const auto fresh = [](const QStringList &after, const QStringList &before) {
+                    int count = 0;
+                    for (const QString &row : after)
+                        count += !before.contains(row);
+                    return count;
+                };
+
+                const QVector<Rec::Shelf> ranked = build(plays, 0, {});
+                const quint64 rotation = Rec::rotationFor(1000, 0);
+                const QVector<Rec::Shelf> rotated = build(plays, rotation, {});
+                const QStringList rankedRows = rowsOf(ranked);
+                const QStringList rotatedRows = rowsOf(rotated);
+                const QStringList again = rowsOf(build(plays, rotation, {}));
+                const QStringList nextPeriod = rowsOf(build(plays, Rec::rotationFor(1001, 0), {}));
+                const QStringList nextTurn = rowsOf(build(plays, Rec::rotationFor(1000, 1), {}));
+                qWarning("rec: ranked page: %s", qPrintable(titlesOf(ranked)));
+                qWarning("rec: rotated page: %s", qPrintable(titlesOf(rotated)));
+                qWarning("rec: rotation: the same rotation twice %s (must be the same); %d of %d rows not on the "
+                         "ranked page; the next 45 minutes %d of %d rows new, the next REFRESH %d of %d new "
+                         "(all three must be > 0)",
+                         again == rotatedRows ? "the same" : "DIFFERENT",
+                         fresh(rotatedRows, rankedRows), int(rotatedRows.size()),
+                         fresh(nextPeriod, rotatedRows), int(nextPeriod.size()),
+                         fresh(nextTurn, rotatedRows), int(nextTurn.size()));
+
+                // One song owned, one turned down (as the app records it: an
+                // event in the history and the list), and one artist turned
+                // down, all taken from the ranked page. None may come back.
+                int ownedAt = -1, downAt = -1;
+                QString blockedArtist;
+                QVector<Rec::Suggestion> rankedAll;
+                for (const Rec::Shelf &shelf : ranked)
+                    rankedAll += shelf.rows;
+                for (int i = 0; i < rankedAll.size(); ++i) {
+                    const QString key = Rec::suggestionArtistKey(rankedAll.at(i).artist);
+                    if (ownedAt < 0)
+                        ownedAt = i;
+                    else if (downAt < 0 && key != Rec::suggestionArtistKey(rankedAll.at(ownedAt).artist))
+                        downAt = i;
+                    else if (downAt >= 0 && blockedArtist.isEmpty()
+                             && key != Rec::suggestionArtistKey(rankedAll.at(ownedAt).artist)
+                             && key != Rec::suggestionArtistKey(rankedAll.at(downAt).artist))
+                        blockedArtist = rankedAll.at(i).artist;
+                }
+                if (ownedAt >= 0 && downAt >= 0 && !blockedArtist.isEmpty()) {
+                    const Rec::Suggestion owned = rankedAll.at(ownedAt);
+                    const Rec::Suggestion down = rankedAll.at(downAt);
+                    Rec::Exclusions exclude;
+                    exclude.owned.insert(Rec::strictKey(owned.title, owned.artist));
+                    exclude.turnedDown.insert(Rec::strictKey(down.title, down.artist));
+                    exclude.artists.insert(Rec::suggestionArtistKey(blockedArtist));
+                    QVector<Rec::PlayEvent> withDown = plays;
+                    Rec::PlayEvent event;
+                    event.kind = QStringLiteral("notInterested");
+                    event.source = QStringLiteral("notInterested");
+                    event.title = down.title;
+                    event.artist = down.artist;
+                    event.when = now;
+                    event.hasLabel = true;
+                    withDown.prepend(event);
+
+                    int ownedSeen = 0, downSeen = 0, artistSeen = 0, pages = 0;
+                    const auto sweep = [&](const QVector<Rec::Suggestion> &rows) {
+                        for (const Rec::Suggestion &row : rows) {
+                            ownedSeen += Rec::strictKey(row.title, row.artist)
+                                         == Rec::strictKey(owned.title, owned.artist);
+                            downSeen += Rec::strictKey(row.title, row.artist)
+                                        == Rec::strictKey(down.title, down.artist);
+                            artistSeen += Rec::suggestionArtistKey(row.artist)
+                                          == Rec::suggestionArtistKey(blockedArtist);
+                        }
+                    };
+                    for (const quint64 r : { quint64(0), rotation }) {
+                        for (const Rec::Shelf &shelf : build(withDown, r, exclude)) {
+                            sweep(shelf.rows);
+                            QVector<Rec::Suggestion> list = shelf.rows;
+                            for (int page = 0; page < 2; ++page) {
+                                const QVector<Rec::Suggestion> more = Rec::moreFrom(
+                                    catalogue, nullptr, shelf, withDown, exclude, list, 24);
+                                sweep(more);
+                                list += more;
+                                ++pages;
+                            }
+                        }
+                    }
+                    qWarning("rec: exclusions: owned \"%s\" seen %d, turned down \"%s\" seen %d, rows by %s %d, "
+                             "over the ranked and a rotated page and %d See all pages (all three must be 0)",
+                             qPrintable(owned.title), ownedSeen, qPrintable(down.title), downSeen,
+                             qPrintable(blockedArtist), artistSeen, pages);
+                    qWarning("rec: taste: negative mass %.2f without the turn-down, %.2f with it (must rise)",
+                             taste.negativeMass, Rec::buildTaste(*catalogue, withDown, now).negativeMass);
+                } else {
+                    qWarning("rec: exclusions: NOT CHECKED, the ranked page has too few artists");
+                }
+
+                // See all, shelf by shelf: two pages past the shelf, none of
+                // it repeating the shelf or itself.
+                QStringList seeAll;
+                int repeats = 0;
+                for (const Rec::Shelf &shelf : ranked) {
+                    QVector<Rec::Suggestion> list = shelf.rows;
+                    QStringList sizes;
+                    for (int page = 0; page < 2; ++page) {
+                        const QVector<Rec::Suggestion> more = Rec::moreFrom(catalogue, nullptr, shelf, plays, {},
+                                                                            list, 24);
+                        sizes << QStringLiteral("+%1").arg(more.size());
+                        list += more;
+                    }
+                    QSet<quint64> keys;
+                    for (const Rec::Suggestion &row : std::as_const(list)) {
+                        const quint64 key = Rec::strictKey(row.title, row.artist);
+                        repeats += keys.contains(key);
+                        keys.insert(key);
+                    }
+                    seeAll << QStringLiteral("%1 %2 %3").arg(shelf.title).arg(shelf.rows.size())
+                                  .arg(sizes.join(QLatin1Char(' ')));
+                }
+                qWarning("rec: see all: %s; %d repeated rows (must be 0)",
+                         qPrintable(seeAll.join(QStringLiteral(" | "))), repeats);
             }
 
             const Rec::Catalog::Match seed =
