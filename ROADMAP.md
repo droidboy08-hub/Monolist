@@ -6,26 +6,26 @@ Priority runs from 1 (first) to 9. Size: S under an hour, M a few hours, L a day
 
 ## Bugs
 
-- [ ] **B01** Every launch waits on three tool --version checks because Settings is built at startup *(P1, S)*
+- [x] **B01** Every launch waits on three tool --version checks because Settings is built at startup *(P1, S)*
   Done when: The version checks run in the background through QProcess signals and start only the first time Settings is shown. The window appears at once, and Settings shows 'Reading versions…' until the answers arrive.
-- [ ] **B02** A retried InnerTube request can replace a newer one: search spins forever, or autoplay sticks on 'Finding more songs…' *(P1, S)*
+- [x] **B02** A retried InnerTube request can replace a newer one: search spins forever, or autoplay sticks on 'Finding more songs…' *(P1, S)*
   Done when: Each slot carries a generation token. A pending retry checks it before sending, and cancelling or starting a new request bumps it, so an old retry can never replace or silence a newer search or radio request.
-- [ ] **B04** A song started with Play after launch, or reached with Next/Previous while paused, is never recorded; launching offline shows an error toast unprompted *(P1, S)*
+- [x] **B04** A song started with Play after launch, or reached with Next/Previous while paused, is never recorded; launching offline shows an error toast unprompted *(P1, S)*
   Done when: The first time a paused-loaded track starts playing, it records history and opens its play event. A resolve failure for a track nobody asked to play only updates the status line.
-- [ ] **B07** Ctrl+F and the Search nav item don't put the cursor in the search field, and the field has no clear button *(P1, S)*
+- [x] **B07** Ctrl+F and the Search nav item don't put the cursor in the search field, and the field has no clear button *(P1, S)*
   Done when: TopBar.focusSearch() (forceActiveFocus plus selectAll) is called by the Find shortcut and the Search nav item. An X clears the text and suggestions and keeps focus in the field.
-- [ ] **B08** A failed search's error stays on the Search page after the field is cleared *(P1, S)*
+- [x] **B08** A failed search's error stays on the Search page after the field is cleared *(P1, S)*
   Done when: An empty query clears lastError, or the error Text also requires term.length > 0.
-- [ ] **B12** Changing the country while Home is still loading is ignored *(P2, S)*
+- [x] **B12** Changing the country while Home is still loading is ignored *(P2, S)*
   Done when: A refresh asked for during a load is queued, as Recommender does with m_refreshQueued, or restarts the load with the new region.
 - [ ] **B14** Album and playlist pages read only one of YouTube's two header formats *(P5, S)*
   Done when: parseCollection falls back to musicDetailHeaderRenderer and the top-level header, so pages keep their title, artist and cover whichever form YouTube sends.
 
 ## Downloads
 
-- [ ] **B09** Track menu shows a greyed-out 'Downloading…' for failed downloads, and can't remove or show a finished one *(P1, S)*
+- [x] **B09** Track menu shows a greyed-out 'Downloading…' for failed downloads, and can't remove or show a finished one *(P1, S)*
   Done when: A failed track shows 'Retry download' (Downloads.retry). A finished one shows 'Show in folder' and 'Remove download' with the two-step confirmation (Downloads.remove).
-- [ ] **B13** Downloads stay disabled after the tools are installed or updated, until restart *(P2, S)*
+- [x] **B13** Downloads stay disabled after the tools are installed or updated, until restart *(P2, S)*
   Done when: DownloadManager re-checks its tools after a tool update, and lazily on enqueue, through NOTIFY properties, so new tools work without a restart.
 - [ ] **D01** The download queue is lost on quit, and partly downloaded files are deleted *(P5, M)*
   Done when: Queued and failed downloads are stored in a table and queued again at launch.
@@ -34,11 +34,11 @@ Priority runs from 1 (first) to 9. Size: S under an hour, M a few hours, L a day
 
 ## Player
 
-- [ ] **B03** Player settings, including Settings' Autoplay switch, reset on every launch *(P1, S)*
+- [x] **B03** Player settings, including Settings' Autoplay switch, reset on every launch *(P1, S)*
   Done when: Volume, shuffle, repeat and autoplay are saved when they change and restored in main.cpp before QML loads.
-- [ ] **B05** After Next or Previous the old song keeps playing until the new one resolves, and its end can skip or fail the new track *(P1, S)*
+- [x] **B05** After Next or Previous the old song keeps playing until the new one resolves, and its end can skip or fail the new track *(P1, S)*
   Done when: Starting a new track stops or pauses the old file, and mpv events are matched to the current playlist_entry_id from MPV_EVENT_START_FILE. Nothing from the previous file reaches the new one, and position starts at 0.
-- [ ] **B06** Player bar: the queue and Now Playing buttons vanish below 1040 px, volume has no fallback, and the queue button does nothing while Now Playing is open *(P1, S)*
+- [x] **B06** Player bar: the queue and Now Playing buttons vanish below 1040 px, volume has no fallback, and the queue button does nothing while Now Playing is open *(P1, S)*
   Done when: The Now Playing and queue toggles stay visible at every width, and only volume collapses to a button with a popup slider and mute. In Now Playing the queue button switches the right pane to UP NEXT.
 - [ ] **U01** The itag 18 fallback doesn't run when a track actually fails to play (user request) *(P3, S)*
   Done when: When mpv fails on an InnerTube adaptive URL, the same track is retried once with its best progressive format (itag 18) before yt-dlp. This is exercised on a real track, with the itag logged.
@@ -55,9 +55,9 @@ Priority runs from 1 (first) to 9. Size: S under an hour, M a few hours, L a day
 
 ## Recommendations
 
-- [ ] **B10** Quitting while recommendations are being built can crash the app *(P2, S)*
+- [x] **B10** Quitting while recommendations are being built can crash the app *(P2, S)*
   Done when: The worker checks a stop flag between scans, and the destructor waits until it stops, so quitting mid-build exits cleanly.
-- [ ] **B11** The recommender learns the wrong things: re-liked songs never count, skipped songs seed 'More like…', weekends use the UTC day *(P2, S)*
+- [x] **B11** The recommender learns the wrong things: re-liked songs never count, skipped songs seed 'More like…', weekends use the UTC day *(P2, S)*
   Done when: The newest like or unlike per song decides. Only positively labelled plays seed song rails (label ≥0.6, liked, or unlabelled but heard for ≥30 s). The weekend check uses the local date.
 - [ ] **R01** 'Not interested' is read by the taste profile, but nothing can record it *(P3, M)*
   Done when: 'Not interested' appears on suggestion rows, in TrackMenu and in Now Playing. It records a notInterested event, removes the row, keeps the song out of shelves and autoplay radio, and can be undone from the toast.
@@ -188,18 +188,47 @@ Priority runs from 1 (first) to 9. Size: S under an hour, M a few hours, L a day
 - [ ] **DOC2** DESIGN.md and some code comments disagree with the code *(P9, S)*
   Done when: Each deliberate exception is written into DESIGN.md with its reason (or the code changes), the macOS title bar is described, and the stale comments and tokens are fixed.
 
+## Found while fixing
+
+Seen by the agents that fixed B01–B13 and by their reviewers, and not yet fixed.
+
+- [ ] **F01** Player-bar tooltips never appear: hovering logs "QQmlComponent: Component is not ready" *(P2, S)*
+  Done when: every ToolTip in the player bar shows on hover with no warning.
+- [ ] **F02** With nothing loaded, the centre button shows Pause because Player.playing is true at launch *(P2, S)*
+  Done when: an empty player shows Play, and playing is false until something plays.
+- [ ] **F03** The search box overlaps the forward arrow at narrow window widths (TopBar.qml:134) *(P3, S)*
+  Done when: the search box shrinks or moves so nothing overlaps at any width down to the minimum.
+- [ ] **F04** Pressing Previous twice records the song as heard for 0 seconds *(P3, S)*
+  Done when: restarting a song closes its play event with the time actually heard.
+- [ ] **F05** The track menu shows a greyed "Downloading…" for queued and running downloads, with no Cancel *(P3, S)*
+  Done when: queued, downloading and processing tracks offer "Cancel download".
+- [ ] **F06** IconButton's iconSize has no effect: every glyph is drawn at the button's full size *(P4, S)*
+  Done when: iconSize sets the glyph size and existing buttons look the same or better.
+- [ ] **F07** Network timeouts may never be retried: Qt reports a transfer timeout as a cancel, which InnerTube skips *(P4, S)*
+  Done when: a timed-out InnerTube request is retried once, and a real cancel is not.
+- [ ] **F08** A country rejected during a Home load makes Home load twice, and Catalog's own retry timer survives a refresh *(P5, S)*
+  Done when: one refresh at a time, whatever triggered it.
+- [ ] **F09** "Update components": a timeout's message is overwritten by the exit-code message that follows it *(P5, S)*
+  Done when: the user sees "took too long" when that is what happened.
+- [ ] **F10** Unmuting after a restart that happened while muted goes to 65% instead of the old level *(P6, S)*
+  Done when: the level before muting is remembered across restarts.
+- [ ] **F11** Esc may be claimed by both Now Playing and an open menu or the volume popup *(P6, S)*
+  Done when: Esc closes the topmost thing only.
+- [ ] **F12** Compiler warnings: deprecated QDateTime::setTimeSpec (taste.cpp), unchecked QFile::open in --content-test (main.cpp) *(P8, S)*
+  Done when: the changed files build without warnings.
+
 ## Decisions waiting on the owner
 
-- [ ] Connections: should YouTube Music sign-in (a cookie file kept in the Mac Keychain or Windows Credential Manager) and/or Last.fm scrobbling be built now, later, or should the 'Designed, not built' section be hidden until then? (SettingsView.qml:393-431)
+- [x] **Decided: build both.** Connections: should YouTube Music sign-in (a cookie file kept in the Mac Keychain or Windows Credential Manager) and/or Last.fm scrobbling be built now, later, or should the 'Designed, not built' section be hidden until then? (SettingsView.qml:393-431)
 - [ ] Update checks: the repo is public, so GitHub Releases on droidboy08-hub/Monolist can be the update feed (api.github.com/repos/droidboy08-hub/Monolist/releases/latest, appinfo.cpp:214-221). Will builds be published as Releases there?
 - [ ] Country shelf title: keep 'From <country>' (current; the list is ranked by MusicBrainz ratings, not plays, shelves.h:61-69) or go back to 'Popular in <country>' as you first asked? The Settings note (SettingsView.qml:371) will be changed to match either way.
-- [ ] Should Burzum be added to the suggestion block list (suitable.cpp:73), and do you want a 'Hide explicit titles' setting (suitable.h:29)?
+- [x] **Decided: Burzum is not blocked; add a "Hide explicit titles" setting.** Should Burzum be added to the suggestion block list (suitable.cpp:73), and do you want a 'Hide explicit titles' setting (suitable.h:29)?
 - [ ] Should 'Clear history' also reset recommendations by deleting the listening events, or keep them and add a separate 'Reset recommendations'? Today it clears only Recently played and History (library.cpp:697-705), so Search still says 'Because you played…' for cleared songs.
-- [ ] When you click a search result, should the app keep queueing all the results (SearchView.qml:155-156), or play just that song and continue with similar songs like the iPhone app does?
+- [x] **Decided: play that song, then similar songs.** When you click a search result, should the app keep queueing all the results (SearchView.qml:155-156), or play just that song and continue with similar songs like the iPhone app does?
 - [ ] Appearance: stay a single paper-and-ink theme by design, or add a dark theme that follows the system? A Mac in dark mode currently gets a light app.
 - [ ] iPhone and desktop libraries: is a JSON backup file enough (export on one, import on the other), or do you want live sync? iCloud sync needs a signed Mac app, and Windows would need a web service or your own server.
-- [ ] Mac distribution: personal use only (ad-hoc signed, opened with right-click → Open), or shareable with others (Apple Developer ID at $99 a year plus notarization)?
-- [ ] Mac architecture: Apple Silicon only (simplest, matches your Mac) or universal with Intel Macs (needs universal Qt, libmpv and tools)?
+- [ ] *(Handled by the separate macOS session.)* Mac distribution: personal use only (ad-hoc signed, opened with right-click → Open), or shareable with others (Apple Developer ID at $99 a year plus notarization)?
+- [ ] *(Handled by the separate macOS session.)* Mac architecture: Apple Silicon only (simplest, matches your Mac) or universal with Intel Macs (needs universal Qt, libmpv and tools)?
 - [ ] The two untracked extracted folders ('Desktop Multiplatorm Music Player' and 'Spotify-inspired desktop player') and their .zip files are still at the repo root. They are not in git. Will you delete them from Finder (deleting on the network share is permanent), and should the zips go too?
 - [ ] Will Monolist stay non-commercial? The recommendation catalogue is licensed CC BY-NC 4.0, which forbids commercial use and requires a credit in the app.
 
