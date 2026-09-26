@@ -5,8 +5,13 @@
 #include <QSGSimpleTextureNode>
 #include <QSGTexture>
 
+// Built without libmpv (MONOLIST_NO_MPV) there is never a picture: the item
+// exists, so the views that place it still load, but it draws nothing and
+// never reports one as showing.
+#ifndef MONOLIST_NO_MPV
 #include <mpv/client.h>
 #include <mpv/render.h>
+#endif
 
 namespace {
 
@@ -14,9 +19,11 @@ namespace {
 MpvEngine *g_engine = nullptr;
 VideoSurface *g_holder = nullptr;
 
+#ifndef MONOLIST_NO_MPV
 // QImage::Format_RGB32 is 0xffRRGGBB in a word, which on a little-endian
 // machine is B, G, R, unused in memory — mpv's "bgr0".
 const char *kFormat = "bgr0";
+#endif
 
 } // namespace
 
@@ -68,6 +75,7 @@ void VideoSurface::attach()
     if (g_holder && g_holder != this)
         g_holder->detach();
 
+#ifndef MONOLIST_NO_MPV
     int advanced = 1;
     mpv_render_param params[] = {
         { MPV_RENDER_PARAM_API_TYPE, const_cast<char *>(MPV_RENDER_API_TYPE_SW) },
@@ -86,6 +94,7 @@ void VideoSurface::attach()
     // What is already playing, in case it started before this was shown.
     setVideoSize(g_engine->videoSize());
     update();
+#endif
 }
 
 // What mpv is playing has a picture of this size, or none at all.
@@ -112,8 +121,10 @@ void VideoSurface::detach()
         return;
     if (g_engine)
         disconnect(g_engine, &MpvEngine::videoSizeChanged, this, &VideoSurface::setVideoSize);
+#ifndef MONOLIST_NO_MPV
     mpv_render_context_set_update_callback(m_render, nullptr, nullptr);
     mpv_render_context_free(m_render);
+#endif
     m_render = nullptr;
     if (g_holder == this)
         g_holder = nullptr;
@@ -138,6 +149,7 @@ QSGNode *VideoSurface::updatePaintNode(QSGNode *old, UpdatePaintNodeData *)
     if (m_frame.size() != size)
         m_frame = QImage(size, QImage::Format_RGB32);
 
+#ifndef MONOLIST_NO_MPV
     int sizes[2] = { size.width(), size.height() };
     size_t stride = size_t(m_frame.bytesPerLine());
     mpv_render_param params[] = {
@@ -148,6 +160,7 @@ QSGNode *VideoSurface::updatePaintNode(QSGNode *old, UpdatePaintNodeData *)
         { MPV_RENDER_PARAM_INVALID, nullptr }
     };
     mpv_render_context_render(m_render, params);
+#endif
 
     auto *node = static_cast<QSGSimpleTextureNode *>(old);
     if (!node) {

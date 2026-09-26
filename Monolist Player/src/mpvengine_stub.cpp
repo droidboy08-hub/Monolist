@@ -23,10 +23,14 @@ MpvEngine::MpvEngine(QObject *parent)
 
 MpvEngine::~MpvEngine() = default;
 
-void MpvEngine::load(const QString &urlOrPath, bool startPlaying)
+void MpvEngine::load(const QString &urlOrPath, bool startPlaying, const QString &audioUrl,
+                     qint64 startAt, const QVariantMap &headers)
 {
     Q_UNUSED(urlOrPath)
     Q_UNUSED(startPlaying)
+    Q_UNUSED(audioUrl)
+    Q_UNUSED(startAt)
+    Q_UNUSED(headers)
     Q_EMIT loadFailed(m_lastError);
 }
 
@@ -55,6 +59,13 @@ void MpvEngine::setSpeed(qreal speed)
 void MpvEngine::setReplayGainEnabled(bool enabled)
 {
     Q_UNUSED(enabled)
+}
+
+// Remembered, so the controller reads back what it asked for; there is still
+// no picture, and videoSize() stays empty, so no surface ever shows one.
+void MpvEngine::setVideoEnabled(bool enabled)
+{
+    m_video = enabled;
 }
 
 // Never invoked — nothing installs a wakeup callback in this build — but moc

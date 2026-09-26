@@ -391,8 +391,6 @@ Known gaps:
   build is the test of the rest.
 * Linux builds and starts (checked on Ubuntu 24.04 with Qt 6.11.2), but has
   not been used day to day and has no packaging yet.
-* Building without libmpv (`-DMONOLIST_NO_MPV=ON`) is broken: the stub has not
-  kept up with `mpvengine.h`, and `videosurface.cpp` still needs libmpv.
 
 ## About the Swift libraries
 
