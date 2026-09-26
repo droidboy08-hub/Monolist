@@ -28,23 +28,38 @@ bool isKnownFormat(const QString &format)
         || format == QLatin1String("mp3");
 }
 
+// Whether a file is one yt-dlp has not finished with, judged by what follows
+// "[<id>]" in its name, in lower case. A finished download is "[<id>].<ext>"
+// and nothing else, so none of these is ever one: a download under way (.part,
+// .ytdl, and .part-Frag<n> for a fragment), one stream of several waiting to
+// be merged (.f<format>.<ext>), a post-processor's working copy (.temp.<ext>),
+// the chapter list FFmpeg reads (.meta), and the thumbnail fetched to embed.
+// ".orig.<ext>" is left out on purpose: it is the untouched original that
+// yt-dlp moves aside while it converts, complete audio in its own right.
+bool isIntermediate(const QString &tail)
+{
+    if (tail.endsWith(QLatin1String(".part")) || tail.endsWith(QLatin1String(".ytdl"))
+        || tail.contains(QLatin1String(".part-frag")))
+        return true;
+    static const QRegularExpression stream(QStringLiteral(R"(^\.f[0-9a-z_-]+\.[0-9a-z]+$)"));
+    if (stream.match(tail).hasMatch())
+        return true;
+    if (tail == QLatin1String(".temp") || tail.startsWith(QLatin1String(".temp."))
+        || tail == QLatin1String(".meta"))
+        return true;
+    return tail == QLatin1String(".jpg") || tail == QLatin1String(".jpeg")
+        || tail == QLatin1String(".png") || tail == QLatin1String(".webp");
+}
+
 } // namespace
 
 DownloadManager::DownloadManager(QObject *parent)
     : QObject(parent)
+    , m_directory(chooseDirectory())
     , m_available(YtDlp::isAvailable())
     , m_canConvert(!YtDlp::ffmpegPath().isEmpty())
 {
     m_toolsChecked.start();
-
-    // Same convention Melody settled on: a named folder inside the user's real
-    // Music directory, so downloads survive reinstalls and are visible to other
-    // players rather than buried in app data.
-    const QString music = QStandardPaths::writableLocation(QStandardPaths::MusicLocation);
-    m_directory = QDir(music.isEmpty()
-                           ? QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
-                           : music)
-                      .filePath(QStringLiteral("Monolist"));
     QDir().mkpath(m_directory);
 
     const QString format = settingValue(kFormatKey, m_format);
@@ -218,6 +233,10 @@ void DownloadManager::begin(const QString &videoId)
     item.error.clear();
     m_queue.upsert(item);
 
+    // What is already there for this track, before yt-dlp writes a byte: should
+    // this attempt fail, its cleanup may take only what the attempt wrote.
+    m_before.insert(videoId, filesFor(m_directory, videoId));
+
     // Without a title the stem is left to yt-dlp, which names the file from
     // the metadata it fetches.
     const QString stem = item.title.isEmpty() ? QString() : fileStem(videoId, item.title, item.artist);
@@ -281,6 +300,7 @@ void DownloadManager::complete(const QString &videoId, const QString &reportedPa
     m_requests.remove(videoId);
     const DownloadQueueModel::Item *current = m_queue.find(videoId);
     if (!current) {
+        m_before.remove(videoId);
         pump();
         return;
     }
@@ -315,6 +335,7 @@ void DownloadManager::complete(const QString &videoId, const QString &reportedPa
         fail(videoId, QStringLiteral("The download finished, but no file was written."));
         return;
     }
+    m_before.remove(videoId);
 
     recordStored(item, path);
     m_stored.insert(videoId, path);
@@ -524,17 +545,82 @@ QString DownloadManager::findWrittenFile(const QString &videoId) const
 }
 
 // yt-dlp leaves .part, .ytdl, thumbnail and intermediate files behind when it
-// is stopped part-way. A finished download of the same track is never touched.
-void DownloadManager::removePartialFiles(const QString &videoId) const
+// is stopped part-way. A finished file of the same track is never touched,
+// whether or not the database knows about it: after app data is reset, or
+// when another run wrote to the same folder, the database is not the whole
+// story, and a file it has no row for is still somebody's music.
+void DownloadManager::removePartialFiles(const QString &videoId)
 {
+    // Without a record of what was there before (every download that ran
+    // has one), count everything as having been there: only yt-dlp's own
+    // leftovers go.
+    const QSet<QString> before = m_before.contains(videoId) ? m_before.take(videoId)
+                                                            : filesFor(m_directory, videoId);
+    removeLeftovers(m_directory, videoId, before, m_stored.value(videoId));
+}
+
+QString DownloadManager::chooseDirectory()
+{
+    // Named outright: for a test, or for keeping downloads somewhere else.
+    const QString named = qEnvironmentVariable("MONOLIST_DOWNLOAD_DIR");
+    if (!named.isEmpty())
+        return QDir::cleanPath(QDir(named).absolutePath());
+
+    // A scratch database means a test or a trial run, and its downloads are
+    // just as much scratch: beside that database, never among the user's
+    // music, where a later cleanup or a re-download could meet them.
+    const QString data = qEnvironmentVariable("MONOLIST_DATA_DIR");
+    if (!data.isEmpty())
+        return QDir::cleanPath(QDir(data).absoluteFilePath(QStringLiteral("downloads")));
+
+    // Same convention Melody settled on: a named folder inside the user's real
+    // Music directory, so downloads survive reinstalls and are visible to other
+    // players rather than buried in app data.
+    const QString music = QStandardPaths::writableLocation(QStandardPaths::MusicLocation);
+    return QDir(music.isEmpty() ? QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
+                                : music)
+        .filePath(QStringLiteral("Monolist"));
+}
+
+QSet<QString> DownloadManager::filesFor(const QString &directory, const QString &videoId)
+{
+    QSet<QString> names;
+    if (videoId.isEmpty())
+        return names;
     const QString marker = QLatin1Char('[') + videoId + QStringLiteral("].");
-    const QString kept = m_stored.value(videoId);
-    const QFileInfoList files = QDir(m_directory).entryInfoList(QDir::Files | QDir::Hidden);
+    const QFileInfoList files = QDir(directory).entryInfoList(QDir::Files | QDir::Hidden);
     for (const QFileInfo &file : files) {
-        const QString path = file.absoluteFilePath();
-        if (file.fileName().contains(marker) && path != kept)
-            QFile::remove(path);
+        if (file.fileName().contains(marker))
+            names.insert(file.fileName());
     }
+    return names;
+}
+
+QStringList DownloadManager::removeLeftovers(const QString &directory, const QString &videoId,
+                                             const QSet<QString> &before, const QString &kept)
+{
+    QStringList removed;
+    if (videoId.isEmpty())
+        return removed;
+    const QString marker = QLatin1Char('[') + videoId + QLatin1Char(']');
+    const QFileInfo keptFile(kept);
+    const QFileInfoList files = QDir(directory).entryInfoList(QDir::Files | QDir::Hidden);
+    for (const QFileInfo &file : files) {
+        const QString name = file.fileName();
+        // The last one: the id closes the stem, and a title could in theory
+        // carry the same text earlier on.
+        const qsizetype at = name.lastIndexOf(marker + QLatin1Char('.'));
+        if (at < 0)
+            continue;
+        if (!kept.isEmpty() && file == keptFile)
+            continue;
+        const QString tail = name.mid(at + marker.size()).toLower();
+        if (!isIntermediate(tail) && before.contains(name))
+            continue;   // finished before this attempt began
+        if (QFile::remove(file.absoluteFilePath()))
+            removed.append(name);
+    }
+    return removed;
 }
 
 void DownloadManager::recordStored(const DownloadQueueModel::Item &item, const QString &path)

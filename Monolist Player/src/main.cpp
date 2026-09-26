@@ -24,6 +24,7 @@
 #include "scrobbleselftest.h"
 #include "secretstore.h"
 #include "downloadmanager.h"
+#include "downloadselftest.h"
 #include "innertube.h"
 #include "library.h"
 #include "lyrics.h"
@@ -136,6 +137,11 @@ int main(int argc, char *argv[])
         // stand-in server on this computer; in MONOLIST_DATA_DIR only.
         if (arguments.contains(QStringLiteral("--ytm-session-test")))
             return runYtmSessionSelfTest(&library) == 0 ? 0 : 1;
+        // What a failed or cancelled download may delete, on invented files,
+        // and where downloads go under a scratch data folder
+        // (downloadselftest.cpp); in MONOLIST_DATA_DIR only.
+        if (arguments.contains(QStringLiteral("--download-cleanup-test")))
+            return runDownloadCleanupSelfTest() == 0 ? 0 : 1;
     }
 
     // --set <key> <value>: writes one setting (region, lrclib_url,
@@ -1827,9 +1833,16 @@ int main(int argc, char *argv[])
     //
     // The same for the offline path: one download through yt-dlp and FFmpeg,
     // reporting progress, and quitting when the file is written, when it fails,
-    // or when the time runs out.
+    // or when the time runs out. Only into a scratch folder: with neither
+    // MONOLIST_DATA_DIR nor MONOLIST_DOWNLOAD_DIR it would write to the real
+    // Music folder, so it refuses.
     const int downloadFlag = args.indexOf(QStringLiteral("--download"));
     if (downloadFlag >= 0 && downloadFlag + 1 < args.size()) {
+        if (qEnvironmentVariableIsEmpty("MONOLIST_DATA_DIR") && qEnvironmentVariableIsEmpty("MONOLIST_DOWNLOAD_DIR")) {
+            qWarning("selftest: refusing to download without MONOLIST_DATA_DIR or MONOLIST_DOWNLOAD_DIR:"
+                     " it would write to %s", qPrintable(downloads.downloadDirectory()));
+            return 1;
+        }
         const QString videoId = args.at(downloadFlag + 1);
         const int seconds = (downloadFlag + 2 < args.size()) ? args.at(downloadFlag + 2).toInt() : 120;
 
@@ -1856,8 +1869,9 @@ int main(int argc, char *argv[])
                          });
 
         QTimer::singleShot(500, &app, [&downloads, videoId]() {
-            qWarning("selftest: downloading %s as %s (tools: yt-dlp %s, ffmpeg %s, deno %s)",
+            qWarning("selftest: downloading %s as %s into %s (tools: yt-dlp %s, ffmpeg %s, deno %s)",
                      qPrintable(videoId), qPrintable(downloads.format()),
+                     qPrintable(downloads.downloadDirectory()),
                      downloads.available() ? "yes" : "no",
                      downloads.canConvert() ? "yes" : "no",
                      YtDlp::denoPath().isEmpty() ? "no" : "yes");

@@ -94,6 +94,27 @@ public:
     Q_INVOKABLE void openDownloadFolder() const;
     Q_INVOKABLE void revealFile(const QString &videoId) const;
 
+    // Where downloads are written: MONOLIST_DOWNLOAD_DIR when it is set;
+    // otherwise "downloads" inside MONOLIST_DATA_DIR when that is set, so a
+    // test run with a scratch database never writes to the real Music folder;
+    // otherwise <Music>/Monolist.
+    static QString chooseDirectory();
+
+    // The names of the files in `directory` that belong to `videoId`: every
+    // file a download writes carries "[<video id>]." in its name. Taken as a
+    // download starts, so that its cleanup can tell what it wrote itself.
+    static QSet<QString> filesFor(const QString &directory, const QString &videoId);
+
+    // Clears up after a download of `videoId` that failed or was cancelled,
+    // and returns the names it deleted. yt-dlp's partial and intermediate
+    // files go, whenever they were written. Anything else goes only if this
+    // download wrote it (it is not in `before`), and `kept`, the file the
+    // database holds, never does. So a finished file from an earlier
+    // download survives even when the database has forgotten it. Public for
+    // --download-cleanup-test.
+    static QStringList removeLeftovers(const QString &directory, const QString &videoId,
+                                       const QSet<QString> &before, const QString &kept);
+
 Q_SIGNALS:
     void progressChanged(const QString &videoId, qreal progress);
     void completed(const QString &videoId, const QString &path);
@@ -111,7 +132,7 @@ private:
     void fail(const QString &videoId, const QString &reason);
     void recordStored(const DownloadQueueModel::Item &item, const QString &path);
     QString findWrittenFile(const QString &videoId) const;
-    void removePartialFiles(const QString &videoId) const;
+    void removePartialFiles(const QString &videoId);
     void loadStored();
     void touch();
     DownloadOptions options() const;
@@ -129,6 +150,7 @@ private:
     QStringList m_pending;                               // waiting to start, in order
     QHash<QString, QPointer<YtDlpRequest>> m_requests;   // running
     QHash<QString, QString> m_stored;                    // video id -> file on disk
+    QHash<QString, QSet<QString>> m_before;              // running: its files already there at the start
     QSet<QString> m_cancelling;
     QString m_format = QStringLiteral("original");
     bool m_skipNonMusic = true;

@@ -159,6 +159,7 @@ whichever contrasts better.
       streamresolver.*       the tiered source ladder and its link cache
       downloadmanager.*      offline library: queue, options, files, DB rows
       downloadmodels.*       the queue and offline-set models for QML
+      downloadselftest.*     --download-cleanup-test
       artworkcache.*         async disk-cached image provider + cover colours
       windowchrome.*         the window without the system title bar
       recdata.*              downloads the recommendation data, checked against
@@ -288,7 +289,14 @@ mpv's own messages.
                                                     back from a failure: the broken id fails twice and
                                                     records nothing, the good one plays again and pauses,
                                                     and two quick Nexts while paused stay paused
-    monolist --download <videoId> [seconds]         one download through yt-dlp and FFmpeg
+    monolist --download <videoId> [seconds]         one download through yt-dlp and FFmpeg, into the scratch
+                                                    download folder (refuses without MONOLIST_DATA_DIR or
+                                                    MONOLIST_DOWNLOAD_DIR)
+    monolist --download-cleanup-test                what a failed or cancelled download deletes, on invented
+                                                    files in a scratch folder: yt-dlp's partial and working
+                                                    files, never a finished file, whatever the database
+                                                    says; and where MONOLIST_DATA_DIR and
+                                                    MONOLIST_DOWNLOAD_DIR send downloads
     monolist --search "<query>"                     one timed search, with suggestions
     monolist --lyrics "<query>"                     lyrics for the first three results, then one from the store
     monolist --library-test "<query>"               a playlist, likes and a saved album from a real search
@@ -340,9 +348,14 @@ be, for a look at a state:
                                                     invidious_instances)
 
 `MONOLIST_DATA_DIR` keeps the database somewhere else, so a test never touches
-the real library; the scrobbling tests and `--ytm-session-test` refuse to run
-without it, since they empty the scrobble queue and replace the stored session. `MONOLIST_REC_DATA_URL` fetches the recommendation data from
-another address, or a local folder (`file:///C:/dev/monolist-data/`), instead of
+the real library; the scrobbling tests, `--ytm-session-test` and
+`--download-cleanup-test` refuse to run without it, since they empty the
+scrobble queue, replace the stored session or open the downloads on that
+database. It moves downloads too, to `downloads` inside it, so a test never
+writes to the real Music folder. `MONOLIST_DOWNLOAD_DIR` names the download
+folder outright, and wins when both are set. A test downloads only into one of
+those two, which is why `--download` refuses to run without either.
+`MONOLIST_REC_DATA_URL` fetches the recommendation data from another address, or a local folder (`file:///C:/dev/monolist-data/`), instead of
 the pinned tag on GitHub. `MONOLIST_LASTFM_URL` sends the self-tests' Last.fm
 calls, made with an invented key, to a stand-in on this computer, for
 `--scrobble-send-test` against `scripts/lastfm-mock.ps1`. Only a loopback
@@ -358,7 +371,11 @@ only ever go to ws.audioscrobbler.com.
     artwork           <Cache>/artwork  (256 MB cap)
 
 Downloads live in the user's real Music folder, the convention Melody settled
-on, so they survive reinstalls and other players can see them.
+on, so they survive reinstalls and other players can see them; with
+`MONOLIST_DOWNLOAD_DIR` or `MONOLIST_DATA_DIR` set they go there instead (see
+Self-tests and diagnostics). A download that fails or is cancelled takes only
+what it wrote itself and yt-dlp's partial files with it: a finished file already
+in the folder stays, even one the database has no row for.
 
 ## State
 

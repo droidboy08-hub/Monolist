@@ -65,6 +65,7 @@ qt_add_executable(monolist
     src/streamresolver.h           src/streamresolver.cpp
     src/downloadmanager.h          src/downloadmanager.cpp
     src/downloadmodels.h           src/downloadmodels.cpp
+    src/downloadselftest.h         src/downloadselftest.cpp
     src/artworkcache.h             src/artworkcache.cpp
 )
 

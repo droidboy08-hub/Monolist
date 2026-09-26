@@ -217,9 +217,9 @@ Seen by the agents that fixed B01–B13 and by their reviewers, and not yet fixe
 - [ ] **F12** Compiler warnings: deprecated QDateTime::setTimeSpec (taste.cpp), unchecked QFile::open in --content-test (main.cpp) *(P8, S)*
   Done when: the changed files build without warnings.
 
-- [ ] **F13** Data loss: when a download fails or is cancelled, a finished file for the same song that the database does not know about (after app data was reset, or a test run) is deleted with the partial files *(P1, S)*
+- [x] **F13** Data loss: when a download fails or is cancelled, a finished file for the same song that the database does not know about (after app data was reset, or a test run) is deleted with the partial files *(P1, S)*
   Done when: only yt-dlp's partial and intermediate files are removed, never a complete audio file, whatever the database says.
-- [ ] **F14** Tests and self-tests download into the user's real Music folder even with a scratch data folder *(P2, S)*
+- [x] **F14** Tests and self-tests download into the user's real Music folder even with a scratch data folder *(P2, S)*
   Done when: MONOLIST_DATA_DIR (or a MONOLIST_DOWNLOAD_DIR override) keeps test downloads out of the real Music folder.
 - [ ] **F15** Radio tracks are never marked as radio: openPlayEvent's fromRadio test can never be true, so play_events and Last.fm's chosenByUser treat autoplay songs as chosen *(P2, S)*
   Done when: songs added by autoplay radio are recorded with source "radio" and scrobbled with chosenByUser=0.
@@ -235,6 +235,8 @@ Seen by the agents that fixed B01–B13 and by their reviewers, and not yet fixe
   Done when: that configuration builds. (Same as M04.)
 - [ ] **F21** The README's self-test list lacks --rec-test, --graph-test, --artist-test, --content-test and the new --lastfm-test, --cookie-test, --listen-test, --scrobble-test, --lastfm-connect-test, --ytm-session-test, --secret-test *(P9, S)*
   Done when: every self-test flag is documented with what it checks.
+- [ ] **F22** Downloading a song again in the "original" format while its finished file is still in the folder, unknown to the database, has FFmpeg rewrite that file in place, so a cancel or failure at that moment leaves it cut short *(P4, S)*
+  Done when: a finished file already in the folder for that video id is taken into the library instead of being downloaded again, or the new copy is written under another name until it is complete.
 
 ## Connections
 
