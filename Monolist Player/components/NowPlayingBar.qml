@@ -309,11 +309,14 @@ Rectangle {
 
         // Too narrow for the slider: one button, and the slider and mute in a
         // popup above it. Red while muted, so that still shows when folded.
+        // Grey while the popup is open, like any glyph the pointer has left:
+        // ink means the pointer is on it (DESIGN 2.6a), and the framed popup
+        // standing on it already shows what is open.
         IconButton {
             id: volumeButton
             visible: !root.showVolume
             iconName: root.volumeIcon
-            iconColor: root.muted ? Theme.accent : volumePopup.visible ? Theme.text : Theme.neutral700
+            iconColor: root.muted ? Theme.accent : Theme.neutral700
             iconSize: 15
             anchors.verticalCenter: parent.verticalCenter
             onClicked: volumePopup.visible ? volumePopup.close() : volumePopup.open()

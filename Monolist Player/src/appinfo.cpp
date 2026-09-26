@@ -224,9 +224,17 @@ void AppInfo::publishComponents()
     m_componentsKnown = true;
     Q_EMIT componentsChanged();
 
-    if (m_copyWhenKnown) {
-        m_copyWhenKnown = false;
-        copyReport();
+    // A report copied while these were being read is completed now — but only
+    // if it is still what the clipboard holds. Anything copied since is the
+    // user's, and replacing it seconds later would paste the wrong thing.
+    if (!m_partialReport.isEmpty()) {
+        const QString partial = std::exchange(m_partialReport, QString());
+        QClipboard *clipboard = QGuiApplication::clipboard();
+        // Compared without carriage returns: a platform clipboard may hand
+        // text back with Windows line ends.
+        const auto plain = [](QString text) { return text.remove(QLatin1Char('\r')); };
+        if (clipboard && plain(clipboard->text()) == plain(partial))
+            clipboard->setText(report());
     }
 }
 
@@ -237,6 +245,12 @@ QString AppInfo::report() const
     // one is the real one.
     QString text = QStringLiteral("Monolist %1\ncommit %2, built %3\n")
                        .arg(fullVersion(), commit(), buildDate());
+    if (!m_componentsKnown) {
+        // Asked for before the tools answered: Qt needs no asking, and the
+        // rest is said to be missing rather than left out without a word.
+        text += QStringLiteral("Qt %1\n(other components: versions not read yet)\n").arg(qtVersion());
+        return text;
+    }
     for (const QVariant &entry : m_components) {
         const QVariantMap map = entry.toMap();
         text += QStringLiteral("%1 %2\n")
@@ -250,16 +264,20 @@ QString AppInfo::report() const
 
 void AppInfo::copyReport()
 {
-    // The versions are what a report is for, so one asked for before they are
-    // in goes on the clipboard when they arrive, rather than without them.
-    if (!m_componentsKnown) {
-        m_copyWhenKnown = true;
-        if (m_versionsPending == 0)
-            refreshComponents();
+    QClipboard *clipboard = QGuiApplication::clipboard();
+    if (!clipboard)
         return;
-    }
-    if (QClipboard *clipboard = QGuiApplication::clipboard())
-        clipboard->setText(report());
+    // Copied at once, whatever is known: a click that puts nothing on the
+    // clipboard looks broken, and the answers can take many seconds. The
+    // versions are what a report is for, though, so one copied before they
+    // are in is completed when they arrive (publishComponents).
+    const QString text = report();
+    clipboard->setText(text);
+    if (m_componentsKnown)
+        return;
+    m_partialReport = text;
+    if (m_versionsPending == 0)
+        refreshComponents();
 }
 
 // -------------------------------------------------------------- app updates

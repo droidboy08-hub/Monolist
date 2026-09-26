@@ -210,6 +210,7 @@ private:
     void setStatus(const QString &text, const QString &source, bool resolving, bool error = false);
     void setDuration(qint64 ms);
     void setPlayingFlag(bool playing);
+    void haltPlayback();   // the flag cleared and mpv paused, together
     void recordHistory(const QVariantMap &track);
     void saveSetting(const QString &key, const QString &value);
     void saveVolume();
@@ -253,8 +254,8 @@ private:
     // Whether the listener is waiting for sound from this track: set by
     // starting it with Play or by pressing Play, cleared by Pause.
     bool m_autoPlayAfterResolve = true;
-    // The track was loaded without being played, and nothing is recorded for
-    // it yet; the first Play records it.
+    // Nothing is recorded for the current track yet: it was only loaded, or
+    // its sound has not arrived. It is recorded once, when it does play.
     bool m_listenPending = false;
     bool m_autoplay = true;
     qint64 m_position = 0;

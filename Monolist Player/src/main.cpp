@@ -186,6 +186,14 @@ int main(int argc, char *argv[])
     // Tools installed or updated from Settings are used by downloads at once,
     // not after a restart.
     QObject::connect(&appInfo, &AppInfo::toolsUpdated, &downloads, &DownloadManager::refreshTools);
+    // And tools put in place any other way — the setup script run from a
+    // terminal, pip, a package manager, a copy into tools/ — are put there
+    // from outside the app, so coming back to its window is when to look.
+    QObject::connect(&app, &QGuiApplication::applicationStateChanged, &downloads,
+                     [&downloads](Qt::ApplicationState state) {
+                         if (state == Qt::ApplicationActive)
+                             downloads.refreshToolsIfStale();
+                     });
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "About",     &appInfo);
     Recommender recommender;
     recommender.setPlayer(&player);
@@ -375,7 +383,8 @@ int main(int argc, char *argv[])
     // up as a wrong line. A single id checks the quiet half: a paused song
     // that will not resolve says so on the status line, not in a toast, and
     // Play then tries it again out loud. --early presses Play while the first
-    // song is still resolving, which must start it when it arrives.
+    // song is still resolving, which must start it when it arrives. --recover
+    // runs the recovery script described below instead.
     const int queueFlag = args.indexOf(QStringLiteral("--queue-test"));
     if (queueFlag >= 0 && queueFlag + 1 < args.size()) {
         QStringList ids;
@@ -452,7 +461,96 @@ int main(int argc, char *argv[])
             QTimer::singleShot(200, qApp, []() { QCoreApplication::quit(); });
         };
 
+        // --recover <videoId that will not resolve>: the ways back from a
+        // failure, the first id being a song that plays. It plays; the broken
+        // one is played and fails for good; Play on it tries again and fails
+        // again, and neither attempt may record anything, since nothing was
+        // heard. Then the good song is played again: the bar must say playing,
+        // and Pause must pause it. Last, three copies of the good song are
+        // queued and paused, and Next is pressed twice, the second time while
+        // the first is still resolving: that stays paused and records nothing.
+        const int recoverFlag = args.indexOf(QStringLiteral("--recover"));
+        const QString broken = recoverFlag >= 0 && recoverFlag + 1 < args.size()
+                                   ? args.at(recoverFlag + 1) : QString();
+        const auto recover = [=, &player, &resolver]() {
+            if (ids.isEmpty()) {
+                say(QStringLiteral("--recover needs a video id that plays before it"));
+                finish();
+                return;
+            }
+            const QString good = ids.first();
+            // Only the songs asked for: no radio stepping in after a failure.
+            player.setAutoplay(false);
+            say(QStringLiteral("before: ") + recorded());
+            player.playSource(good, QStringLiteral("Good song"), QStringLiteral("Selftest"));
+            waitFor([&player]() { return player.position() >= 2000; }, 60000, [=, &player, &resolver]() {
+                say(QStringLiteral("playing: ") + where() + QStringLiteral("; ") + recorded());
+                player.playSource(broken, QStringLiteral("Broken song"), QStringLiteral("Selftest"));
+                waitFor([&player]() { return player.statusError(); }, 90000, [=, &player, &resolver]() {
+                    say(QStringLiteral("failed: ") + where() + QStringLiteral("; ") + recorded()
+                        + QStringLiteral(" (no more than when playing)"));
+                    say(QStringLiteral("Play on the song that failed"));
+                    player.play();
+                    waitFor([&player]() { return !player.resolving(); }, 90000, [=, &player, &resolver]() {
+                        say(QStringLiteral("failed again: ") + where() + QStringLiteral("; ") + recorded()
+                            + QStringLiteral("; %1 error toasts").arg(*toasts));
+                        player.playSource(good, QStringLiteral("Good song again"), QStringLiteral("Selftest"));
+                        waitFor([&player]() { return player.position() >= 2000; }, 60000, [=, &player, &resolver]() {
+                            say(QStringLiteral("good again: ") + where() + QStringLiteral(" (must be playing)"));
+                            say(QStringLiteral("Play/Pause"));
+                            player.togglePlay();
+                            QTimer::singleShot(1500, qApp, [=, &player, &resolver]() {
+                                const qint64 at = player.position();
+                                QTimer::singleShot(1000, qApp, [=, &player, &resolver]() {
+                                    say(QStringLiteral("after Play/Pause: %1; the clock moved %2 ms in a second"
+                                                       " (must be paused, and about 0)")
+                                            .arg(where()).arg(player.position() - at));
+                                    QVariantList three;
+                                    for (int i = 1; i <= 3; ++i) {
+                                        three.append(QVariantMap{
+                                            { QStringLiteral("sourceId"), good },
+                                            { QStringLiteral("title"), QStringLiteral("Recover test %1").arg(i) },
+                                            { QStringLiteral("artist"), QStringLiteral("Selftest") } });
+                                    }
+                                    player.playTracks(three, 0);
+                                    waitFor([&player]() { return player.position() >= 1000; }, 60000,
+                                            [=, &player, &resolver]() {
+                                        player.pause();
+                                        waitFor([&player]() { return !player.playing(); }, 5000,
+                                                [=, &player, &resolver]() {
+                                            say(QStringLiteral("paused: ") + where() + QStringLiteral("; ")
+                                                + recorded());
+                                            // Resolved afresh, so the first Next is still resolving when
+                                            // the second comes.
+                                            resolver.invalidate(good);
+                                            player.next();
+                                            say(QStringLiteral("Next while paused: ") + where()
+                                                + (player.resolving() ? QStringLiteral(", resolving") : QString()));
+                                            player.next();
+                                            say(QStringLiteral("Next again: ") + where());
+                                            waitFor([&player]() { return !player.resolving(); }, 90000, [=]() {
+                                                QTimer::singleShot(1500, qApp, [=]() {
+                                                    say(QStringLiteral("after both: ") + where() + QStringLiteral("; ")
+                                                        + recorded() + QStringLiteral(" (must be paused on Recover"
+                                                                                      " test 3, nothing new recorded)"));
+                                                    finish();
+                                                });
+                                            });
+                                        });
+                                    });
+                                });
+                            });
+                        });
+                    });
+                });
+            });
+        };
+
         QTimer::singleShot(500, &app, [=, &player, &resolver]() {
+            if (!broken.isEmpty()) {
+                recover();
+                return;
+            }
             say(QStringLiteral("before: ") + recorded());
             // An empty queue takes its first song paused, as a launch loads
             // the library.

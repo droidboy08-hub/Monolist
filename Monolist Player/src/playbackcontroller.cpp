@@ -123,7 +123,7 @@ PlaybackController::PlaybackController(MpvEngine *engine,
                 return;
             }
             m_streamTier = -1;
-            setPlayingFlag(false);
+            haltPlayback();
             setStatus(QStringLiteral("Playback failed"), QString(), false, /*error=*/true);
             // As for a failed resolve: a toast only for someone waiting to
             // hear it.
@@ -203,7 +203,7 @@ PlaybackController::PlaybackController(MpvEngine *engine,
                     if (m_queue.upcomingCount() > 0) {
                         playIndex(m_queue.currentIndex() + 1);
                     } else {
-                        setPlayingFlag(false);
+                        haltPlayback();
                         setStatus(QStringLiteral("End of the queue"), QString(), false);
                     }
                 } else {
@@ -219,7 +219,7 @@ PlaybackController::PlaybackController(MpvEngine *engine,
                 qWarning("Monolist: autoplay has nothing to continue with: %s", qPrintable(reason));
                 if (m_waitingForRadio) {
                     m_waitingForRadio = false;
-                    setPlayingFlag(false);
+                    haltPlayback();
                     setStatus(QStringLiteral("End of the queue"), QString(), false);
                 }
             });
@@ -328,6 +328,19 @@ void PlaybackController::setPlayingFlag(bool playing)
         return;
     m_playing = playing;
     Q_EMIT playingChanged();
+}
+
+// Stopped with nothing more on its way: a track that will not play, or a queue
+// that ran out. mpv is paused along with the flag. The flag follows mpv's pause
+// property, and a file that failed or ended leaves mpv idle but unpaused; were
+// only the flag cleared, the next load's "play" would change nothing in mpv,
+// no pause change would ever come back, and the bar would show Play over
+// music that Play/Pause could then not pause.
+void PlaybackController::haltPlayback()
+{
+    setPlayingFlag(false);
+    if (engineAvailable())
+        m_engine->setPaused(true);
 }
 
 void PlaybackController::setDuration(qint64 ms)
@@ -590,9 +603,11 @@ void PlaybackController::recordHistory(const QVariantMap &track)
 
 // ------------------------------------------------------------- play events
 
-// A listen begins when someone asks for the track to play: at once for one
-// started with Play, and at the first press of Play for one that was only
-// loaded. Either way it is written down exactly once.
+// A listen begins when a track someone wants to hear has its sound on the way:
+// as it is loaded to play, for one started with Play, or at the first press of
+// Play for one that was only loaded. Not when it is asked for — a track that
+// never resolves was never heard, and a play in History and a skip in the
+// taste profile would both be false. Either way it is written down once.
 void PlaybackController::startListening()
 {
     if (!m_listenPending || m_currentTrack.isEmpty())
@@ -741,11 +756,11 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
     m_autoPlayAfterResolve = autoPlay;
     setDuration(track.value(QStringLiteral("durationMs")).toLongLong());
 
-    // A track only loaded — the one a launch opens on, or one reached with
-    // Next while paused — is a listen once Play is pressed (see play()).
+    // Recorded below once there is something to play, and for a stream once
+    // it resolves (handleResolved). A track only loaded — the one a launch
+    // opens on, or one reached with Next while paused — is a listen once Play
+    // is pressed (see play()).
     m_listenPending = true;
-    if (autoPlay)
-        startListening();
 
     Q_EMIT currentTrackChanged();
     Q_EMIT positionChanged();
@@ -773,8 +788,10 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
     if (!localPath.isEmpty()) {
         setStatus(QStringLiteral("Offline"), QStringLiteral("Local file"), false);
         m_engine->load(localPath, autoPlay);
-        if (autoPlay)
+        if (autoPlay) {
+            startListening();
             prefetchUpcoming();
+        }
         return;
     }
 
@@ -791,6 +808,8 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
     if (!source.isEmpty()) {
         setStatus(QStringLiteral("Streaming"), QStringLiteral("Direct URL"), false);
         m_engine->load(source, autoPlay);
+        if (autoPlay)
+            startListening();
         return;
     }
 
@@ -820,6 +839,10 @@ void PlaybackController::handleResolved(const QString &videoId, const QString &u
     m_streamVideoId = videoId;
     m_streamTier = tier;
     m_streamFromCache = fromCache;
+    // Someone is waiting to hear it, and now it can be heard: a listen. (Once
+    // only — a stream refreshed or re-resolved mid-song arrives here again.)
+    if (m_autoPlayAfterResolve)
+        startListening();
     if (m_engine)
         m_engine->load(url, m_autoPlayAfterResolve, QString(), m_resumeAt);
     m_resumeAt = 0;
@@ -861,7 +884,7 @@ void PlaybackController::handleResolveFailed(const QString &videoId, const QStri
         return;
     }
 
-    setPlayingFlag(false);
+    haltPlayback();
     setStatus(giveUp ? QStringLiteral("Nothing here will play")
                      : QStringLiteral("Source unavailable"),
               QString(), false, /*error=*/true);
@@ -933,10 +956,11 @@ void PlaybackController::play()
         return;
     }
     // Someone wants to hear this one now: if it is still resolving it starts
-    // when it arrives rather than landing paused, and if it was only loaded it
-    // counts as played from here.
+    // when it arrives rather than landing paused, and is recorded then; if it
+    // was only loaded it counts as played from here.
     m_autoPlayAfterResolve = true;
-    startListening();
+    if (m_pendingVideoId.isEmpty())
+        startListening();
     m_engine->setPaused(false);
 }
 
@@ -953,9 +977,12 @@ void PlaybackController::togglePlay()
     m_playing ? pause() : play();
 }
 
+// A track still resolving counts as playing only if someone is waiting for its
+// sound: one reached with Next while paused is resolving too, and a second
+// Next on it must load the one after paused as well, not start it.
 void PlaybackController::next()
 {
-    advance(m_playing || m_resolving);
+    advance(m_playing || (m_resolving && m_autoPlayAfterResolve));
 }
 
 // `keepPlaying` is separate from m_playing because of one caller: a track that
@@ -998,7 +1025,8 @@ void PlaybackController::previous()
         return;
     }
 
-    const bool wasPlaying = m_playing || m_resolving;
+    // As in next(): resolving is playing only for a track someone is waiting for.
+    const bool wasPlaying = m_playing || (m_resolving && m_autoPlayAfterResolve);
     const int target = m_queue.currentIndex() - 1;
     if (wasPlaying)
         playIndex(target);

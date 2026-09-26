@@ -271,6 +271,10 @@ mpv's own messages.
                                                     Next while paused: the clock and what was recorded at
                                                     each step. One id that will not resolve checks the
                                                     quiet failure; --early presses Play while resolving
+    monolist --queue-test <videoId> --recover <badId>
+                                                    back from a failure: the broken id fails twice and
+                                                    records nothing, the good one plays again and pauses,
+                                                    and two quick Nexts while paused stay paused
     monolist --download <videoId> [seconds]         one download through yt-dlp and FFmpeg
     monolist --search "<query>"                     one timed search, with suggestions
     monolist --lyrics "<query>"                     lyrics for the first three results, then one from the store

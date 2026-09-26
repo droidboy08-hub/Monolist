@@ -64,8 +64,13 @@ public:
     int revision() const { return m_revision; }
 
     // Looks for yt-dlp and FFmpeg again. Run after the setup script updates
-    // the tools, and now and then from enqueue.
+    // the tools.
     Q_INVOKABLE void refreshTools();
+    // The same, unless they were looked for a moment ago. Run from enqueue,
+    // when the window is returned to and when Downloads is opened: while
+    // yt-dlp is missing every download control is hidden, so enqueue alone
+    // would never find one installed since.
+    Q_INVOKABLE void refreshToolsIfStale();
 
     // Queue a track for offline use. Re-queuing something already stored or in
     // flight is a no-op, so the interface can call this from a simple toggle.

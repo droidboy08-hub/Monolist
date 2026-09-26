@@ -110,7 +110,8 @@ public Q_SLOTS:
     QString report() const;
     // The same, on the clipboard, because nobody retypes a build number
     // correctly and a wrong one sends whoever reads it the wrong way. Asked
-    // before the versions are in, it copies once they arrive.
+    // before the versions are in, it copies what is known at once and swaps
+    // in the whole report when they arrive, if nothing was copied since.
     void copyReport();
 
 Q_SIGNALS:
@@ -142,7 +143,9 @@ private:
     int m_versionsPending = 0;
     QHash<QString, QString> m_versionAnswers;
     QList<QPointer<QProcess>> m_versionProcesses;
-    bool m_copyWhenKnown = false;
+    // A report copied before the versions were in, exactly as copied; empty
+    // when there is none waiting to be completed.
+    QString m_partialReport;
 
     int m_updateState = Idle;
     QString m_updateMessage;

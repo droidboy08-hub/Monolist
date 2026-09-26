@@ -40,8 +40,12 @@ MonoMenu {
         onPicked: function(playlistId) { Library.addToPlaylist(playlistId, menu.track) }
     }
 
+    // A hidden entry is disabled as well, here and below. The arrow keys pass
+    // over disabled entries but not hidden ones, so an entry that was only
+    // hidden took the highlight out of sight, and Enter ran it.
     MonoMenuItem {
         visible: menu.playlistId > 0 && menu.entryId > 0
+        enabled: menu.playlistId > 0 && menu.entryId > 0
         text: "Remove from this playlist"
         onTriggered: Library.removeFromPlaylist(menu.playlistId, menu.entryId)
     }
@@ -61,11 +65,12 @@ MonoMenu {
     MonoMenuItem {
         visible: menu.downloadState === "failed"
         text: "Retry download"
-        enabled: Downloads.available
+        enabled: menu.downloadState === "failed" && Downloads.available
         onTriggered: Downloads.retry(menu.sourceId)
     }
     MonoMenuItem {
         visible: menu.downloadState === "done"
+        enabled: menu.downloadState === "done"
         text: "Show in folder"
         onTriggered: Downloads.revealFile(menu.sourceId)
     }
@@ -89,6 +94,7 @@ MonoMenu {
         }
 
         visible: menu.downloadState === "done"
+        enabled: menu.downloadState === "done"
         text: armed ? "Click again to delete the file" : "Remove download"
         textColor: armed ? Theme.accent700 : Theme.text
 

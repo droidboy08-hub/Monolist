@@ -17,9 +17,9 @@ namespace {
 
 const QString kFormatKey = QStringLiteral("download_format");
 const QString kSkipNonMusicKey = QStringLiteral("download_skip_non_music");
-// How stale a look for the tools may be before enqueue looks again. Not on
-// every call: "Download all" enqueues a whole album in one go, and a tool that
-// is not bundled is looked for along the whole of PATH.
+// How stale a look for the tools may be before it is taken again. Not on every
+// call: "Download all" enqueues a whole album in one go, and a tool that is not
+// bundled is looked for along the whole of PATH.
 constexpr qint64 kToolsRecheckMs = 3000;
 
 bool isKnownFormat(const QString &format)
@@ -161,6 +161,12 @@ void DownloadManager::refreshTools()
     Q_EMIT toolsChanged();
 }
 
+void DownloadManager::refreshToolsIfStale()
+{
+    if (m_toolsChecked.elapsed() > kToolsRecheckMs)
+        refreshTools();
+}
+
 void DownloadManager::enqueue(const QString &videoId,
                               const QString &title,
                               const QString &artist,
@@ -170,9 +176,9 @@ void DownloadManager::enqueue(const QString &videoId,
     if (videoId.isEmpty())
         return;
     // What was found at launch is not the last word: tools put in place since
-    // then are used rather than refused until a restart.
-    if (m_toolsChecked.elapsed() > kToolsRecheckMs)
-        refreshTools();
+    // then are used rather than refused until a restart, and one taken away
+    // is noticed here.
+    refreshToolsIfStale();
     if (!m_available || m_stored.contains(videoId) || isPending(videoId))
         return;
 

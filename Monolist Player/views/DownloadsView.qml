@@ -16,6 +16,10 @@ Flickable {
 
     ScrollBar.vertical: MonoScrollBar {}
 
+    // The note below says how to install yt-dlp; once that is done, opening
+    // this page again is enough for downloads to switch on.
+    onVisibleChanged: if (visible) Downloads.refreshToolsIfStale()
+
     component Caption: Text {
         font.family: Theme.fontFamily
         font.pixelSize: 11
