@@ -192,15 +192,15 @@ Priority runs from 1 (first) to 9. Size: S under an hour, M a few hours, L a day
 
 Seen by the agents that fixed B01–B13 and by their reviewers, and not yet fixed.
 
-- [ ] **F01** Player-bar tooltips never appear: hovering logs "QQmlComponent: Component is not ready" *(P2, S)*
+- [x] **F01** Player-bar tooltips never appear: hovering logs "QQmlComponent: Component is not ready" *(P2, S)*
   Done when: every ToolTip in the player bar shows on hover with no warning.
-- [ ] **F02** With nothing loaded, the centre button shows Pause because Player.playing is true at launch *(P2, S)*
+- [x] **F02** With nothing loaded, the centre button shows Pause because Player.playing is true at launch *(P2, S)*
   Done when: an empty player shows Play, and playing is false until something plays.
-- [ ] **F03** The search box overlaps the forward arrow at narrow window widths (TopBar.qml:134) *(P3, S)*
+- [x] **F03** The search box overlaps the forward arrow at narrow window widths (TopBar.qml:134) *(P3, S)*
   Done when: the search box shrinks or moves so nothing overlaps at any width down to the minimum.
-- [ ] **F04** Pressing Previous twice records the song as heard for 0 seconds *(P3, S)*
+- [x] **F04** Pressing Previous twice records the song as heard for 0 seconds *(P3, S)*
   Done when: restarting a song closes its play event with the time actually heard.
-- [ ] **F05** The track menu shows a greyed "Downloading…" for queued and running downloads, with no Cancel *(P3, S)*
+- [x] **F05** The track menu shows a greyed "Downloading…" for queued and running downloads, with no Cancel *(P3, S)*
   Done when: queued, downloading and processing tracks offer "Cancel download".
 - [ ] **F06** IconButton's iconSize has no effect: every glyph is drawn at the button's full size *(P4, S)*
   Done when: iconSize sets the glyph size and existing buttons look the same or better.

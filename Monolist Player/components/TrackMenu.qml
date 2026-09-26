@@ -54,13 +54,25 @@ MonoMenu {
 
     // — the offline copy —
     // What can be done depends on where the download has got to: fetch it,
-    // try it again, or, once the file is here, find it or delete it.
+    // call it off, try it again, or, once the file is here, find it or
+    // delete it.
     MonoMenuItem {
-        visible: menu.downloadState !== "failed" && menu.downloadState !== "done"
-        text: menu.downloadState.length > 0 ? "Downloading…" : "Download"
+        visible: menu.downloadState.length === 0
+        text: "Download"
         enabled: Downloads.available && menu.sourceId.length > 0 && menu.downloadState.length === 0
         onTriggered: Downloads.enqueue(menu.sourceId, menu.track.title, menu.track.artist,
                                        menu.track.artwork, menu.track.durationMs)
+    }
+    // Waiting its turn, downloading, or being finished by FFmpeg: any of the
+    // three can be stopped, as in Downloads, and nothing is left behind.
+    MonoMenuItem {
+        readonly property bool underWay: menu.downloadState === "queued"
+                                         || menu.downloadState === "downloading"
+                                         || menu.downloadState === "processing"
+        visible: underWay
+        enabled: underWay
+        text: "Cancel download"
+        onTriggered: Downloads.cancel(menu.sourceId)
     }
     MonoMenuItem {
         visible: menu.downloadState === "failed"

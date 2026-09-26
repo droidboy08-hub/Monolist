@@ -25,6 +25,9 @@ constexpr int kRadioBatch = 25;
 // itself. Three is enough to step over a patch of unavailable songs and few
 // enough that a machine with no network gives up almost at once.
 constexpr int kMaxConsecutiveFailures = 3;
+// Previous restarts a song played for longer than this, and goes back to the
+// one before a song that has barely begun.
+constexpr qint64 kRestartAfterMs = 3000;
 
 // The player's own choices, kept in the settings table so a launch picks up
 // where the last one left off.
@@ -70,6 +73,17 @@ PlaybackController::PlaybackController(MpvEngine *engine,
                 return;
             m_position = ms;
             Q_EMIT positionChanged();
+
+            // A song restarted with Previous is a listen again once it plays
+            // past the point where Previous would go back instead (see
+            // previous()). Only after mpv has reported the jump back: until
+            // then it may still say where the song was.
+            if (m_replay == Replay::Rewinding && ms <= kRestartAfterMs) {
+                m_replay = Replay::Replaying;
+            } else if (m_replay == Replay::Replaying && m_playing && ms > kRestartAfterMs) {
+                m_replay = Replay::None;
+                startListening();
+            }
         });
 
         connect(m_engine, &MpvEngine::durationChanged, this, &PlaybackController::setDuration);
@@ -610,12 +624,13 @@ void PlaybackController::recordHistory(const QVariantMap &track)
 
 // A listen begins when a track someone wants to hear has its sound on the way:
 // as it is loaded to play, for one started with Play, or at the first press of
-// Play for one that was only loaded. Not when it is asked for — a track that
+// Play for one that was only loaded; for one restarted with Previous, a few
+// seconds into hearing it again. Not when it is asked for — a track that
 // never resolves was never heard, and a play in History and a skip in the
 // taste profile would both be false. Either way it is written down once.
 void PlaybackController::startListening()
 {
-    if (!m_listenPending || m_currentTrack.isEmpty())
+    if (!m_listenPending || m_currentTrack.isEmpty() || m_replay != Replay::None)
         return;
     m_listenPending = false;
     recordHistory(m_currentTrack);
@@ -766,6 +781,7 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
     // opens on, or one reached with Next while paused — is a listen once Play
     // is pressed (see play()).
     m_listenPending = true;
+    m_replay = Replay::None;
 
     Q_EMIT currentTrackChanged();
     Q_EMIT positionChanged();
@@ -933,9 +949,10 @@ void PlaybackController::handleEndOfFile()
     if (abandonVideo(QStringLiteral("This video would not play — back to audio")))
         return;
 
+    // The clock is left at the end for beginTrack to close the listen with, as
+    // for any song that ends: set back to 0 first, every repeat was written
+    // down as a skip. beginTrack puts it back to 0 itself.
     if (m_repeatMode == RepeatOne) {
-        m_position = 0;
-        Q_EMIT positionChanged();
         beginCurrent(/*autoPlay=*/true);
         return;
     }
@@ -1025,7 +1042,18 @@ void PlaybackController::advance(bool keepPlaying)
 void PlaybackController::previous()
 {
     // Restart the current song first, the way every other player behaves.
-    if (m_position > 3000 || m_queue.currentIndex() <= 0) {
+    if (m_position > kRestartAfterMs || m_queue.currentIndex() <= 0) {
+        // The listen ends here, while the clock still says how much of it was
+        // heard. Left open, it was closed by whatever came next — and pressed
+        // twice, Previous goes back a song a second later, which recorded the
+        // song as heard for no time at all. Hearing it again is a listen of
+        // its own, but only once it is past this point again: until then
+        // Previous means "the song before", and the restart was on the way.
+        if (m_position > kRestartAfterMs) {
+            closePlayEvent();
+            m_listenPending = true;
+            m_replay = Replay::Rewinding;
+        }
         setPosition(0);
         return;
     }

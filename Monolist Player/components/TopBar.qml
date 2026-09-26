@@ -128,10 +128,19 @@ Rectangle {
 
     Rectangle {
         id: searchBox
+
+        // Where its right edge falls, worked out rather than read from x,
+        // which follows from the width being decided here.
+        readonly property real rightEdge: (windowButtons.visible ? windowButtons.x : root.width)
+                                          - anchors.rightMargin
+
         anchors.right: windowButtons.visible ? windowButtons.left : parent.right
         anchors.rightMargin: windowButtons.visible ? Theme.space6 : Theme.space8
         anchors.verticalCenter: parent.verticalCenter
-        width: Math.min(360, Math.max(200, root.width * 0.28))
+        // Its share of the bar, but never over the arrows: in a narrow window
+        // it takes what is left between them and the window buttons.
+        width: Math.max(0, Math.min(360, Math.max(200, root.width * 0.28),
+                                    rightEdge - (leftGroup.x + leftGroup.width) - Theme.space4))
         height: 36
         color: "transparent"
         border.width: Theme.ruleWidth
@@ -214,10 +223,13 @@ Rectangle {
             }
             Keys.onEscapePressed: root.suggesting = false
 
+            // Elided rather than cut through a letter when the box is narrow.
             Text {
                 anchors.verticalCenter: parent.verticalCenter
+                width: parent.width
                 visible: searchField.text.length === 0
                 text: "Artists, albums, tracks…"
+                elide: Text.ElideRight
                 font: searchField.font
                 color: Theme.neutral500
             }

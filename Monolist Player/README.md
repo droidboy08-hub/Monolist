@@ -196,7 +196,8 @@ and use native ARM64 builds.
 
 `build-windows.ps1` builds out of the source tree into `C:\dev\monolist-build`
 (a network share is slow, and cmd.exe cannot run Qt's generators from a UNC
-path), runs `windeployqt`, copies libmpv, and links the runtime tools into
+path), runs `windeployqt` (and adds the `QtQuick.Controls` module it leaves
+out, which the tooltips need), copies libmpv, and links the runtime tools into
 `tools\` beside the executable, where the app looks first. `-Config Release`,
 `-NoMpv` and `-Run` do what they say.
 

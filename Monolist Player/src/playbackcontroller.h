@@ -260,6 +260,11 @@ private:
     // Nothing is recorded for the current track yet: it was only loaded, or
     // its sound has not arrived. It is recorded once, when it does play.
     bool m_listenPending = false;
+    // Previous restarted the current song. Its listen was closed then; the
+    // next begins once it plays past the restart point again. Rewinding
+    // until mpv reports the jump back, Replaying from then on.
+    enum class Replay { None, Rewinding, Replaying };
+    Replay m_replay = Replay::None;
     bool m_autoplay = true;
     qint64 m_position = 0;
     qint64 m_duration = 0;

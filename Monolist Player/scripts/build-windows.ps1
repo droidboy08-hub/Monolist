@@ -166,6 +166,19 @@ function Install-File([string] $from, [string] $to, [switch] $HardLink) {
 # windeployqt reads the build type from the binary; MinGW Qt has one set of DLLs.
 & windeployqt --qmldir $source --no-translations $exe
 if ($LASTEXITCODE -ne 0) { throw 'windeployqt failed.' }
+
+# Qt builds the one tool tip that every `ToolTip.text` shows at run time, from
+# "import QtQuick.Controls; ToolTip {}". The QML here imports only
+# QtQuick.Controls.Basic, so windeployqt leaves QtQuick.Controls itself out, and
+# every tooltip failed with "QQmlComponent: Component is not ready". Its files
+# are copied by hand: importing the module in QML instead would have windeployqt
+# ship its six other styles as well, some 17 MB that are never used.
+$controlsFrom = Join-Path $qtPrefix 'qml\QtQuick\Controls'
+$controlsTo = Join-Path $buildDir 'qml\QtQuick\Controls'
+New-Item -ItemType Directory -Force -Path $controlsTo | Out-Null
+foreach ($file in 'qmldir', 'plugins.qmltypes', 'qtquickcontrols2plugin.dll') {
+    Install-File (Join-Path $controlsFrom $file) (Join-Path $controlsTo $file)
+}
 if (-not $NoMpv) {
     $mpvDll = Get-ChildItem -LiteralPath $mpvRoot -Recurse -Filter 'libmpv*.dll' | Select-Object -First 1
     if (-not $mpvDll) { throw "No libmpv DLL under $mpvRoot." }

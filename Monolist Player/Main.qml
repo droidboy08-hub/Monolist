@@ -125,6 +125,23 @@ ApplicationWindow {
         anchors.top: parent.top
         anchors.bottom: playerBar.top
 
+        // Every `ToolTip.text` in the app shows the same single tool tip, which
+        // Qt makes in the Basic style: the system's font, on the style's own
+        // colours. Printed like the toast instead — paper type on ink, in
+        // Archivo, square; its 1px frame takes the fill's colour, so it is one
+        // flat block. Asked for here rather than on the window because the
+        // attached ToolTip only attaches to an Item.
+        Component.onCompleted: {
+            const tip = ToolTip.toolTip
+            if (!tip)
+                return
+            tip.font = Qt.font({ family: Theme.fontFamily, pixelSize: 12, weight: Theme.weightMedium })
+            tip.palette.toolTipBase = Theme.text
+            tip.palette.toolTipText = Theme.bg
+            tip.palette.dark = Theme.text
+            tip.horizontalPadding = Theme.space2
+        }
+
         Sidebar {
             id: dockedSidebar
             visible: window.sidebarDocked
