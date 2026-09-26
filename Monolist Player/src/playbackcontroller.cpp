@@ -197,6 +197,7 @@ PlaybackController::PlaybackController(MpvEngine *engine,
                         break;
                 }
                 m_queue.insert(m_queue.rowCount(), additions);
+                qInfo("autoplay: %d songs added after %s", int(additions.size()), qPrintable(seed));
 
                 if (m_waitingForRadio) {
                     m_waitingForRadio = false;
@@ -430,6 +431,10 @@ bool PlaybackController::extendWithRadio()
         const QueueTrack *track = m_queue.at(row);
         if (track && !track->videoId.isEmpty()) {
             m_radioSeed = track->videoId;
+            // One line a request: the log is the only place that says where
+            // the radio took over, and from which song.
+            qInfo("autoplay: asking for songs like \"%s\" (%s), %d in the queue",
+                  qPrintable(track->title), qPrintable(m_radioSeed), int(m_queue.rowCount()));
             m_innerTube.radio(m_radioSeed);
             return true;
         }

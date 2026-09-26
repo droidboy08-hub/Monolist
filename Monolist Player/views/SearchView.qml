@@ -155,8 +155,15 @@ Flickable {
             model: Extractor.results
             activeIndex: -1
             showDownloads: true
-            // The results become the queue, starting from the one picked.
-            onTrackActivated: function(index) { Player.playModel(Extractor.results, index, "search") }
+            // A result is one song asked for by name, not the start of a list,
+            // so it plays on its own and autoplay's radio carries on from it
+            // with songs like it, as YouTube Music does. The rest of the
+            // results are other answers to the search, not what comes next.
+            // With "Autoplay similar songs" turned off, the player respects
+            // the switch: no radio is fetched, and the song plays alone.
+            onTrackActivated: function(index) {
+                Player.playTracks([Extractor.results.get(index)], 0, "search")
+            }
         }
     }
 }

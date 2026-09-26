@@ -17,10 +17,11 @@ class DownloadManager;
 
 // Playback facade for the UI.
 //
-// It owns the play queue. Playing from any list — the library, search results,
-// downloads, an album — queues that list; Play next and Add to queue edit it;
-// and when it runs out, autoplay continues with YouTube Music's radio for the
-// last song, the way YouTube Music itself does.
+// It owns the play queue. Playing from a list — the library, downloads, an
+// album, a playlist — queues that list; a search result or a suggestion plays
+// on its own; Play next and Add to queue edit the queue; and when it runs out,
+// autoplay continues with YouTube Music's radio for the last song, the way
+// YouTube Music itself does.
 //
 // Where the audio for a track comes from is the source ladder Melody called
 // its playback protocol:
@@ -124,7 +125,9 @@ public Q_SLOTS:
     void playIndex(int index);
 
     // Queue every row of a list model that uses the app's track roles and
-    // start at `row`: the library, search results, downloads, an album.
+    // start at `row`: the library, downloads, an album. (Search results are
+    // not a list to play through: Search plays the one picked, with
+    // playTracks, and the radio follows it.)
     //
     // `origin` is which surface asked — "search", "home", "playlist",
     // "library", "queue". It is not for display: the recommender weights what
