@@ -36,6 +36,12 @@ struct Shelf {
     QVector<Suggestion> rows;
 };
 
+// Whether the thread doing the building has been asked to stop, which the
+// recommender does when the app quits (QThread::requestInterruption). Both
+// builders below check it between scans and return what they have so far,
+// for the caller to throw away. On a thread nobody asks, it is always false.
+bool stopRequested();
+
 // Everything the Search tab shows when nobody is searching.
 //
 // Catalogue only: no network, no resolution, nothing that can fail slowly.

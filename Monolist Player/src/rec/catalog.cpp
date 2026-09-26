@@ -5,6 +5,7 @@
 #include "matchkey.h"
 
 #include <QDir>
+#include <QThread>
 #include <QtEndian>
 
 #include <cmath>
@@ -525,13 +526,35 @@ void Catalog::ensureArtistIndex() const
         return;
     m_artistIndexBuilt = true;
 
+    // Every artist's name normalised and then every row walked: about two
+    // seconds the first time, longer than anything else a recommendations
+    // build does before its first scan. So a thread asked to stop — the app
+    // quitting (Rec::stopRequested) — gives up part way and drops what it has,
+    // because half an index says "no such artist" of artists that exist.
+    const auto stopping = [](int i) {
+        return (i & 0xFFF) == 0 && QThread::currentThread()->isInterruptionRequested();
+    };
+    const auto drop = [this]() {
+        m_artistIndexBuilt = false;
+        m_artistKey.clear();
+        m_keyRows.clear();
+        m_keyLead.clear();
+    };
+    if (stopping(0))
+        return drop();
+
     m_artistKey.resize(m_artistCount);
-    for (int id = 0; id < m_artistCount; ++id)
+    for (int id = 0; id < m_artistCount; ++id) {
+        if (stopping(id))
+            return drop();
         m_artistKey[id] = Rec::primaryArtist(artistName(id));
+    }
 
     m_keyRows.reserve(m_artistCount);
     m_keyLead.reserve(m_artistCount);
     for (int row = 0; row < m_count; ++row) {
+        if (stopping(row))
+            return drop();
         const int id = artistId(row);
         if (id < 0)
             continue;

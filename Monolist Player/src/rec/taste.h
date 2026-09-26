@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QDateTime>
+#include <QSet>
 #include <QString>
 #include <QStringList>
 #include <QVector>
@@ -69,8 +70,16 @@ struct TasteProfile {
     float score(const float *vector, int dims) const;
 };
 
+// The songs the listener likes now, by their strict text key (matchkey.h).
+// Each song's newest like or unlike decides: liked, unliked and liked again is
+// liked; liked and then unliked is not. One rule for the profile and the
+// shelves alike, because two readings of the same history drifted apart once
+// already. `events` newest first.
+QSet<quint64> likedSongs(const QVector<PlayEvent> &events);
+
 // Builds the profile. `now` is passed rather than read so the same events
 // always give the same answer, which is what makes this testable at all.
+// `events` newest first, as readPlayEvents returns them.
 TasteProfile buildTaste(const Catalog &catalog,
                         const QVector<PlayEvent> &events,
                         const QDateTime &now);

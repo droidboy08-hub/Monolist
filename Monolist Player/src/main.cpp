@@ -694,6 +694,84 @@ int main(int argc, char *argv[])
                 }
             }
 
+            // What the page learns from, case by case: a like decided by the
+            // song's newest like or unlike, song shelves seeded only by plays
+            // that said yes, and weekends on the listener's own calendar.
+            {
+                const QDateTime now = QDateTime::currentDateTimeUtc();
+                const auto mark = [](const char *kind, const char *title, const char *artist,
+                                     const QDateTime &when) {
+                    Rec::PlayEvent event;
+                    event.kind = QString::fromLatin1(kind);
+                    event.title = QString::fromUtf8(title);
+                    event.artist = QString::fromUtf8(artist);
+                    event.source = QStringLiteral("search");
+                    event.when = when;
+                    return event;
+                };
+                // A label below zero stands for none.
+                const auto heard = [&mark](const char *title, const char *artist, const QDateTime &when,
+                                           double label, qint64 listenedMs) {
+                    Rec::PlayEvent event = mark("play", title, artist, when);
+                    event.hasLabel = label >= 0.0;
+                    event.label = qMax(0.0, label);
+                    event.listenedMs = listenedMs;
+                    event.trackMs = 220000;
+                    return event;
+                };
+
+                // Newest first, as the database reads them.
+                const QVector<Rec::PlayEvent> relike = {
+                    mark("like", "Kyoto", "Phoebe Bridgers", now.addDays(-1)),
+                    mark("unliked", "Kyoto", "Phoebe Bridgers", now.addDays(-2)),
+                    mark("like", "Kyoto", "Phoebe Bridgers", now.addDays(-3)) };
+                const QVector<Rec::PlayEvent> unliked = { relike.at(1), relike.at(2) };
+                const QVector<Rec::PlayEvent> twice = { relike.at(0), relike.at(2) };
+                qWarning("rec: likes: liked, unliked, liked again %s (must be liked); liked, unliked %s (must not be)",
+                         Rec::likedSongs(relike).isEmpty() ? "not liked" : "liked",
+                         Rec::likedSongs(unliked).isEmpty() ? "not liked" : "liked");
+                qWarning("rec: like mass: re-liked %.3f (must be > 0), liked twice %.3f (must be the same), "
+                         "unliked %.3f (must be 0)",
+                         Rec::buildTaste(*catalogue, relike, now).positiveMass,
+                         Rec::buildTaste(*catalogue, twice, now).positiveMass,
+                         Rec::buildTaste(*catalogue, unliked, now).positiveMass);
+
+                const QVector<Rec::PlayEvent> plays = {
+                    heard("Blinding Lights", "The Weeknd", now.addSecs(-600), 0.0, 5000),
+                    heard("Levitating", "Dua Lipa", now.addSecs(-1200), 0.0, 5000),
+                    heard("Save Your Tears", "The Weeknd", now.addSecs(-1800), -1.0, 10000),
+                    heard("Creep", "Radiohead", now.addSecs(-2400), -1.0, 45000),
+                    heard("Yellow", "Coldplay", now.addSecs(-3000), 0.6, 120000),
+                    mark("like", "Levitating", "Dua Lipa", now.addDays(-1)) };
+                QStringList seeded;
+                for (const Rec::Shelf &shelf : Rec::buildShelves(*catalogue, Rec::TasteProfile(), plays, 12)) {
+                    if (shelf.kind == QLatin1String("song"))
+                        seeded << shelf.title;
+                }
+                qWarning("rec: song shelves: %s (must be Levitating, skipped but liked; Creep, 45 s unlabelled; "
+                         "Yellow, 0.6 — not the skipped Blinding Lights or the 10-second Save Your Tears)",
+                         qPrintable(seeded.join(QStringLiteral(" | "))));
+
+                // A week back, so every day is past: that week's Friday to
+                // Monday, at hours that land on another day in UTC for most
+                // of the world.
+                const QDate today = QDate::currentDate();
+                const QDate friday = today.addDays(-7 - (today.dayOfWeek() + 2) % 7);
+                const auto at = [](const QDate &day, int hour) {
+                    return QDateTime(day, QTime(hour, 0)).toUTC();
+                };
+                const QVector<Rec::PlayEvent> weekend = {
+                    heard("Blinding Lights", "The Weeknd", at(friday.addDays(1), 1), 1.0, 200000),
+                    heard("Levitating", "Dua Lipa", at(friday.addDays(2), 22), 1.0, 200000) };
+                const QVector<Rec::PlayEvent> weekdays = {
+                    heard("Blinding Lights", "The Weeknd", at(friday, 22), 1.0, 200000),
+                    heard("Levitating", "Dua Lipa", at(friday.addDays(3), 1), 1.0, 200000) };
+                qWarning("rec: weekend mass: Saturday 01:00 and Sunday 22:00 local %.2f (must be > 0); "
+                         "Friday 22:00 and Monday 01:00 local %.2f (must be 0 where the weekend is Sat-Sun)",
+                         Rec::buildTaste(*catalogue, weekend, now).weekendMass,
+                         Rec::buildTaste(*catalogue, weekdays, now).weekendMass);
+            }
+
             const Rec::Catalog::Match seed =
                 catalogue->match(QStringLiteral("Blinding Lights"), QStringLiteral("The Weeknd"));
             if (seed.row >= 0) {

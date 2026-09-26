@@ -10,6 +10,7 @@
 #include <QHash>
 #include <QRegularExpression>
 #include <QSet>
+#include <QThread>
 
 #include <algorithm>
 #include <climits>
@@ -403,9 +404,8 @@ QStringList likedArtists(const QVector<PlayEvent> &history, const TasteProfile &
         int firstSeen = 0;             // history is newest first, so lower is more recent
     };
     QHash<QString, Tally> tallies;
-    // The newest like-or-unlike per song decides whether it is liked now. A
-    // song is its text key, so "Halo" liked and "HALO" unliked are one song.
-    QSet<quint64> decided;
+    // The newest like-or-unlike per song decides whether it is liked now.
+    const QSet<quint64> liked = likedSongs(history);
 
     for (int i = 0; i < history.size(); ++i) {
         const PlayEvent &event = history.at(i);
@@ -418,13 +418,9 @@ QStringList likedArtists(const QVector<PlayEvent> &history, const TasteProfile &
             tally.name = credit;
             tally.firstSeen = i;
         }
-        const quint64 song = Rec::strictKey(event.title, credit);
-        if (event.kind == QLatin1String("like") || event.kind == QLatin1String("unliked")) {
-            if (!decided.contains(song)) {
-                decided.insert(song);
-                if (event.kind == QLatin1String("like"))
-                    tally.liked = true;
-            }
+        if (event.kind == QLatin1String("like")) {
+            if (liked.contains(Rec::strictKey(event.title, event.artist)))
+                tally.liked = true;
         } else if (event.kind == QLatin1String("play") && event.trackMs > 0
                    && event.listenedMs * 2 >= event.trackMs) {
             ++tally.goodPlays;
@@ -626,6 +622,11 @@ Shelf listenersAlso(const Catalog &catalog, const Graph &graph, const QString &a
 
 } // namespace
 
+bool stopRequested()
+{
+    return QThread::currentThread()->isInterruptionRequested();
+}
+
 QVector<Shelf> buildShelves(const Catalog &catalog,
                             const TasteProfile &taste,
                             const QVector<PlayEvent> &history,
@@ -646,12 +647,26 @@ QVector<Shelf> buildShelves(const Catalog &catalog,
     //
     // First because it needs no profile and no gate: one play is enough, and
     // it is the shelf a new listener sees on their second visit.
+    //
+    // One play that said yes, though. A song abandoned after five seconds
+    // counts against itself in the taste profile, and "More like it, because
+    // you played it" over a song they skipped reads as not listening. Yes is
+    // what the profile takes for yes: a label of 0.6 or better, a song liked
+    // now, or, for a listen never labelled, half a minute heard.
+    const QSet<quint64> liked = likedSongs(history);
+    const auto saidYes = [&liked](const PlayEvent &event) {
+        if (liked.contains(Rec::strictKey(event.title, event.artist)))
+            return true;
+        if (event.hasLabel)
+            return event.label >= 0.6;
+        return event.listenedMs >= 30000;
+    };
     int songShelves = 0;
     QSet<int> seededRows;
     for (const PlayEvent &event : history) {
-        if (songShelves >= 3)
+        if (songShelves >= 3 || stopRequested())
             break;
-        if (event.kind != QLatin1String("play") || event.title.isEmpty())
+        if (event.kind != QLatin1String("play") || event.title.isEmpty() || !saidYes(event))
             continue;
         const Catalog::Match match = catalog.match(event.title, event.artist);
         if (match.row < 0 || seededRows.contains(match.row))
@@ -679,6 +694,8 @@ QVector<Shelf> buildShelves(const Catalog &catalog,
     }
 
     // — the profile's own shelves —
+    if (stopRequested())
+        return shelves;
     if (taste.valid && !taste.positive.isEmpty()) {
         QVector<Hit> hits = topK(catalog, { taste.positive }, scanDepth(perShelf), 0, {}).value(0);
         hits = capPerArtist(catalog, hits, kPerArtistCap);
@@ -691,7 +708,7 @@ QVector<Shelf> buildShelves(const Catalog &catalog,
             shelves.append(shelf);
     }
 
-    if (taste.valid && !taste.recent.isEmpty()) {
+    if (taste.valid && !taste.recent.isEmpty() && !stopRequested()) {
         QVector<Hit> hits = topK(catalog, { taste.recent }, scanDepth(perShelf), 0, {}).value(0);
         hits = capPerArtist(catalog, hits, kPerArtistCap);
         Shelf shelf;
@@ -718,7 +735,7 @@ QVector<Shelf> buildShelves(const Catalog &catalog,
     // songs the next one could have had.
     int artistShelves = 0;
     for (const QString &artist : likedArtists(history, taste)) {
-        if (artistShelves >= 2)
+        if (artistShelves >= 2 || stopRequested())
             break;
 
         Shown trial = shown;
@@ -774,7 +791,7 @@ QVector<Shelf> buildShelves(const Catalog &catalog,
     // Last, and only when nothing else filled the page. It is not a
     // recommendation and does not pretend to be: it is the catalogue's most
     // played, so a listener with no history has somewhere to begin.
-    if (shelves.isEmpty()) {
+    if (shelves.isEmpty() && !stopRequested()) {
         QVector<Hit> popular;
         popular.reserve(perShelf * 6);
         for (int row = 0; row < catalog.count() && popular.size() < perShelf * 6; ++row) {
@@ -814,7 +831,7 @@ QVector<Shelf> buildRegionShelves(const Graph &graph,
 {
     QVector<Shelf> shelves;
     // No catalogue, no shelf: it is what keeps the non-musicians out.
-    if (!graph.isOpen() || !catalogue || !catalogue->isLoaded())
+    if (!graph.isOpen() || !catalogue || !catalogue->isLoaded() || stopRequested())
         return shelves;
 
     // Read deeper than the 40 iOS reads, because the gates below remove a good
@@ -861,6 +878,8 @@ QVector<Shelf> buildRegionShelves(const Graph &graph,
     QSet<QString> seenRecordings;
     QSet<quint64> seenKeys;
     for (int i = 0; i < seeds.size() && i < 28; ++i) {
+        if (stopRequested())
+            return shelves;
         // A recording's title is whatever its release called it, and the
         // most-rated recordings of the German composers are East Asian
         // editions: Bach's top track reads トッカータとフーガ ニ短調, Beethoven's

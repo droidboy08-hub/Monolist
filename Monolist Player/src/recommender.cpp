@@ -156,6 +156,8 @@ RecommenderWorker::~RecommenderWorker()
 
 void RecommenderWorker::load(const QString &catalogueDirectory, const QString &graphDirectory)
 {
+    if (Rec::stopRequested())
+        return;                        // quitting: nothing will read it
     delete m_catalog;
     m_catalog = nullptr;
     delete m_graph;
@@ -196,6 +198,11 @@ void RecommenderWorker::load(const QString &catalogueDirectory, const QString &g
 void RecommenderWorker::build(const QVector<Rec::PlayEvent> &history, const QString &region,
                               const QString &regionName, int perShelf)
 {
+    // The builders check this between scans as well, and return early; a page
+    // cut short that way is nobody's to show, so it is dropped here, unsent.
+    if (Rec::stopRequested())
+        return;
+
     QVector<Rec::Shelf> shelves;
     if (m_catalog) {
         const Rec::TasteProfile taste =
@@ -203,7 +210,7 @@ void RecommenderWorker::build(const QVector<Rec::PlayEvent> &history, const QStr
         shelves = Rec::buildShelves(*m_catalog, taste, history, perShelf, m_graph, region);
     }
 
-    if (m_graph) {
+    if (m_graph && !Rec::stopRequested()) {
         QVector<Rec::Shelf> regional =
             Rec::buildRegionShelves(*m_graph, m_catalog, region, regionName, history, perShelf);
         // The country shelves are built from the graph, apart from the rest,
@@ -237,6 +244,8 @@ void RecommenderWorker::build(const QVector<Rec::PlayEvent> &history, const QStr
             shelves += regional;
         }
     }
+    if (Rec::stopRequested())
+        return;
 
     QVariantList out;
     bool personal = false;
@@ -322,10 +331,17 @@ Recommender::Recommender(QObject *parent)
     reload();
 }
 
+// Destroying a QThread that is still running is fatal in Qt 6, and a build
+// can outlast any timeout worth picking: the first one in a session reads
+// every graph shard, from wherever they are stored, which may be a network
+// share. So the worker is asked to stop — the builders check between scans —
+// and then waited for until it has actually finished, which after the ask is
+// at most the rest of one scan.
 Recommender::~Recommender()
 {
+    m_thread.requestInterruption();
     m_thread.quit();
-    m_thread.wait(2000);
+    m_thread.wait();
 }
 
 void Recommender::setPlayer(PlaybackController *player)
