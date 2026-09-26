@@ -431,6 +431,12 @@ ApplicationWindow {
         function onNotice(text) { toast.show(text) }
     }
 
+    // The YouTube Music sign-in's answers: a file deleted or kept.
+    Connections {
+        target: Account
+        function onNotice(text) { toast.show(text) }
+    }
+
     Connections {
         target: Player
         function onNotice(text) { toast.show(text) }

@@ -142,6 +142,15 @@ else()
     add_dependencies(monolist monolist_apicredentials)
 endif()
 
+# YouTube Music sign-in: a session imported from the user's own browser
+# (cookies.txt, a Cookie header or a copied cURL command), kept in SecretStore,
+# checked with YouTube Music, and carried only by the calls that ask for it.
+# Plain Qt on every platform; its tests are --cookie-test and --ytm-session-test.
+target_sources(monolist PRIVATE
+    src/cookieimport.h             src/cookieimport.cpp
+    src/ytmsession.h               src/ytmsession.cpp
+    src/ytmselftest.h              src/ytmselftest.cpp)
+
 # components/ and views/ hold .qml files outside the module root. Qt 6.8+ wants
 # a qmldir in each so the directory imports in Main.qml and the views resolve
 # through the module rather than the old implicit-directory path. NEW makes Qt

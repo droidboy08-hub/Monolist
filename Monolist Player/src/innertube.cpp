@@ -78,6 +78,12 @@ QString g_region;
 // Told when YouTube Music refuses that country.
 std::function<void(const QString &)> g_regionRejected;
 
+// The signed-in account (YtmSession), for the calls that ask for it. Set once
+// at start, before any request; read only for a call that is not Anonymous.
+InnerTube::AccountHook g_account;
+// Where every request goes in a self-test; empty is YouTube.
+QString g_testServer;
+
 // The web client's own locale, so results follow the user's language and the
 // region they are browsing. YouTube Music and YouTube name themselves
 // differently and number their versions differently.
@@ -377,10 +383,22 @@ void InnerTube::setRegionRejectedHandler(std::function<void(const QString &)> ha
     g_regionRejected = std::move(handler);
 }
 
-InnerTube::InnerTube(QObject *parent)
+void InnerTube::setAccountHook(AccountHook hook)
+{
+    g_account = std::move(hook);
+}
+
+void InnerTube::setTestServer(const QString &baseUrl)
+{
+    g_testServer = baseUrl;
+}
+
+InnerTube::InnerTube(QObject *parent, bool warmUp)
     : QObject(parent)
     , m_network(new QNetworkAccessManager(this))
 {
+    if (!warmUp || !g_testServer.isEmpty())
+        return;
     // Open the TLS connections now, so the first search and the first track
     // are one round trip like every later one, rather than paying for DNS and
     // the handshake. www.youtube.com is where /player is asked.
@@ -440,7 +458,8 @@ void InnerTube::withVisitorData(std::function<void()> then)
     m_visitorWaiters.push_back(std::move(then));
 }
 
-QNetworkReply *InnerTube::post(Client client, const QString &endpoint, QJsonObject body, int timeoutMs)
+QNetworkReply *InnerTube::post(Client client, const QString &endpoint, QJsonObject body, int timeoutMs,
+                               Auth auth, quint64 *session)
 {
     QString host = QStringLiteral("https://www.youtube.com");
     QByteArray agent = kUserAgent;
@@ -449,6 +468,8 @@ QNetworkReply *InnerTube::post(Client client, const QString &endpoint, QJsonObje
     } else if (client == Client::Player) {
         agent = kVisionUserAgent;
     }
+    if (!g_testServer.isEmpty())
+        host = g_testServer;
 
     QJsonObject context = clientContext(client);
     if (client == Client::Player && !m_visitorData.isEmpty()) {
@@ -467,6 +488,35 @@ QNetworkReply *InnerTube::post(Client client, const QString &endpoint, QJsonObje
     if (client == Client::Player && !m_visitorData.isEmpty())
         request.setRawHeader("X-Goog-Visitor-Id", m_visitorData.toUtf8());
     request.setTransferTimeout(timeoutMs);
+
+    // The account, on the few calls that ask for it and only while there is
+    // one. Everything above is what an anonymous call sends, and an
+    // anonymous call sends nothing more.
+    quint64 account = 0;
+    if (auth != Auth::Anonymous && client == Client::Music && g_account.headers) {
+        QByteArray cookie;
+        QByteArray authorization;
+        account = g_account.headers(auth, host.toUtf8(), &cookie, &authorization);
+        if (account != 0 && !cookie.isEmpty()) {
+            // Neither way through the network manager's own jar. How Qt
+            // would mix a Cookie header set here with the jar's anonymous
+            // cookies is not documented, and those must not ride along with
+            // the account's; and the account's rotated cookies must not land
+            // in the jar, where every anonymous call would carry them.
+            // YtmSession keeps those itself.
+            request.setAttribute(QNetworkRequest::CookieLoadControlAttribute, QNetworkRequest::Manual);
+            request.setAttribute(QNetworkRequest::CookieSaveControlAttribute, QNetworkRequest::Manual);
+            request.setRawHeader("Cookie", cookie);
+            if (!authorization.isEmpty())
+                request.setRawHeader("Authorization", authorization);
+            request.setRawHeader("X-Origin", host.toUtf8());
+            request.setRawHeader("X-Goog-AuthUser", "0");
+        } else {
+            account = 0;
+        }
+    }
+    if (session)
+        *session = account;
     return m_network->post(request, QJsonDocument(body).toJson(QJsonDocument::Compact));
 }
 
@@ -483,9 +533,11 @@ void InnerTube::release(Slot &slot)
 
 void InnerTube::send(Client client, const QString &endpoint, const QJsonObject &body, int timeoutMs,
                      Slot *slot,
-                     std::function<void(const QJsonObject &, const QString &)> done, int retries)
+                     std::function<void(const QJsonObject &, const QString &)> done, int retries,
+                     Auth auth)
 {
-    QNetworkReply *reply = post(client, endpoint, body, timeoutMs);
+    quint64 account = 0;
+    QNetworkReply *reply = post(client, endpoint, body, timeoutMs, auth, &account);
     // The request this attempt belongs to. Its retries carry it forward, and
     // whichever of them finds the slot moved on stops there.
     const quint64 generation = slot ? slot->generation : 0;
@@ -496,7 +548,7 @@ void InnerTube::send(Client client, const QString &endpoint, const QJsonObject &
     };
 
     connect(reply, &QNetworkReply::finished, this,
-            [this, reply, client, endpoint, body, timeoutMs, slot, done, retries, superseded]() {
+            [this, reply, client, endpoint, body, timeoutMs, slot, done, retries, auth, account, superseded]() {
                 reply->deleteLater();
                 // A newer request of the same kind took this one's place, or it
                 // was cancelled: whoever did that has already moved on.
@@ -505,11 +557,43 @@ void InnerTube::send(Client client, const QString &endpoint, const QJsonObject &
                 if (slot)
                     slot->reply = nullptr;
 
+                const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+                if (account != 0) {
+                    // The session's cookies, rotated by the server; kept by
+                    // YtmSession, since this request left the jar alone.
+                    const QList<QNetworkCookie> rotated =
+                        reply->header(QNetworkRequest::SetCookieHeader).value<QList<QNetworkCookie>>();
+                    if (!rotated.isEmpty() && g_account.cookies)
+                        g_account.cookies(account, rotated);
+
+                    // Refused with the account. 401 and 403 say the session
+                    // is over; 400 may be the cookies as much as the country,
+                    // and a broken session must never cost the user the
+                    // country they chose, so a call that carried the account
+                    // never reaches the branch below that drops it. Either
+                    // way the call is made again without the account, and a
+                    // country that really is refused is then found out by an
+                    // anonymous request, as it always was.
+                    if (status == 400 || status == 401 || status == 403) {
+                        if (status != 400 && g_account.rejected)
+                            g_account.rejected(account, status);
+                        if (superseded())
+                            return;
+                        // YtmSession's check wants the verdict, not an
+                        // anonymous answer standing in for it.
+                        if (auth == Auth::Checking) {
+                            done({}, reply->errorString());
+                            return;
+                        }
+                        send(client, endpoint, body, timeoutMs, slot, done, retries, Auth::Anonymous);
+                        return;
+                    }
+                }
+
                 if (reply->error() != QNetworkReply::NoError) {
                     // A country YouTube Music does not serve is refused with
                     // 400, every time, for everything. Rather than look
                     // broken, drop the country and ask again as the system.
-                    const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
                     if (status == 400 && !g_region.isEmpty()) {
                         const QString refused = g_region;
                         g_region.clear();
@@ -519,21 +603,21 @@ void InnerTube::send(Client client, const QString &endpoint, const QJsonObject &
                         // if it did, that one is the answer now.
                         if (superseded())
                             return;
-                        send(client, endpoint, body, timeoutMs, slot, done, retries);
+                        send(client, endpoint, body, timeoutMs, slot, done, retries, auth);
                         return;
                     }
                     // A dropped connection or a timeout is ordinary on a home
                     // connection; the second attempt usually works.
                     if (retries > 0 && reply->error() != QNetworkReply::OperationCanceledError) {
                         QTimer::singleShot(1200, this, [this, client, endpoint, body, timeoutMs,
-                                                        slot, done, retries, superseded]() {
+                                                        slot, done, retries, auth, superseded]() {
                             // Replaced or cancelled while waiting. Sending now
                             // would put this old request back in the slot,
                             // where the newer one's answer would be dropped
                             // as stale and nobody would ever hear back.
                             if (superseded())
                                 return;
-                            send(client, endpoint, body, timeoutMs, slot, done, retries - 1);
+                            send(client, endpoint, body, timeoutMs, slot, done, retries - 1, auth);
                         });
                         return;
                     }
@@ -783,12 +867,49 @@ QList<InnerTube::Track> InnerTube::parseYouTubeSearch(const QJsonObject &root)
 }
 
 void InnerTube::browse(const QString &browseId,
-                       std::function<void(const QJsonObject &, const QString &)> done)
+                       std::function<void(const QJsonObject &, const QString &)> done, Auth auth)
 {
     // A page is bigger than a search (the home feed is a few hundred KB), so
     // it is given longer before the connection is called dead.
     send(Client::Music, QStringLiteral("browse"), { { QStringLiteral("browseId"), browseId } },
-         kBrowseTimeoutMs, nullptr, std::move(done));
+         kBrowseTimeoutMs, nullptr, std::move(done), /*retries=*/1, auth);
+}
+
+void InnerTube::accountMenu(Auth auth, std::function<void(const QJsonObject &, const QString &)> done)
+{
+    send(Client::Music, QStringLiteral("account/account_menu"), {}, kBrowseTimeoutMs, nullptr,
+         std::move(done), /*retries=*/1, auth);
+}
+
+// The header of the menu behind the avatar, as ytmusicapi's get_account_info
+// reads it: the account's name, and its channel handle below it.
+QString InnerTube::parseAccountName(const QJsonObject &root)
+{
+    const QJsonValue header = dig(root, { "actions", "#0", "openPopupAction", "popup", "multiPageMenuRenderer",
+                                          "header", "activeAccountHeaderRenderer" });
+    QString name = joinRuns(dig(header, { "accountName", "runs" }).toArray()).trimmed();
+    if (name.isEmpty())
+        name = dig(header, { "accountName", "simpleText" }).toString().trimmed();
+    return name;
+}
+
+QString InnerTube::parseLoggedIn(const QJsonObject &root)
+{
+    const QJsonArray services = dig(root, { "responseContext", "serviceTrackingParams" }).toArray();
+    for (const QJsonValue &service : services) {
+        for (const QJsonValue &param : service.toObject().value(QLatin1String("params")).toArray()) {
+            const QJsonObject pair = param.toObject();
+            if (pair.value(QLatin1String("key")).toString() != QLatin1String("logged_in"))
+                continue;
+            // A string on the wire; a number is read the same.
+            const QJsonValue value = pair.value(QLatin1String("value"));
+            if (value.isString())
+                return value.toString();
+            if (value.isDouble())
+                return QString::number(value.toInt());
+        }
+    }
+    return QString();
 }
 
 void InnerTube::lyrics(const QString &videoId,

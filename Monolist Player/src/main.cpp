@@ -34,6 +34,8 @@
 #include "trackmodel.h"
 #include "videosurface.h"
 #include "windowchrome.h"
+#include "ytmselftest.h"
+#include "ytmsession.h"
 #include "appinfo.h"
 #include "rec/catalog.h"
 #include "rec/suitable.h"
@@ -95,6 +97,10 @@ int main(int argc, char *argv[])
         return runSecretStoreSelfTest() == 0 ? 0 : 1;
     if (app.arguments().contains(QStringLiteral("--lastfm-test")))
         return runLastFmSelfTest() == 0 ? 0 : 1;
+    // --cookie-test: the YouTube Music import parser and the SAPISIDHASH
+    // known answers, on invented cookies (ytmselftest.cpp).
+    if (app.arguments().contains(QStringLiteral("--cookie-test")))
+        return runCookieImportSelfTest() == 0 ? 0 : 1;
 
     AppDatabase database;
     if (!database.open())
@@ -126,6 +132,10 @@ int main(int argc, char *argv[])
         }
         if (arguments.contains(QStringLiteral("--scrobble-kill-test")))
             return startScrobbleKillTest(&library) ? app.exec() : 1;
+        // The YouTube Music session and InnerTube's account path, against a
+        // stand-in server on this computer; in MONOLIST_DATA_DIR only.
+        if (arguments.contains(QStringLiteral("--ytm-session-test")))
+            return runYtmSessionSelfTest(&library) == 0 ? 0 : 1;
     }
 
     // --set <key> <value>: writes one setting (region, lrclib_url,
@@ -146,6 +156,20 @@ int main(int argc, char *argv[])
     InnerTube::setRegionRejectedHandler([&library](const QString &code) {
         library.dropRegion(code);
     });
+
+    // The YouTube Music account, if one was imported: restored from the
+    // secret store and checked a few seconds in. Made here, before anything
+    // that calls YouTube Music and so torn down after all of it, because it
+    // hands the account to the few calls that ask for it (InnerTube's hook).
+    // Until it is confirmed, and for everything but those calls, the app is
+    // exactly as signed out as it always was.
+    YtmSession ytmSession(&library);
+    ytmSession.start();
+    // --ytm-demo <state>[+file]: the Settings row in that state, with an
+    // invented account and no cookies, for a look or a screenshot.
+    if (const int demoFlag = app.arguments().indexOf(QStringLiteral("--ytm-demo"));
+        demoFlag >= 0 && demoFlag + 1 < app.arguments().size())
+        ytmSession.showDemo(app.arguments().at(demoFlag + 1));
 
     // — engines —
     MpvEngine engine;
@@ -254,6 +278,8 @@ int main(int argc, char *argv[])
     scrobbler.setPlayer(&player);
     scrobbler.start();
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Scrobbler", &scrobbler);
+    // The YouTube Music sign-in: the Settings row's import, check and sign-out.
+    qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Account",   &ytmSession);
     qmlRegisterUncreatableType<SearchResultModel>(
         "Monolist.Backend", 1, 0, "SearchResultModel",
         QStringLiteral("Obtained from Extractor.results"));
@@ -715,6 +741,15 @@ int main(int argc, char *argv[])
         qWarning("diag: Last.fm %s%s, scrobbling %s, %d waiting", qPrintable(scrobbler.state()),
                  scrobbler.accountName().isEmpty() ? "" : qPrintable(QStringLiteral(" as ") + scrobbler.accountName()),
                  scrobbler.enabled() ? "on" : "off", scrobbler.pending());
+        // Never a value: the state, and the jar's size and cookie names.
+        qWarning("diag: YouTube Music %s%s, %s", qPrintable(ytmSession.state()),
+                 ytmSession.accountName().isEmpty() ? "" : qPrintable(QStringLiteral(" as ") + ytmSession.accountName()),
+                 ytmSession.jar().isEmpty()
+                     ? "no session held"
+                     : qPrintable(QStringLiteral("%1 cookies held (%2 bytes as stored): %3")
+                                      .arg(ytmSession.jar().size())
+                                      .arg(CookieImport::toJson(ytmSession.jar()).size())
+                                      .arg(CookieImport::names(ytmSession.jar()).join(QStringLiteral(", ")))));
         QSqlQuery waiting(AppDatabase::connection());
         waiting.exec(QStringLiteral("SELECT id, account, artist, track, started_at, chosen_by_user, attempts,"
                                     " last_error FROM scrobble_queue ORDER BY id LIMIT 10"));

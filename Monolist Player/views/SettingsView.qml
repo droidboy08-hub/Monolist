@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls.Basic
+import QtQuick.Dialogs
 import Monolist
 import Monolist.Backend
 import "../components"
@@ -30,6 +31,18 @@ Flickable {
     }
 
     ScrollBar.vertical: MonoScrollBar {}
+
+    // The exported YouTube Music session. The system's own dialog, so the
+    // file is picked the way every other file is.
+    FileDialog {
+        id: cookieFileDialog
+        title: "Choose the exported cookies file"
+        nameFilters: ["Cookie files (*.txt *.cookies)", "All files (*)"]
+        onAccepted: {
+            if (Account.importFile(selectedFile))
+                ytmRow.importing = false
+        }
+    }
 
     function matches() {
         var text = filter.trim().toLowerCase()
@@ -449,9 +462,10 @@ Flickable {
 
         // — connections —
         //
-        // Last.fm is built; YouTube Music is next. The app works entirely without any of
-        // these and is meant to keep working that way; what an account buys
-        // is your own library and your own history, not a better player.
+        // Last.fm scrobbles; YouTube Music signs in, and what it brings comes
+        // next. The app works entirely without any of these and is meant to
+        // keep working that way; what an account buys is your own library
+        // and your own history, not a better player.
         SectionHeader {
             width: parent.width
             number: "05"
@@ -460,12 +474,21 @@ Flickable {
 
         Note {
             // Follows the rows, so it cannot go on saying nothing is signed
-            // in once something is.
-            text: lastFmRow.connected
-                  ? "Last.fm is connected as " + lastFmRow.accountName + ". Everything else still works "
-                    + "without an account, and your library stays on this computer."
-                  : "Nothing is signed in. Monolist plays without an account, and keeps your library "
-                    + "on this computer. Connecting one would add what only an account can know."
+            // in once something is. Plain text: account names are not markup.
+            textFormat: Text.PlainText
+            text: {
+                var said = []
+                if (lastFmRow.connected)
+                    said.push("Last.fm is connected as " + lastFmRow.accountName)
+                if (Account.state === "active")
+                    said.push("YouTube Music is signed in"
+                              + (Account.accountName.length > 0 ? " as " + Account.accountName : ""))
+                if (said.length === 0)
+                    return "Nothing is signed in. Monolist plays without an account, and keeps your library "
+                           + "on this computer. Connecting one would add what only an account can know."
+                return said.join("; ") + ". Everything else still works without an account, and your library "
+                       + "stays on this computer."
+            }
         }
 
         ServiceRow {
@@ -511,18 +534,153 @@ Flickable {
             onToggled: Scrobbler.enabled = !Scrobbler.enabled
         }
 
+        // YouTube Music: a session imported from the user's own browser, since
+        // Google allows no sign-in from inside an app like this one. The row
+        // says Connected only once YouTube Music has confirmed the session
+        // (Account checks it online); while that is under way, or YouTube
+        // Music cannot be reached, it offers SIGN OUT and names no one.
         ServiceRow {
+            id: ytmRow
+
+            // Open while the user imports: the steps, and where the file or
+            // the pasted header goes. CANCEL closes it, and so does an import
+            // that was read.
+            property bool importing: false
+            readonly property string account: Account.state
+
             width: parent.width
             name: "YouTube Music"
             detail: "Your own playlists, likes and listening history, instead of this computer's."
-            caution: "Use an account you can afford to lose. Google restricts accounts used by outside players, and that would take the account with it."
+            caution: "Use an account you can afford to lose: Google restricts accounts used by outside players, "
+                     + "and that would take the account with it. Sign in only on Google's own page, in a private "
+                     + "window of your own browser. Monolist never asks for your password."
+            built: true
+            serviceState: importing ? "waiting"
+                          : account === "active" || account === "checking" || account === "unreachable"
+                            ? "connected"
+                          : account === "rejected" ? "expired"
+                          : "off"
+            accountName: account === "active" ? Account.accountName : ""
+            statusLine: importing ? "" : Account.statusLine
+            actionText: serviceState === "connected" ? "SIGN OUT"
+                        : serviceState === "expired" ? "IMPORT AGAIN"
+                        : ""
             steps: [
-                "Sign in to YouTube Music in your own browser, in a private window, and export the cookies for that tab to a file.",
-                "Point Monolist at that file. It is read once, encrypted with your Windows sign-in (the Keychain on a Mac), and never written to the music database or to any log.",
-                "Your library, likes and history then come from your account. Sign out here and Monolist's encrypted copy is deleted; it offers to delete your exported file as soon as it has read it.",
-                "A session lasts days to weeks; when it ends Monolist says so and keeps playing signed out.",
-                "It buys none of the speed: playback is exactly as fast signed out, and signing in never becomes required for anything."
+                "In your own browser, open a private window and sign in at music.youtube.com, on Google's own page. Firefox is the safest choice.",
+                "Export that tab's youtube.com cookies to a file with a cookies.txt extension. Or open the developer tools, pick any browse request to music.youtube.com, and copy its cookie header, or the whole request as cURL.",
+                "Choose the file, or paste into the box below. It is read once, encrypted with your Windows sign-in (the Keychain on a Mac), and never written to the music database or to any log.",
+                "Monolist then asks YouTube Music, over the internet, whether the sign-in works: that is the only way to know. It says Connected only once YouTube Music does.",
+                "Close the private window without using it again. Monolist offers to delete the exported file as soon as it has read it, and never deletes it by itself.",
+                "A session lasts days to weeks; when it ends Monolist says so and keeps playing signed out. It buys none of the speed: playback, search, lyrics and radio always stay signed out."
             ]
+            onConnectRequested: importing = true
+            onCancelRequested: {
+                importing = false
+                pasteField.clear()
+            }
+            onDisconnectRequested: Account.signOut()
+
+            // — the import, in the open panel —
+            Note {
+                visible: !Account.remembered
+                width: parent.width
+                text: "Keeping a sign-in safely is not available on this system yet, so Monolist holds it "
+                      + "only until it closes."
+            }
+
+            ActionButton {
+                text: "CHOOSE FILE…"
+                onClicked: cookieFileDialog.open()
+            }
+
+            // Masked, like a password: what is pasted is the session itself.
+            Item {
+                width: parent.width
+                height: Math.max(pasteField.implicitHeight, importButton.implicitHeight)
+
+                TextField {
+                    id: pasteField
+                    anchors.left: parent.left
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: parent.width - importButton.width - Theme.space4
+                    implicitHeight: 40
+                    echoMode: TextInput.Password
+                    inputMethodHints: Qt.ImhSensitiveData | Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase
+                    // A copied cURL command runs to several thousand characters.
+                    maximumLength: 1048576
+                    placeholderText: "…or paste the cookie header, or the request copied as cURL"
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 13
+                    color: Theme.text
+                    placeholderTextColor: Theme.neutral500
+                    selectionColor: Theme.accent
+                    selectedTextColor: Theme.accentForeground
+                    background: Rectangle {
+                        color: "transparent"
+                        border.width: Theme.ruleWidth
+                        border.color: pasteField.activeFocus ? Theme.accent : Theme.neutral300
+                    }
+                    onAccepted: if (importButton.enabled) importButton.clicked()
+                }
+
+                ActionButton {
+                    id: importButton
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "IMPORT"
+                    enabled: pasteField.text.length > 0
+                    onClicked: {
+                        if (Account.importText(pasteField.text)) {
+                            pasteField.clear()
+                            ytmRow.importing = false
+                        }
+                    }
+                }
+            }
+
+            Text {
+                visible: Account.importError.length > 0
+                width: parent.width
+                text: Account.importError
+                textFormat: Text.PlainText
+                wrapMode: Text.WordWrap
+                font.family: Theme.fontFamily
+                font.pixelSize: 13
+                color: Theme.accent
+            }
+        }
+
+        // Right after a file was read: from now on it is only a copy of the
+        // session in plain text, and whether it goes is the user's call.
+        // Nothing is ever deleted without this answer.
+        Column {
+            visible: Account.importedFileName.length > 0
+            width: parent.width
+            spacing: Theme.space3
+            leftPadding: Theme.space4
+
+            Note {
+                width: parent.width - Theme.space4
+                textFormat: Text.PlainText
+                color: Theme.text
+                text: "Monolist has read “" + Account.importedFileName + "” and keeps its own encrypted copy. "
+                      + "The file itself still holds your sign-in in plain text, so anyone who opens it can use "
+                      + "your account. Delete it now? It is deleted for good, not moved to the Recycle Bin or "
+                      + "Trash, where it could still be read."
+            }
+
+            Row {
+                spacing: Theme.space3
+
+                ActionButton {
+                    text: "DELETE THE FILE"
+                    onClicked: Account.deleteImportedFile()
+                }
+                ActionButton {
+                    text: "KEEP IT"
+                    onClicked: Account.keepImportedFile()
+                }
+            }
         }
 
         HRule { width: parent.width }
@@ -706,8 +864,13 @@ Flickable {
                       + " · Qt " + About.qtVersion
             }
             Note {
+                // Once an account is connected, "nothing is signed in" would
+                // no longer be true.
                 text: "Songs, search, lyrics and artwork come from YouTube Music, LRCLIB, yt-dlp and FFmpeg. "
-                      + "Nothing is signed in: no account, and nothing about you leaves this computer."
+                      + (Scrobbler.state === "connected" || Account.state === "active"
+                         ? "They are fetched without an account; what a connected account is told is set out "
+                           + "under Connections."
+                         : "Nothing is signed in: no account, and nothing about you leaves this computer.")
             }
             DataCredit {
                 width: parent.width

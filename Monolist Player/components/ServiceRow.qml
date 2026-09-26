@@ -45,6 +45,13 @@ Item {
     // While waiting on the browser: a second button, for the person who has
     // done what the browser asked ("I'VE APPROVED IT"). None when empty.
     property string confirmText: ""
+    // The button's own word for a service that has one ("SIGN OUT" rather
+    // than DISCONNECT); the state's usual word when empty. What it does
+    // still follows the state.
+    property string actionText: ""
+    // Whatever else the open panel needs, after the steps: YouTube Music's
+    // file and paste boxes. Children of the row go here.
+    default property alias panelContent: extra.data
 
     readonly property bool connected: serviceState === "connected"
     readonly property bool needsAttention: serviceState === "expired" || serviceState === "error"
@@ -149,7 +156,8 @@ Item {
                 // Built but unable to work here (no key in this build, say):
                 // CONNECT, greyed, and the status line says why.
                 enabled: !root.built || root.serviceState !== "unavailable"
-                text: !root.built ? (root.stepsOpen ? "CLOSE" : "HOW IT WILL WORK")
+                text: root.built && root.actionText.length > 0 ? root.actionText
+                      : !root.built ? (root.stepsOpen ? "CLOSE" : "HOW IT WILL WORK")
                       : root.serviceState === "connected" ? "DISCONNECT"
                       : root.serviceState === "waiting" ? "CANCEL"
                       : root.serviceState === "expired" ? "RECONNECT"
@@ -220,6 +228,14 @@ Item {
                         color: Theme.text
                     }
                 }
+            }
+
+            Column {
+                id: extra
+                width: parent.width - Theme.space4
+                spacing: Theme.space3
+                topPadding: children.length > 0 ? Theme.space2 : 0
+                bottomPadding: children.length > 0 ? Theme.space2 : 0
             }
 
             // Done in the browser: ask now rather than wait for the next look.

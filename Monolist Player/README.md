@@ -314,8 +314,17 @@ mpv's own messages.
                                                     a stand-in on this computer (scripts/lastfm-mock.ps1)
     monolist --scrobble-kill-test                   two scrobbles queued, then it waits to be killed;
                                                     --diag afterwards shows they survived
+    monolist --cookie-test                          the YouTube Music import on invented cookies: cookies.txt
+                                                    (LF, CRLF, #HttpOnly_, spaces for tabs), a Cookie header,
+                                                    cURL in bash and cmd quoting, duplicates across domains,
+                                                    a missing LOGIN_INFO; and the SAPISIDHASH known answers
+    monolist --ytm-session-test                     the YouTube Music session against a stand-in server on
+                                                    this computer: signed-out requests byte for byte, the
+                                                    check, rotation, 400/401/403, restart, sign-out, the
+                                                    offer to delete the imported file, no value in the log
     monolist --diag                                 what the database holds, whether there is a Last.fm
-                                                    key, and the scrobbles waiting
+                                                    key, the scrobbles waiting, and the YouTube Music session
+                                                    (its state, size and cookie names, never a value)
 
 Each quits by itself and reports on stderr. These open the window as it would
 be, for a look at a state:
@@ -324,12 +333,15 @@ be, for a look at a state:
                                                     page:<browse id>, playlist:<id>, playlist:liked
     monolist --query "<text>"                       search, with the text typed in
     monolist --open-queue  /  --now-playing         with the queue, or Now Playing, open
+    monolist --ytm-demo <state>[+file]              the YouTube Music row as active, checking, unreachable
+                                                    or rejected, with an invented account and no cookies;
+                                                    +file adds the offer to delete an imported file
     monolist --set <key> <value>                    write a setting first (lrclib_url, piped_instances,
                                                     invidious_instances)
 
 `MONOLIST_DATA_DIR` keeps the database somewhere else, so a test never touches
-the real library; the scrobbling tests refuse to run without it, since they empty
-the scrobble queue. `MONOLIST_REC_DATA_URL` fetches the recommendation data from
+the real library; the scrobbling tests and `--ytm-session-test` refuse to run
+without it, since they empty the scrobble queue and replace the stored session. `MONOLIST_REC_DATA_URL` fetches the recommendation data from
 another address, or a local folder (`file:///C:/dev/monolist-data/`), instead of
 the pinned tag on GitHub. `MONOLIST_LASTFM_URL` sends Last.fm calls to another
 address, for `--scrobble-send-test` against `scripts/lastfm-mock.ps1`.

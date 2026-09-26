@@ -1,7 +1,9 @@
 #pragma once
 
+#include <QByteArray>
 #include <QJsonObject>
 #include <QList>
+#include <QNetworkCookie>
 #include <QObject>
 #include <QPointer>
 #include <QSet>
@@ -91,7 +93,42 @@ public:
     // reused for this no matter how convenient that would be.
     enum class Client { Music, YouTube, Player };
 
-    explicit InnerTube(QObject *parent = nullptr);
+    // Whether a call may carry the signed-in YouTube Music account.
+    //
+    // Anonymous is every call's default, and sends exactly what was sent
+    // before there were accounts, byte for byte. IfSignedIn carries the
+    // account while a session is active, and is otherwise Anonymous.
+    // Checking is YtmSession's own check of a session it holds but has not
+    // confirmed yet; nothing else uses it. Only the Music client ever carries
+    // the account: playback (Player), youtube.com's search and yt-dlp never do.
+    enum class Auth { Anonymous, IfSignedIn, Checking };
+
+    // The account, as the calls see it. Static for the same reason as the
+    // region: there are several InnerTube objects, each with its own network
+    // manager, and all of them must agree on whether there is an account.
+    // Set once at start (main.cpp), before any request, to YtmSession's.
+    struct AccountHook {
+        // Fills in the Cookie and Authorization headers for one call from
+        // `origin`, and returns the session they belong to; 0, with nothing
+        // filled in, when this call goes without.
+        std::function<quint64(Auth auth, const QByteArray &origin, QByteArray *cookie,
+                              QByteArray *authorization)> headers;
+        // The server refused that session outright (401, 403).
+        std::function<void(quint64 session, int httpStatus)> rejected;
+        // Set-Cookie on an answer to that session: its cookies, rotated.
+        std::function<void(quint64 session, const QList<QNetworkCookie> &cookies)> cookies;
+    };
+    static void setAccountHook(AccountHook hook);
+
+    // `warmUp` opens the TLS connections and fetches the visitor id at once,
+    // for the objects that play and search. One that only makes the odd
+    // call (YtmSession's check) goes without.
+    explicit InnerTube(QObject *parent = nullptr, bool warmUp = true);
+
+    // For the self-tests only: every request goes to this address
+    // ("http://127.0.0.1:<port>") instead of YouTube, and objects made
+    // afterwards do not warm up. Empty is YouTube again.
+    static void setTestServer(const QString &baseUrl);
 
     // The country every request is made from ("US", "JP", …), which decides
     // what YouTube Music offers: new releases, charts and the ranking of
@@ -114,10 +151,23 @@ public:
 
     // One browse request (the home feed, charts, new releases, an album or a
     // playlist); `done` gets the response, or an error. Any number can run.
+    // Anonymous unless the caller asks for the account.
     void browse(const QString &browseId,
-                std::function<void(const QJsonObject &root, const QString &error)> done);
+                std::function<void(const QJsonObject &root, const QString &error)> done,
+                Auth auth = Auth::Anonymous);
     static QList<Shelf> parseShelves(const QJsonObject &root);
     static Collection parseCollection(const QString &browseId, const QJsonObject &root);
+
+    // account/account_menu: who is signed in. Asked only with the account;
+    // without one it only offers to sign in.
+    void accountMenu(Auth auth, std::function<void(const QJsonObject &root, const QString &error)> done);
+    // The signed-in account's name in account_menu's answer, or empty.
+    static QString parseAccountName(const QJsonObject &root);
+    // `logged_in` from any answer's responseContext.serviceTrackingParams:
+    // "1", "0", or empty when the answer does not say. The one reliable sign
+    // that a call was answered as the account: bad cookies are usually
+    // answered 200 OK with the signed-out feed.
+    static QString parseLoggedIn(const QJsonObject &root);
 
     // A song's lyrics as YouTube Music shows them: plain text, from a partner
     // it names ("Source: Musixmatch"). Two requests: the watch page says
@@ -181,16 +231,20 @@ private:
     // Moves the slot on and aborts the reply it holds, if any.
     static void release(Slot &slot);
 
-    QNetworkReply *post(Client client, const QString &endpoint, QJsonObject body, int timeoutMs);
+    // `session` is set to the account's session when the request carries it,
+    // and to 0 when it goes anonymous.
+    QNetworkReply *post(Client client, const QString &endpoint, QJsonObject body, int timeoutMs,
+                        Auth auth, quint64 *session);
     // One request, its answer as JSON. A dropped connection or a timeout is
     // ordinary on a home connection, so it is tried once more before failing;
     // `slot`, where given, holds the reply so a newer request can cancel it,
     // and a cancelled or replaced request is dropped silently rather than
-    // retried.
+    // retried. One that carried the account and was refused for it is sent
+    // again without it.
     void send(Client client, const QString &endpoint, const QJsonObject &body, int timeoutMs,
               Slot *slot,
               std::function<void(const QJsonObject &root, const QString &error)> done,
-              int retries = 1);
+              int retries = 1, Auth auth = Auth::Anonymous);
 
     static QList<Track> parseSearch(const QJsonObject &root);
     static QList<Track> parseYouTubeSearch(const QJsonObject &root);
