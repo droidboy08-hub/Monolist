@@ -11,6 +11,7 @@
 #include <QQuickStyle>
 #include <QSqlError>
 #include <QSqlQuery>
+#include <QTimeZone>
 #include <QTimer>
 #include <QWindow>
 
@@ -19,6 +20,8 @@
 #include "catalog.h"
 #include "connectionselftest.h"
 #include "lastfm.h"
+#include "scrobbler.h"
+#include "scrobbleselftest.h"
 #include "secretstore.h"
 #include "downloadmanager.h"
 #include "innertube.h"
@@ -101,6 +104,29 @@ int main(int argc, char *argv[])
 
     Library library;
     library.load();
+
+    // Scrobbling checked on its own (scrobbleselftest.cpp), in the data folder
+    // MONOLIST_DATA_DIR names, which each insists on: --listen-test,
+    // --scrobble-test and --lastfm-connect-test with no network;
+    // --scrobble-send-test [rows] [--expect-kept] against a stand-in server on
+    // this computer (MONOLIST_LASTFM_URL); --scrobble-kill-test queues two
+    // scrobbles and waits to be killed.
+    {
+        const QStringList arguments = app.arguments();
+        if (arguments.contains(QStringLiteral("--listen-test")))
+            return runListenSelfTest() == 0 ? 0 : 1;
+        if (arguments.contains(QStringLiteral("--scrobble-test")))
+            return runScrobbleSelfTest(&library) == 0 ? 0 : 1;
+        if (arguments.contains(QStringLiteral("--lastfm-connect-test")))
+            return runLastFmConnectSelfTest(&library) == 0 ? 0 : 1;
+        if (const int sendFlag = arguments.indexOf(QStringLiteral("--scrobble-send-test")); sendFlag >= 0) {
+            const int rows = sendFlag + 1 < arguments.size() ? arguments.at(sendFlag + 1).toInt() : 0;
+            return runScrobbleSendTest(&library, rows > 0 ? rows : 120,
+                                       arguments.contains(QStringLiteral("--expect-kept"))) == 0 ? 0 : 1;
+        }
+        if (arguments.contains(QStringLiteral("--scrobble-kill-test")))
+            return startScrobbleKillTest(&library) ? app.exec() : 1;
+    }
 
     // --set <key> <value>: writes one setting (region, lrclib_url,
     // piped_instances, invidious_instances) before anything reads it.
@@ -222,6 +248,12 @@ int main(int argc, char *argv[])
     // somewhere safe to keep a session.
     LastFmApi lastFm;
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "LastFm",    &lastFm);
+    // Scrobbling: the Settings row's sign-in, and what the player hears,
+    // queued and sent while connected.
+    Scrobbler scrobbler(&lastFm, &library);
+    scrobbler.setPlayer(&player);
+    scrobbler.start();
+    qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Scrobbler", &scrobbler);
     qmlRegisterUncreatableType<SearchResultModel>(
         "Monolist.Backend", 1, 0, "SearchResultModel",
         QStringLiteral("Obtained from Extractor.results"));
@@ -663,7 +695,7 @@ int main(int argc, char *argv[])
     if (args.contains(QStringLiteral("--diag"))) {
         QSqlQuery count(AppDatabase::connection());
         for (const char *table : { "tracks", "downloads", "recent", "history", "settings",
-                                   "playlists", "playlist_tracks", "albums", "lyrics" }) {
+                                   "playlists", "playlist_tracks", "albums", "lyrics", "scrobble_queue" }) {
             const QString name = QString::fromLatin1(table);
             const bool ok = count.exec(QStringLiteral("SELECT COUNT(*) FROM %1").arg(name)) && count.next();
             qWarning("diag: %-9s %s", table, ok ? qPrintable(count.value(0).toString())
@@ -679,6 +711,23 @@ int main(int argc, char *argv[])
         qWarning("diag: Last.fm key %s; secret store: %s", lastFm.hasKey() ? "present" : "absent",
                  qPrintable(SecretStore::available() ? SecretStore::backendName()
                                                      : SecretStore::unavailableReason()));
+        // Never the session key: whether there is a sign-in, and what waits.
+        qWarning("diag: Last.fm %s%s, scrobbling %s, %d waiting", qPrintable(scrobbler.state()),
+                 scrobbler.accountName().isEmpty() ? "" : qPrintable(QStringLiteral(" as ") + scrobbler.accountName()),
+                 scrobbler.enabled() ? "on" : "off", scrobbler.pending());
+        QSqlQuery waiting(AppDatabase::connection());
+        waiting.exec(QStringLiteral("SELECT id, account, artist, track, started_at, chosen_by_user, attempts,"
+                                    " last_error FROM scrobble_queue ORDER BY id LIMIT 10"));
+        while (waiting.next()) {
+            qWarning("diag:   scrobble %lld for %s: %s - %s, started %s, chosen_by_user %d, %d attempts%s",
+                     waiting.value(0).toLongLong(), qPrintable(waiting.value(1).toString()),
+                     qPrintable(waiting.value(2).toString()), qPrintable(waiting.value(3).toString()),
+                     qPrintable(QDateTime::fromSecsSinceEpoch(waiting.value(4).toLongLong(), QTimeZone::UTC)
+                                    .toString(Qt::ISODate)),
+                     waiting.value(5).toInt(), waiting.value(6).toInt(),
+                     waiting.value(7).toString().isEmpty()
+                         ? "" : qPrintable(QStringLiteral(", last: ") + waiting.value(7).toString()));
+        }
         QTimer::singleShot(0, &app, []() { QCoreApplication::quit(); });
     }
 

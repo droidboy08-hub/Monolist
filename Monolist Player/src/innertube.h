@@ -41,6 +41,11 @@ public:
         // A real video, rather than YouTube Music's own audio track (which is
         // a still picture of the cover and not worth showing).
         bool isVideo = false;
+        // The first artist credited, as its own link said it: what Last.fm
+        // is sent. `artist` joins every credit with ", ", and splitting that
+        // again would break "Tyler, The Creator" in two. Empty when the
+        // answer had no credit to read it from.
+        QString primaryArtist;
     };
 
     // An album, playlist, artist or video, as the home feed and charts show them.

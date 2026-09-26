@@ -105,7 +105,11 @@ target_sources(monolist PRIVATE
     src/secretstore.h              src/secretstore.cpp
     src/secretstore_win.cpp
     src/lastfm.h                   src/lastfm.cpp
-    src/connectionselftest.h       src/connectionselftest.cpp)
+    src/connectionselftest.h       src/connectionselftest.cpp
+    # Scrobbling: the heard-time rule, the queue and the sending, and their tests.
+    src/listentracker.h            src/listentracker.cpp
+    src/scrobbler.h                src/scrobbler.cpp
+    src/scrobbleselftest.h         src/scrobbleselftest.cpp)
 if(WIN32)
     target_link_libraries(monolist PRIVATE crypt32)
 endif()

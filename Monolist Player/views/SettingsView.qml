@@ -449,7 +449,7 @@ Flickable {
 
         // — connections —
         //
-        // Being built, Last.fm first. The app works entirely without any of
+        // Last.fm is built; YouTube Music is next. The app works entirely without any of
         // these and is meant to keep working that way; what an account buys
         // is your own library and your own history, not a better player.
         SectionHeader {
@@ -473,18 +473,42 @@ Flickable {
             width: parent.width
             name: "Last.fm"
             detail: "Scrobble what you play, and see what you have been listening to."
-            // The sign-in itself is not built yet; whether this build could
-            // use one (it has a key, and somewhere safe to keep the session)
-            // already shows.
-            built: false
-            serviceState: LastFm.available ? "off" : "unavailable"
-            statusLine: LastFm.unavailableReason
+            // Where it stands comes from the Scrobbler: unavailable in a build
+            // with no key (CONNECT greyed, and the line says why), otherwise
+            // off, waiting on the browser, connected, or needing a reconnect.
+            built: true
+            serviceState: Scrobbler.state
+            accountName: Scrobbler.accountName
+            statusLine: Scrobbler.statusLine
+            confirmText: "I'VE APPROVED IT"
+            // Last.fm's terms ask for the credit, and for the account to link
+            // to its own page there.
+            credit: "powered by <a href=\"https://www.last.fm\">AudioScrobbler</a>"
+                    + (Scrobbler.accountName.length > 0
+                       ? " · <a href=\"https://www.last.fm/user/" + encodeURIComponent(Scrobbler.accountName)
+                         + "\">your Last.fm profile</a>"
+                       : "")
             steps: [
                 "Monolist opens Last.fm in your browser, where you approve it. Your password is never typed into this app.",
                 "Last.fm hands back a session key, which is kept on this computer, encrypted with your Windows sign-in (the Keychain on a Mac), and can be revoked from your Last.fm account at any time.",
                 "A track counts as played once you have heard half of it or four minutes, whichever comes first; tracks of 30 seconds or less never count. "
                 + "While a track plays, Last.fm is also told what is playing now. Nothing else is sent."
             ]
+            onConnectRequested: Scrobbler.connectAccount()
+            onCancelRequested: Scrobbler.cancelConnect()
+            onConfirmRequested: Scrobbler.checkApproval()
+            onDisconnectRequested: Scrobbler.disconnectAccount()
+        }
+
+        // Only once there is an account to scrobble to. Off, nothing is kept
+        // or sent; what was already waiting stays for when it is on again.
+        ToggleRow {
+            visible: Scrobbler.state === "connected" || Scrobbler.state === "expired"
+            width: parent.width
+            label: "Scrobble what I play"
+            hint: "Off, Last.fm is told nothing, not even what is playing now."
+            checked: Scrobbler.enabled
+            onToggled: Scrobbler.enabled = !Scrobbler.enabled
         }
 
         ServiceRow {

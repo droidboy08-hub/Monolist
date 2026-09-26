@@ -18,6 +18,7 @@ struct QueueTrack {
     int trackId = 0;          // the library row; 0 when not in the library
     bool fromRadio = false;   // added by autoplay rather than chosen
     bool isVideo = false;     // has a picture worth showing
+    QString primaryArtist;    // the first credit alone, for Last.fm; may be empty
     quint64 uid = 0;          // identity within the queue, stamped by QueueModel
 
     static QueueTrack fromMap(const QVariantMap &map);

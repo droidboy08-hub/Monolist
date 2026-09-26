@@ -72,6 +72,11 @@ PlaybackController::PlaybackController(MpvEngine *engine,
             if (ms == m_position)
                 return;
             m_position = ms;
+            // Heard time, for scrobbling: the tracker counts only the small
+            // forward steps of real playing. A seek from setPosition has
+            // already moved m_position, so the jump never arrives here as a
+            // step; nor does a picture's stream opening where the sound was.
+            m_listen.positionChanged(ms);
             Q_EMIT positionChanged();
 
             // A song restarted with Previous is a listen again once it plays
@@ -96,6 +101,7 @@ PlaybackController::PlaybackController(MpvEngine *engine,
             if (buffering == m_buffering)
                 return;
             m_buffering = buffering;
+            m_listen.setBuffering(buffering);
             Q_EMIT bufferingChanged();
         });
 
@@ -147,6 +153,10 @@ PlaybackController::PlaybackController(MpvEngine *engine,
 
         m_engine->setVolume(m_volume);
     }
+
+    connect(&m_listen, &ListenTracker::listenStarted, this, &PlaybackController::listenStarted);
+    connect(&m_listen, &ListenTracker::listenQualified, this, &PlaybackController::listenQualified);
+    connect(&m_listen, &ListenTracker::listenResumed, this, &PlaybackController::listenResumed);
 
     m_volumeSave.setSingleShot(true);
     m_volumeSave.setInterval(kVolumeSaveDelayMs);
@@ -205,6 +215,7 @@ PlaybackController::PlaybackController(MpvEngine *engine,
                     track.album = song.album;
                     track.artwork = song.artwork;
                     track.durationMs = song.durationMs;
+                    track.primaryArtist = song.primaryArtist;
                     track.fromRadio = true;
                     additions.append(track);
                     if (additions.size() >= kRadioBatch)
@@ -342,6 +353,7 @@ void PlaybackController::setPlayingFlag(bool playing)
     if (playing == m_playing)
         return;
     m_playing = playing;
+    m_listen.setPlaying(playing);
     Q_EMIT playingChanged();
 }
 
@@ -360,6 +372,9 @@ void PlaybackController::haltPlayback()
 
 void PlaybackController::setDuration(qint64 ms)
 {
+    // Told even when unchanged: a new listen starts from the track's listed
+    // length, and mpv's own may be the same number.
+    m_listen.setDuration(ms);
     if (ms == m_duration)
         return;
     m_duration = ms;
@@ -774,6 +789,12 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
 
     m_position = 0;
     m_autoPlayAfterResolve = autoPlay;
+    // A new listen for Last.fm, whether or not it will be heard: repeat-one
+    // arrives here too, and is a listen of its own. A song autoplay added was
+    // not chosen by anyone, which Last.fm is told. The queue row's own flag
+    // is read, not QueueModel::radioStartIndex, which only looks ahead of
+    // the current song.
+    m_listen.begin(m_currentTrack, !m_currentTrack.value(QStringLiteral("fromRadio")).toBool());
     setDuration(track.value(QStringLiteral("durationMs")).toLongLong());
 
     // Recorded below once there is something to play, and for a stream once
@@ -1053,6 +1074,9 @@ void PlaybackController::previous()
             closePlayEvent();
             m_listenPending = true;
             m_replay = Replay::Rewinding;
+            // For Last.fm too: heard again from the start, it is a new
+            // listen, and counts again once enough of it has been heard.
+            m_listen.restart();
         }
         setPosition(0);
         return;
@@ -1072,6 +1096,7 @@ void PlaybackController::setPosition(qint64 ms)
     const qint64 clamped = m_duration > 0 ? qBound<qint64>(0, ms, m_duration)
                                           : qMax<qint64>(0, ms);
     m_position = clamped;
+    m_listen.seeked(clamped);
     if (engineAvailable())
         m_engine->seekAbsolute(clamped);
     Q_EMIT positionChanged();

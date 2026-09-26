@@ -7,6 +7,7 @@
 #include <QVariantMap>
 
 #include "innertube.h"
+#include "listentracker.h"
 #include "queuemodel.h"
 
 class QAbstractItemModel;
@@ -187,6 +188,14 @@ Q_SIGNALS:
     void notice(const QString &text);
     // A listen was written to the history and to Recently played.
     void playRecorded();
+    // A listen as Last.fm counts one (ListenTracker): begun at its first
+    // second actually heard, qualified once enough of it has been, and
+    // resumed after a long pause. `startedAt` is UTC seconds; `chosenByUser`
+    // is false for what autoplay added. Not currentTrackChanged, which also
+    // fires when the queue around the track moves.
+    void listenStarted(const QVariantMap &track, qint64 startedAt, bool chosenByUser);
+    void listenQualified(const QVariantMap &track, qint64 startedAt, bool chosenByUser);
+    void listenResumed(const QVariantMap &track, qint64 startedAt, bool chosenByUser);
 
 private:
     void startQueue(QList<QueueTrack> tracks, int start, bool autoPlay);
@@ -239,6 +248,9 @@ private:
     qint64 m_playEventId = 0;
     QString m_playEventKey;
     QSet<QString> m_finalisedThisSession;
+    // Time actually heard of the current track, for scrobbling. Separate from
+    // the play event above, which records the playhead on purpose.
+    ListenTracker m_listen;
     // The surface the current queue was started from. It lasts as long as the
     // queue: the fourth track of an album still came from wherever the album
     // did. Only the radio's own additions override it.

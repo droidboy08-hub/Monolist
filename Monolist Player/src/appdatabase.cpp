@@ -194,6 +194,30 @@ void AppDatabase::createSchema()
         " plain TEXT NOT NULL DEFAULT '',"
         " source TEXT NOT NULL DEFAULT '',"
         " fetched_at TEXT NOT NULL DEFAULT (datetime('now')))"));
+
+    // Scrobbles not yet accepted by Last.fm, oldest first. A row is written
+    // the moment a listen qualifies, before anything is sent, so a crash, a
+    // killed process or a week offline loses none of them; it is deleted
+    // only once Last.fm has answered for it. `account` is the Last.fm user it
+    // was heard under, so a backlog is never sent to someone else who
+    // connects later. `started_at` and `queued_at` are UTC seconds.
+    q.exec(QStringLiteral(
+        "CREATE TABLE IF NOT EXISTS scrobble_queue ("
+        " id INTEGER PRIMARY KEY AUTOINCREMENT,"
+        " account TEXT NOT NULL DEFAULT '',"
+        " artist TEXT NOT NULL DEFAULT '',"
+        " track TEXT NOT NULL DEFAULT '',"
+        " album TEXT NOT NULL DEFAULT '',"
+        " album_artist TEXT NOT NULL DEFAULT '',"
+        " duration_s INTEGER NOT NULL DEFAULT 0,"
+        " started_at INTEGER NOT NULL DEFAULT 0,"
+        " chosen_by_user INTEGER NOT NULL DEFAULT 1,"
+        " video_id TEXT NOT NULL DEFAULT '',"
+        " attempts INTEGER NOT NULL DEFAULT 0,"
+        " last_error TEXT NOT NULL DEFAULT '',"
+        " queued_at INTEGER NOT NULL DEFAULT 0)"));
+    q.exec(QStringLiteral(
+        "CREATE INDEX IF NOT EXISTS idx_scrobble_queue_account ON scrobble_queue(account, id)"));
 }
 
 bool AppDatabase::hasColumn(const QString &table, const QString &column)

@@ -6,20 +6,31 @@
 #include <QObject>
 #include <QPair>
 #include <QString>
+#include <QUrl>
 
-// Last.fm's web service, as far as it goes without a network: the signature
-// every call needs, the body it is sent in, and what an answer means.
+#include <functional>
+
+class QNetworkAccessManager;
+
+// Last.fm's web service: the signature every call needs, the body it is sent
+// in, what an answer means, and the four calls Monolist makes.
 //
-// Those three are where a scrobbler goes wrong quietly. A parameter signed in
-// the wrong order, or a '+' sent unencoded (which the server reads as a space),
-// fails with error 13 on some titles and not others; an answer read by its
-// HTTP status instead of its error number drops scrobbles that should have
+// The first three are where a scrobbler goes wrong quietly. A parameter signed
+// in the wrong order, or a '+' sent unencoded (which the server reads as a
+// space), fails with error 13 on some titles and not others; an answer read by
+// its HTTP status instead of its error number drops scrobbles that should have
 // waited. So each is a function of its own, tested against fixed answers
 // (--lastfm-test), before anything is sent anywhere.
 //
+// The calls are the sign-in (auth.getToken, then auth.getSession once the user
+// has approved the token in their browser; never auth.getMobileSession, which
+// takes a password) and the two that report listening (track.updateNowPlaying,
+// track.scrobble). Every one is signed and POSTed; what to do with the answer
+// is the caller's business (Scrobbler).
+//
 // The build's API key and shared secret come from apicredentials.h, generated
 // at build time; they are private to this class and never logged. Neither is
-// a session key, which lives in SecretStore.
+// a session key, which lives in SecretStore and is only ever passed in.
 //
 // Exposed to QML as the "LastFm" singleton, for whether this build can
 // connect at all.
@@ -82,11 +93,49 @@ public:
         QList<int> ignoredCodes;
     };
 
+    // One scrobble as sent. track.scrobble takes up to 50 in one request.
+    struct Scrobble {
+        QString artist;
+        QString track;
+        QString album;
+        QString albumArtist;
+        int durationS = 0;
+        qint64 timestamp = 0;      // when it started, UTC seconds
+        bool chosenByUser = true;  // false for what autoplay picked
+    };
+    static constexpr int kMaxBatch = 50;
+
+    using Done = std::function<void(const Reply &reply)>;
+
     explicit LastFmApi(QObject *parent = nullptr);
 
     bool hasKey() const;
     bool available() const;
     QString unavailableReason() const;
+
+    // Where calls go: https://ws.audioscrobbler.com/2.0/, or the address in
+    // MONOLIST_LASTFM_URL, for trying the sending against a stand-in server.
+    static QUrl endpoint();
+    // The page, in the user's browser, where a token is approved.
+    QUrl authPageUrl(const QString &token) const;
+
+    // The calls. `done` always runs, once, with the answer read; a call
+    // made with no key answers at once as a request error.
+    void getToken(Done done);
+    void getSession(const QString &token, Done done);
+    void updateNowPlaying(const QByteArray &sessionKey, const Scrobble &item, Done done);
+    void scrobble(const QByteArray &sessionKey, const QList<Scrobble> &items, Done done);
+
+    // — for the self-tests only —
+    // An invented account in place of the build's, so the calls can be
+    // signed and sent to a stand-in server.
+    void setTestAccount(const QByteArray &key, const QByteArray &secret);
+    // Answers in place of the network: given what would have been sent
+    // (signed, format included), the HTTP status and body to answer with; a
+    // status of 0 is no answer at all. Answered on the next turn of the
+    // event loop, as a real reply would be.
+    using Responder = std::function<QPair<int, QByteArray>(const Params &sent)>;
+    void setTestResponder(Responder responder);
 
     // api_sig: the lower-case hex MD5 of every parameter but format and
     // callback, sorted by name byte for byte ("artist[10]" before
@@ -122,4 +171,13 @@ private:
     // them is in lastfm.cpp.
     static QByteArray apiKey();
     static QByteArray sharedSecret();
+
+    // Adds api_key, signs, and sends.
+    void call(Params params, Done done);
+    QNetworkAccessManager *network();
+
+    QByteArray m_key;
+    QByteArray m_secret;
+    QNetworkAccessManager *m_network = nullptr;
+    Responder m_responder;
 };

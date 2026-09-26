@@ -12,7 +12,10 @@ import Monolist
 //
 // One that is built says where it stands, and its button is the one thing to
 // do next: connect, cancel, disconnect or reconnect. What the button does is
-// the page's business; the row only asks, through its signals.
+// the page's business; the row only asks, through its signals. One built but
+// unable to work here (no key in this build) keeps its CONNECT, greyed, with
+// the status line saying why: the control is where it will be, and the reason
+// it is dead is written beside it.
 Item {
     id: root
 
@@ -34,8 +37,14 @@ Item {
     // Who is connected, shown while connected.
     property string accountName: ""
     // One line on where things stand: "12 scrobbles waiting", "This build has
-    // no Last.fm key". Red when it is something to act on.
+    // no Last.fm key". Red when it is something to act on. Styled text: it
+    // may carry a link (where to revoke access, a page to open by hand).
     property string statusLine: ""
+    // A small line of credit the service asks for, styled text with links.
+    property string credit: ""
+    // While waiting on the browser: a second button, for the person who has
+    // done what the browser asked ("I'VE APPROVED IT"). None when empty.
+    property string confirmText: ""
 
     readonly property bool connected: serviceState === "connected"
     readonly property bool needsAttention: serviceState === "expired" || serviceState === "error"
@@ -43,6 +52,7 @@ Item {
     signal connectRequested()
     signal disconnectRequested()
     signal cancelRequested()
+    signal confirmRequested()
 
     // The steps, opened by hand from a row not built yet; a built one shows
     // them on its own while it waits on the browser, as what is happening.
@@ -93,16 +103,42 @@ Item {
                     topPadding: Theme.space1
                 }
                 Text {
+                    id: status
                     visible: root.statusLine.length > 0
                     width: parent.width
                     text: root.statusLine
+                    textFormat: Text.StyledText
                     wrapMode: Text.WordWrap
                     font.family: Theme.fontFamily
                     font.pixelSize: 13
                     // Red only when there is something to do about it; a fact
                     // about this build is not an alarm.
                     color: root.needsAttention ? Theme.accent : Theme.neutral700
+                    linkColor: Theme.text
                     topPadding: root.connected && root.accountName.length > 0 ? 0 : Theme.space1
+                    onLinkActivated: function(link) { Qt.openUrlExternally(link) }
+
+                    HoverHandler {
+                        cursorShape: status.hoveredLink.length > 0 ? Qt.PointingHandCursor : Qt.ArrowCursor
+                    }
+                }
+                Text {
+                    id: creditLine
+                    visible: root.credit.length > 0
+                    width: parent.width
+                    text: root.credit
+                    textFormat: Text.StyledText
+                    wrapMode: Text.WordWrap
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 12
+                    color: Theme.neutral700
+                    linkColor: Theme.text
+                    topPadding: Theme.space1
+                    onLinkActivated: function(link) { Qt.openUrlExternally(link) }
+
+                    HoverHandler {
+                        cursorShape: creditLine.hoveredLink.length > 0 ? Qt.PointingHandCursor : Qt.ArrowCursor
+                    }
                 }
             }
 
@@ -111,9 +147,8 @@ Item {
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
                 // Built but unable to work here (no key in this build, say):
-                // no button at all, and the status line says why, rather than
-                // one that does nothing.
-                visible: !root.built || root.serviceState !== "unavailable"
+                // CONNECT, greyed, and the status line says why.
+                enabled: !root.built || root.serviceState !== "unavailable"
                 text: !root.built ? (root.stepsOpen ? "CLOSE" : "HOW IT WILL WORK")
                       : root.serviceState === "connected" ? "DISCONNECT"
                       : root.serviceState === "waiting" ? "CANCEL"
@@ -184,6 +219,21 @@ Item {
                         font.pixelSize: 13
                         color: Theme.text
                     }
+                }
+            }
+
+            // Done in the browser: ask now rather than wait for the next look.
+            Item {
+                visible: root.built && root.serviceState === "waiting" && root.confirmText.length > 0
+                width: parent.width - Theme.space4
+                height: confirm.implicitHeight + Theme.space2 * 2
+
+                ActionButton {
+                    id: confirm
+                    y: Theme.space2
+                    primary: true
+                    text: root.confirmText
+                    onClicked: root.confirmRequested()
                 }
             }
 

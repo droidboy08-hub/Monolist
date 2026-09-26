@@ -143,6 +143,24 @@ bool isTypeLabel(const QString &text)
     return labels.contains(text);
 }
 
+// The first run that links to an artist's or a channel's page: in
+// "Bruno Mars & Lady Gaga", "Bruno Mars". Empty when none does.
+QString firstArtistRun(const QJsonArray &runs)
+{
+    for (const QJsonValue &run : runs) {
+        const QString pageType = dig(run, { "navigationEndpoint", "browseEndpoint",
+                                            "browseEndpointContextSupportedConfigs",
+                                            "browseEndpointContextMusicConfig", "pageType" }).toString();
+        if (pageType == QLatin1String("MUSIC_PAGE_TYPE_ARTIST")
+            || pageType == QLatin1String("MUSIC_PAGE_TYPE_USER_CHANNEL")) {
+            const QString text = run.toObject().value(QLatin1String("text")).toString().trimmed();
+            if (!text.isEmpty())
+                return text;
+        }
+    }
+    return {};
+}
+
 // "Artist & Artist • Album • 2:05" for a song, "Channel • 1.2M views • 3:31"
 // for a video, sometimes led by a "Song" or "Video" label. Split on the bullets
 // and tell the parts apart by what they link to rather than by position.
@@ -180,8 +198,15 @@ void parseSubtitle(const QJsonArray &runs, InnerTube::Track &track)
             track.album = text;
         else if (pageType.isEmpty() && !artists.isEmpty())
             continue;   // an unlinked line after the artist: a date, a count
-        else
+        else {
             artists << text;   // an artist or channel page, or an artist without one
+            // The first credit, from its own run rather than by splitting the
+            // joined line; an artist with no page is credited as written.
+            if (track.primaryArtist.isEmpty()) {
+                const QString linked = firstArtistRun(group);
+                track.primaryArtist = linked.isEmpty() ? text : linked;
+            }
+        }
     }
     track.artist = artists.join(QStringLiteral(", "));
 }
@@ -870,6 +895,9 @@ InnerTube::Collection InnerTube::parseCollection(const QString &browseId, const 
     collection.title = joinRuns(dig(header, { "title", "runs" }).toArray()).trimmed();
     collection.subtitle = joinRuns(dig(header, { "subtitle", "runs" }).toArray()).trimmed();
     collection.artist = joinRuns(dig(header, { "straplineTextOne", "runs" }).toArray()).trimmed();
+    QString primaryArtist = firstArtistRun(dig(header, { "straplineTextOne", "runs" }).toArray());
+    if (primaryArtist.isEmpty())
+        primaryArtist = collection.artist;
     collection.details = joinRuns(dig(header, { "secondSubtitle", "runs" }).toArray()).trimmed();
     collection.description = joinRuns(dig(header, { "description", "musicDescriptionShelfRenderer",
                                                     "description", "runs" }).toArray()).trimmed();
@@ -892,8 +920,10 @@ InnerTube::Collection InnerTube::parseCollection(const QString &browseId, const 
         if (track.videoId.isEmpty() || track.title.isEmpty())
             continue;   // unavailable in this region, or not a song
         // An album's rows leave out what the header already says.
-        if (track.artist.isEmpty())
+        if (track.artist.isEmpty()) {
             track.artist = collection.artist;
+            track.primaryArtist = primaryArtist;
+        }
         if (album) {
             if (track.album.isEmpty())
                 track.album = collection.title;

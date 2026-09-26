@@ -33,6 +33,7 @@ QVariant SearchResultModel::data(const QModelIndex &index, int role) const
     case DurationTextRole: return TrackModel::formatDuration(item.durationMs);
     case EntryIdRole:      return item.entryId;
     case IsVideoRole:      return item.isVideo;
+    case PrimaryArtistRole: return item.primaryArtist;
     default:               return {};
     }
 }
@@ -48,7 +49,8 @@ QHash<int, QByteArray> SearchResultModel::roleNames() const
         { DurationRole, "durationMs" },
         { DurationTextRole, "durationText" },
         { EntryIdRole, "entryId" },
-        { IsVideoRole, "isVideo" }
+        { IsVideoRole, "isVideo" },
+        { PrimaryArtistRole, "primaryArtist" }
     };
 }
 
@@ -79,7 +81,8 @@ QVariantMap SearchResultModel::get(int row) const
         { QStringLiteral("durationMs"),   item.durationMs },
         { QStringLiteral("durationText"), TrackModel::formatDuration(item.durationMs) },
         { QStringLiteral("entryId"),      item.entryId },
-        { QStringLiteral("isVideo"),      item.isVideo }
+        { QStringLiteral("isVideo"),      item.isVideo },
+        { QStringLiteral("primaryArtist"), item.primaryArtist }
     };
 }
 
@@ -103,7 +106,8 @@ MediaExtractor::MediaExtractor(QObject *parent)
                 items.reserve(tracks.size());
                 for (const InnerTube::Track &track : tracks)
                     items.append({ track.videoId, track.title, track.artist, track.album,
-                                   track.artwork, track.durationMs, 0, track.isVideo });
+                                   track.artwork, track.durationMs, 0, track.isVideo,
+                                   track.primaryArtist });
                 finishSearch(items, QStringLiteral("YouTube Music"));
             });
 

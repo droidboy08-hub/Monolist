@@ -300,8 +300,22 @@ mpv's own messages.
                                                     delete; exits 0 when every check passes
     monolist --lastfm-test                          Last.fm signing, the request body and every answer,
                                                     on invented keys and canned replies; no network
-    monolist --diag                                 what the database holds, and whether there is a
-                                                    Last.fm key
+    monolist --listen-test                          when a listen counts for Last.fm, through the player
+                                                    with the engine's part played by the test: 30 s, half,
+                                                    4 min, seeks, pauses, buffering, repeat-one, a video
+                                                    toggle, Play after a paused launch, a failed resolve
+    monolist --scrobble-test                        the scrobble queue on canned replies: what is kept,
+                                                    120 sent as 50/50/20, and each error's handling
+    monolist --lastfm-connect-test                  connecting on canned replies: the browser page, polling,
+                                                    window focus, I've approved it, the 10-minute limit,
+                                                    the session kept encrypted, Disconnect
+    monolist --scrobble-send-test [rows] [--expect-kept]
+                                                    queued scrobbles sent over HTTP to MONOLIST_LASTFM_URL,
+                                                    a stand-in on this computer (scripts/lastfm-mock.ps1)
+    monolist --scrobble-kill-test                   two scrobbles queued, then it waits to be killed;
+                                                    --diag afterwards shows they survived
+    monolist --diag                                 what the database holds, whether there is a Last.fm
+                                                    key, and the scrobbles waiting
 
 Each quits by itself and reports on stderr. These open the window as it would
 be, for a look at a state:
@@ -314,9 +328,11 @@ be, for a look at a state:
                                                     invidious_instances)
 
 `MONOLIST_DATA_DIR` keeps the database somewhere else, so a test never touches
-the real library. `MONOLIST_REC_DATA_URL` fetches the recommendation data from
+the real library; the scrobbling tests refuse to run without it, since they empty
+the scrobble queue. `MONOLIST_REC_DATA_URL` fetches the recommendation data from
 another address, or a local folder (`file:///C:/dev/monolist-data/`), instead of
-the pinned tag on GitHub.
+the pinned tag on GitHub. `MONOLIST_LASTFM_URL` sends Last.fm calls to another
+address, for `--scrobble-send-test` against `scripts/lastfm-mock.ps1`.
 
 ## Storage
 

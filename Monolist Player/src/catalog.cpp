@@ -30,7 +30,7 @@ QList<SearchResultModel::Item> Catalog::toItems(const QList<InnerTube::Track> &t
     items.reserve(tracks.size());
     for (const InnerTube::Track &track : tracks)
         items.append({ track.videoId, track.title, track.artist, track.album, track.artwork,
-                       track.durationMs, 0, track.isVideo });
+                       track.durationMs, 0, track.isVideo, track.primaryArtist });
     return items;
 }
 

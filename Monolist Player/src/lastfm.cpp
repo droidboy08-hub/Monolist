@@ -3,12 +3,18 @@
 #include "apicredentials.h"
 #include "secretstore.h"
 
+#include <QCoreApplication>
 #include <QCryptographicHash>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonParseError>
 #include <QJsonValue>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QNetworkRequest>
+#include <QTimer>
 #include <QUrl>
+#include <QUrlQuery>
 
 #include <algorithm>
 
@@ -23,11 +29,154 @@ int number(const QJsonValue &value)
     return value.toString().trimmed().toInt();
 }
 
+const QString kEndpoint = QStringLiteral("https://ws.audioscrobbler.com/2.0/");
+const QString kAuthPage = QStringLiteral("https://www.last.fm/api/auth/");
+// A scrobble batch is small, but Last.fm is sometimes slow to answer one; an
+// answer that never comes is retried later, not waited on for ever.
+constexpr int kTimeoutMs = 20000;
+
 }
 
 LastFmApi::LastFmApi(QObject *parent)
     : QObject(parent)
+    , m_key(apiKey())
+    , m_secret(sharedSecret())
 {
+}
+
+void LastFmApi::setTestAccount(const QByteArray &key, const QByteArray &secret)
+{
+    m_key = key;
+    m_secret = secret;
+}
+
+void LastFmApi::setTestResponder(Responder responder)
+{
+    m_responder = std::move(responder);
+}
+
+QUrl LastFmApi::endpoint()
+{
+    const QString custom = qEnvironmentVariable("MONOLIST_LASTFM_URL").trimmed();
+    if (!custom.isEmpty()) {
+        const QUrl url(custom);
+        if (url.isValid() && (url.scheme() == QLatin1String("http") || url.scheme() == QLatin1String("https")))
+            return url;
+    }
+    return QUrl(kEndpoint);
+}
+
+QUrl LastFmApi::authPageUrl(const QString &token) const
+{
+    // The key is in the address the browser opens; that is what the page
+    // needs, and why the address is never written to the log.
+    QUrl url(kAuthPage);
+    QUrlQuery query;
+    query.addQueryItem(QStringLiteral("api_key"), QString::fromLatin1(m_key));
+    query.addQueryItem(QStringLiteral("token"), token);
+    url.setQuery(query);
+    return url;
+}
+
+QNetworkAccessManager *LastFmApi::network()
+{
+    if (!m_network)
+        m_network = new QNetworkAccessManager(this);
+    return m_network;
+}
+
+void LastFmApi::call(Params params, Done done)
+{
+    if (m_key.isEmpty() || m_secret.isEmpty()) {
+        Reply reply;
+        reply.outcome = Outcome::Rejected;
+        reply.message = unavailableReason();
+        QTimer::singleShot(0, this, [done, reply]() { done(reply); });
+        return;
+    }
+    params.prepend({ QStringLiteral("api_key"), QString::fromLatin1(m_key) });
+    const Params sent = sign(params, m_secret);
+
+    if (m_responder) {
+        const QPair<int, QByteArray> answer = m_responder(sent);
+        QTimer::singleShot(0, this, [done, answer]() {
+            done(parseReply(answer.first, answer.second, answer.first == 0));
+        });
+        return;
+    }
+
+    QNetworkRequest request(endpoint());
+    request.setHeader(QNetworkRequest::ContentTypeHeader, QByteArrayLiteral("application/x-www-form-urlencoded"));
+    request.setHeader(QNetworkRequest::UserAgentHeader,
+                      QStringLiteral("Monolist/%1 (+https://github.com/droidboy08-hub/Monolist)")
+                          .arg(QCoreApplication::applicationVersion()));
+    request.setTransferTimeout(kTimeoutMs);
+    QNetworkReply *reply = network()->post(request, formBody(sent));
+    connect(reply, &QNetworkReply::finished, this, [reply, done]() {
+        reply->deleteLater();
+        // A 4xx is a Qt error too, with Last.fm's answer in the body; only
+        // no status at all means nothing came back.
+        const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        const QByteArray body = reply->readAll();
+        Reply read = parseReply(status, body, status == 0);
+        if (status == 0 && read.message == QLatin1String("no answer"))
+            read.message = QStringLiteral("no answer (%1)").arg(reply->errorString());
+        done(read);
+    });
+}
+
+void LastFmApi::getToken(Done done)
+{
+    call({ { QStringLiteral("method"), QStringLiteral("auth.getToken") } }, std::move(done));
+}
+
+void LastFmApi::getSession(const QString &token, Done done)
+{
+    call({ { QStringLiteral("method"), QStringLiteral("auth.getSession") },
+           { QStringLiteral("token"), token } },
+         std::move(done));
+}
+
+void LastFmApi::updateNowPlaying(const QByteArray &sessionKey, const Scrobble &item, Done done)
+{
+    Params params = {
+        { QStringLiteral("method"), QStringLiteral("track.updateNowPlaying") },
+        { QStringLiteral("artist"), item.artist },
+        { QStringLiteral("track"), item.track },
+    };
+    if (!item.album.isEmpty())
+        params.append({ QStringLiteral("album"), item.album });
+    if (!item.albumArtist.isEmpty())
+        params.append({ QStringLiteral("albumArtist"), item.albumArtist });
+    if (item.durationS > 0)
+        params.append({ QStringLiteral("duration"), QString::number(item.durationS) });
+    params.append({ QStringLiteral("sk"), QString::fromUtf8(sessionKey) });
+    call(params, std::move(done));
+}
+
+void LastFmApi::scrobble(const QByteArray &sessionKey, const QList<Scrobble> &items, Done done)
+{
+    Params params = { { QStringLiteral("method"), QStringLiteral("track.scrobble") } };
+    for (int i = 0; i < items.size() && i < kMaxBatch; ++i) {
+        const Scrobble &item = items.at(i);
+        const auto indexed = [i](const char *name) {
+            return QStringLiteral("%1[%2]").arg(QLatin1String(name)).arg(i);
+        };
+        params.append({ indexed("artist"), item.artist });
+        params.append({ indexed("track"), item.track });
+        params.append({ indexed("timestamp"), QString::number(item.timestamp) });
+        if (!item.album.isEmpty())
+            params.append({ indexed("album"), item.album });
+        if (!item.albumArtist.isEmpty())
+            params.append({ indexed("albumArtist"), item.albumArtist });
+        if (item.durationS > 0)
+            params.append({ indexed("duration"), QString::number(item.durationS) });
+        // Only ever sent as 0: the default is 1, chosen by the listener.
+        if (!item.chosenByUser)
+            params.append({ indexed("chosenByUser"), QStringLiteral("0") });
+    }
+    params.append({ QStringLiteral("sk"), QString::fromUtf8(sessionKey) });
+    call(params, std::move(done));
 }
 
 QByteArray LastFmApi::apiKey()
@@ -42,7 +191,7 @@ QByteArray LastFmApi::sharedSecret()
 
 bool LastFmApi::hasKey() const
 {
-    return !apiKey().isEmpty() && !sharedSecret().isEmpty();
+    return !m_key.isEmpty() && !m_secret.isEmpty();
 }
 
 bool LastFmApi::available() const
