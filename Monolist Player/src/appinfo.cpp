@@ -25,8 +25,15 @@
 namespace {
 
 constexpr int kFeedTimeoutMs = 10000;
-// A tool that will not answer --version in this long is not going to.
-constexpr int kVersionTimeoutMs = 4000;
+// A tool that will not answer --version in this long is not going to. Nothing
+// waits on the answer, so this can be generous: yt-dlp is a Python program,
+// and started cold under x64 emulation it has taken several seconds.
+constexpr int kVersionTimeoutMs = 20000;
+
+// The components whose versions are read, as they are named in the list.
+const QString kYtDlp = QStringLiteral("yt-dlp");
+const QString kFfmpeg = QStringLiteral("FFmpeg");
+const QString kDeno = QStringLiteral("Deno");
 // The setup script fetches and unpacks several tools; it is allowed to take
 // its time, but not forever.
 constexpr int kToolsTimeoutMs = 10 * 60 * 1000;
@@ -113,61 +120,114 @@ void AppInfo::setUpdateFeed(const QString &url)
 
 // ---------------------------------------------------------------- components
 
-QString AppInfo::toolVersion(const QString &program, const QStringList &arguments)
+// Every tool is asked in its own process, all at once, and nothing waits for
+// them. This used to run each in turn on the interface thread, and because the
+// Settings page was built at launch, every start of the app sat behind three
+// processes — seconds of them, since yt-dlp is a Python start.
+void AppInfo::refreshComponents()
 {
-    if (program.isEmpty())
-        return {};
-    QProcess process;
-    process.setProgram(program);
-    process.setArguments(arguments);
-    process.start();
-    if (!process.waitForFinished(kVersionTimeoutMs)) {
-        process.kill();
-        process.waitForFinished(500);
-        return {};
+    // A newer read replaces an older one: after a tool update, what the old
+    // binaries are still saying is no longer the truth.
+    ++m_versionRound;
+    for (const QPointer<QProcess> &process : std::as_const(m_versionProcesses)) {
+        if (process)
+            process->kill();
     }
-    // FFmpeg writes its banner to stdout, yt-dlp to stdout, others to stderr:
-    // take whichever spoke.
-    QString text = QString::fromUtf8(process.readAllStandardOutput()).trimmed();
-    if (text.isEmpty())
-        text = QString::fromUtf8(process.readAllStandardError()).trimmed();
-    return text.section(QLatin1Char('\n'), 0, 0).trimmed();
+    m_versionProcesses.clear();
+    m_versionAnswers.clear();
+
+    // Held by this function while it starts them, so a tool that fails to
+    // start at once cannot publish the list before the others are asked.
+    m_versionsPending = 1;
+    const QStringList ytdlp = YtDlp::invocationCommand();
+    if (!ytdlp.isEmpty())
+        askVersion(kYtDlp, ytdlp.first(), ytdlp.mid(1) + QStringList{ QStringLiteral("--version") });
+    askVersion(kFfmpeg, YtDlp::ffmpegPath(), { QStringLiteral("-version") });
+    askVersion(kDeno, YtDlp::denoPath(), { QStringLiteral("--version") });
+    if (--m_versionsPending == 0)
+        publishComponents();
 }
 
-void AppInfo::refreshComponents()
+void AppInfo::askVersion(const QString &tool, const QString &program, const QStringList &arguments)
+{
+    if (program.isEmpty())
+        return;   // not installed, which its row says
+
+    auto *process = new QProcess(this);
+    const int round = m_versionRound;
+    m_versionProcesses.append(process);
+    ++m_versionsPending;
+
+    // Exactly one of the two handlers below runs: a process that failed to
+    // start never finishes, and one that finished did start.
+    const auto settle = [this, process, tool, round](bool answered) {
+        process->deleteLater();
+        if (round != m_versionRound)
+            return;
+        QString text;
+        if (answered) {
+            // FFmpeg writes its banner to stdout, yt-dlp to stdout, others to
+            // stderr: take whichever spoke.
+            text = QString::fromUtf8(process->readAllStandardOutput()).trimmed();
+            if (text.isEmpty())
+                text = QString::fromUtf8(process->readAllStandardError()).trimmed();
+        }
+        m_versionAnswers.insert(tool, text.section(QLatin1Char('\n'), 0, 0).trimmed());
+        if (--m_versionsPending == 0)
+            publishComponents();
+    };
+    connect(process, &QProcess::finished, this, [settle](int, QProcess::ExitStatus status) {
+        // Killed for taking too long counts as no answer.
+        settle(status == QProcess::NormalExit);
+    });
+    connect(process, &QProcess::errorOccurred, this, [settle](QProcess::ProcessError error) {
+        if (error == QProcess::FailedToStart)
+            settle(false);
+    });
+    QTimer::singleShot(kVersionTimeoutMs, process, [process]() {
+        if (process->state() != QProcess::NotRunning)
+            process->kill();
+    });
+
+    process->setProgram(program);
+    process->setArguments(arguments);
+    process->start();
+}
+
+void AppInfo::publishComponents()
 {
     QVariantList list;
 
     list.append(component(QStringLiteral("Qt"), qtVersion(),
                           QStringLiteral("The interface, and everything drawn in it")));
 
-    const QStringList ytdlp = YtDlp::invocationCommand();
-    const QString ytdlpVersion = ytdlp.isEmpty()
-        ? QString()
-        : toolVersion(ytdlp.first(), ytdlp.mid(1) + QStringList{ QStringLiteral("--version") });
-    list.append(component(QStringLiteral("yt-dlp"), ytdlpVersion,
+    list.append(component(kYtDlp, m_versionAnswers.value(kYtDlp),
                           QStringLiteral("Resolves tracks the fast path cannot, and saves downloads")));
 
-    const QString ffmpeg = YtDlp::ffmpegPath();
-    QString ffmpegVersion = toolVersion(ffmpeg, { QStringLiteral("-version") });
+    QString ffmpegVersion = m_versionAnswers.value(kFfmpeg);
     // "ffmpeg version 7.1-full_build-www.gyan.dev Copyright (c) …"
     ffmpegVersion.remove(QStringLiteral("ffmpeg version "));
     ffmpegVersion = ffmpegVersion.section(QStringLiteral(" Copyright"), 0, 0).trimmed();
-    list.append(component(QStringLiteral("FFmpeg"), ffmpegVersion,
+    list.append(component(kFfmpeg, ffmpegVersion,
                           QStringLiteral("Converts and tags what you download")));
 
-    const QString deno = YtDlp::denoPath();
-    QString denoVersion = toolVersion(deno, { QStringLiteral("--version") });
+    QString denoVersion = m_versionAnswers.value(kDeno);
     // "deno 2.9.7 (stable, release, x86_64-pc-windows-msvc)" — the build
     // triple is not what anyone is here to read.
     denoVersion.remove(QStringLiteral("deno "));
     denoVersion = denoVersion.section(QLatin1Char(' '), 0, 0);
-    list.append(component(QStringLiteral("Deno"), denoVersion.trimmed(),
+    list.append(component(kDeno, denoVersion.trimmed(),
                           QStringLiteral("Runs YouTube's player script when yt-dlp needs it")));
 
+    m_versionProcesses.clear();
     m_components = list;
     m_componentsKnown = true;
     Q_EMIT componentsChanged();
+
+    if (m_copyWhenKnown) {
+        m_copyWhenKnown = false;
+        copyReport();
+    }
 }
 
 QString AppInfo::report() const
@@ -190,8 +250,14 @@ QString AppInfo::report() const
 
 void AppInfo::copyReport()
 {
-    if (!m_componentsKnown)
-        refreshComponents();
+    // The versions are what a report is for, so one asked for before they are
+    // in goes on the clipboard when they arrive, rather than without them.
+    if (!m_componentsKnown) {
+        m_copyWhenKnown = true;
+        if (m_versionsPending == 0)
+            refreshComponents();
+        return;
+    }
     if (QClipboard *clipboard = QGuiApplication::clipboard())
         clipboard->setText(report());
 }
@@ -337,6 +403,9 @@ void AppInfo::updateTools()
                 if (m_toolsProcess != process)
                     return;
                 m_toolsProcess = nullptr;
+                // Said whatever the exit code: a run that stopped at the third
+                // tool may still have put the first two in place.
+                Q_EMIT toolsUpdated();
                 if (status == QProcess::CrashExit || code != 0) {
                     setTools(Failed, QStringLiteral("The update did not finish (exit %1). "
                                                     "The tools you already have are untouched.")

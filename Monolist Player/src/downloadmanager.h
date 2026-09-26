@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QDir>
+#include <QElapsedTimer>
 #include <QHash>
 #include <QObject>
 #include <QPointer>
@@ -36,8 +37,10 @@ class DownloadManager : public QObject
     Q_PROPERTY(QString downloadDirectory READ downloadDirectory CONSTANT)
     Q_PROPERTY(QString format READ format WRITE setFormat NOTIFY optionsChanged)
     Q_PROPERTY(bool skipNonMusic READ skipNonMusic WRITE setSkipNonMusic NOTIFY optionsChanged)
-    Q_PROPERTY(bool available READ available CONSTANT)
-    Q_PROPERTY(bool canConvert READ canConvert CONSTANT)
+    // Not fixed at launch: the tools can be installed or updated from Settings
+    // while the app runs, and downloads should work the moment they are.
+    Q_PROPERTY(bool available READ available NOTIFY toolsChanged)
+    Q_PROPERTY(bool canConvert READ canConvert NOTIFY toolsChanged)
     Q_PROPERTY(int revision READ revision NOTIFY revisionChanged)
 public:
     explicit DownloadManager(QObject *parent = nullptr);
@@ -59,6 +62,10 @@ public:
     bool available() const { return m_available; }     // yt-dlp was found
     bool canConvert() const { return m_canConvert; }   // FFmpeg too: tags, cover art, trimming
     int revision() const { return m_revision; }
+
+    // Looks for yt-dlp and FFmpeg again. Run after the setup script updates
+    // the tools, and now and then from enqueue.
+    Q_INVOKABLE void refreshTools();
 
     // Queue a track for offline use. Re-queuing something already stored or in
     // flight is a no-op, so the interface can call this from a simple toggle.
@@ -90,6 +97,7 @@ Q_SIGNALS:
     void libraryChanged();
     void optionsChanged();
     void revisionChanged();
+    void toolsChanged();
 
 private:
     void pump();
@@ -121,5 +129,6 @@ private:
     bool m_skipNonMusic = true;
     bool m_available = false;
     bool m_canConvert = false;
+    QElapsedTimer m_toolsChecked;   // since the tools were last looked for
     int m_revision = 0;
 };

@@ -254,10 +254,25 @@ ApplicationWindow {
                 }
 
                 ViewFade {
+                    id: settingsFade
+                    // Built the first time it is opened, then kept. Settings
+                    // asks each bundled tool for its version when it is made,
+                    // and a page nobody has opened has no business starting
+                    // processes while the window is coming up.
+                    property bool opened: false
                     shown: window.currentView === "settings"
+                    // Any change of `shown` means the page is on screen now
+                    // or was a moment ago. Latched here rather than from the
+                    // Loader's own onLoaded, which would feed `active` while
+                    // it is still being set.
+                    onShownChanged: opened = true
 
-                    SettingsView {
+                    Loader {
                         anchors.fill: parent
+                        active: settingsFade.shown || settingsFade.opened
+                        sourceComponent: Component {
+                            SettingsView {}
+                        }
                     }
                 }
             }

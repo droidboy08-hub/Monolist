@@ -26,6 +26,15 @@ constexpr int kRadioBatch = 25;
 // enough that a machine with no network gives up almost at once.
 constexpr int kMaxConsecutiveFailures = 3;
 
+// The player's own choices, kept in the settings table so a launch picks up
+// where the last one left off.
+const QString kVolumeKey = QStringLiteral("player.volume");
+const QString kShuffleKey = QStringLiteral("player.shuffle");
+const QString kRepeatKey = QStringLiteral("player.repeat");
+const QString kAutoplayKey = QStringLiteral("player.autoplay");
+// Long enough to outlast one drag of the slider.
+constexpr int kVolumeSaveDelayMs = 400;
+
 QList<QueueTrack> tracksFromModel(QAbstractItemModel *model)
 {
     QList<QueueTrack> tracks;
@@ -122,11 +131,23 @@ PlaybackController::PlaybackController(MpvEngine *engine,
         m_engine->setVolume(m_volume);
     }
 
+    m_volumeSave.setSingleShot(true);
+    m_volumeSave.setInterval(kVolumeSaveDelayMs);
+    connect(&m_volumeSave, &QTimer::timeout, this, &PlaybackController::saveVolume);
+
     // The last song of a session is the one nothing else closes, and it is the
     // most recent thing the listener chose — exactly the event a recommender
     // would miss most.
     if (QCoreApplication *app = QCoreApplication::instance()) {
-        connect(app, &QCoreApplication::aboutToQuit, this, [this]() { closePlayEvent(); });
+        connect(app, &QCoreApplication::aboutToQuit, this, [this]() {
+            closePlayEvent();
+            // A volume still settling as the app closes is written now
+            // rather than lost with the timer.
+            if (m_volumeSave.isActive()) {
+                m_volumeSave.stop();
+                saveVolume();
+            }
+        });
     }
 
     if (m_resolver) {
@@ -214,6 +235,53 @@ void PlaybackController::setLibrary(Library *library)
     if (m_library)
         connect(m_library, &Library::likesChanged, this, &PlaybackController::refreshFavourite);
     refreshFavourite();
+}
+
+// Straight into the members rather than through the setters: those write the
+// value back, and setShuffle would shuffle a queue that has not been loaded
+// yet. A value never saved, or one that does not read, keeps its default.
+void PlaybackController::restoreSettings()
+{
+    if (!m_library)
+        return;
+
+    bool ok = false;
+    const qreal volume = m_library->settingValue(kVolumeKey).toDouble(&ok);
+    if (ok) {
+        m_volume = qBound(0.0, volume, 1.0);
+        if (m_engine)
+            m_engine->setVolume(m_volume);
+        Q_EMIT volumeChanged();
+    }
+
+    const QString shuffle = m_library->settingValue(kShuffleKey);
+    if (!shuffle.isEmpty()) {
+        m_shuffle = shuffle == QLatin1String("1");
+        Q_EMIT shuffleChanged();
+    }
+
+    const int repeat = m_library->settingValue(kRepeatKey).toInt(&ok);
+    if (ok && repeat >= RepeatOff && repeat <= RepeatOne) {
+        m_repeatMode = repeat;
+        Q_EMIT repeatModeChanged();
+    }
+
+    const QString autoplay = m_library->settingValue(kAutoplayKey);
+    if (!autoplay.isEmpty()) {
+        m_autoplay = autoplay != QLatin1String("0");
+        Q_EMIT autoplayChanged();
+    }
+}
+
+void PlaybackController::saveSetting(const QString &key, const QString &value)
+{
+    if (m_library)
+        m_library->setSetting(key, value);
+}
+
+void PlaybackController::saveVolume()
+{
+    saveSetting(kVolumeKey, QString::number(m_volume, 'f', 3));
 }
 
 QString PlaybackController::currentSourceId() const
@@ -921,6 +989,7 @@ void PlaybackController::setVolume(qreal volume)
     if (m_engine)
         m_engine->setVolume(clamped);
     Q_EMIT volumeChanged();
+    m_volumeSave.start();
 }
 
 void PlaybackController::setShuffle(bool shuffle)
@@ -928,6 +997,7 @@ void PlaybackController::setShuffle(bool shuffle)
     if (shuffle == m_shuffle)
         return;
     m_shuffle = shuffle;
+    saveSetting(kShuffleKey, shuffle ? QStringLiteral("1") : QStringLiteral("0"));
     if (shuffle)
         m_queue.shuffleUpcoming();
     else
@@ -939,6 +1009,7 @@ void PlaybackController::setShuffle(bool shuffle)
 void PlaybackController::cycleRepeat()
 {
     m_repeatMode = (m_repeatMode + 1) % 3;
+    saveSetting(kRepeatKey, QString::number(m_repeatMode));
     Q_EMIT repeatModeChanged();
 }
 
@@ -1032,6 +1103,7 @@ void PlaybackController::setAutoplay(bool autoplay)
     if (autoplay == m_autoplay)
         return;
     m_autoplay = autoplay;
+    saveSetting(kAutoplayKey, autoplay ? QStringLiteral("1") : QStringLiteral("0"));
     if (!autoplay) {
         m_innerTube.cancelRadio();
         m_radioSeed.clear();

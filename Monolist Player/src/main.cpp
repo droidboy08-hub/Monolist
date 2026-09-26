@@ -126,6 +126,10 @@ int main(int argc, char *argv[])
 
     PlaybackController player(&engine, &resolver, &downloads);
     player.setLibrary(&library);
+    // Volume, shuffle, repeat and autoplay as they were left: before the
+    // queue below is built, so a shuffle left on shuffles it, and before QML
+    // reads any of them.
+    player.restoreSettings();
     player.setVideoHeight(library.videoQuality());
     QObject::connect(&library, &Library::videoQualityChanged, &player, [&player, &library]() {
         player.setVideoHeight(library.videoQuality());
@@ -176,6 +180,9 @@ int main(int argc, char *argv[])
     WindowChrome chrome;
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Chrome",    &chrome);
     AppInfo appInfo;
+    // Tools installed or updated from Settings are used by downloads at once,
+    // not after a restart.
+    QObject::connect(&appInfo, &AppInfo::toolsUpdated, &downloads, &DownloadManager::refreshTools);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "About",     &appInfo);
     Recommender recommender;
     recommender.setPlayer(&player);

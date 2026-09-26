@@ -3,6 +3,7 @@
 #include <QObject>
 #include <QSet>
 #include <QString>
+#include <QTimer>
 #include <QVariantMap>
 
 #include "innertube.h"
@@ -76,8 +77,13 @@ public:
                                 DownloadManager *downloads,
                                 QObject *parent = nullptr);
 
-    // The library, for likes and for recording plays against library rows.
+    // The library, for likes and for recording plays against library rows,
+    // and for the settings table the player's own choices are kept in.
     void setLibrary(Library *library);
+    // Volume, shuffle, repeat and autoplay as they were left. Called once the
+    // library is set, before a queue is loaded or the interface reads them;
+    // each is written back whenever it changes.
+    void restoreSettings();
 
     bool playing() const { return m_playing; }
     QVariantMap currentTrack() const { return m_currentTrack; }
@@ -202,6 +208,8 @@ private:
     void setDuration(qint64 ms);
     void setPlayingFlag(bool playing);
     void recordHistory(const QVariantMap &track);
+    void saveSetting(const QString &key, const QString &value);
+    void saveVolume();
 
     MpvEngine *m_engine = nullptr;
     StreamResolver *m_resolver = nullptr;
@@ -244,6 +252,9 @@ private:
     qint64 m_position = 0;
     qint64 m_duration = 0;
     qreal m_volume = 0.65;
+    // A drag of the volume slider is dozens of changes a second: the value is
+    // written once it settles, not for each.
+    QTimer m_volumeSave;
     bool m_shuffle = false;
     int m_repeatMode = RepeatOff;
     bool m_favourite = false;

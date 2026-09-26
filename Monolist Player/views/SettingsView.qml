@@ -23,7 +23,8 @@ Flickable {
     Component.onCompleted: {
         allCountries = Library.countries()
         // Versions cost a process each to read, so they are asked for when
-        // this page opens rather than while the app is starting.
+        // this page first opens (Main.qml builds it then, not at launch), and
+        // in the background: "Reading versions…" shows until they answer.
         if (!About.componentsKnown)
             About.refreshComponents()
     }
