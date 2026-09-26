@@ -125,7 +125,10 @@ PlaybackController::PlaybackController(MpvEngine *engine,
             m_streamTier = -1;
             setPlayingFlag(false);
             setStatus(QStringLiteral("Playback failed"), QString(), false, /*error=*/true);
-            Q_EMIT playbackError(reason);
+            // As for a failed resolve: a toast only for someone waiting to
+            // hear it.
+            if (m_autoPlayAfterResolve)
+                Q_EMIT playbackError(reason);
         });
 
         m_engine->setVolume(m_volume);
@@ -587,6 +590,19 @@ void PlaybackController::recordHistory(const QVariantMap &track)
 
 // ------------------------------------------------------------- play events
 
+// A listen begins when someone asks for the track to play: at once for one
+// started with Play, and at the first press of Play for one that was only
+// loaded. Either way it is written down exactly once.
+void PlaybackController::startListening()
+{
+    if (!m_listenPending || m_currentTrack.isEmpty())
+        return;
+    m_listenPending = false;
+    recordHistory(m_currentTrack);
+    openPlayEvent(m_currentTrack);
+    Q_EMIT playRecorded();
+}
+
 void PlaybackController::openPlayEvent(const QVariantMap &track)
 {
     const QString videoId = track.value(QStringLiteral("sourceId")).toString();
@@ -691,6 +707,13 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
     m_streamTier = -1;
     m_resumeAt = 0;
 
+    // The song being left stops now, not when the next one has resolved.
+    // Until then it would play on under the new title, and the engine passes
+    // on nothing more from it: not its clock, and not an ending that would
+    // skip the new track or an error that would be blamed on it.
+    if (engineAvailable())
+        m_engine->stop();
+
     // Every track starts as sound: the picture is asked for, never assumed.
     if (!m_videoPendingId.isEmpty() && m_resolver)
         m_resolver->cancelVideo(m_videoPendingId);
@@ -718,12 +741,11 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
     m_autoPlayAfterResolve = autoPlay;
     setDuration(track.value(QStringLiteral("durationMs")).toLongLong());
 
-    // Before announcing the track, so anything that reloads history on the
-    // announcement already finds it there.
-    if (autoPlay) {
-        recordHistory(m_currentTrack);
-        openPlayEvent(m_currentTrack);
-    }
+    // A track only loaded — the one a launch opens on, or one reached with
+    // Next while paused — is a listen once Play is pressed (see play()).
+    m_listenPending = true;
+    if (autoPlay)
+        startListening();
 
     Q_EMIT currentTrackChanged();
     Q_EMIT positionChanged();
@@ -773,7 +795,8 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
     }
 
     setStatus(QStringLiteral("No playable source"), QString(), false, /*error=*/true);
-    Q_EMIT playbackError(QStringLiteral("This track has no local file and no source id."));
+    if (autoPlay)
+        Q_EMIT playbackError(QStringLiteral("This track has no local file and no source id."));
 }
 
 void PlaybackController::handleResolved(const QString &videoId, const QString &url, int tier,
@@ -842,7 +865,11 @@ void PlaybackController::handleResolveFailed(const QString &videoId, const QStri
     setStatus(giveUp ? QStringLiteral("Nothing here will play")
                      : QStringLiteral("Source unavailable"),
               QString(), false, /*error=*/true);
-    Q_EMIT playbackError(reason);
+    // Out loud only to someone waiting for sound. A track nobody asked to
+    // play — the one a launch opens on, with the network down — says so on
+    // the status line alone, and Play tries it again.
+    if (wasGoingToPlay)
+        Q_EMIT playbackError(reason);
 }
 
 // True when a video that never proved itself has just been dropped, and the
@@ -898,11 +925,25 @@ void PlaybackController::play()
             playIndex(qMax(0, m_queue.currentIndex()));
         return;
     }
+    // A track that would not load has nothing to unpause: try it again, now
+    // as one the listener is waiting for, which says so if it fails.
+    if (m_statusError) {
+        m_consecutiveFailures = 0;
+        beginCurrent(/*autoPlay=*/true);
+        return;
+    }
+    // Someone wants to hear this one now: if it is still resolving it starts
+    // when it arrives rather than landing paused, and if it was only loaded it
+    // counts as played from here.
+    m_autoPlayAfterResolve = true;
+    startListening();
     m_engine->setPaused(false);
 }
 
 void PlaybackController::pause()
 {
+    // A track still resolving arrives paused, as asked.
+    m_autoPlayAfterResolve = false;
     if (engineAvailable())
         m_engine->setPaused(true);
 }

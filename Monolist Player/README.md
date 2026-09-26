@@ -267,6 +267,10 @@ mpv's own messages.
     monolist --play <videoId> [seconds] [--again] [--at <s>]
                                                     resolve and play; --again replays from the cache,
                                                     --at jumps into the song
+    monolist --queue-test <videoId>... [--early]    load paused, Play, Next near the end, Previous twice,
+                                                    Next while paused: the clock and what was recorded at
+                                                    each step. One id that will not resolve checks the
+                                                    quiet failure; --early presses Play while resolving
     monolist --download <videoId> [seconds]         one download through yt-dlp and FFmpeg
     monolist --search "<query>"                     one timed search, with suggestions
     monolist --lyrics "<query>"                     lyrics for the first three results, then one from the store

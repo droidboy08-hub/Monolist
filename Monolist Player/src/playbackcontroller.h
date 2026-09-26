@@ -182,6 +182,8 @@ Q_SIGNALS:
     void playbackError(const QString &reason);
     // Something the user should be told, in their words, for the toast.
     void notice(const QString &text);
+    // A listen was written to the history and to Recently played.
+    void playRecorded();
 
 private:
     void startQueue(QList<QueueTrack> tracks, int start, bool autoPlay);
@@ -200,6 +202,7 @@ private:
     void advance(bool keepPlaying);
     // One row per listen, finalised with the playhead at the moment the track
     // is left. What the recommender is built on.
+    void startListening();   // history and the play event, once per track
     void openPlayEvent(const QVariantMap &track);
     void closePlayEvent();
     bool extendWithRadio();   // false when there is nothing to seed a radio from
@@ -247,7 +250,12 @@ private:
     bool m_playing = false;
     bool m_buffering = false;
     bool m_resolving = false;
+    // Whether the listener is waiting for sound from this track: set by
+    // starting it with Play or by pressing Play, cleared by Pause.
     bool m_autoPlayAfterResolve = true;
+    // The track was loaded without being played, and nothing is recorded for
+    // it yet; the first Play records it.
+    bool m_listenPending = false;
     bool m_autoplay = true;
     qint64 m_position = 0;
     qint64 m_duration = 0;

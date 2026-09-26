@@ -40,6 +40,7 @@
 #include "rec/vectorsearch.h"
 #include "ytdlp.h"
 
+#include <functional>
 #include <memory>
 
 int main(int argc, char *argv[])
@@ -144,12 +145,14 @@ int main(int argc, char *argv[])
     lyrics.setLrclibUrl(library.settingValue(QStringLiteral("lrclib_url")));
 
     // Home's content: YouTube Music's feed and new releases, fetched once at
-    // start, and the songs played lately, refreshed whenever one starts.
+    // start, and the songs played lately, refreshed whenever a play is
+    // recorded — which for a song only loaded is when Play is pressed, not
+    // when it became the current track.
     Catalog catalog;
     catalog.refresh();
     catalog.reloadRecent();
-    QObject::connect(&player, &PlaybackController::currentTrackChanged, &catalog, &Catalog::reloadRecent);
-    QObject::connect(&player, &PlaybackController::currentTrackChanged, &library, &Library::reloadHistory);
+    QObject::connect(&player, &PlaybackController::playRecorded, &catalog, &Catalog::reloadRecent);
+    QObject::connect(&player, &PlaybackController::playRecorded, &library, &Library::reloadHistory);
     QObject::connect(&library, &Library::historyCleared, &catalog, &Catalog::reloadRecent);
     // Another country's music is a different feed.
     QObject::connect(&library, &Library::regionChanged, &catalog, &Catalog::refresh);
@@ -358,6 +361,180 @@ int main(int argc, char *argv[])
                      queue->upcomingCount(), fromRadio, qPrintable(upcoming.join(QStringLiteral(" / "))));
             qWarning("selftest: done, quitting");
             QCoreApplication::quit();
+        });
+    }
+
+    // --queue-test <videoId> [<videoId> ...]
+    //
+    // The queue driven the way a listener drives it after a launch: the first
+    // song loaded paused, then played, then left with Next while its last
+    // second runs out, then gone back to with Previous twice, then paused and
+    // moved on with Next before Play is pressed again. What was
+    // recorded, and where the clock stood, is reported at each step, so a skip
+    // that lets the old song's sound, clock or ending reach the new one shows
+    // up as a wrong line. A single id checks the quiet half: a paused song
+    // that will not resolve says so on the status line, not in a toast, and
+    // Play then tries it again out loud. --early presses Play while the first
+    // song is still resolving, which must start it when it arrives.
+    const int queueFlag = args.indexOf(QStringLiteral("--queue-test"));
+    if (queueFlag >= 0 && queueFlag + 1 < args.size()) {
+        QStringList ids;
+        for (int i = queueFlag + 1; i < args.size() && !args.at(i).startsWith(QLatin1String("--")); ++i)
+            ids << args.at(i);
+        const bool early = args.contains(QStringLiteral("--early"));
+        auto clock = std::make_shared<QElapsedTimer>();
+        clock->start();
+        auto toasts = std::make_shared<int>(0);
+        const auto say = [clock](const QString &text) {
+            qWarning("selftest: +%6lld ms  %s", (long long)clock->elapsed(), qPrintable(text));
+        };
+        const auto recorded = []() {
+            QSqlQuery q(AppDatabase::connection());
+            const qint64 plays = q.exec(QStringLiteral("SELECT COALESCE(SUM(play_count), 0) FROM recent"))
+                                         && q.next() ? q.value(0).toLongLong() : -1;
+            const qint64 events = q.exec(QStringLiteral("SELECT COUNT(*) FROM play_events"))
+                                          && q.next() ? q.value(0).toLongLong() : -1;
+            return QStringLiteral("recorded: %1 plays, %2 play events").arg(plays).arg(events);
+        };
+        const auto where = [&player]() {
+            return QStringLiteral("on \"%1\" at %2, %3")
+                .arg(player.currentTrack().value(QStringLiteral("title")).toString(),
+                     player.positionText(),
+                     player.playing() ? QStringLiteral("playing") : QStringLiteral("paused"));
+        };
+        // Polls until `ready` holds, or `limitMs` passes, then carries on.
+        const auto waitFor = [](std::function<bool()> ready, int limitMs, std::function<void()> then) {
+            auto *poll = new QTimer(qApp);
+            auto waited = std::make_shared<QElapsedTimer>();
+            waited->start();
+            QObject::connect(poll, &QTimer::timeout, qApp, [poll, waited, ready, limitMs, then]() {
+                if (!ready() && waited->elapsed() < limitMs)
+                    return;
+                poll->stop();
+                poll->deleteLater();
+                then();
+            });
+            poll->start(100);
+        };
+        // The clock four times a second while a skip is under way.
+        auto *sampler = new QTimer(&app);
+        sampler->setInterval(250);
+        QObject::connect(sampler, &QTimer::timeout, &app, [say, where]() { say(QStringLiteral("  ") + where()); });
+
+        QObject::connect(&player, &PlaybackController::playbackError, &app, [say, toasts](const QString &reason) {
+            ++*toasts;
+            say(QStringLiteral("ERROR TOAST: ") + reason);
+        });
+        QObject::connect(&player, &PlaybackController::notice, &app, [say](const QString &text) {
+            say(QStringLiteral("notice: ") + text);
+        });
+        QObject::connect(&player, &PlaybackController::statusChanged, &app, [say, &player]() {
+            say(QStringLiteral("status \"%1\"%2").arg(player.statusText(),
+                                                     player.statusError() ? QStringLiteral(" (error)") : QString()));
+        });
+        QObject::connect(&player, &PlaybackController::currentTrackChanged, &app, [say, &player]() {
+            say(QStringLiteral("current track: \"%1\", row %2")
+                    .arg(player.currentTrack().value(QStringLiteral("title")).toString())
+                    .arg(player.currentIndex()));
+        });
+
+        const auto finish = [say, recorded]() {
+            say(recorded());
+            QSqlQuery q(AppDatabase::connection());
+            q.exec(QStringLiteral("SELECT title, listened_ms, track_ms, label FROM play_events ORDER BY id"));
+            while (q.next()) {
+                say(QStringLiteral("  event \"%1\" heard %2 of %3 s, label %4")
+                        .arg(q.value(0).toString())
+                        .arg(q.value(1).toLongLong() / 1000).arg(q.value(2).toLongLong() / 1000)
+                        .arg(q.value(3).isNull() ? QStringLiteral("-") : q.value(3).toString()));
+            }
+            say(QStringLiteral("done, quitting"));
+            QTimer::singleShot(200, qApp, []() { QCoreApplication::quit(); });
+        };
+
+        QTimer::singleShot(500, &app, [=, &player, &resolver]() {
+            say(QStringLiteral("before: ") + recorded());
+            // An empty queue takes its first song paused, as a launch loads
+            // the library.
+            for (int i = 0; i < ids.size(); ++i) {
+                player.addToQueue({ { QStringLiteral("sourceId"), ids.at(i) },
+                                    { QStringLiteral("title"), QStringLiteral("Queue test %1").arg(i + 1) },
+                                    { QStringLiteral("artist"), QStringLiteral("Selftest") } });
+            }
+            if (early) {
+                say(QStringLiteral("Play while it resolves: ") + where());
+                player.play();
+            }
+            waitFor([&player]() { return !player.resolving(); }, 90000, [=, &player, &resolver]() {
+                // Time for mpv to open it, still paused.
+                QTimer::singleShot(2000, qApp, [=, &player, &resolver]() {
+                    say(QStringLiteral("loaded: ") + where() + QStringLiteral("; ") + recorded()
+                        + QStringLiteral("; %1 error toasts").arg(*toasts));
+                    if (player.statusError()) {
+                        say(QStringLiteral("Play on the song that failed"));
+                        player.play();
+                        waitFor([&player]() { return !player.resolving(); }, 90000, [=]() {
+                            say(QStringLiteral("after Play: ") + where() + QStringLiteral("; ") + recorded()
+                                + QStringLiteral("; %1 error toasts").arg(*toasts));
+                            finish();
+                        });
+                        return;
+                    }
+                    if (early || ids.size() < 2) {
+                        finish();
+                        return;
+                    }
+                    player.play();
+                    QTimer::singleShot(300, qApp, [=]() { say(QStringLiteral("after Play: ") + recorded()); });
+                    waitFor([&player]() { return player.position() >= 4000; }, 60000, [=, &player, &resolver]() {
+                        say(QStringLiteral("playing: ") + where());
+                        player.setPosition(player.duration() - 1500);
+                        QTimer::singleShot(1000, qApp, [=, &player, &resolver]() {
+                            // Resolved afresh, not from the prefetch, so the
+                            // first song's end falls inside the wait.
+                            resolver.invalidate(ids.at(1));
+                            say(QStringLiteral("Next, half a second before the end: ") + where());
+                            sampler->start();
+                            player.next();
+                            QTimer::singleShot(7000, qApp, [=, &player]() {
+                                sampler->stop();
+                                say(QStringLiteral("after Next: ") + where() + QStringLiteral("; ") + recorded());
+                                player.previous();
+                                say(QStringLiteral("Previous once: ") + where());
+                                player.previous();
+                                sampler->start();
+                                QTimer::singleShot(4000, qApp, [=, &player]() {
+                                    sampler->stop();
+                                    say(QStringLiteral("after Previous twice: ") + where());
+                                    // Next while paused loads without playing:
+                                    // nothing recorded until Play. (Once mpv has
+                                    // said it paused, which the player follows.)
+                                    player.pause();
+                                    const auto thenPlay = [=, &player]() {
+                                        say(QStringLiteral("Next while paused: ") + where()
+                                            + QStringLiteral("; ") + recorded());
+                                        player.play();
+                                        QTimer::singleShot(1500, qApp, [=]() {
+                                            say(QStringLiteral("then Play: ") + where());
+                                            finish();
+                                        });
+                                    };
+                                    waitFor([&player]() { return !player.playing(); }, 5000, [=, &player]() {
+                                        player.next();
+                                        waitFor([&player]() { return !player.resolving(); }, 90000, [thenPlay]() {
+                                            QTimer::singleShot(1500, qApp, thenPlay);
+                                        });
+                                    });
+                                });
+                            });
+                        });
+                    });
+                });
+            });
+        });
+        QTimer::singleShot(150000, &app, []() {
+            qWarning("selftest: timed out");
+            QCoreApplication::exit(2);
         });
     }
 

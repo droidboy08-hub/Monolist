@@ -35,6 +35,10 @@ public:
     // after loadfile would arrive before the file is open and be dropped.
     // `headers` are the ones the link was fetched with (yt-dlp reports them
     // per format): YouTube refuses a link fetched as anything else.
+    //
+    // Only the file most recently asked for speaks: position, duration, the
+    // picture's size, its end and its errors are reported for it alone, never
+    // for one it replaced, and nothing at all is reported after stop().
     void load(const QString &urlOrPath, bool startPlaying = true,
               const QString &audioUrl = QString(), qint64 startAt = 0,
               const QVariantMap &headers = QVariantMap());
@@ -73,8 +77,19 @@ private:
     void observeProperties();
     void applyBaseOptions();
     void setOption(const char *name, const char *value);
+    // True once the file of the latest load has started: what mpv reports
+    // from then on is about it.
+    bool currentFileStarted() const { return m_currentEntry > 0 && m_startedEntry == m_currentEntry; }
 
     mpv_handle *m_mpv = nullptr;
+    // Which file is the current one. Each load is numbered, and mpv's answer to
+    // it names the playlist entry it made; START_FILE and END_FILE name the
+    // entry they are about. 0 is "none" (stopped, or the answer is still on
+    // its way); -1 is an mpv whose answer named no entry, so the next file to
+    // start is taken to be it.
+    quint64 m_loadRequest = 0;
+    qint64 m_currentEntry = 0;
+    qint64 m_startedEntry = 0;
     QString m_lastError;
     bool m_paused = true;
     bool m_buffering = false;

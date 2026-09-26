@@ -24,6 +24,21 @@ enum ObservedProperty : uint64_t {
     PropVideoWidth,
     PropVideoHeight
 };
+
+// The playlist entry a loadfile made, from mpv's answer to it; -1 when the
+// answer does not say, as an older mpv's does not.
+qint64 playlistEntryOf(const mpv_node &result)
+{
+    if (result.format != MPV_FORMAT_NODE_MAP || !result.u.list)
+        return -1;
+    const mpv_node_list *map = result.u.list;
+    for (int i = 0; i < map->num; ++i) {
+        if (qstrcmp(map->keys[i], "playlist_entry_id") == 0
+            && map->values[i].format == MPV_FORMAT_INT64)
+            return map->values[i].u.int64;
+    }
+    return -1;
+}
 }
 
 MpvEngine::MpvEngine(QObject *parent)
@@ -93,6 +108,11 @@ void MpvEngine::applyBaseOptions()
     // decides what plays next.
     setOption("keep-open", "no");
     setOption("idle", "yes");
+    // Paused until something is played, as m_paused already assumes. mpv
+    // starts unpaused, which the controller would read as playing while the
+    // song a launch opens on is still resolving — so the first press of Play
+    // would pause it instead.
+    setOption("pause", "yes");
 
     // Network buffering. Generous enough that a hiccup on a remote stream does
     // not audibly drop out.
@@ -150,6 +170,15 @@ void MpvEngine::drainEvents()
         case MPV_EVENT_PROPERTY_CHANGE: {
             auto *prop = static_cast<mpv_event_property *>(event->data);
             if (!prop->data)
+                break;
+
+            // The clock, the length and the picture belong to one file. Until
+            // the file last asked for has started, they are still the old
+            // one's, running on under the new track's title.
+            const bool perFile = event->reply_userdata != PropPause
+                                 && event->reply_userdata != PropCoreIdle
+                                 && event->reply_userdata != PropCacheBuffering;
+            if (perFile && !currentFileStarted())
                 break;
 
             switch (event->reply_userdata) {
@@ -211,8 +240,35 @@ void MpvEngine::drainEvents()
             break;
         }
 
+        case MPV_EVENT_COMMAND_REPLY: {
+            // mpv's answer to a loadfile, naming the entry it made. Only the
+            // latest load's answer counts: an earlier one was replaced, or
+            // stopped, before it could matter. (stop() asks with 0, and no
+            // load is ever numbered 0.)
+            if (event->reply_userdata == 0 || event->reply_userdata != m_loadRequest)
+                break;
+            if (event->error < 0) {
+                Q_EMIT loadFailed(QString::fromUtf8(mpv_error_string(event->error)));
+                break;
+            }
+            m_currentEntry = playlistEntryOf(static_cast<mpv_event_command *>(event->data)->result);
+            break;
+        }
+
+        case MPV_EVENT_START_FILE: {
+            m_startedEntry = static_cast<mpv_event_start_file *>(event->data)->playlist_entry_id;
+            if (m_currentEntry < 0)
+                m_currentEntry = m_startedEntry;   // the answer did not say; this is it
+            break;
+        }
+
         case MPV_EVENT_END_FILE: {
             auto *end = static_cast<mpv_event_end_file *>(event->data);
+            // The end of a file that has since been replaced or stopped. Its
+            // natural end would skip the track that took its place, and its
+            // error would be blamed on it.
+            if (m_currentEntry <= 0 || end->playlist_entry_id != m_currentEntry)
+                break;
             if (end->reason == MPV_END_FILE_REASON_ERROR) {
                 Q_EMIT loadFailed(QString::fromUtf8(mpv_error_string(end->error)));
             } else if (end->reason == MPV_END_FILE_REASON_EOF) {
@@ -287,10 +343,13 @@ void MpvEngine::load(const QString &urlOrPath, bool startPlaying, const QString 
                                       : "none");
 
     const QByteArray target = urlOrPath.toUtf8();
-    // "replace" tears down the previous file; EndFile arrives with reason STOP,
-    // which drainEvents deliberately ignores so it is not mistaken for EOF.
+    // "replace" tears down the previous file. From here until mpv answers
+    // with the new entry, no file is current, so whatever the previous one
+    // still reports goes nowhere.
+    ++m_loadRequest;
+    m_currentEntry = 0;
     const char *args[] = { "loadfile", target.constData(), "replace", nullptr };
-    const int rc = mpv_command_async(m_mpv, 0, args);
+    const int rc = mpv_command_async(m_mpv, m_loadRequest, args);
     if (rc < 0) {
         Q_EMIT loadFailed(QString::fromUtf8(mpv_error_string(rc)));
         return;
@@ -298,10 +357,19 @@ void MpvEngine::load(const QString &urlOrPath, bool startPlaying, const QString 
     setPaused(!startPlaying);
 }
 
+// Silence now, while the next thing is found. Nothing the stopped file still
+// reports — its clock, its end, a late answer to its loadfile — is passed on.
 void MpvEngine::stop()
 {
     if (!m_mpv)
         return;
+    ++m_loadRequest;
+    m_currentEntry = 0;
+    m_duration = 0;
+    if (!m_videoSize.isEmpty()) {
+        m_videoSize = QSize();
+        Q_EMIT videoSizeChanged(m_videoSize);
+    }
     const char *args[] = { "stop", nullptr };
     mpv_command_async(m_mpv, 0, args);
 }
