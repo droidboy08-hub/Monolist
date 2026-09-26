@@ -142,7 +142,7 @@ Priority runs from 1 (first) to 9. Size: S under an hour, M a few hours, L a day
 
 ## Settings
 
-- [ ] **S01** Recommendation folders must be typed by hand: no picker, no ~ expansion, no default location *(P5, S)*
+- [ ] **S01** *(Partly done: the data now downloads to a default location from Settings; the manual fields still have no picker or ~ expansion.)* Recommendation folders must be typed by hand: no picker, no ~ expansion, no default location *(P5, S)*
   Done when: A 'Choose…' button opens a native folder picker, a leading ~ is expanded, and with nothing set the app looks in its data folder and beside the executable (Contents/Resources in a Mac bundle).
 - [ ] **X05** No in-app log, and release builds have no console *(P7, M)*
   Done when: A message handler keeps recent log lines in memory and in a rotating log file in the app's data folder. About adds 'Copy playback log' and 'Open log folder'.
@@ -178,7 +178,7 @@ Priority runs from 1 (first) to 9. Size: S under an hour, M a few hours, L a day
   Done when: An icon made from the 'MONOLIST.' wordmark ships as .ico on Windows (via an .rc file), .icns in the Mac bundle, and PNG for the window icon.
 - [ ] **G02** No Windows build that can be given to someone else *(P8, M)*
   Done when: A -Package option, or an Inno Setup/CPack step, produces a self-contained zip or installer with real copies of the tools, a Start-menu shortcut and the icon.
-- [ ] **G03** No licence notices for bundled components, and no credit for the recommendation data *(P8, S)*
+- [ ] **G03** *(Partly done: the recommendation data is credited in Settings and About; bundled components still have no notices.)* No licence notices for bundled components, and no credit for the recommendation data *(P8, S)*
   Done when: About → Acknowledgements lists every component with its licence text, and the texts ship in the Windows package and inside the Mac app. A credit line for the data appears whenever a catalogue or graph is loaded.
 
 ## Docs
@@ -216,6 +216,40 @@ Seen by the agents that fixed B01–B13 and by their reviewers, and not yet fixe
   Done when: Esc closes the topmost thing only.
 - [ ] **F12** Compiler warnings: deprecated QDateTime::setTimeSpec (taste.cpp), unchecked QFile::open in --content-test (main.cpp) *(P8, S)*
   Done when: the changed files build without warnings.
+
+- [ ] **F13** Data loss: when a download fails or is cancelled, a finished file for the same song that the database does not know about (after app data was reset, or a test run) is deleted with the partial files *(P1, S)*
+  Done when: only yt-dlp's partial and intermediate files are removed, never a complete audio file, whatever the database says.
+- [ ] **F14** Tests and self-tests download into the user's real Music folder even with a scratch data folder *(P2, S)*
+  Done when: MONOLIST_DATA_DIR (or a MONOLIST_DOWNLOAD_DIR override) keeps test downloads out of the real Music folder.
+- [ ] **F15** Radio tracks are never marked as radio: openPlayEvent's fromRadio test can never be true, so play_events and Last.fm's chosenByUser treat autoplay songs as chosen *(P2, S)*
+  Done when: songs added by autoplay radio are recorded with source "radio" and scrobbled with chosenByUser=0.
+- [ ] **F16** Pin the published manifest's SHA-256 in the app once Monolist-data v1 is pushed, so a moved tag cannot swap the data *(P3, S)*
+  Done when: RecData refuses a manifest whose hash differs from the one built into the app for that version.
+- [ ] **F17** With "Hide explicit titles" on, pressing a clean suggestion can still play an explicit version, because the YouTube search that resolves it is not filtered *(P5, S)*
+  Done when: with the switch on, the resolver prefers a non-explicit result when one exists.
+- [ ] **F18** The download button does nothing while a download is processing (FFmpeg), though the menu and Downloads page can cancel it *(P5, S)*
+  Done when: the button cancels in every in-flight state.
+- [ ] **F19** With nothing loaded, the player bar's heart offers "Add to Liked songs" and does nothing *(P6, S)*
+  Done when: the heart is disabled or hidden when nothing is loaded.
+- [ ] **F20** The build-without-libmpv stub (-DMONOLIST_NO_MPV=ON) no longer compiles: load() and setVideoEnabled are out of date *(P6, S)*
+  Done when: that configuration builds. (Same as M04.)
+- [ ] **F21** The README's self-test list lacks --rec-test, --graph-test, --artist-test, --content-test and the new --lastfm-test, --cookie-test, --listen-test, --scrobble-test, --lastfm-connect-test, --ytm-session-test, --secret-test *(P9, S)*
+  Done when: every self-test flag is documented with what it checks.
+
+## Connections
+
+Built so far (batch 2): Last.fm connect, listening-time tracking, offline scrobble queue and sending; YouTube Music session import (cookies file, header or cURL), SAPISIDHASH, signed-in browse requests; a DPAPI secret store. All tested against fakes only.
+
+- [ ] **C01** Last.fm live test: needs the owner's API key in MONOLIST_LASTFM_API_KEY / MONOLIST_LASTFM_SHARED_SECRET; then connect, scrobble, revoke *(P3, S)*
+  Done when: a real scrobble shows on the owner's profile and revoking gives the Reconnect state.
+- [ ] **C02** YouTube Music live test with the owner's spare account: import, account name, logged_in check *(P3, S)*
+  Done when: an imported session shows the account name and survives a restart.
+- [ ] **C03** YouTube Music personalised Home when signed in (design step 14) *(P4, M)*
+  Done when: signed-in Home differs from signed-out and reports logged_in=1.
+- [ ] **C04** Read-only imports: liked songs as "Liked on YouTube Music", library playlists, private playlists, history (design step 15) *(P4, L)*
+  Done when: counts match the account.
+- [ ] **C05** macOS Keychain backend for the secret store (secretstore_mac.mm) — for the macOS session *(P6, M)*
+  Done when: the secret-test self-test passes on a Mac.
 
 ## Decisions waiting on the owner
 
