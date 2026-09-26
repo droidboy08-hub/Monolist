@@ -3,6 +3,7 @@
 #include <QAbstractNativeEventFilter>
 #include <QObject>
 #include <QPointer>
+#include <QStringList>
 
 class QWindow;
 
@@ -33,6 +34,16 @@ class WindowChrome : public QObject, public QAbstractNativeEventFilter
     Q_PROPERTY(bool nativeButtons READ nativeButtons CONSTANT)
     // Room the native buttons need at the left of the title bar.
     Q_PROPERTY(int nativeButtonsInset READ nativeButtonsInset CONSTANT)
+    // Which corner the window buttons belong in, and which buttons, in the
+    // order they are drawn from left to right ("minimize", "maximize",
+    // "close"). Windows: the right, all three. Linux: wherever the desktop's
+    // own button layout puts close (GNOME's button-layout, KDE's kwinrc), and
+    // only the buttons it lists there. macOS: the system's, so on the left.
+    Q_PROPERTY(bool buttonsOnLeft READ buttonsOnLeft CONSTANT)
+    Q_PROPERTY(QStringList windowButtons READ windowButtons CONSTANT)
+    // Round buttons, centred in the bar, as GTK and Breeze draw them; square
+    // caption buttons the full height of the bar, as Windows draws them.
+    Q_PROPERTY(bool roundButtons READ roundButtons CONSTANT)
 public:
     explicit WindowChrome(QObject *parent = nullptr);
     ~WindowChrome() override;
@@ -43,6 +54,9 @@ public:
     bool drawsResizeEdges() const;
     bool nativeButtons() const;
     int nativeButtonsInset() const;
+    bool buttonsOnLeft() const;
+    QStringList windowButtons() const;
+    bool roundButtons() const;
 
     // The window menu (restore, move, size, minimise, maximise, close) at the
     // pointer, as a right click on a system title bar shows it. Windows only.
@@ -51,5 +65,12 @@ public:
     bool nativeEventFilter(const QByteArray &eventType, void *message, qintptr *result) override;
 
 private:
+    // Read once, the first time it is asked for: the desktop's layout is not
+    // followed live, as it is changed about as often as the desktop itself.
+    void readButtonLayout() const;
+
     QPointer<QWindow> m_window;
+    mutable bool m_layoutRead = false;
+    mutable bool m_buttonsOnLeft = false;
+    mutable QStringList m_windowButtons;
 };

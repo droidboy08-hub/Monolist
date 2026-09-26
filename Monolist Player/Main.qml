@@ -515,4 +515,12 @@ ApplicationWindow {
         enabled: window.nowPlayingOpen
         onActivated: window.nowPlayingOpen = false
     }
+    // The cover / video switch in Now Playing, from the keyboard. Only where
+    // the poster, and so the picture, is on screen.
+    Shortcut {
+        sequence: "V"
+        enabled: window.nowPlayingOpen && nowPlaying.wide && Player.videoAvailable
+                 && !topBar.searchFocused
+        onActivated: Player.videoWanted = !Player.videoWanted
+    }
 }
