@@ -18,6 +18,10 @@ class QWindow;
 //            other corner in the design is.
 //   macOS    The content extends under the title bar and the traffic lights
 //            stay, so no buttons are drawn and the brand leaves them room.
+//            The title's text is hidden (it would sit over the search field);
+//            a double click does what System Settings says; the full screen
+//            button and tiling work as in any other window. Needs Qt 6.9;
+//            with an older Qt the system title bar simply stays.
 //   Linux    The frame goes entirely; the window moves and resizes through
 //            the compositor (startSystemMove / startSystemResize), so snapping
 //            works there too, and QML draws the resize edges.
@@ -48,7 +52,15 @@ public:
     // pointer, as a right click on a system title bar shows it. Windows only.
     Q_INVOKABLE void showSystemMenu();
 
+    // A double click on the title bar. True when the platform decided what it
+    // does (macOS: zoom, minimise or nothing, as the user has set it); false
+    // leaves it to QML, which maximises or restores.
+    Q_INVOKABLE bool titleBarDoubleClicked();
+
     bool nativeEventFilter(const QByteArray &eventType, void *message, qintptr *result) override;
+
+protected:
+    bool eventFilter(QObject *watched, QEvent *event) override;
 
 private:
     QPointer<QWindow> m_window;

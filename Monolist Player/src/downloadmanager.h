@@ -38,6 +38,8 @@ class DownloadManager : public QObject
     Q_PROPERTY(bool skipNonMusic READ skipNonMusic WRITE setSkipNonMusic NOTIFY optionsChanged)
     Q_PROPERTY(bool available READ available CONSTANT)
     Q_PROPERTY(bool canConvert READ canConvert CONSTANT)
+    // What to do about a missing yt-dlp, in this platform's terms.
+    Q_PROPERTY(QString installHint READ installHint CONSTANT)
     Q_PROPERTY(int revision READ revision NOTIFY revisionChanged)
 public:
     explicit DownloadManager(QObject *parent = nullptr);
@@ -58,6 +60,7 @@ public:
 
     bool available() const { return m_available; }     // yt-dlp was found
     bool canConvert() const { return m_canConvert; }   // FFmpeg too: tags, cover art, trimming
+    QString installHint() const { return YtDlp::installHint(); }
     int revision() const { return m_revision; }
 
     // Queue a track for offline use. Re-queuing something already stored or in

@@ -132,6 +132,10 @@ whichever contrasts better.
     scripts/setup-windows.ps1  installs Qt, MinGW, CMake, Ninja, libmpv, yt-dlp,
                                FFmpeg, Deno and Git into C:\dev\monolist-deps
     scripts/build-windows.ps1  configures, builds and deploys a runnable build
+    scripts/setup-macos.sh     installs Qt, libmpv, CMake, Ninja, yt-dlp, FFmpeg
+                               and Deno through Homebrew; --update updates the tools
+    scripts/build-macos.sh     builds Monolist.app, or an Xcode project (--xcode)
+    macos/                     Info.plist template, the app icon and its generator
 
     Main.qml                 window, view switching, breakpoints, shortcuts
     Theme.qml                design tokens
@@ -161,6 +165,8 @@ whichever contrasts better.
       downloadmodels.*       the queue and offline-set models for QML
       artworkcache.*         async disk-cached image provider + cover colours
       windowchrome.*         the window without the system title bar
+      macos/                 Objective-C++ for the Mac: the title bar (macwindow.*)
+                             and Now Playing, for the media keys (mediasession.*)
 
 ### QML singletons
 
@@ -223,11 +229,74 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build && ./build
 
 ### macOS
 
+Needs Homebrew (https://brew.sh) and Apple's Command Line Tools; the full Xcode
+from the App Store only for an Xcode project. Apple silicon and Intel alike.
+
 ```
-brew install qt mpv yt-dlp ffmpeg deno cmake ninja
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$(brew --prefix qt)
-cmake --build build
+scripts/setup-macos.sh
+scripts/build-macos.sh --install
 ```
+
+`setup-macos.sh` installs Qt, libmpv, CMake, Ninja and pkgconf to build with,
+and yt-dlp, FFmpeg and Deno to run with, all through Homebrew, skipping what is
+already there. `--update` updates the three tools: it is what Settings ›
+Update components runs, from a copy inside the app.
+
+`build-macos.sh` makes a Release build in `build-macos/`, copies it to
+`build-macos/dist/Monolist.app`, puts Qt, its QML modules and libmpv inside it
+with `macdeployqt` (so a `brew upgrade` cannot break it), signs it ad hoc and
+checks that nothing is still loaded from Homebrew. `--install` then copies it
+into `/Applications` (`~/Applications` when that is not writable), `--dmg`
+makes a disk image beside it, `--run` opens it, `--debug` builds Debug and
+`--no-deploy` skips `macdeployqt` for a quicker build that uses Homebrew's Qt.
+
+#### In Xcode
+
+```
+scripts/build-macos.sh --xcode
+```
+
+generates `build-xcode/Monolist.xcodeproj` with CMake's Xcode generator and
+opens it. Pick the **monolist** scheme and **My Mac**, then Product › Run (⌘R);
+the log appears in Xcode's console. The project is generated, so change
+`CMakeLists.txt` rather than the project, and run the command again after
+adding a file. A build run from Xcode loads Qt and libmpv from Homebrew; for
+the copy to keep, use `build-macos.sh --install`.
+
+By hand, either way:
+
+```
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_PREFIX_PATH="$(brew --prefix qt);$(brew --prefix)"
+cmake --build build          # build/Monolist.app
+```
+
+#### What is different on a Mac
+
+* **The window.** The design runs under a transparent title bar with the
+  traffic lights in its corner, as Windows keeps its snap layouts: full
+  screen, tiling and Mission Control work as for any other window. A double
+  click on the bar does what System Settings › Desktop & Dock says. This needs
+  Qt 6.9 or later; with an older Qt the system title bar simply stays.
+* **Closing the window** leaves the app and the music running; the Dock icon
+  brings the window back, and ⌘Q quits. ⌘W, ⌘M and ⌃⌘F do what they do in any
+  Mac app.
+* **Media keys and Now Playing.** The play, next and previous keys, AirPods,
+  the Touch Bar, Control Center and the lock screen control Monolist and show
+  the song, its cover and its position. Without this, the play key opens
+  Apple Music.
+* **Tools from Finder.** An app opened from Finder or the Dock does not get
+  the shell's PATH, so Homebrew's folders (`/opt/homebrew/bin`,
+  `/usr/local/bin`) and `~/.deno/bin` are added to it at startup.
+* **Light appearance.** The design draws its own colours, so the app keeps
+  the light appearance in Dark Mode, as it looks on Windows.
+
+The app is signed ad hoc ("Sign to Run Locally"), which is all a Mac needs to
+run what was built on it. To give it to someone else, sign it with a Developer
+ID and notarise it; without that, macOS will refuse to open a downloaded copy.
+
+The icon is `macos/Monolist.icns`, drawn from the bundled Archivo by
+`macos/make-icon.py` (Pillow); run that again if the palette changes.
 
 ### Typeface
 
@@ -257,6 +326,8 @@ a fallback sans does not merely look different — the tracking is wrong for it.
 
 All three tools are looked for in `tools\` next to the executable, next to the
 executable itself, in `MONOLIST_TOOLS_DIR`, and then on PATH; bundled copies win.
+On a Mac the executable is `Monolist.app/Contents/MacOS/Monolist`, and PATH
+includes Homebrew's folders even when the app is opened from Finder.
 
 ## Self-tests and diagnostics
 
@@ -292,6 +363,10 @@ the real library.
     database    <AppData>/monolist.db  (library, playlists, history, lyrics, settings)
     artwork     <Cache>/artwork  (256 MB cap)
 
+On a Mac, `<Music>` is `~/Music`, `<AppData>` is
+`~/Library/Application Support/Monolist/Monolist` and `<Cache>` is
+`~/Library/Caches/Monolist/Monolist`.
+
 Downloads live in the user's real Music folder, the convention Melody settled
 on, so they survive reinstalls and other players can see them.
 
@@ -308,7 +383,16 @@ Known gaps:
 * Artist pages: an artist card searches for the name instead.
 * The device button in the player bar is styled but unwired.
 * Songs in a playlist cannot yet be reordered.
-* macOS and Linux build from the same code but have not been run.
+* macOS: prepared for, but not yet run on a Mac. The shared code compiles
+  with Clang against libc++ (Apple's standard library) with the Mac code paths
+  on; the Objective-C++ is checked against the AppKit and MediaPlayer
+  declarations it uses; the build scripts are tested under macOS's bash 3.2
+  with Homebrew, CMake and the signing tools stood in for. The first real
+  build is the test of the rest.
+* Linux builds and starts (checked on Ubuntu 24.04 with Qt 6.11.2), but has
+  not been used day to day and has no packaging yet.
+* Building without libmpv (`-DMONOLIST_NO_MPV=ON`) is broken: the stub has not
+  kept up with `mpvengine.h`, and `videosurface.cpp` still needs libmpv.
 
 ## About the Swift libraries
 

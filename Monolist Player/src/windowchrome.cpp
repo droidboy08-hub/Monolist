@@ -1,7 +1,18 @@
 #include "windowchrome.h"
 
 #include <QCoreApplication>
+#include <QEvent>
 #include <QWindow>
+
+#ifdef Q_OS_MACOS
+#include "macos/macwindow.h"
+
+// Qt::ExpandedClientAreaHint and Qt::NoTitleBarBackgroundHint, which put the
+// content under a transparent title bar, arrived in Qt 6.9.
+#  if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+#    define MONOLIST_MAC_EXPANDED_TITLE_BAR 1
+#  endif
+#endif
 
 #ifdef Q_OS_WIN
 #include <windows.h>
@@ -65,7 +76,13 @@ bool WindowChrome::nativeButtons() const
 
 int WindowChrome::nativeButtonsInset() const
 {
-    return nativeButtons() ? 78 : 0;   // the traffic lights and their margin
+    // The traffic lights and their margin, where they sit over the content.
+    // Under a system title bar (Qt before 6.9) they are above it instead.
+#ifdef MONOLIST_MAC_EXPANDED_TITLE_BAR
+    return 78;
+#else
+    return 0;
+#endif
 }
 
 void WindowChrome::attach(QWindow *window)
@@ -96,8 +113,16 @@ void WindowChrome::attach(QWindow *window)
     // Have Windows ask for the new frame size (WM_NCCALCSIZE) straight away.
     SetWindowPos(hwnd, nullptr, 0, 0, 0, 0,
                  SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
-#elif defined(Q_OS_MACOS)
+#elif defined(MONOLIST_MAC_EXPANDED_TITLE_BAR)
     window->setFlags(window->flags() | Qt::ExpandedClientAreaHint | Qt::NoTitleBarBackgroundHint);
+    // The native window is made again whenever the window is shown after
+    // being closed (which on a Mac leaves the app, and the music, running),
+    // so the hidden title is applied each time one is made.
+    window->installEventFilter(this);
+    window->create();
+    MacWindow::hideTitle(window);
+#elif defined(Q_OS_MACOS)
+    // An older Qt: the system title bar stays, above the design's own.
 #else
     window->setFlags(window->flags() | Qt::FramelessWindowHint);
 #endif
@@ -131,6 +156,25 @@ void WindowChrome::showSystemMenu()
     if (command)
         PostMessageW(hwnd, WM_SYSCOMMAND, command, 0);
 #endif
+}
+
+bool WindowChrome::titleBarDoubleClicked()
+{
+#ifdef Q_OS_MACOS
+    MacWindow::titleBarDoubleClicked(m_window);
+    return true;
+#else
+    return false;
+#endif
+}
+
+bool WindowChrome::eventFilter(QObject *watched, QEvent *event)
+{
+#ifdef MONOLIST_MAC_EXPANDED_TITLE_BAR
+    if (watched == m_window && event->type() == QEvent::Show)
+        MacWindow::hideTitle(m_window);
+#endif
+    return QObject::eventFilter(watched, event);
 }
 
 bool WindowChrome::nativeEventFilter(const QByteArray &eventType, void *message, qintptr *result)

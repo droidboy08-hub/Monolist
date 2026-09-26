@@ -70,7 +70,7 @@ Flickable {
         Text {
             visible: !Downloads.available
             width: parent.width
-            text: "Downloading needs yt-dlp. Run scripts\\setup-windows.ps1, or place yt-dlp next to the app."
+            text: "Downloading needs yt-dlp. " + Downloads.installHint
             wrapMode: Text.WordWrap
             font.family: Theme.fontFamily
             font.pixelSize: 13

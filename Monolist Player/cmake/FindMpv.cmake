@@ -27,15 +27,25 @@ if(PkgConfig_FOUND AND NOT _mpv_root)
     pkg_check_modules(PC_MPV QUIET mpv)
 endif()
 
+# Homebrew's prefix is not one CMake searches by default (/opt/homebrew on
+# Apple silicon, /usr/local on Intel), and pkg-config is not always installed
+# alongside it, so a Mac without pkg-config still finds libmpv there.
+set(_mpv_fallback_prefixes)
+if(APPLE)
+    list(APPEND _mpv_fallback_prefixes /opt/homebrew/opt/mpv /opt/homebrew /usr/local/opt/mpv /usr/local /opt/local)
+endif()
+
 find_path(MPV_INCLUDE_DIR
     NAMES mpv/client.h
     HINTS ${_mpv_root} ${PC_MPV_INCLUDEDIR} ${PC_MPV_INCLUDE_DIRS}
+    PATHS ${_mpv_fallback_prefixes}
     PATH_SUFFIXES include
 )
 
 find_library(MPV_LIBRARY
     NAMES mpv libmpv mpv.dll libmpv.dll.a
     HINTS ${_mpv_root} ${PC_MPV_LIBDIR} ${PC_MPV_LIBRARY_DIRS}
+    PATHS ${_mpv_fallback_prefixes}
     PATH_SUFFIXES lib lib64 x86_64 x86_64-w64-mingw32
 )
 
@@ -53,3 +63,4 @@ if(Mpv_FOUND AND NOT TARGET Mpv::Mpv)
 endif()
 
 mark_as_advanced(MPV_INCLUDE_DIR MPV_LIBRARY)
+unset(_mpv_fallback_prefixes)

@@ -39,12 +39,25 @@
 #include "rec/taste.h"
 #include "rec/vectorsearch.h"
 #include "ytdlp.h"
+#ifdef Q_OS_MACOS
+#include "macos/mediasession.h"
+#endif
 
+#include <clocale>
 #include <memory>
 
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
+    // Qt sets the process locale from the environment on macOS and Linux, and
+    // libmpv refuses to start under any numeric locale but "C" — mpv_create()
+    // returns nothing, and the app runs without sound. A Mac set to German, or
+    // any launch from a Terminal with LANG set, hit this; Windows never does.
+    // Only number formatting in C functions changes: QLocale is unaffected.
+    std::setlocale(LC_NUMERIC, "C");
+    // Before anything looks for yt-dlp, FFmpeg or Deno.
+    YtDlp::extendSearchPath();
+
     app.setOrganizationName(QStringLiteral("Monolist"));
     app.setApplicationName(QStringLiteral("Monolist"));
     app.setApplicationDisplayName(QStringLiteral("Monolist"));
@@ -157,13 +170,18 @@ int main(int argc, char *argv[])
 
     if (!YtDlp::isAvailable()) {
         qWarning("Monolist: yt-dlp not found — search and downloads are disabled, "
-                 "and streaming falls back to public instances. Install with "
-                 "`pip install yt-dlp`.");
+                 "and streaming falls back to public instances. %s",
+                 qPrintable(YtDlp::installHint()));
     }
 
     // — QML —
     ArtworkFetcher artworkFetcher;
     PaletteTool palette(&artworkFetcher);
+
+#ifdef Q_OS_MACOS
+    // The media keys, Control Center and the lock screen.
+    MacMediaSession mediaSession(&player, artworkFetcher.network());
+#endif
 
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Library",   &library);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Player",    &player);
@@ -247,6 +265,18 @@ int main(int argc, char *argv[])
     if (auto *window = qobject_cast<QWindow *>(qmlEngine.rootObjects().value(0))) {
         chrome.attach(window);
         window->show();
+#ifdef Q_OS_MACOS
+        // A Mac app outlives its window: closing it (the red button, ⌘W)
+        // leaves the music playing, and clicking the Dock icon brings it back.
+        // Qt reports that click as the app becoming active, even when it
+        // already was. ⌘Q quits.
+        app.setQuitOnLastWindowClosed(false);
+        QObject::connect(&app, &QGuiApplication::applicationStateChanged, window,
+                         [window](Qt::ApplicationState state) {
+                             if (state == Qt::ApplicationActive && !window->isVisible())
+                                 window->show();
+                         });
+#endif
     }
 
     // --play <videoId> [seconds]

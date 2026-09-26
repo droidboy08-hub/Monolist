@@ -273,16 +273,30 @@ void AppInfo::openUpdatePage()
 // The script that installed the bundled tools in the first place, if this
 // build can still see it. A build running from where it was developed can; one
 // installed somewhere else cannot, and says so instead of pretending.
+//
+// On macOS the tools are Homebrew's and the script updates them through brew,
+// which works from anywhere, so Monolist.app carries its own copy of it
+// (Contents/Resources/scripts, put there by CMakeLists.txt).
 QString AppInfo::setupScriptPath()
 {
-#ifdef Q_OS_WIN
+#if defined(Q_OS_WIN) || defined(Q_OS_MACOS)
+#  ifdef Q_OS_WIN
     const QString name = QStringLiteral("scripts/setup-windows.ps1");
+#  else
+    const QString name = QStringLiteral("scripts/setup-macos.sh");
+#  endif
     const QString fromSource = QDir(QStringLiteral(MONOLIST_SOURCE_DIR)).filePath(name);
     if (QFileInfo::exists(fromSource))
         return QDir::toNativeSeparators(fromSource);
-    const QString beside = QDir(QCoreApplication::applicationDirPath()).filePath(name);
+    const QDir appDir(QCoreApplication::applicationDirPath());
+    const QString beside = appDir.filePath(name);
     if (QFileInfo::exists(beside))
         return QDir::toNativeSeparators(beside);
+#  ifdef Q_OS_MACOS
+    const QString bundled = QDir::cleanPath(appDir.filePath(QStringLiteral("../Resources/") + name));
+    if (QFileInfo::exists(bundled))
+        return bundled;
+#  endif
 #endif
     return {};
 }
@@ -316,10 +330,17 @@ void AppInfo::updateTools()
 
     auto *process = new QProcess(this);
     m_toolsProcess = process;
+#ifdef Q_OS_WIN
     process->setProgram(QStringLiteral("powershell.exe"));
     process->setArguments({ QStringLiteral("-ExecutionPolicy"), QStringLiteral("Bypass"),
                             QStringLiteral("-NonInteractive"),
                             QStringLiteral("-File"), script, QStringLiteral("-Update") });
+#else
+    // Run by bash rather than by itself, so a copy that lost its executable
+    // bit on the way still runs.
+    process->setProgram(QStringLiteral("/bin/bash"));
+    process->setArguments({ script, QStringLiteral("--update") });
+#endif
     process->setProcessChannelMode(QProcess::MergedChannels);
 
     // The script prints a line per tool; show the last one, so a long update
@@ -352,7 +373,11 @@ void AppInfo::updateTools()
         if (error != QProcess::FailedToStart || m_toolsProcess != process)
             return;
         m_toolsProcess = nullptr;
+#ifdef Q_OS_WIN
         setTools(Failed, QStringLiteral("PowerShell could not be started."));
+#else
+        setTools(Failed, QStringLiteral("The setup script could not be started."));
+#endif
     });
 
     process->start();

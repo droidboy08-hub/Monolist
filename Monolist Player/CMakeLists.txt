@@ -5,6 +5,19 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
+if(APPLE)
+    # The few parts that talk to AppKit and MediaPlayer (src/macos/) are
+    # Objective-C++.
+    enable_language(OBJCXX)
+    set(CMAKE_OBJCXX_STANDARD 17)
+    set(CMAKE_OBJCXX_STANDARD_REQUIRED ON)
+
+    # Xcode 15 and later run build scripts in a sandbox that may read only the
+    # files a script declares. Qt's generators (moc, rcc, qmlcachegen) and the
+    # build-number stamp read more than that, so the sandbox is off.
+    set(CMAKE_XCODE_ATTRIBUTE_ENABLE_USER_SCRIPT_SANDBOXING NO)
+endif()
+
 if(MSVC)
   add_compile_options("/utf-8")
 endif()
@@ -189,6 +202,71 @@ if(WIN32)
     # WindowChrome: the drop shadow and square corners of the caption-less frame.
     # netapi32: the account's full name, for the sidebar (Library).
     target_link_libraries(monolist PRIVATE dwmapi netapi32)
+endif()
+
+if(APPLE)
+    # — Monolist.app —
+    target_sources(monolist PRIVATE
+        # The window under its transparent title bar (WindowChrome).
+        src/macos/macwindow.h          src/macos/macwindow.mm
+        # Media keys, Control Center and the lock screen (Now Playing).
+        src/macos/mediasession.h       src/macos/mediasession.mm
+        macos/Monolist.icns
+        # Settings › Update components runs this to update yt-dlp, FFmpeg and
+        # Deno through Homebrew, from wherever the app is installed.
+        scripts/setup-macos.sh
+    )
+    set_source_files_properties(src/macos/macwindow.mm src/macos/mediasession.mm
+        PROPERTIES COMPILE_OPTIONS "-fobjc-arc")
+    set_source_files_properties(macos/Monolist.icns
+        PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+    set_source_files_properties(scripts/setup-macos.sh
+        PROPERTIES MACOSX_PACKAGE_LOCATION Resources/scripts)
+    target_link_libraries(monolist PRIVATE "-framework AppKit" "-framework MediaPlayer")
+
+    # The build number the stamp above just worked out, for CFBundleVersion.
+    file(STRINGS "${MONOLIST_BUILDINFO}" _monolist_build_line REGEX "MONOLIST_BUILD_NUMBER")
+    string(REGEX MATCH "\"([0-9]+)\"" _ "${_monolist_build_line}")
+    set(MONOLIST_BUNDLE_BUILD "${CMAKE_MATCH_1}")
+    if(NOT MONOLIST_BUNDLE_BUILD)
+        set(MONOLIST_BUNDLE_BUILD 0)
+    endif()
+
+    # Read by macos/Info.plist.in. Homebrew builds Qt for the Mac it runs on,
+    # so this is only a floor for anything built elsewhere.
+    if(CMAKE_OSX_DEPLOYMENT_TARGET)
+        set(MONOLIST_MACOS_MINIMUM "${CMAKE_OSX_DEPLOYMENT_TARGET}")
+    else()
+        set(MONOLIST_MACOS_MINIMUM "12.0")
+    endif()
+
+    # Signed ad hoc ("Sign to Run Locally"): builds on any Mac with no Apple
+    # developer account, and runs there. A Developer ID is only needed to hand
+    # the app to other people; see README.md.
+    set(QT_NO_SET_XCODE_DEVELOPMENT_TEAM_ID ON)
+
+    set_target_properties(monolist PROPERTIES
+        MACOSX_BUNDLE TRUE
+        # Monolist.app, as Finder, the Dock and the menu bar show it.
+        OUTPUT_NAME Monolist
+        MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/macos/Info.plist.in"
+        MACOSX_BUNDLE_GUI_IDENTIFIER "io.github.droidboy08-hub.monolist"
+        MACOSX_BUNDLE_BUNDLE_NAME "Monolist"
+        MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}"
+        MACOSX_BUNDLE_BUNDLE_VERSION "${MONOLIST_BUNDLE_BUILD}"
+        MACOSX_BUNDLE_ICON_FILE "Monolist.icns"
+        MACOSX_BUNDLE_COPYRIGHT "Monolist. Archivo is licensed under the SIL Open Font License 1.1."
+        XCODE_ATTRIBUTE_CODE_SIGN_STYLE "Manual"
+        XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "-"
+        XCODE_ATTRIBUTE_ENABLE_HARDENED_RUNTIME NO
+        # Xcode's Run button starts the app from the build folder, where it
+        # still loads Qt and libmpv from Homebrew; scripts/build-macos.sh makes
+        # the self-contained copy.
+        XCODE_GENERATE_SCHEME TRUE
+        # The log in Xcode's console as plain lines, as the Windows debug
+        # build's console shows it.
+        XCODE_SCHEME_ENVIRONMENT "QT_FORCE_STDERR_LOGGING=1"
+    )
 endif()
 
 # On Windows the app is a GUI binary; keep the console attached in debug builds

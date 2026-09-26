@@ -252,6 +252,43 @@ void YtDlp::setExecutableOverride(const QString &path)
     g_executableOverride = path;
 }
 
+void YtDlp::extendSearchPath()
+{
+#ifdef Q_OS_MACOS
+    // Appended, not prepended: a PATH that already has them — the app started
+    // from Terminal — keeps its own order. Children inherit the result, so
+    // yt-dlp finds ffprobe and brew finds its own tools too.
+    QStringList path = qEnvironmentVariable("PATH").split(QLatin1Char(':'), Qt::SkipEmptyParts);
+    const QStringList candidates = {
+        QStringLiteral("/opt/homebrew/bin"),     // Homebrew on Apple silicon
+        QStringLiteral("/usr/local/bin"),        // Homebrew on Intel, and most installers
+        QStringLiteral("/opt/local/bin"),        // MacPorts
+        QDir::home().filePath(QStringLiteral(".deno/bin"))   // Deno's own installer
+    };
+    bool changed = false;
+    for (const QString &directory : candidates) {
+        if (!path.contains(directory) && QFileInfo(directory).isDir()) {
+            path.append(directory);
+            changed = true;
+        }
+    }
+    if (changed)
+        qputenv("PATH", path.join(QLatin1Char(':')).toLocal8Bit());
+#endif
+}
+
+QString YtDlp::installHint()
+{
+    // Shown as it is in the Downloads view, so plain text.
+#if defined(Q_OS_WIN)
+    return QStringLiteral("Run scripts\\setup-windows.ps1, or place yt-dlp next to the app.");
+#elif defined(Q_OS_MACOS)
+    return QStringLiteral("Run scripts/setup-macos.sh, or install it with Homebrew: brew install yt-dlp.");
+#else
+    return QStringLiteral("Install it with your package manager, or place yt-dlp next to the app.");
+#endif
+}
+
 QStringList YtDlp::toolDirectories()
 {
     const QDir appDir(QCoreApplication::applicationDirPath());
@@ -393,9 +430,7 @@ YtDlpRequest *YtDlp::run(const QStringList &args, bool expectJson, QObject *pare
     if (!invocation.valid) {
         // Report asynchronously so callers can connect before anything fires.
         QMetaObject::invokeMethod(request, [request]() {
-            request->settleFailed(QStringLiteral(
-                "yt-dlp was not found. Run scripts/setup-windows.ps1, install it with "
-                "`pip install yt-dlp`, or place the binary next to the application."));
+            request->settleFailed(QStringLiteral("yt-dlp was not found. ") + installHint());
         }, Qt::QueuedConnection);
         return request;
     }

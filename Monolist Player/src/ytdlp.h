@@ -85,13 +85,27 @@ private:
 //
 // All three are looked for in MONOLIST_TOOLS_DIR, <app>/tools, <app>/tools/yt-dlp
 // (the unpacked yt-dlp), next to the executable, and finally on PATH. Bundled
-// copies win, so a packaged app runs the versions it shipped with.
+// copies win, so a packaged app runs the versions it shipped with. On macOS
+// <app> is Monolist.app/Contents/MacOS.
 class YtDlp
 {
 public:
     static bool isAvailable();
     static QString resolvedDescription();
     static void setExecutableOverride(const QString &path);
+
+    // Adds the places a package manager puts these tools to PATH, where the
+    // platform does not already. Call once at startup, before anything looks.
+    //
+    // macOS: an app opened from Finder or the Dock inherits launchd's PATH,
+    // /usr/bin:/bin:/usr/sbin:/sbin, not the shell's, so Homebrew's tools —
+    // which is where yt-dlp, FFmpeg and Deno are on a Mac — would be missing
+    // even though Terminal finds them.
+    static void extendSearchPath();
+
+    // How to install yt-dlp on this platform, for the notice that says it is
+    // missing.
+    static QString installHint();
 
     // Full paths, or empty when the tool is missing.
     static QString ffmpegPath();

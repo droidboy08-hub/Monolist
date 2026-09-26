@@ -3,8 +3,9 @@ import Monolist.Backend
 
 // Makes the area it fills act as the window's title bar: drag to move (the
 // native move, so edge snapping still works), double-click to maximise or
-// restore, right-click for the window menu. Put it under the bar's buttons
-// and fields, which take their own clicks first.
+// restore (on a Mac: whatever System Settings says a double click does),
+// right-click for the window menu. Put it under the bar's buttons and fields,
+// which take their own clicks first.
 Item {
     id: root
 
@@ -32,7 +33,10 @@ Item {
     }
 
     TapHandler {
-        onDoubleTapped: root.toggleMaximized()
+        onDoubleTapped: {
+            if (!Chrome.titleBarDoubleClicked())
+                root.toggleMaximized()
+        }
     }
 
     TapHandler {

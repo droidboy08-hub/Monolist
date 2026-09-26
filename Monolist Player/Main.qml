@@ -444,4 +444,16 @@ ApplicationWindow {
         enabled: window.nowPlayingOpen
         onActivated: window.nowPlayingOpen = false
     }
+
+    // The Mac's own window keys, which a Mac app has whether or not it has a
+    // Window menu to show them in. Closing leaves the app, and the music,
+    // running; the Dock icon brings the window back.
+    readonly property bool mac: Qt.platform.os === "osx"
+    Shortcut { sequences: [StandardKey.Close]; enabled: window.mac; onActivated: window.close() }
+    Shortcut { sequence: "Ctrl+M"; enabled: window.mac; onActivated: window.showMinimized() }
+    Shortcut {
+        sequences: [StandardKey.FullScreen]
+        enabled: window.mac
+        onActivated: window.visibility === Window.FullScreen ? window.showNormal() : window.showFullScreen()
+    }
 }
