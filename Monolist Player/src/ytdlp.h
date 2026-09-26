@@ -86,7 +86,8 @@ private:
 // All three are looked for in MONOLIST_TOOLS_DIR, <app>/tools, <app>/tools/yt-dlp
 // (the unpacked yt-dlp), next to the executable, and finally on PATH. Bundled
 // copies win, so a packaged app runs the versions it shipped with. On macOS
-// <app> is Monolist.app/Contents/MacOS.
+// <app> is Monolist.app/Contents/MacOS, where FFmpeg is, and yt-dlp and Deno
+// come first from where the app unpacks and updates them (ToolStore).
 class YtDlp
 {
 public:

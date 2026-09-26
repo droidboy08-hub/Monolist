@@ -8,6 +8,7 @@
 class QNetworkAccessManager;
 class QNetworkReply;
 class QProcess;
+class ToolStore;
 
 // What this copy of the app is, and how it is kept current.
 //
@@ -49,6 +50,8 @@ class AppInfo : public QObject
     Q_PROPERTY(QString toolsMessage READ toolsMessage NOTIFY toolsChanged)
     Q_PROPERTY(bool toolsBusy READ toolsBusy NOTIFY toolsChanged)
     Q_PROPERTY(bool canUpdateTools READ canUpdateTools CONSTANT)
+    // What Update components does here, or why there is nothing to do.
+    Q_PROPERTY(QString toolsDescription READ toolsDescription CONSTANT)
 
 public:
     // Idle covers "not asked yet"; the rest are what an answer can be.
@@ -85,11 +88,16 @@ public:
     QString toolsMessage() const { return m_toolsMessage; }
     bool toolsBusy() const { return m_toolsState == Working; }
     bool canUpdateTools() const;
+    QString toolsDescription() const;
 
     // Where a release feed lives, if one has been set. Stored as the setting
     // `update.feed`; a GitHub releases API URL is the shape expected.
     static QString updateFeed();
     static void setUpdateFeed(const QString &url);
+
+    // Negative, zero or positive as `left` is older than, the same as or newer
+    // than `right`: "1.2.10" after "1.2.9", "2026.08.19.1" after "2026.08.19".
+    static int compareVersions(const QString &left, const QString &right);
 
 public Q_SLOTS:
     // Asks the versions of the bundled tools, one process each. Cheap enough
@@ -102,6 +110,9 @@ public Q_SLOTS:
     // by running the same setup script that installed them.
     void updateTools();
     void openUpdatePage();
+    // macOS: once a day, update yt-dlp quietly and announce anything else
+    // newer (ToolStore). Nothing elsewhere, where the setup script does it.
+    void startToolChecks();
     // For a bug report: the version line, the build, and every component.
     QString report() const;
     // The same, on the clipboard, because nobody retypes a build number
@@ -112,6 +123,8 @@ Q_SIGNALS:
     void componentsChanged();
     void updateChanged();
     void toolsChanged();
+    // A sentence for the toast: something was updated, or could be.
+    void notice(const QString &text);
 
 private:
     void setUpdate(int state, const QString &message, const QString &url = {});
@@ -123,6 +136,7 @@ private:
     QNetworkAccessManager *m_network = nullptr;
     QPointer<QNetworkReply> m_updateReply;
     QPointer<QProcess> m_toolsProcess;
+    ToolStore *m_toolStore = nullptr;   // macOS only
 
     QVariantList m_components;
     bool m_componentsKnown = false;

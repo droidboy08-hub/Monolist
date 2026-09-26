@@ -9,6 +9,10 @@
 #include <QRegularExpression>
 #include <QStandardPaths>
 
+#ifdef Q_OS_MACOS
+#include "macos/toolstore.h"
+#endif
+
 namespace {
 
 QString g_executableOverride;
@@ -283,7 +287,7 @@ QString YtDlp::installHint()
 #if defined(Q_OS_WIN)
     return QStringLiteral("Run scripts\\setup-windows.ps1, or place yt-dlp next to the app.");
 #elif defined(Q_OS_MACOS)
-    return QStringLiteral("Run scripts/setup-macos.sh, or install it with Homebrew: brew install yt-dlp.");
+    return QStringLiteral("Settings › Update components fetches it; then reopen the app.");
 #else
     return QStringLiteral("Install it with your package manager, or place yt-dlp next to the app.");
 #endif
@@ -296,6 +300,11 @@ QStringList YtDlp::toolDirectories()
     const QString fromEnvironment = qEnvironmentVariable("MONOLIST_TOOLS_DIR");
     if (!fromEnvironment.isEmpty())
         directories.append(fromEnvironment);
+#ifdef Q_OS_MACOS
+    // yt-dlp and Deno as unpacked from the app, or as updated since (see
+    // ToolStore). FFmpeg is next to the executable, in Contents/MacOS.
+    directories << ToolStore::executableDirectories();
+#endif
     // tools/yt-dlp holds the unpacked yt-dlp: its exe beside its _internal
     // runtime, which starts far faster than the single-file build.
     directories << appDir.filePath(QStringLiteral("tools"))

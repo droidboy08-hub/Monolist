@@ -572,11 +572,7 @@ Flickable {
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
                 width: parent.width - toolsButton.width - Theme.space4
-                text: About.toolsMessage.length > 0
-                      ? About.toolsMessage
-                      : (About.canUpdateTools
-                         ? "Fetches the newest yt-dlp, FFmpeg and Deno, and leaves the app itself alone."
-                         : "These came with this build and are updated by whatever installed it.")
+                text: About.toolsMessage.length > 0 ? About.toolsMessage : About.toolsDescription
             }
 
             ActionButton {

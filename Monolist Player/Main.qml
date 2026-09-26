@@ -374,6 +374,11 @@ ApplicationWindow {
     }
 
     Connections {
+        target: About
+        function onNotice(text) { toast.show(text) }
+    }
+
+    Connections {
         target: Player
         function onNotice(text) { toast.show(text) }
         // A track that will not play used to fail in complete silence: the

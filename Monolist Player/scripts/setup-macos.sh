@@ -1,17 +1,18 @@
 #!/bin/bash
-# Installs what Monolist needs to build and run on a Mac, through Homebrew.
+# Installs what Monolist needs to be built on a Mac, through Homebrew.
 #
 #     scripts/setup-macos.sh             install whatever is missing
-#     scripts/setup-macos.sh --update    update yt-dlp, FFmpeg and Deno
+#     scripts/setup-macos.sh --update    update Homebrew's yt-dlp, FFmpeg and Deno
 #
-# To build:  qt (Qt 6), mpv (libmpv), cmake, ninja and pkgconf.
-# To run:    yt-dlp, ffmpeg and deno, which the app finds in Homebrew's bin
-#            folder even when it is opened from Finder or the Dock.
+# To build:  qt (Qt 6), mpv (libmpv), cmake, ninja, pkgconf, and ffmpeg,
+#            which scripts/build-macos.sh puts inside the app.
+# Also:      yt-dlp and deno, for builds that do not carry their own (an
+#            Xcode build): the app finds them in Homebrew's bin folder even
+#            when it is opened from Finder or the Dock.
 #
-# Re-running skips what is already there. --update is what Settings ›
-# Update components runs: YouTube changes often, and yt-dlp, FFmpeg and Deno
-# should follow their latest releases. It prints one line per tool, which the
-# app shows as it goes.
+# Only the Mac that builds the app needs any of this. Monolist.app made by
+# scripts/build-macos.sh carries yt-dlp, Deno and FFmpeg inside it, and keeps
+# yt-dlp and Deno current itself. Re-running skips what is already there.
 #
 # Written for the bash that ships with macOS (3.2).
 
@@ -25,7 +26,7 @@ for argument in "$@"; do
     case "$argument" in
         --update) update_only=1 ;;
         -h|--help)
-            sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'
+            sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'
             exit 0 ;;
         *)
             echo "Unknown option: $argument (try --help)" >&2

@@ -41,6 +41,7 @@
 #include "ytdlp.h"
 #ifdef Q_OS_MACOS
 #include "macos/mediasession.h"
+#include "macos/toolstore.h"
 #endif
 
 #include <clocale>
@@ -64,6 +65,13 @@ int main(int argc, char *argv[])
     // One source for the version, generated from the repository at build time
     // rather than typed in two places that drift apart.
     app.setApplicationVersion(AppInfo().version());
+
+#ifdef Q_OS_MACOS
+    // yt-dlp and Deno travel inside Monolist.app and run from Application
+    // Support, where they can be updated. Unpacked before anything looks for
+    // them: on the first launch of a new version, a second or two, once.
+    ToolStore::installBundled();
+#endif
 
     // Neutral control style: the design is drawn entirely by the QML components,
     // platform styles would override paddings and colors.
@@ -276,6 +284,9 @@ int main(int argc, char *argv[])
                              if (state == Qt::ApplicationActive && !window->isVisible())
                                  window->show();
                          });
+        // Once the app has settled: a stale yt-dlp is the usual reason a
+        // track will not play, so it is kept current without asking.
+        QTimer::singleShot(10000, &appInfo, [&appInfo]() { appInfo.startToolChecks(); });
 #endif
     }
 

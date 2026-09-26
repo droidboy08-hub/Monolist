@@ -211,17 +211,14 @@ if(APPLE)
         src/macos/macwindow.h          src/macos/macwindow.mm
         # Media keys, Control Center and the lock screen (Now Playing).
         src/macos/mediasession.h       src/macos/mediasession.mm
+        # yt-dlp and Deno: unpacked from the app, then kept current.
+        src/macos/toolstore.h          src/macos/toolstore.cpp
         macos/Monolist.icns
-        # Settings › Update components runs this to update yt-dlp, FFmpeg and
-        # Deno through Homebrew, from wherever the app is installed.
-        scripts/setup-macos.sh
     )
     set_source_files_properties(src/macos/macwindow.mm src/macos/mediasession.mm
         PROPERTIES COMPILE_OPTIONS "-fobjc-arc")
     set_source_files_properties(macos/Monolist.icns
         PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
-    set_source_files_properties(scripts/setup-macos.sh
-        PROPERTIES MACOSX_PACKAGE_LOCATION Resources/scripts)
     target_link_libraries(monolist PRIVATE "-framework AppKit" "-framework MediaPlayer")
 
     # The build number the stamp above just worked out, for CFBundleVersion.
