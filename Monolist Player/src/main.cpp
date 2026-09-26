@@ -2395,14 +2395,17 @@ int main(int argc, char *argv[])
     //
     // The same for the offline path: one download through yt-dlp and FFmpeg,
     // reporting progress, and quitting when the file is written, when it fails,
-    // or when the time runs out. Only into a scratch folder: with neither
-    // MONOLIST_DATA_DIR nor MONOLIST_DOWNLOAD_DIR it would write to the real
-    // Music folder, so it refuses.
+    // or when the time runs out. Only on a scratch database: a finished
+    // download is written into the library (a downloads row and a tracks
+    // row), and MONOLIST_DOWNLOAD_DIR alone moves the folder but not the
+    // database, so the test song would stay in the real library, pointing at
+    // a scratch file. MONOLIST_DATA_DIR also keeps the file out of the real
+    // Music folder; MONOLIST_DOWNLOAD_DIR may still pick the folder on top.
     const int downloadFlag = args.indexOf(QStringLiteral("--download"));
     if (downloadFlag >= 0 && downloadFlag + 1 < args.size()) {
-        if (qEnvironmentVariableIsEmpty("MONOLIST_DATA_DIR") && qEnvironmentVariableIsEmpty("MONOLIST_DOWNLOAD_DIR")) {
-            qWarning("selftest: refusing to download without MONOLIST_DATA_DIR or MONOLIST_DOWNLOAD_DIR:"
-                     " it would write to %s", qPrintable(downloads.downloadDirectory()));
+        if (qEnvironmentVariableIsEmpty("MONOLIST_DATA_DIR")) {
+            qWarning("selftest: refusing to download without MONOLIST_DATA_DIR: the song would be written into"
+                     " the real library (downloads to %s)", qPrintable(downloads.downloadDirectory()));
             return 1;
         }
         const QString videoId = args.at(downloadFlag + 1);

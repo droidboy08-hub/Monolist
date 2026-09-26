@@ -25,7 +25,10 @@
 // A download moves through DownloadQueueModel (queued, downloading, processing,
 // or failed) and, once its file is on disk, into DownloadLibraryModel and the
 // library's track list. The state every track row shows comes from stateFor(),
-// which answers from memory; QML asks again whenever `revision` changes.
+// which answers from memory; QML asks again whenever `revision` changes. That
+// is every row of every list at once, so it moves only when some download's
+// state does; a running download's percentage moves `progressRevision`, which
+// only the rows showing a running download follow.
 class DownloadManager : public QObject
 {
     Q_OBJECT
@@ -42,6 +45,7 @@ class DownloadManager : public QObject
     Q_PROPERTY(bool available READ available NOTIFY toolsChanged)
     Q_PROPERTY(bool canConvert READ canConvert NOTIFY toolsChanged)
     Q_PROPERTY(int revision READ revision NOTIFY revisionChanged)
+    Q_PROPERTY(int progressRevision READ progressRevision NOTIFY progressRevisionChanged)
 public:
     explicit DownloadManager(QObject *parent = nullptr);
     ~DownloadManager() override;
@@ -62,6 +66,7 @@ public:
     bool available() const { return m_available; }     // yt-dlp was found
     bool canConvert() const { return m_canConvert; }   // FFmpeg too: tags, cover art, trimming
     int revision() const { return m_revision; }
+    int progressRevision() const { return m_progressRevision; }
 
     // Looks for yt-dlp and FFmpeg again. Run after the setup script updates
     // the tools.
@@ -82,6 +87,11 @@ public:
                              const QString &artwork = QString(),
                              qint64 durationMs = 0,
                              bool isVideo = false);
+    // A whole list at once (Download all): track maps as the lists hand the
+    // player (sourceId, title, artist, artwork, durationMs, isVideo). The rows
+    // are told once at the end rather than once a song, which for a long
+    // playlist was every row asking again for every song queued.
+    Q_INVOKABLE void enqueueAll(const QVariantList &tracks);
 
     Q_INVOKABLE void cancel(const QString &videoId);   // also dismisses a failed entry
     Q_INVOKABLE void retry(const QString &videoId);
@@ -126,9 +136,14 @@ Q_SIGNALS:
     void libraryChanged();
     void optionsChanged();
     void revisionChanged();
+    void progressRevisionChanged();
     void toolsChanged();
 
 private:
+    // Puts one track in the queue; false when it is stored, queued or running
+    // already, or yt-dlp is missing. The caller tells the rows and pumps.
+    bool queueOne(const QString &videoId, const QString &title, const QString &artist,
+                  const QString &artwork, qint64 durationMs, bool isVideo);
     void pump();
     void begin(const QString &videoId);
     void complete(const QString &videoId, const QString &reportedPath, const QVariantMap &metadata);
@@ -138,6 +153,7 @@ private:
     void removePartialFiles(const QString &videoId);
     void loadStored();
     void touch();
+    void touchProgress();
     DownloadOptions options() const;
     QString settingValue(const QString &key, const QString &fallback) const;
     void setSettingValue(const QString &key, const QString &value);
@@ -161,4 +177,5 @@ private:
     bool m_canConvert = false;
     QElapsedTimer m_toolsChecked;   // since the tools were last looked for
     int m_revision = 0;
+    int m_progressRevision = 0;
 };

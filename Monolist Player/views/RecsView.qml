@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Controls.Basic
 import Monolist
 import Monolist.Backend
 import "../components"
@@ -138,6 +137,18 @@ ScrollPage {
                     onMenuRequested: root.openMenu(index)
                 }
             }
+        }
+
+        // Returned to with Back or Forward after Search drew a new page
+        // without this shelf on it.
+        Text {
+            visible: root.info.gone === true
+            width: parent.width
+            text: "This shelf is no longer on Search: the suggestions there have been drawn afresh since."
+            wrapMode: Text.WordWrap
+            font.family: Theme.fontFamily
+            font.pixelSize: 13
+            color: Theme.neutral700
         }
 
         Text {

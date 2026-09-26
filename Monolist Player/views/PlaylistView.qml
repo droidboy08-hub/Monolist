@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Controls.Basic
 import Monolist
 import Monolist.Backend
 import "../components"
@@ -80,12 +79,9 @@ ScrollPage {
         return liked ? Library.likedTrackList() : Library.playlistTrackList()
     }
 
+    // In one call, video flags and all (Downloads.enqueueAll).
     function downloadAll() {
-        var tracks = trackList()
-        for (var i = 0; i < tracks.length; ++i) {
-            var track = tracks[i]
-            Downloads.enqueue(track.sourceId, track.title, track.artist, track.artwork, track.durationMs)
-        }
+        Downloads.enqueueAll(trackList())
     }
 
     function songsLabel(n) { return n + (n === 1 ? " song" : " songs") }

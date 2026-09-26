@@ -829,25 +829,76 @@ void Recommender::feedNext()
 
 // -------------------------------------------------------------- See all
 
-void Recommender::openMore(int shelf)
+// The page a shelf was on and its place there, then what it is — its kind and
+// title — for when Back or Forward come to it after the page was rebuilt, and
+// the same place holds another shelf, or none.
+QString Recommender::moreKey(int shelf) const
 {
     if (shelf < 0 || shelf >= m_shelves.size())
-        return;
+        return {};
+    const QVariantMap source = m_shelves.at(shelf).toMap();
+    return QStringLiteral("%1:%2:%3|%4").arg(QString::number(m_shownGeneration), QString::number(shelf),
+                                            source.value(QStringLiteral("kind")).toString(),
+                                            source.value(QStringLiteral("title")).toString());
+}
+
+void Recommender::openMore(const QString &key)
+{
     // Back to a list already open: as it was left, scrolled and paged.
-    if (!m_more.isEmpty() && m_more.value(QStringLiteral("shelf")).toInt() == shelf
-        && m_moreGeneration == m_shownGeneration)
+    if (key.isEmpty() || (!m_more.isEmpty() && m_more.value(QStringLiteral("key")).toString() == key))
         return;
+    const qsizetype bar = key.indexOf(QLatin1Char('|'));
+    const QStringList place = key.left(bar).split(QLatin1Char(':'));
+    if (bar < 0 || place.size() != 3)
+        return;
+    const quint64 generation = place.at(0).toULongLong();
+    const int index = place.at(1).toInt();
+    const QString kind = place.at(2);
+    const QString title = key.mid(bar + 1);
+    const auto isIt = [this, &kind, &title](int candidate) {
+        const QVariantMap map = m_shelves.at(candidate).toMap();
+        return map.value(QStringLiteral("kind")).toString() == kind
+               && map.value(QStringLiteral("title")).toString() == title;
+    };
+    int shelf = -1;
+    if (generation == m_shownGeneration && index >= 0 && index < m_shelves.size() && isIt(index))
+        shelf = index;
+    // The page has been drawn again since: the same shelf, wherever it is on
+    // the new one, from the top.
+    for (int candidate = 0; shelf < 0 && candidate < m_shelves.size(); ++candidate) {
+        if (isIt(candidate))
+            shelf = candidate;
+    }
+
+    ++m_moreSerial;
+    m_moreLoading = false;
+    if (shelf < 0) {
+        // Gone with the page it was on. Said so, rather than showing the
+        // list left open, or another shelf's, under its name.
+        m_more = QVariantMap{
+            { QStringLiteral("title"), title },
+            { QStringLiteral("shelf"), -1 },
+            { QStringLiteral("key"), key },
+            { QStringLiteral("gone"), true }
+        };
+        m_moreRows.clear();
+        m_moreGeneration = 0;
+        m_moreExhausted = true;
+        Q_EMIT moreChanged();
+        Q_EMIT moreStateChanged();
+        return;
+    }
+
     const QVariantMap source = m_shelves.at(shelf).toMap();
     m_more = QVariantMap{
         { QStringLiteral("title"), source.value(QStringLiteral("title")) },
         { QStringLiteral("reason"), source.value(QStringLiteral("reason")) },
         { QStringLiteral("kind"), source.value(QStringLiteral("kind")) },
-        { QStringLiteral("shelf"), shelf }
+        { QStringLiteral("shelf"), shelf },
+        { QStringLiteral("key"), key }
     };
     m_moreRows = source.value(QStringLiteral("rows")).toList();
     m_moreGeneration = m_shownGeneration;
-    ++m_moreSerial;
-    m_moreLoading = false;
     m_moreExhausted = !source.value(QStringLiteral("more")).toBool();
     Q_EMIT moreChanged();
     Q_EMIT moreStateChanged();

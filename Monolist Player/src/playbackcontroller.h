@@ -247,6 +247,12 @@ private:
     // A picture that will not play must not cost the song: back to the sound,
     // from the same second, with a word about it.
     bool abandonVideo(const QString &reason);
+    // The copy of `track` on disk: its download, or its own source where
+    // that is a file. Empty when it has to be streamed.
+    QString localCopyOf(const QVariantMap &track) const;
+    // The song playing, as sound again from where it is: from its file when
+    // it has one, otherwise resolved, with `resolvingText` meanwhile.
+    void backToSound(bool keepPlaying, const QString &resolvingText);
     void handleEndOfFile();
     void prefetchUpcoming();
     void advance(bool keepPlaying);

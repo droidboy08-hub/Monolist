@@ -24,6 +24,7 @@ Item {
         baselineOffset: heading.y + heading.baselineOffset
 
         Text {
+            id: numberText
             text: root.number
             anchors.baseline: heading.baseline
             font.family: Theme.fontFamily
@@ -32,9 +33,15 @@ Item {
             color: Theme.accent700
         }
 
+        // Cut short before the action link rather than run under it: a
+        // shelf's title ("More like …", a search term) can be any length.
         Text {
             id: heading
+            width: Math.max(0, Math.min(implicitWidth,
+                                        root.width - numberText.width - headingRow.spacing
+                                        - (actionLink.visible ? actionLink.width + Theme.space4 : 0)))
             text: root.title
+            elide: Text.ElideRight
             font.family: Theme.fontFamily
             font.pixelSize: 28
             font.weight: Theme.weightBlack
@@ -44,6 +51,7 @@ Item {
     }
 
     Text {
+        id: actionLink
         visible: root.action.length > 0
         text: root.action
         anchors.right: parent.right

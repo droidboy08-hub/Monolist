@@ -59,8 +59,12 @@ private:
     void handleStderr();
     void handleLine(const QString &line);
     void handleFinished(int exitCode, QProcess::ExitStatus status);
+    // Ends yt-dlp and every process it started, and waits until they have gone.
+    void stopProcess();
 
     QProcess *m_process = nullptr;
+    // Windows: the job yt-dlp and its children run in (a HANDLE), or null.
+    void *m_job = nullptr;
     QByteArray m_stdout;
     QByteArray m_stderr;
     QByteArray m_stderrLine;

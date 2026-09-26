@@ -45,12 +45,14 @@ Column {
     // The row held (-1 when none), the gap between rows it would drop into
     // (0 before the first, count after the last), how far it has been
     // carried, and where it was picked up; the pointer in window coordinates,
-    // for scrolling while it is held still at an edge.
+    // for scrolling while it is held still at an edge; and whether it has
+    // been carried at all, rather than the grip only pressed.
     property int dragFrom: -1
     property int dragGap: -1
     property real dragOffset: 0
     property real grabY: 0
     property point dragPointer: Qt.point(0, 0)
+    property bool dragMoved: false
     // Where the row held would end up, as a row number.
     readonly property int dropIndex: dragGap > dragFrom ? dragGap - 1 : dragGap
     readonly property bool dropMoves: dragFrom >= 0 && dropIndex !== dragFrom
@@ -98,20 +100,39 @@ Column {
     function beginDrag(index, sceneX, sceneY) {
         grabY = mapFromItem(null, sceneX, sceneY).y
         dragOffset = 0
+        dragMoved = false
         dragFrom = index
         dragGap = index
         dragPointer = Qt.point(sceneX, sceneY)
     }
 
-    // The gap is chosen by the pointer, not by the row's edges: past the
-    // middle of the next row, the song goes beyond it.
+    // The place is the row slot nearest the middle of the row carried: once
+    // that is past the middle of the next row, the song goes beyond it. The
+    // rows between make room for it there (shiftFor), so the gap it would
+    // drop into is open, and nothing is drawn across the row it carries.
     function updateDrag(sceneX, sceneY) {
         if (dragFrom < 0)
             return
         dragPointer = Qt.point(sceneX, sceneY)
         const y = mapFromItem(null, sceneX, sceneY).y
         dragOffset = y - grabY
-        dragGap = Math.max(0, Math.min(rows.count, Math.round((y - headHeight) / rowHeight)))
+        if (Math.abs(dragOffset) >= Theme.space1)
+            dragMoved = true
+        const target = Math.max(0, Math.min(rows.count - 1, Math.round(dragFrom + dragOffset / rowHeight)))
+        dragGap = target > dragFrom ? target + 1 : target
+    }
+
+    // How far a row that is not held moves aside, while one is carried
+    // across it: up into the slot the held one left, or down out of the
+    // slot it is going to.
+    function shiftFor(index) {
+        if (dragFrom < 0 || index === dragFrom)
+            return 0
+        if (dropIndex > dragFrom && index > dragFrom && index <= dropIndex)
+            return -rowHeight
+        if (dropIndex < dragFrom && index >= dropIndex && index < dragFrom)
+            return rowHeight
+        return 0
     }
 
     function endDrag(drop) {
@@ -157,9 +178,6 @@ Column {
     Item {
         width: root.width
         height: root.headHeight
-        // Over the rows, for the drop line below, which is drawn from here
-        // because a Column places every child of its own.
-        z: 3
 
         Text {
             x: 0
@@ -215,16 +233,6 @@ Column {
             height: Theme.ruleWidth
             color: Theme.divider
         }
-
-        // Where the song held would go: a red rule in the gap, which is the
-        // one thing on the page that says "here".
-        Rectangle {
-            visible: root.dropMoves
-            y: root.headHeight + root.dragGap * root.rowHeight - height / 2
-            width: parent.width
-            height: Theme.ruleWidth
-            color: Theme.accent
-        }
     }
 
     // — rows —
@@ -260,9 +268,11 @@ Column {
             // the keyboard, so Alt+Up and Alt+Down are seen to apply to it.
             readonly property bool gripShown: root.reorderable && (rowHover.hovered || activeFocus || held)
 
-            // Carried with the pointer, over the rows it passes.
+            // Carried with the pointer, over the rows it passes, which step
+            // aside to open the gap it would drop into: where the song goes
+            // is the one empty slot in the list.
             z: held ? 2 : 0
-            transform: Translate { y: row.held ? root.dragOffset : 0 }
+            transform: Translate { y: row.held ? root.dragOffset : root.shiftFor(row.index) }
 
             // Moving a song from the keyboard: Alt+Up and Alt+Down, once the
             // grip has been pressed (or the row moved) gives the row the
@@ -353,7 +363,14 @@ Column {
                         const at = mapToItem(null, mouse.x, mouse.y)
                         root.updateDrag(at.x, at.y)
                     }
-                    onReleased: root.endDrag(true)
+                    // A press alone gives the row the keyboard, for Alt+Up and
+                    // Alt+Down; a drag was the mouse's move, and leaves no red
+                    // focus mark behind on the row it moved.
+                    onReleased: {
+                        if (root.dragMoved)
+                            row.focus = false
+                        root.endDrag(true)
+                    }
                     onCanceled: root.endDrag(false)
                 }
             }

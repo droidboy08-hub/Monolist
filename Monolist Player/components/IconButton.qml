@@ -38,7 +38,10 @@ Button {
     implicitHeight: side
     padding: 0
     flat: true
-    hoverEnabled: true
+    // Qt still reports a disabled button as hovered, which would turn a
+    // dimmed glyph to ink under the pointer (and show its tooltip) for a
+    // control that offers nothing. LikeButton does the same.
+    hoverEnabled: enabled
     focusPolicy: Qt.TabFocus
 
     background: Rectangle {

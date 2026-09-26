@@ -6,8 +6,16 @@
 #include <QSGTexture>
 #include <QTimer>
 
+// Built without libmpv (MONOLIST_NO_MPV) there is no player to draw from:
+// the engine is never valid, so attach() makes no render context and every
+// call into mpv below is never reached. The surfaces still exist, since the
+// views are the same, and draw nothing.
+#ifndef MONOLIST_NO_MPV
 #include <mpv/client.h>
 #include <mpv/render.h>
+#else
+struct mpv_render_context;
+#endif
 
 #include <utility>
 
@@ -47,8 +55,10 @@ VideoSurface::~VideoSurface()
     // The last one gone: the context goes too, which must happen before the
     // player it renders for is destroyed.
     if (g_surfaces.isEmpty() && g_render) {
+#ifndef MONOLIST_NO_MPV
         mpv_render_context_set_update_callback(g_render, nullptr, nullptr);
         mpv_render_context_free(g_render);
+#endif
         g_render = nullptr;
     }
 }
@@ -113,6 +123,9 @@ void VideoSurface::attach()
     if (g_holder == this || !g_engine || !g_engine->isValid())
         return;
 
+#ifdef MONOLIST_NO_MPV
+    return;
+#else
     if (!g_render) {
         int advanced = 1;
         mpv_render_param params[] = {
@@ -139,6 +152,7 @@ void VideoSurface::attach()
     setVideoSize(g_engine->videoSize());
     g_engine->setVideoWatched(true);
     update();
+#endif
 }
 
 void VideoSurface::detach()
@@ -210,12 +224,26 @@ QSGNode *VideoSurface::updatePaintNode(QSGNode *old, UpdatePaintNodeData *)
         return nullptr;
     }
 
-    // In device pixels, so the picture is rendered at the size it is shown.
+    // In device pixels, so the picture is rendered at the size it is shown —
+    // but never larger than the video itself. mpv draws in software, here on
+    // the GUI thread, and every frame is uploaded afresh: full screen at the
+    // item's size would scale a 640×360 stream up to several million pixels a
+    // frame on the processor. At most the video's own size instead, the shape
+    // of the item kept so mpv fits the picture into it the same way, and the
+    // texture node stretches it the rest of the way on the graphics card.
     const qreal ratio = view->effectiveDevicePixelRatio();
-    const QSize size(qMax(1, qRound(width() * ratio)), qMax(1, qRound(height() * ratio)));
+    QSizeF target(width() * ratio, height() * ratio);
+    const QSize video = g_engine ? g_engine->videoSize() : QSize();
+    if (!video.isEmpty()) {
+        const qreal scale = qMin<qreal>(1.0, qMax(video.width() / target.width(),
+                                                  video.height() / target.height()));
+        target *= scale;
+    }
+    const QSize size(qMax(1, qRound(target.width())), qMax(1, qRound(target.height())));
     if (m_frame.size() != size)
         m_frame = QImage(size, QImage::Format_RGB32);
 
+#ifndef MONOLIST_NO_MPV
     int sizes[2] = { size.width(), size.height() };
     size_t stride = size_t(m_frame.bytesPerLine());
     mpv_render_param params[] = {
@@ -226,6 +254,7 @@ QSGNode *VideoSurface::updatePaintNode(QSGNode *old, UpdatePaintNodeData *)
         { MPV_RENDER_PARAM_INVALID, nullptr }
     };
     mpv_render_context_render(g_render, params);
+#endif
 
     auto *node = static_cast<QSGSimpleTextureNode *>(old);
     if (!node) {

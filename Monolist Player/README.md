@@ -355,8 +355,9 @@ mpv's own messages.
                                                     records nothing, the good one plays again and pauses,
                                                     and two quick Nexts while paused stay paused
     monolist --download <videoId> [seconds]         one download through yt-dlp and FFmpeg, into the scratch
-                                                    download folder (refuses without MONOLIST_DATA_DIR or
-                                                    MONOLIST_DOWNLOAD_DIR)
+                                                    database and download folder (refuses without
+                                                    MONOLIST_DATA_DIR; MONOLIST_DOWNLOAD_DIR may still
+                                                    pick the folder)
     monolist --download-cleanup-test                what a failed or cancelled download deletes, on invented
                                                     files in a scratch folder: yt-dlp's partial and working
                                                     files, never a finished file, whatever the database
@@ -460,8 +461,9 @@ the real library; the scrobbling tests, `--ytm-session-test`,
 since they empty the scrobble queue, replace the stored session, open the
 downloads on that database or write playlists and likes into it. It moves downloads too, to `downloads` inside it, so a test never
 writes to the real Music folder. `MONOLIST_DOWNLOAD_DIR` names the download
-folder outright, and wins when both are set. A test downloads only into one of
-those two, which is why `--download` refuses to run without either.
+folder outright, and wins when both are set. It moves only the folder, not the
+database, and a finished download is written into the library, which is why
+`--download` refuses to run without `MONOLIST_DATA_DIR`.
 `MONOLIST_REC_DATA_URL` fetches the recommendation data from another address, or a local folder (`file:///C:/dev/monolist-data/`), instead of
 the pinned tag on GitHub. `MONOLIST_LASTFM_URL` sends the self-tests' Last.fm
 calls, made with an invented key, to a stand-in on this computer, for

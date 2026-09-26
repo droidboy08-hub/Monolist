@@ -16,6 +16,37 @@ constexpr int kPageSongCap = 5000;
 // How many rows go into a page's song table at once (feedPage).
 constexpr int kFeedRows = 25;
 
+// Whose records these are, on the album cards whose own line names nobody:
+// an artist's page, and its discography, print "Album • 2019" under each of
+// theirs. Saved to the library from its menu (Library::setSaved), such a card
+// would otherwise be kept with no artist, and nothing would fill it in later.
+void markOwner(QVariantList &cards, const QString &owner)
+{
+    if (owner.isEmpty())
+        return;
+    for (QVariant &value : cards) {
+        QVariantMap card = value.toMap();
+        if (card.value(QStringLiteral("type")).toString() != QLatin1String("album")
+            || !card.value(QStringLiteral("artist")).toString().isEmpty())
+            continue;
+        card.insert(QStringLiteral("owner"), owner);
+        value = card;
+    }
+}
+
+void markSectionsOwner(QVariantList &sections, const QString &owner)
+{
+    if (owner.isEmpty())
+        return;
+    for (QVariant &value : sections) {
+        QVariantMap section = value.toMap();
+        QVariantList items = section.value(QStringLiteral("items")).toList();
+        markOwner(items, owner);
+        section.insert(QStringLiteral("items"), items);
+        value = section;
+    }
+}
+
 } // namespace
 
 Catalog::Catalog(QObject *parent)
@@ -218,6 +249,7 @@ void Catalog::openPage(const QString &browseId)
         return;   // open already, or on its way
 
     m_pageId = browseId;
+    const quint64 generation = ++m_pageGeneration;
     m_pageLoading = true;
     m_page = { { QStringLiteral("browseId"), browseId } };
     m_pageTracks.clear();
@@ -228,13 +260,14 @@ void Catalog::openPage(const QString &browseId)
     m_pageFeedScheduled = false;
     m_pageRequestOut = false;
     m_pageLoadingMore = false;
+    m_pageFetchingTold = false;
     m_pageWantsAll = false;
     Q_EMIT pageChanged();
     Q_EMIT pageMoreChanged();
 
-    m_innerTube.browse(browseId, [this, browseId](const QJsonObject &root, const QString &error) {
-        if (browseId != m_pageId)
-            return;   // another page was opened meanwhile
+    m_innerTube.browse(browseId, [this, browseId, generation](const QJsonObject &root, const QString &error) {
+        if (generation != m_pageGeneration)
+            return;   // another page was opened meanwhile, or this one again
         m_pageLoading = false;
         if (!error.isEmpty()) {
             m_page.insert(QStringLiteral("error"), error);
@@ -294,9 +327,10 @@ void Catalog::loadRestOfPage()
 void Catalog::updatePageLoadingMore()
 {
     const bool loading = m_pageRequestOut || !m_pageFeed.isEmpty();
-    if (loading == m_pageLoadingMore)
+    if (loading == m_pageLoadingMore && m_pageRequestOut == m_pageFetchingTold)
         return;
     m_pageLoadingMore = loading;
+    m_pageFetchingTold = m_pageRequestOut;
     Q_EMIT pageMoreChanged();
 }
 
@@ -305,9 +339,9 @@ void Catalog::schedulePageFeed()
     if (m_pageFeedScheduled || m_pageFeed.isEmpty())
         return;
     m_pageFeedScheduled = true;
-    const QString browseId = m_pageId;
-    QTimer::singleShot(0, this, [this, browseId]() {
-        if (browseId != m_pageId)
+    const quint64 generation = m_pageGeneration;
+    QTimer::singleShot(0, this, [this, generation]() {
+        if (generation != m_pageGeneration)
             return;   // for a page no longer open; openPage started afresh
         m_pageFeedScheduled = false;
         feedPage();
@@ -331,16 +365,23 @@ void Catalog::feedPage()
 
 void Catalog::fetchPagePart()
 {
-    const QString browseId = m_pageId;
+    const quint64 generation = m_pageGeneration;
     const QString token = m_pageNext;
     m_pageRequestOut = true;
     updatePageLoadingMore();
 
-    m_innerTube.continueBrowse(token, [this, browseId, token](const QJsonObject &root, const QString &error) {
-        // Another page opened meanwhile, or this one opened afresh.
-        if (browseId != m_pageId || token != m_pageNext)
+    m_innerTube.continueBrowse(token, [this, generation, token](const QJsonObject &root, const QString &error) {
+        // Another page opened meanwhile, or this one opened afresh: that
+        // opening started with nothing on its way.
+        if (generation != m_pageGeneration)
             return;
         m_pageRequestOut = false;
+        // Not the part the page is waiting for. Should it ever happen, the
+        // page is at least not left "loading" for good.
+        if (token != m_pageNext) {
+            updatePageLoadingMore();
+            return;
+        }
         if (!error.isEmpty()) {
             // The token is kept, so scrolling on, or pressing Play again,
             // asks once more.
@@ -395,6 +436,7 @@ void Catalog::openListing(const QString &browseId, const QString &params, const 
         return;   // open already, or on its way
 
     m_listingKey = key;
+    const quint64 generation = ++m_listingGeneration;
     m_listingLoading = true;
     m_listingLoadingMore = false;
     m_listingItemsNext.clear();
@@ -404,9 +446,11 @@ void Catalog::openListing(const QString &browseId, const QString &params, const 
     Q_EMIT listingChanged();
     Q_EMIT listingMoreChanged();
 
-    m_innerTube.browse(browseId, params, [this, key, title](const QJsonObject &root, const QString &error) {
-        if (key != m_listingKey)
-            return;   // another was opened meanwhile
+    m_listingOwner.clear();
+    m_innerTube.browse(browseId, params, [this, browseId, key, title, generation](const QJsonObject &root,
+                                                                                 const QString &error) {
+        if (generation != m_listingGeneration)
+            return;   // another was opened meanwhile, or this one again
         m_listingLoading = false;
         if (!error.isEmpty()) {
             m_listing.insert(QStringLiteral("error"), error);
@@ -414,6 +458,13 @@ void Catalog::openListing(const QString &browseId, const QString &params, const 
             return;
         }
         const InnerTube::Listing listing = InnerTube::parseListing(root);
+        // An artist's discography is "MPAD" and their channel: the artist
+        // whose page it was opened from, by name, or else the page's own
+        // heading, which is theirs.
+        if (browseId.startsWith(QLatin1String("MPAD"))) {
+            m_listingOwner = m_artist.value(QStringLiteral("browseId")).toString() == browseId.mid(4)
+                             ? m_artist.value(QStringLiteral("name")).toString() : listing.title;
+        }
         QVariantList sections;
         QList<InnerTube::Track> songs;
         for (const InnerTube::Shelf &shelf : listing.sections) {
@@ -421,6 +472,7 @@ void Catalog::openListing(const QString &browseId, const QString &params, const 
             if (!shelf.cards.isEmpty())
                 sections.append(shelfToMap(shelf));
         }
+        markSectionsOwner(sections, m_listingOwner);
         // The shelf's own name, which is what was clicked; the page's (an
         // artist's name over their albums) goes above it.
         const QString heading = title.isEmpty() ? listing.title : title;
@@ -454,14 +506,19 @@ void Catalog::fetchListingPart()
     // are all in, so the page grows downwards in the order it reads.
     const bool items = !m_listingItemsNext.isEmpty();
     const QString token = items ? m_listingItemsNext : m_listingSectionsNext;
-    const QString key = m_listingKey;
+    const quint64 generation = m_listingGeneration;
     m_listingLoadingMore = true;
     Q_EMIT listingMoreChanged();
 
-    m_innerTube.continueBrowse(token, [this, key, items, token](const QJsonObject &root, const QString &error) {
-        if (key != m_listingKey || token != (items ? m_listingItemsNext : m_listingSectionsNext))
-            return;
+    m_innerTube.continueBrowse(token, [this, generation, items, token](const QJsonObject &root,
+                                                                     const QString &error) {
+        if (generation != m_listingGeneration)
+            return;   // another listing opened meanwhile, which started afresh
         m_listingLoadingMore = false;
+        if (token != (items ? m_listingItemsNext : m_listingSectionsNext)) {
+            Q_EMIT listingMoreChanged();
+            return;
+        }
         if (!error.isEmpty()) {
             Q_EMIT listingMoreChanged();
             Q_EMIT notice(QStringLiteral("The rest of this shelf would not load: %1").arg(error));
@@ -469,17 +526,30 @@ void Catalog::fetchListingPart()
         }
         const InnerTube::Continuation part = InnerTube::parseContinuation(root);
         QVariantList sections = m_listing.value(QStringLiteral("sections")).toList();
+        // More cards for the last grid, where there is one to add them to:
+        // handed over as they are (listingAppended), so the cards already
+        // shown stay, pictures and all. New sections, or a first grid, and
+        // the listing is shown again whole.
+        const bool extendsLast = !sections.isEmpty() && part.shelves.isEmpty();
+        QVariantList added;
         if (!part.cards.isEmpty()) {
             QVariantMap last = sections.isEmpty() ? QVariantMap() : sections.takeLast().toMap();
             QVariantList cards = last.value(QStringLiteral("items")).toList();
             for (const InnerTube::Card &card : part.cards)
-                cards.append(InnerTube::cardToVariant(card));
+                added.append(InnerTube::cardToVariant(card));
+            markOwner(added, m_listingOwner);
+            cards += added;
             last.insert(QStringLiteral("items"), cards);
             sections.append(last);
         }
         for (const InnerTube::Shelf &shelf : part.shelves) {
-            if (!shelf.cards.isEmpty())
-                sections.append(shelfToMap(shelf));
+            if (!shelf.cards.isEmpty()) {
+                QVariantMap map = shelfToMap(shelf);
+                QVariantList items = map.value(QStringLiteral("items")).toList();
+                markOwner(items, m_listingOwner);
+                map.insert(QStringLiteral("items"), items);
+                sections.append(map);
+            }
             m_listingSongs.append(toItems(shelf.songs));
         }
         m_listingSongs.append(toItems(part.tracks));
@@ -490,8 +560,12 @@ void Catalog::fetchListingPart()
             m_listingItemsNext = empty ? QString() : part.next;
         else
             m_listingSectionsNext = empty ? QString() : part.next;
-        if (!empty)
+        if (extendsLast) {
+            if (!added.isEmpty())
+                Q_EMIT listingAppended(int(sections.size()) - 1, added);
+        } else if (!empty) {
             Q_EMIT listingChanged();
+        }
         Q_EMIT listingMoreChanged();
     });
 }
@@ -536,8 +610,13 @@ void Catalog::playCollection(const QString &browseId, const QString &title, cons
 QVariantList Catalog::pageTrackList() const
 {
     QVariantList list;
+    list.reserve(m_pageTracks.rowCount() + m_pageFeed.size());
     for (int row = 0; row < m_pageTracks.rowCount(); ++row)
         list.append(m_pageTracks.get(row));
+    // Arrived, and still waiting for their rows (feedPage): the table is a
+    // few frames behind the songs, and a long playlist's many frames.
+    for (const SearchResultModel::Item &item : m_pageFeed)
+        list.append(SearchResultModel::toMap(item));
     return list;
 }
 
@@ -590,6 +669,8 @@ void Catalog::showArtist(const QString &browseId, const QString &name)
         QVariantList shelves;
         for (const InnerTube::Shelf &shelf : artist.shelves)
             shelves.append(shelfToMap(shelf));
+        // The albums and singles on their page are theirs.
+        markSectionsOwner(shelves, artist.name);
         m_shuffle = artist.shuffle;
         m_radio = artist.radio;
         m_artist = {

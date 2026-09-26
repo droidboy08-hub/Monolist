@@ -37,11 +37,14 @@ ScrollPage {
     // waits for the rest of a long one to arrive first (Catalog.loadRestOfPage),
     // and then runs, with all of it or, if the rest would not load, with what
     // did (Catalog says why). `waiting` names the button, so it shows dots.
+    // It waits for the songs, not for their rows: the table makes those a
+    // few at a time and can be far behind, and the actions take their songs
+    // from Catalog.pageTrackList, which has every song that has arrived.
     property var afterLoad: null
     property string waiting: ""
 
     function withWholePage(name, action) {
-        if (!Catalog.pageHasMore && !Catalog.pageLoadingMore) {
+        if (!Catalog.pageHasMore && !Catalog.pageFetching) {
             action()
             return
         }
@@ -53,7 +56,7 @@ ScrollPage {
     Connections {
         target: Catalog
         function onPageMoreChanged() {
-            if (root.afterLoad === null || Catalog.pageLoadingMore) {
+            if (root.afterLoad === null || Catalog.pageFetching) {
                 // A part just in, with the end still in sight: the next.
                 root.loadMoreIfNear()
                 return
@@ -75,12 +78,10 @@ ScrollPage {
         }
     }
 
+    // In one call, video flags and all: queued one at a time, every row on
+    // every page was asked again for every song.
     function downloadAll() {
-        var tracks = Catalog.pageTrackList()
-        for (var i = 0; i < tracks.length; ++i) {
-            var track = tracks[i]
-            Downloads.enqueue(track.sourceId, track.title, track.artist, track.artwork, track.durationMs)
-        }
+        Downloads.enqueueAll(Catalog.pageTrackList())
     }
 
     readonly property bool saved: Library.revision >= 0 && Library.isSaved(page.browseId !== undefined ? page.browseId : "")
@@ -198,7 +199,7 @@ ScrollPage {
                         text: "Play"
                         enabled: Catalog.pageTracks.count > 0
                         onClicked: root.withWholePage("play", function() {
-                            Player.playModel(Catalog.pageTracks, 0, "playlist")
+                            Player.playTracks(Catalog.pageTrackList(), 0, "playlist")
                         })
                     }
                     ActionButton {
@@ -206,8 +207,9 @@ ScrollPage {
                         text: "Shuffle"
                         enabled: Catalog.pageTracks.count > 1
                         onClicked: root.withWholePage("shuffle", function() {
+                            const tracks = Catalog.pageTrackList()
                             Player.shuffle = true
-                            Player.playModel(Catalog.pageTracks, Math.floor(Math.random() * Catalog.pageTracks.count), "playlist")
+                            Player.playTracks(tracks, Math.floor(Math.random() * tracks.length), "playlist")
                         })
                     }
                     ActionButton {

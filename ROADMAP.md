@@ -157,7 +157,7 @@ Priority runs from 1 (first) to 9. Size: S under an hour, M a few hours, L a day
   Done when: CMake requires 6.9 on APPLE and the README says so, or the flags are guarded with QT_VERSION_CHECK(6,9,0) and fall back to the standard title bar.
 - [ ] **M03** yt-dlp, FFmpeg and Deno aren't found when the app is opened from Finder, and any python3 makes yt-dlp look installed (Windows too) *(P6, S)*
   Done when: On macOS the lookup also searches the bundle's tools folder, ~/Library/Application Support/Monolist/tools, /opt/homebrew/bin and /usr/local/bin. The python fallback is used only if `-m yt_dlp --version` succeeds, and missing-tool messages give the right step for each platform.
-- [ ] **M04** The build-without-libmpv option (-DMONOLIST_NO_MPV=ON) no longer compiles *(P6, S)*
+- [x] **M04** The build-without-libmpv option (-DMONOLIST_NO_MPV=ON) no longer compiles *(P6, S)*
   Done when: The stub matches the header and VideoSurface's mpv code is guarded, so a NO_MPV build compiles and shows 'Built without libmpv'.
 - [ ] **M05** The Mac build is a bare executable, not a Monolist.app *(P6, M)*
   Done when: On APPLE, CMake sets MACOSX_BUNDLE and OUTPUT_NAME Monolist and uses a cmake/Info.plist.in (bundle ID, version from PROJECT_VERSION, build number, minimum macOS, Music category, icon). cmake --build then produces a Monolist.app that opens from Finder.
@@ -231,7 +231,7 @@ Seen by the agents that fixed B01–B13 and by their reviewers, and not yet fixe
   Done when: the button cancels in every in-flight state.
 - [x] **F19** With nothing loaded, the player bar's heart offers "Add to Liked songs" and does nothing *(P6, S)*
   Done when: the heart is disabled or hidden when nothing is loaded.
-- [ ] **F20** The build-without-libmpv stub (-DMONOLIST_NO_MPV=ON) no longer compiles: load(), setVideoEnabled and setVideoWatched are out of date *(P6, S)*
+- [x] **F20** The build-without-libmpv stub (-DMONOLIST_NO_MPV=ON) no longer compiles: load(), setVideoEnabled and setVideoWatched are out of date *(P6, S)*
   Done when: that configuration builds. (Same as M04.)
 - [ ] **F21** The README's self-test list lacks --rec-test, --graph-test, --artist-test, --content-test and the new --lastfm-test, --cookie-test, --listen-test, --scrobble-test, --lastfm-connect-test, --ytm-session-test, --secret-test *(P9, S)*
   Done when: every self-test flag is documented with what it checks.
@@ -247,7 +247,7 @@ Seen by the agents that fixed B01–B13 and by their reviewers, and not yet fixe
   Done when: the rest comes another way (the watch playlist, /next with the playlist id, or the signed-in session), or the page says how many of the total it could load.
 - [ ] **F27** Home shows only the first two or three shelves of YouTube Music's feed: the feed's own continuation is never followed, and asked anonymously it answers an empty page (token in the body, in the URL, or both) *(P5, M)*
   Done when: Home follows the feed's continuation as the reader scrolls (probably with the visitor cookie or the signed-in session), and shows the shelves below the first few.
-- [ ] **F28** Track tables make every row up front (a Repeater in a Column): 100 rows cost 250-300 ms in the Debug build here, so a 5,000-song playlist would hold 5,000 heavy rows. Pages now add them 25 at a time (at most ~90 ms a batch), which keeps scrolling smooth but not the memory *(P5, M)*
+- [ ] **F28** Track tables make every row up front (a Repeater in a Column): 100 rows cost 250-300 ms in the Debug build here, so a 5,000-song playlist would hold 5,000 heavy rows. Pages now add them 25 at a time (at most ~90 ms a batch), which keeps scrolling smooth but not the memory. Every view stays made, so those rows stay resident after the page is left. Play, Shuffle, Download all and Add all no longer wait for the rows, only for the songs (Catalog.pageFetching) *(P5, M)*
   Done when: rows are made only near what is on screen (a ListView kept in step with the page's scroll, or rows that load their controls lazily), measured with --page <id> --all.
 - [ ] **F29** The library's cards (Liked songs, your playlists, saved albums and playlists) have no play plate, while YouTube Music's cards on Home, artist pages, search and "show all" now do *(P6, S)*
   Done when: every album and playlist card plays from its plate, your own playlists and Liked songs included.
@@ -259,6 +259,8 @@ Seen by the agents that fixed B01–B13 and by their reviewers, and not yet fixe
   Done when: both use SmoothWheel, the country list passes the wheel on to the Settings page at its ends, and the lyrics still stop following the song when scrolled by hand (LyricsPane uses onMovementStarted, which a wheel glide does not raise).
 - [ ] **F33** Now Playing's colour field decodes its cover on the interface's thread: PaletteTool::request reads, scales and measures the image in the network reply's slot (artworkcache.cpp), the same 10-190 ms per cover that --scroll-test measured for covers before they moved to a thread pool *(P6, S)*
   Done when: the decode and the histogram run on ArtworkFetcher's pool and only the colour comes back.
+- [ ] **F34** "Add all to queue" on a long page (PageView, PlaylistView) still queues one song per call: each is a JS-to-C++ call with its map, a queue model insert that the queue panel's captions re-read, a scan for autoplay's first row and a prefetch, so a few thousand songs hold the window for seconds. Download all now goes in one call (Downloads.enqueueAll) *(P6, S)*
+  Done when: Player takes the whole list in one call and inserts it as one block of rows, measured on a 5,000-song page.
 
 ## Connections
 

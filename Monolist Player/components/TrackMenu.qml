@@ -65,12 +65,16 @@ MonoMenu {
     readonly property bool orderGroup: canMoveUp || canMoveDown || canLeaveQueue
 
     // "Not interested" is offered where a song was put in front of the
-    // listener rather than picked by them: a suggestion, the queue (where
-    // autoplay adds its songs), and the song playing, which autoplay may have
-    // chosen. In their own lists it would make no sense: they chose those.
-    readonly property bool offerNotInterested: (context.suggestion === true || inQueue || context.playing === true)
-                                               && track !== null && track !== undefined
+    // listener rather than picked by them: a suggestion, and in the queue
+    // and on the player bar only a song autoplay added (its row's fromRadio,
+    // which the queue's rows and Player.currentTrack carry). A song they
+    // queued or played from their own lists they chose: offered there, one
+    // stray click would turn down a favourite artist for good.
+    readonly property bool offerNotInterested: track !== null && track !== undefined
                                                && (track.title || "").length > 0
+                                               && (context.suggestion === true
+                                                   || ((inQueue || context.playing === true)
+                                                       && track.fromRadio === true))
     // Who "Don't suggest" names and turns down: the first name of the
     // credit, as YouTube Music gave it or as Artists can split it.
     readonly property string leadArtist: {

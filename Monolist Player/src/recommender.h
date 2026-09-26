@@ -174,9 +174,11 @@ public Q_SLOTS:
     // queue, ahead of anything autoplay finds. Stops the moment the listener
     // plays something else.
     void playAll(int shelf);
-    // Opens See all for a shelf: its rows, then more from the same anchor.
-    // Kept as it is when that shelf's list is already open.
-    void openMore(int shelf);
+    // Opens See all for the shelf `key` names (moreKey): its rows, then more
+    // from the same anchor. Kept as it is when that list is already open.
+    // After the page has been rebuilt, the same shelf is found by its kind
+    // and title; one no longer there is shown as gone (more.gone).
+    void openMore(const QString &key);
     void loadMore();
     // "Not interested": the song is recorded as turned down, taken off every
     // shelf and the See all list at once, and never suggested again —
@@ -192,6 +194,9 @@ public Q_SLOTS:
 public:
     // A shelf's rows as they are now, after anything turned down.
     Q_INVOKABLE QVariantList rowsOf(int shelf) const;
+    // What names a shelf's See all in the view history, for openMore: the
+    // index alone would name another shelf once the page is drawn again.
+    Q_INVOKABLE QString moreKey(int shelf) const;
 
 Q_SIGNALS:
     // What resolve() found, as a track map with the app's track roles.

@@ -669,9 +669,15 @@ void PlaybackController::playSource(const QString &videoId,
     startQueue({ track }, 0, /*autoPlay=*/true);
 }
 
+// Both of these are the listener's own choice, whatever the song was before:
+// a copy of something autoplay added (the player bar's menu on the song
+// playing, a queue row's) must not arrive marked as autoplay's, or it would
+// sit after the AUTOPLAY heading, be recorded as a radio play and go with the
+// next "Don't suggest".
 void PlaybackController::playNext(const QVariantMap &map)
 {
-    const QueueTrack track = QueueTrack::fromMap(map);
+    QueueTrack track = QueueTrack::fromMap(map);
+    track.fromRadio = false;
     if (track.videoId.isEmpty() && track.sourceUrl.isEmpty())
         return;
     if (m_queue.rowCount() == 0) {
@@ -684,7 +690,8 @@ void PlaybackController::playNext(const QVariantMap &map)
 
 void PlaybackController::addToQueue(const QVariantMap &map)
 {
-    const QueueTrack track = QueueTrack::fromMap(map);
+    QueueTrack track = QueueTrack::fromMap(map);
+    track.fromRadio = false;
     if (track.videoId.isEmpty() && track.sourceUrl.isEmpty())
         return;
     if (m_queue.rowCount() == 0) {
@@ -992,15 +999,7 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
     const QString videoId = currentSourceId();
 
     // 1 — a downloaded copy, or any source that is already a local file.
-    QString localPath;
-    if (m_downloads && !videoId.isEmpty())
-        localPath = m_downloads->localPathFor(videoId);
-    if (localPath.isEmpty()) {
-        const QString source = track.value(QStringLiteral("sourceUrl")).toString();
-        if (!source.isEmpty() && QFileInfo::exists(source))
-            localPath = source;
-    }
-
+    const QString localPath = localCopyOf(track);
     if (!localPath.isEmpty()) {
         setStatus(QStringLiteral("Offline"), QStringLiteral("Local file"), false);
         m_engine->load(localPath, autoPlay);
@@ -1105,6 +1104,42 @@ void PlaybackController::handleResolveFailed(const QString &videoId, const QStri
         Q_EMIT playbackError(reason);
 }
 
+QString PlaybackController::localCopyOf(const QVariantMap &track) const
+{
+    const QString videoId = track.value(QStringLiteral("sourceId")).toString();
+    if (m_downloads && !videoId.isEmpty()) {
+        const QString downloaded = m_downloads->localPathFor(videoId);
+        if (!downloaded.isEmpty())
+            return downloaded;
+    }
+    const QString source = track.value(QStringLiteral("sourceUrl")).toString();
+    return !source.isEmpty() && QFileInfo::exists(source) ? source : QString();
+}
+
+// The picture has gone and the sound comes back, from the second it had
+// reached. A song kept on disk comes back from the file, as it began: the
+// picture was the only part of it that needed the network, and a stream in
+// its place would leave the rest of the song at the network's mercy.
+void PlaybackController::backToSound(bool keepPlaying, const QString &resolvingText)
+{
+    const QString localPath = localCopyOf(m_currentTrack);
+    if (!localPath.isEmpty()) {
+        m_pendingVideoId.clear();
+        setStatus(QStringLiteral("Offline"), QStringLiteral("Local file"), false);
+        if (m_engine)
+            m_engine->load(localPath, keepPlaying, QString(), m_position);
+        return;
+    }
+    const QString videoId = currentSourceId();
+    if (videoId.isEmpty() || !m_resolver)
+        return;
+    m_resumeAt = m_position;
+    m_autoPlayAfterResolve = keepPlaying;
+    m_pendingVideoId = videoId;
+    setStatus(resolvingText, QString(), true);
+    m_resolver->resolve(videoId);
+}
+
 // True when a video that never proved itself has just been dropped, and the
 // sound of the same track is on its way back.
 bool PlaybackController::abandonVideo(const QString &reason)
@@ -1112,7 +1147,6 @@ bool PlaybackController::abandonVideo(const QString &reason)
     if (!m_videoPlaying || !m_videoUnproven)
         return false;
 
-    const QString videoId = currentSourceId();
     m_videoUnproven = false;
     m_videoWanted = false;
     m_videoPlaying = false;
@@ -1121,13 +1155,7 @@ bool PlaybackController::abandonVideo(const QString &reason)
     Q_EMIT videoChanged();
     Q_EMIT notice(reason);
 
-    if (videoId.isEmpty() || !m_resolver)
-        return true;
-    m_resumeAt = m_position;
-    m_autoPlayAfterResolve = true;
-    m_pendingVideoId = videoId;
-    setStatus(QStringLiteral("Back to the sound…"), QString(), true);
-    m_resolver->resolve(videoId);
+    backToSound(/*keepPlaying=*/true, QStringLiteral("Back to the sound…"));
     return true;
 }
 
@@ -1366,11 +1394,7 @@ void PlaybackController::playWithVideo(bool video)
     if (!wasShowing)
         return;   // nothing was loaded with a picture; the sound plays on
     // Straight back to the sound, from the same second.
-    m_resumeAt = m_position;
-    m_autoPlayAfterResolve = m_playing || m_resolving;
-    m_pendingVideoId = videoId;
-    setStatus(QStringLiteral("Resolving source…"), QString(), true);
-    m_resolver->resolve(videoId);
+    backToSound(m_playing || m_resolving, QStringLiteral("Resolving source…"));
 }
 
 void PlaybackController::handleVideoResolved(const QString &videoId, const QString &videoUrl,

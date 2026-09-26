@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Controls.Basic
 import Monolist
 import Monolist.Backend
 import "../components"
@@ -123,9 +122,21 @@ ScrollPage {
                 id: section
 
                 required property var modelData
+                required property int index
 
                 width: column.width
                 spacing: Theme.space4
+
+                // More cards for this grid: added to it, rather than every
+                // card made again (and every cover fetched again) for each
+                // part that arrives.
+                Connections {
+                    target: Catalog
+                    function onListingAppended(at, cards) {
+                        if (at === section.index)
+                            grid.append(cards)
+                    }
+                }
 
                 // A page of several shelves names each; a grid alone is the
                 // page's title already.
@@ -141,6 +152,7 @@ ScrollPage {
                 }
 
                 CardGrid {
+                    id: grid
                     width: parent.width
                     items: section.modelData.items
                     origin: "explore"

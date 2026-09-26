@@ -4,7 +4,10 @@ import Monolist
 import Monolist.Backend
 
 // The download control for one track. State comes from Downloads, which answers
-// from memory; the bindings ask again whenever Downloads.revision moves.
+// from memory; the bindings ask again whenever Downloads.revision moves, and
+// the percentage, only while this track is the one downloading, whenever
+// Downloads.progressRevision does. Every list keeps a button on every row, so
+// a percent step asking all of them again would be thousands of calls.
 //
 //   not saved    download glyph              click: save for offline
 //   queued       three dots                  click: cancel
@@ -27,7 +30,8 @@ Button {
 
     // Not "state": Item already has one.
     readonly property string downloadState: Downloads.revision >= 0 ? Downloads.stateFor(videoId) : ""
-    readonly property real progress: Downloads.revision >= 0 ? Downloads.progressFor(videoId) : 0
+    readonly property real progress: downloadState === "downloading" && Downloads.progressRevision >= 0
+                                     ? Downloads.progressFor(videoId) : 0
 
     visible: videoId.length > 0 && Downloads.available
     implicitWidth: side

@@ -312,8 +312,11 @@ void MediaExtractor::searchCards(const QString &query)
     } else if (m_filter == QLatin1String("artists")) {
         parts->append({ InnerTube::Filter::Artists, QString(), {}, {} });
     } else {
-        parts->append({ InnerTube::Filter::FeaturedPlaylists, QStringLiteral("From YouTube Music"), {}, {} });
-        parts->append({ InnerTube::Filter::CommunityPlaylists, QStringLiteral("From listeners"), {}, {} });
+        // Named for whose playlists they are, not where they came from: the
+        // line beside the chips already says "From YouTube Music" about the
+        // search itself, a few lines above the first of these.
+        parts->append({ InnerTube::Filter::FeaturedPlaylists, QStringLiteral("YouTube Music's playlists"), {}, {} });
+        parts->append({ InnerTube::Filter::CommunityPlaylists, QStringLiteral("Listeners' playlists"), {}, {} });
     }
 
     const quint64 generation = ++m_cardGeneration;

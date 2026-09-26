@@ -21,15 +21,17 @@ Rectangle {
     // left edge under the pointer, dragged; or Alt+Up and Alt+Down once the
     // grip has been pressed; or Move up and Move down in the row's menu.
     // The row held (-1 when none), the gap it would drop into (a row number:
-    // before that row, or the count for after the last), where the red rule
-    // for that gap goes in the list's content, how far the row has been
-    // carried, where it was picked up, and the pointer in the window.
+    // before that row, or the count for after the last), how far the row has
+    // been carried, where it was picked up and where its row began in the
+    // list's content, the pointer in the window, and whether it has been
+    // carried at all rather than the grip only pressed.
     property int dragFrom: -1
     property int dragGap: -1
-    property real dropLineY: 0
     property real dragOffset: 0
     property real grabY: 0
+    property real heldTop: 0
     property point dragPointer: Qt.point(0, 0)
+    property bool dragMoved: false
     readonly property int firstUpcoming: Player.queue.currentIndex + 1
     readonly property int dropIndex: dragGap > dragFrom ? dragGap - 1 : dragGap
     readonly property bool dropMoves: dragFrom >= 0 && dropIndex !== dragFrom
@@ -44,39 +46,65 @@ Rectangle {
             Player.moveInQueue(from, to)
     }
 
+    // Where a row's own part starts in the list's content, under whatever
+    // caption heads it; NaN for a row the list has not made.
+    function rowTopOf(index) {
+        const item = list.itemAtIndex(index)
+        return item ? item.y + item.height - rowHeight : NaN
+    }
+
     function beginDrag(index, sceneX, sceneY) {
         grabY = list.contentItem.mapFromItem(null, sceneX, sceneY).y
+        heldTop = rowTopOf(index)
         dragOffset = 0
+        dragMoved = false
         dragFrom = index
+        dragGap = index
         updateDrag(sceneX, sceneY)
     }
 
-    // The gap under the pointer: before a row while the pointer is in its
-    // upper half (or on its caption), after it in the lower; never among
-    // what has played, nor before the song playing.
+    // The place is the entry under the middle of the row carried, its
+    // caption included; never among what has played, nor before the song
+    // playing. The rows between make room for it there (shiftFor), so the
+    // gap is open and nothing is drawn across the row carried.
     function updateDrag(sceneX, sceneY) {
         if (dragFrom < 0)
             return
         dragPointer = Qt.point(sceneX, sceneY)
         const y = list.contentItem.mapFromItem(null, sceneX, sceneY).y
         dragOffset = y - grabY
+        if (Math.abs(dragOffset) >= Theme.space1)
+            dragMoved = true
+        const middle = heldTop + rowHeight / 2 + dragOffset
         const count = Player.queue.count
-        let gap = count
-        const over = list.indexAt(1, y)
-        if (over >= 0) {
-            const item = list.itemAtIndex(over)
-            const rowTop = item.y + item.height - rowHeight
-            gap = y < rowTop + rowHeight / 2 ? over : over + 1
-        } else {
+        let target = list.indexAt(1, middle)
+        if (target < 0) {
             const first = list.itemAtIndex(root.firstUpcoming)
-            if (first && y < first.y)
-                gap = root.firstUpcoming
+            target = first && middle < first.y ? root.firstUpcoming : count - 1
         }
-        gap = Math.max(root.firstUpcoming, Math.min(count, gap))
-        dragGap = gap
-        const at = list.itemAtIndex(Math.min(gap, count - 1))
-        if (at)
-            dropLineY = gap < count ? at.y + at.height - rowHeight : at.y + at.height
+        target = Math.max(root.firstUpcoming, Math.min(count - 1, target))
+        dragGap = target > dragFrom ? target + 1 : target
+    }
+
+    // How far a row that is not held moves aside while one is carried
+    // across it: into the slot of the row before it (up, into the one the
+    // held row left) or after it (down, out of the one it is going to).
+    // Captions stay where they are; a row steps to the next row's slot.
+    function shiftFor(index) {
+        if (dragFrom < 0 || index === dragFrom)
+            return 0
+        let other = -1
+        if (dropIndex > dragFrom && index > dragFrom && index <= dropIndex)
+            other = index - 1
+        else if (dropIndex < dragFrom && index >= dropIndex && index < dragFrom)
+            other = index + 1
+        if (other < 0)
+            return 0
+        const from = rowTopOf(index)
+        const to = rowTopOf(other)
+        if (isNaN(from) || isNaN(to))
+            return other < index ? -rowHeight : rowHeight
+        return to - from
     }
 
     function endDrag(drop) {
@@ -147,17 +175,6 @@ Rectangle {
 
         ScrollBar.vertical: MonoScrollBar { width: 8 }
         SmoothWheel { flickable: list }
-
-        // Where the song held would go: a red rule in the gap. In the list's
-        // content, so it scrolls with the rows.
-        Rectangle {
-            visible: root.dropMoves
-            y: root.dropLineY - height / 2
-            z: 3
-            width: list.width
-            height: Theme.ruleWidth
-            color: Theme.accent
-        }
 
         // A drag held near the list's top or bottom edge scrolls it.
         Timer {
@@ -249,8 +266,9 @@ Rectangle {
                 id: rowPart
                 width: entry.width
                 height: root.rowHeight
-                // Carried with the pointer; the caption above it stays.
-                transform: Translate { y: entry.held ? root.dragOffset : 0 }
+                // Carried with the pointer; the caption above it stays. The
+                // rows it passes step aside to open the gap it would go into.
+                transform: Translate { y: entry.held ? root.dragOffset : root.shiftFor(entry.index) }
 
                 // A row being carried is a plate of paper in an ink frame.
                 Rectangle {
@@ -302,7 +320,13 @@ Rectangle {
                         const at = mapToItem(null, mouse.x, mouse.y)
                         root.updateDrag(at.x, at.y)
                     }
-                    onReleased: root.endDrag(true)
+                    // As in a track table: a press alone keeps the keyboard
+                    // for Alt+Up and Alt+Down, a drag leaves no focus mark.
+                    onReleased: {
+                        if (root.dragMoved)
+                            entry.focus = false
+                        root.endDrag(true)
+                    }
                     onCanceled: root.endDrag(false)
                 }
 

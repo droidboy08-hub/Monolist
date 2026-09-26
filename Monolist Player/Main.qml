@@ -59,13 +59,19 @@ ApplicationWindow {
             Player.videoWanted = true
         visibilityBeforeFullscreen = window.visibility
         videoFullscreen = true
-        window.showFullScreen()
+        if (window.visibility !== Window.FullScreen)
+            window.showFullScreen()
     }
 
+    // Back to how the window was. One that was full screen already — a Mac
+    // window in a Space of its own, from its green button — stays so: only
+    // the picture leaves.
     function leaveVideoFullscreen() {
         if (!videoFullscreen)
             return
         videoFullscreen = false
+        if (visibilityBeforeFullscreen === Window.FullScreen)
+            return
         if (visibilityBeforeFullscreen === Window.Maximized)
             window.showMaximized()
         else
@@ -88,7 +94,8 @@ ApplicationWindow {
     // "page:<browse id>" for an album or a YouTube Music playlist,
     // "artist:<channel id>" for an artist, "artistname:<name>" for one known
     // only by name until it is looked up, "shelf:<browse id>[|<params>]" for
-    // a shelf's "show all", "recs:<index>" for a suggestion shelf's, and
+    // a shelf's "show all", "recs:<key>" for a suggestion shelf's (the page
+    // it was on, its place there, its kind and title: Recs.moreKey), and
     // "playlist:<id>" or "playlist:liked" for the user's own. Back and forward
     // step through them.
     function openPage(browseId) {
@@ -97,8 +104,11 @@ ApplicationWindow {
     }
 
     function openSuggestions(shelf) {
+        const key = Recs.moreKey(shelf)
+        if (key.length === 0)
+            return
         nowPlayingOpen = false
-        navigate("recs:" + shelf)
+        navigate("recs:" + key)
     }
 
     // The shelf's own title, which heads its page while the page loads. Read
@@ -157,7 +167,7 @@ ApplicationWindow {
         else if (currentView.indexOf("playlist:") === 0 && currentView !== "playlist:liked")
             Library.openPlaylist(parseInt(currentView.substring(9)))
         else if (currentView.indexOf("recs:") === 0)
-            Recs.openMore(parseInt(currentView.substring(5)))
+            Recs.openMore(currentView.substring(5))
     }
 
     function createPlaylist() {
@@ -539,6 +549,14 @@ ApplicationWindow {
         active: window.videoPlace === "mini" && Player.videoPlaying
         onOpenRequested: window.nowPlayingOpen = true
         onFullscreenRequested: window.enterVideoFullscreen()
+    }
+
+    // The pages leave room for it below their ends while it is up, so the
+    // rows it stands over can be scrolled clear (Nav.pageClearance).
+    Binding {
+        target: Nav
+        property: "pageClearance"
+        value: miniVideo.active ? miniVideo.height + miniVideo.anchors.bottomMargin : 0
     }
 
     // — the picture, full screen —

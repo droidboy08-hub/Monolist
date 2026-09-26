@@ -317,18 +317,19 @@ Rectangle {
                 }
             }
 
-            // On paper, so a bare glyph like the rest of the page's: grey at
-            // rest, red while the picture is on, greyed out for a song with
-            // none rather than hidden.
+            // On paper, so a bare glyph like the rest of the page's, and the
+            // player bar's switch exactly: the camera always, grey at rest,
+            // red while the picture is on, greyed out for a song with none
+            // rather than hidden. The cover glyph belongs to the plate on the
+            // picture, where the glyph is what a click brings back.
             IconButton {
                 id: narrowToggle
                 anchors.verticalCenter: parent.verticalCenter
                 side: 40
                 iconSize: 18
                 enabled: Player.videoAvailable
-                hoverEnabled: enabled
                 opacity: enabled ? 1 : 0.45
-                iconName: root.videoWaiting ? "dots" : (root.videoShowing ? "image" : "video")
+                iconName: root.videoWaiting ? "dots" : "video"
                 iconColor: Player.videoWanted ? Theme.accent : Theme.neutral700
                 onClicked: Player.videoWanted = !Player.videoWanted
                 ToolTip.visible: hovered

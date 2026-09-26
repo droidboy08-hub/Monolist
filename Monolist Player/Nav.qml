@@ -15,6 +15,12 @@ QtObject {
     // A suggestion shelf's SHOW ALL, by its index in Recs.shelves.
     signal suggestionsRequested(int shelf)
 
+    // How much of the bottom of every page something stands over — the mini
+    // video panel, while it is up — so each page (ScrollPage) leaves that
+    // much room below its end and its last rows can scroll out from under
+    // it. Main sets it.
+    property real pageClearance: 0
+
     function openSuggestions(shelf) {
         if (shelf >= 0)
             suggestionsRequested(shelf)

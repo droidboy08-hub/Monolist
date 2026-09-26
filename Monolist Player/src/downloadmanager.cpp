@@ -164,6 +164,12 @@ void DownloadManager::touch()
     Q_EMIT revisionChanged();
 }
 
+void DownloadManager::touchProgress()
+{
+    ++m_progressRevision;
+    Q_EMIT progressRevisionChanged();
+}
+
 void DownloadManager::refreshTools()
 {
     m_toolsChecked.start();
@@ -189,14 +195,40 @@ void DownloadManager::enqueue(const QString &videoId,
                               qint64 durationMs,
                               bool isVideo)
 {
-    if (videoId.isEmpty())
-        return;
     // What was found at launch is not the last word: tools put in place since
     // then are used rather than refused until a restart, and one taken away
     // is noticed here.
     refreshToolsIfStale();
-    if (!m_available || m_stored.contains(videoId) || isPending(videoId))
+    if (!queueOne(videoId, title, artist, artwork, durationMs, isVideo))
         return;
+    touch();
+    pump();
+}
+
+void DownloadManager::enqueueAll(const QVariantList &tracks)
+{
+    refreshToolsIfStale();
+    bool queued = false;
+    for (const QVariant &value : tracks) {
+        const QVariantMap track = value.toMap();
+        queued |= queueOne(track.value(QStringLiteral("sourceId")).toString(),
+                           track.value(QStringLiteral("title")).toString(),
+                           track.value(QStringLiteral("artist")).toString(),
+                           track.value(QStringLiteral("artwork")).toString(),
+                           track.value(QStringLiteral("durationMs")).toLongLong(),
+                           track.value(QStringLiteral("isVideo")).toBool());
+    }
+    if (!queued)
+        return;
+    touch();
+    pump();
+}
+
+bool DownloadManager::queueOne(const QString &videoId, const QString &title, const QString &artist,
+                               const QString &artwork, qint64 durationMs, bool isVideo)
+{
+    if (videoId.isEmpty() || !m_available || m_stored.contains(videoId) || isPending(videoId))
+        return false;
 
     DownloadQueueModel::Item item;
     item.videoId = videoId;
@@ -207,14 +239,20 @@ void DownloadManager::enqueue(const QString &videoId,
     item.isVideo = isVideo;
     m_queue.upsert(item);   // replaces a failed attempt at the same track
     m_pending.append(videoId);
-    touch();
-    pump();
+    return true;
 }
 
 void DownloadManager::pump()
 {
-    while (!m_pending.isEmpty() && m_requests.size() < kMaxConcurrent)
+    bool began = false;
+    while (!m_pending.isEmpty() && m_requests.size() < kMaxConcurrent) {
         begin(m_pending.takeFirst());
+        began = true;
+    }
+    // Waiting has become downloading, which the rows show: they are told
+    // here, since what follows only moves the percentage.
+    if (began)
+        touch();
     Q_EMIT queueChanged();
 }
 
@@ -258,6 +296,9 @@ void DownloadManager::begin(const QString &videoId)
                 if (item.state == DownloadQueueModel::State::Downloading && fraction < 1.0
                     && qAbs(fraction - item.progress) < 0.01)
                     return;
+                // Back from processing (a second stream, say) is a new state
+                // for the rows; another percent is only a new percentage.
+                const bool stateChanged = item.state != DownloadQueueModel::State::Downloading;
                 item.state = DownloadQueueModel::State::Downloading;
                 item.progress = fraction;
                 item.received = received;
@@ -265,7 +306,10 @@ void DownloadManager::begin(const QString &videoId)
                 item.speed = speed;
                 item.eta = eta;
                 m_queue.upsert(item);
-                touch();
+                if (stateChanged)
+                    touch();
+                else
+                    touchProgress();
                 Q_EMIT progressChanged(videoId, fraction);
             });
 

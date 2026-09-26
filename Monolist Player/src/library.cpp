@@ -471,24 +471,31 @@ void Library::removeFromPlaylist(int playlistId, int entryId)
     Q_EMIT notice(QStringLiteral("Removed from %1").arg(playlistName(playlistId)));
 }
 
-// The whole playlist is numbered again, 0, 1, 2…, rather than the one row
-// given a new number: positions written before could repeat (a playlist
+// The playlist ends numbered 0, 1, 2… in its new order, rather than the one
+// row given a new number: positions written before could repeat (a playlist
 // filled in one go) or skip (a song taken out), and a move among repeats
-// would not hold once the list was read back ordered by position.
+// would not hold once the list was read back ordered by position. Only the
+// rows whose number changes are written, though: once the numbers are dense,
+// those between `from` and `to` — two for a step up or down — where writing
+// every row made each step of a held Alt+Down cost the whole playlist.
 void Library::movePlaylistEntry(int playlistId, int entryId, int toIndex)
 {
     QSqlDatabase db = AppDatabase::connection();
     QSqlQuery read(db);
     read.prepare(QStringLiteral(
-        "SELECT id FROM playlist_tracks WHERE playlist_id = ? ORDER BY position ASC, id ASC"));
+        "SELECT id, position FROM playlist_tracks WHERE playlist_id = ? ORDER BY position ASC, id ASC"));
     read.addBindValue(playlistId);
     if (!read.exec())
         return;
-    QList<int> entries;
-    while (read.next())
-        entries.append(read.value(0).toInt());
-
-    const int from = int(entries.indexOf(entryId));
+    // Each entry, with the position it has stored.
+    QList<std::pair<int, int>> entries;
+    int from = -1;
+    while (read.next()) {
+        const int id = read.value(0).toInt();
+        if (id == entryId)
+            from = int(entries.size());
+        entries.append({ id, read.value(1).toInt() });
+    }
     if (from < 0)
         return;
     const int to = qBound(0, toIndex, int(entries.size()) - 1);
@@ -501,8 +508,10 @@ void Library::movePlaylistEntry(int playlistId, int entryId, int toIndex)
     write.prepare(QStringLiteral("UPDATE playlist_tracks SET position = ? WHERE id = ?"));
     bool ok = true;
     for (int position = 0; position < entries.size() && ok; ++position) {
+        if (entries.at(position).second == position)
+            continue;
         write.addBindValue(position);
-        write.addBindValue(entries.at(position));
+        write.addBindValue(entries.at(position).first);
         ok = write.exec();
     }
     if (!ok) {
@@ -514,19 +523,26 @@ void Library::movePlaylistEntry(int playlistId, int entryId, int toIndex)
     markUpdated(playlistId);
 
     // The open list moves its one row, so a long playlist is not drawn again
-    // for every song dragged; were it out of step, it is read afresh.
+    // for every song dragged; were it out of step, it is read afresh. The
+    // mosaic on its card and in the sidebar is its first four covers, so the
+    // playlists are read again only when those have changed.
+    bool mosaicChanged = true;
     if (playlistId == m_openPlaylistId) {
         if (m_playlistTracks.get(from).value(QStringLiteral("entryId")).toInt() == entryId
                 && m_playlistTracks.rowCount() == entries.size()) {
             m_playlistTracks.move(from, to);
-            m_playlist.insert(QStringLiteral("artworks"), PlaylistModel::artworksFor(playlistId));
-            Q_EMIT playlistChanged();
+            const QStringList artworks = PlaylistModel::artworksFor(playlistId);
+            mosaicChanged = artworks != m_playlist.value(QStringLiteral("artworks")).toStringList();
+            if (mosaicChanged) {
+                m_playlist.insert(QStringLiteral("artworks"), artworks);
+                Q_EMIT playlistChanged();
+            }
         } else {
             reloadOpenPlaylist();
         }
     }
-    // The mosaic on its card and in the sidebar is its first four covers.
-    m_playlists.reload();
+    if (mosaicChanged)
+        m_playlists.reload();
 }
 
 QVariantList Library::playlistTracksFor(int playlistId) const
@@ -818,6 +834,10 @@ void Library::setSaved(const QVariantMap &page, bool saved)
                 }
             }
         }
+        // A card from an artist's page or discography names nobody on its
+        // own line ("Album • 2019"): whose page it was on (Catalog's owner).
+        if (artist.isEmpty())
+            artist = page.value(QStringLiteral("owner")).toString();
         write.prepare(QStringLiteral(
             "INSERT INTO albums (position, title, artist, year, format, artwork, browse_id, saved_at)"
             " VALUES (0, ?, ?, ?, ?, ?, ?, datetime('now'))"));

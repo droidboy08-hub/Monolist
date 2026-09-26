@@ -359,7 +359,6 @@ Rectangle {
         IconButton {
             readonly property bool waiting: Player.videoWanted && !Player.videoPlaying
             enabled: Player.videoAvailable
-            hoverEnabled: enabled
             opacity: enabled ? 1 : 0.4
             iconName: waiting ? "dots" : "video"
             iconColor: Player.videoWanted ? Theme.accent : Theme.neutral700

@@ -11,6 +11,9 @@ Flickable {
     contentWidth: width
     boundsBehavior: Flickable.StopAtBounds
     clip: true
+    // Room below the end for whatever stands over the page's foot (the mini
+    // video): without it the last rows sit under it and cannot be reached.
+    bottomMargin: Nav.pageClearance
 
     ScrollBar.vertical: MonoScrollBar {}
 

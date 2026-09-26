@@ -39,6 +39,10 @@ class Catalog : public QObject
     // into the list.
     Q_PROPERTY(bool pageHasMore READ pageHasMore NOTIFY pageMoreChanged)
     Q_PROPERTY(bool pageLoadingMore READ pageLoadingMore NOTIFY pageMoreChanged)
+    // Only whether a part is on its way: once none is, and there is no more,
+    // every song is here (pageTrackList), even while the table is still
+    // making their rows. What takes the whole playlist waits for this alone.
+    Q_PROPERTY(bool pageFetching READ pageFetching NOTIFY pageMoreChanged)
     // A shelf's "show all" page open now:
     // { key, title, kicker, sections: [{ title, items: [card] }], error },
     // and the songs it lists, if it lists any.
@@ -76,6 +80,7 @@ public:
     bool pageLoading() const { return m_pageLoading; }
     bool pageHasMore() const { return !m_pageNext.isEmpty(); }
     bool pageLoadingMore() const { return m_pageLoadingMore; }
+    bool pageFetching() const { return m_pageRequestOut; }
     QVariantMap listing() const { return m_listing; }
     SearchResultModel *listingSongs() { return &m_listingSongs; }
     bool listingLoading() const { return m_listingLoading; }
@@ -91,7 +96,8 @@ public Q_SLOTS:
     void refresh();
     void reloadRecent();
     void openPage(const QString &browseId);
-    // The open page's songs as maps, for "Download all".
+    // Every song of the open page that has arrived, as maps, those not yet
+    // in the table included: for Play, Shuffle, Download all and Add all.
     QVariantList pageTrackList() const;
     // The next hundred songs of a long playlist, as the reader nears the end
     // of the ones shown.
@@ -132,6 +138,10 @@ Q_SIGNALS:
     void pageMoreChanged();
     void listingChanged();
     void listingMoreChanged();
+    // More cards at the end of the listing's section `section`, which
+    // `listing` holds too: the view adds them to the grid it has, where a
+    // listingChanged would make every card again.
+    void listingAppended(int section, const QVariantList &cards);
     void collectionLoadingChanged();
     void collectionReady(const QString &origin, const QVariantList &tracks);
     void artistChanged();
@@ -180,6 +190,11 @@ private:
     QVariantMap m_featured;
 
     QString m_pageId;                 // the page whose answer is still wanted
+    // Moves on with every openPage. The id alone could not tell a page's
+    // answer from the one its earlier opening is still waiting for (A, B,
+    // then A again on a slow link), and the older, landing second, reset
+    // the list under the parts loaded since.
+    quint64 m_pageGeneration = 0;
     QVariantMap m_page;
     bool m_pageLoading = false;
     // The rest of a long playlist: the header its later songs are completed
@@ -193,9 +208,12 @@ private:
     bool m_pageFeedScheduled = false;
     bool m_pageRequestOut = false;
     bool m_pageLoadingMore = false;   // m_pageRequestOut or a feed, as last told
+    bool m_pageFetchingTold = false;  // m_pageRequestOut, as last told
     bool m_pageWantsAll = false;
 
     QString m_listingKey;             // browse id and parameters, as "id|params"
+    quint64 m_listingGeneration = 0;  // as m_pageGeneration, for openListing
+    QString m_listingOwner;           // the artist a discography's cards are by, or empty
     QVariantMap m_listing;
     SearchResultModel m_listingSongs;
     bool m_listingLoading = false;
