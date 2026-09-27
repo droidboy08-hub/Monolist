@@ -3,6 +3,9 @@
 #include "appdatabase.h"
 #include "buildinfo.h"
 #include "ytdlp.h"
+#ifdef Q_OS_MACOS
+#include "macos/toolstore.h"
+#endif
 
 #include <QClipboard>
 #include <QCoreApplication>
@@ -50,10 +53,12 @@ QVariantMap component(const QString &name, const QString &version, const QString
     };
 }
 
+} // namespace
+
 // "1.2.10" sorts after "1.2.9", which a string comparison gets wrong. Anything
 // that is not a number compares as text, so "2026.08.19" works as well as
 // "0.1" and a date-shaped tag beats a smaller one.
-int compareVersions(const QString &left, const QString &right)
+int AppInfo::compareVersions(const QString &left, const QString &right)
 {
     const QStringList a = left.split(QLatin1Char('.'));
     const QStringList b = right.split(QLatin1Char('.'));
@@ -74,12 +79,23 @@ int compareVersions(const QString &left, const QString &right)
     return 0;
 }
 
-} // namespace
-
 AppInfo::AppInfo(QObject *parent)
     : QObject(parent)
     , m_network(new QNetworkAccessManager(this))
 {
+#ifdef Q_OS_MACOS
+    m_toolStore = new ToolStore(m_network, this);
+    connect(m_toolStore, &ToolStore::progress, this, [this](const QString &message) {
+        setTools(Working, message);
+    });
+    connect(m_toolStore, &ToolStore::finished, this, [this](bool ok, const QString &message) {
+        setTools(ok ? UpToDate : Failed, message);
+        // Show what they are now, not what they were.
+        if (m_componentsKnown)
+            refreshComponents();
+    });
+    connect(m_toolStore, &ToolStore::notice, this, &AppInfo::notice);
+#endif
 }
 
 QString AppInfo::version() const     { return QStringLiteral(MONOLIST_VERSION); }
@@ -373,7 +389,32 @@ QString AppInfo::setupScriptPath()
 
 bool AppInfo::canUpdateTools() const
 {
+#ifdef Q_OS_MACOS
+    // Fetched from the projects' own releases: works wherever the app is.
+    return true;
+#else
     return !setupScriptPath().isEmpty();
+#endif
+}
+
+QString AppInfo::toolsDescription() const
+{
+#ifdef Q_OS_MACOS
+    return QStringLiteral("Fetches the newest yt-dlp and Deno, and leaves the app itself alone. "
+                          "FFmpeg is updated with the app.");
+#else
+    return canUpdateTools()
+        ? QStringLiteral("Fetches the newest yt-dlp, FFmpeg and Deno, and leaves the app itself alone.")
+        : QStringLiteral("These came with this build and are updated by whatever installed it.");
+#endif
+}
+
+void AppInfo::startToolChecks()
+{
+#ifdef Q_OS_MACOS
+    if (m_toolStore)
+        m_toolStore->checkDaily();
+#endif
 }
 
 void AppInfo::setTools(int state, const QString &message)
@@ -387,6 +428,14 @@ void AppInfo::updateTools()
 {
     if (m_toolsState == Working)
         return;
+
+#ifdef Q_OS_MACOS
+    if (m_toolStore) {
+        setTools(Working, QStringLiteral("Looking for newer tools…"));
+        m_toolStore->update();
+    }
+    return;
+#endif
 
     const QString script = setupScriptPath();
     if (script.isEmpty()) {

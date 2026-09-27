@@ -719,6 +719,11 @@ ApplicationWindow {
     }
 
     Connections {
+        target: About
+        function onNotice(text) { toast.show(text) }
+    }
+
+    Connections {
         target: Player
         function onNotice(text) { toast.show(text) }
         // A track that will not play used to fail in complete silence: the
@@ -815,5 +820,17 @@ ApplicationWindow {
         sequence: "V"
         enabled: window.nowPlayingOpen && Player.videoAvailable && !topBar.searchFocused
         onActivated: Player.videoWanted = !Player.videoWanted
+    }
+
+    // The Mac's own window keys, which a Mac app has whether or not it has a
+    // Window menu to show them in. Closing leaves the app, and the music,
+    // running; the Dock icon brings the window back.
+    readonly property bool mac: Qt.platform.os === "osx"
+    Shortcut { sequences: [StandardKey.Close]; enabled: window.mac; onActivated: window.close() }
+    Shortcut { sequence: "Ctrl+M"; enabled: window.mac; onActivated: window.showMinimized() }
+    Shortcut {
+        sequences: [StandardKey.FullScreen]
+        enabled: window.mac
+        onActivated: window.visibility === Window.FullScreen ? window.showNormal() : window.showFullScreen()
     }
 }

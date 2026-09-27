@@ -44,6 +44,8 @@ class DownloadManager : public QObject
     // while the app runs, and downloads should work the moment they are.
     Q_PROPERTY(bool available READ available NOTIFY toolsChanged)
     Q_PROPERTY(bool canConvert READ canConvert NOTIFY toolsChanged)
+    // What to do about a missing yt-dlp, in this platform's terms.
+    Q_PROPERTY(QString installHint READ installHint CONSTANT)
     Q_PROPERTY(int revision READ revision NOTIFY revisionChanged)
     Q_PROPERTY(int progressRevision READ progressRevision NOTIFY progressRevisionChanged)
 public:
@@ -65,6 +67,7 @@ public:
 
     bool available() const { return m_available; }     // yt-dlp was found
     bool canConvert() const { return m_canConvert; }   // FFmpeg too: tags, cover art, trimming
+    QString installHint() const { return YtDlp::installHint(); }
     int revision() const { return m_revision; }
     int progressRevision() const { return m_progressRevision; }
 
