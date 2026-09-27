@@ -275,6 +275,28 @@ ScrollPage {
             onToggled: Player.autoplay = !Player.autoplay
         }
 
+        // A second source of sound, and what it is told. Said plainly: it
+        // is another company's service, and the second switch has the
+        // requests claim to come from somewhere they do not.
+        ToggleRow {
+            width: parent.width
+            label: "Use JioSaavn when it has the same song (up to 320 kbps)"
+            hint: "JioSaavn is an Indian music service. It is asked for each song by title and artist, and plays "
+                  + "only when it has exactly the same recording; otherwise YouTube plays, as it always has."
+            checked: Player.saavnEnabled
+            onToggled: Player.saavnEnabled = !Player.saavnEnabled
+        }
+
+        ToggleRow {
+            visible: Player.saavnEnabled
+            width: parent.width
+            label: "Send Indian region headers to JioSaavn"
+            hint: "Some songs are offered only in India, so each request claims to come from an Indian address, "
+                  + "which it does not. Turn this off if you would rather it did not pretend."
+            checked: Player.saavnIndiaHeaders
+            onToggled: Player.saavnIndiaHeaders = !Player.saavnIndiaHeaders
+        }
+
         Text {
             text: "VIDEO"
             font.family: Theme.fontFamily
@@ -908,7 +930,8 @@ ScrollPage {
                 // Once an account is connected, "nothing is signed in" would
                 // no longer be true; nor while a YouTube Music session is
                 // held and being checked, which sends its cookies.
-                text: "Songs, search, lyrics and artwork come from YouTube Music, LRCLIB, yt-dlp and FFmpeg. "
+                text: "Songs, search, lyrics and artwork come from YouTube Music, LRCLIB, yt-dlp and FFmpeg"
+                      + (Player.saavnEnabled ? ", and the sound from JioSaavn where it has the same song. " : ". ")
                       + (Scrobbler.state === "connected" || Account.state === "active"
                          || Account.state === "checking" || Account.state === "unreachable"
                          ? "They are fetched without an account; what a connected account is told is set out "

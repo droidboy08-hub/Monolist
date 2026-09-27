@@ -38,6 +38,8 @@ const QString kAutoplayKey = QStringLiteral("player.autoplay");
 const QString kAudioDeviceKey = QStringLiteral("player.audio_device");
 const QString kAudioDeviceNameKey = QStringLiteral("player.audio_device_name");
 const QString kAutoDevice = QStringLiteral("auto");
+const QString kSaavnKey = QStringLiteral("jiosaavn.enabled");
+const QString kSaavnIndiaKey = QStringLiteral("jiosaavn.india_headers");
 // Long enough to outlast one drag of the slider.
 constexpr int kVolumeSaveDelayMs = 400;
 
@@ -50,8 +52,22 @@ QString tierLabel(int tier)
     case StreamResolver::TierMuxed:     return QStringLiteral("yt-dlp · muxed");
     case StreamResolver::TierPiped:     return QStringLiteral("Piped");
     case StreamResolver::TierInvidious: return QStringLiteral("Invidious");
+    case StreamResolver::TierJioSaavn:  return QStringLiteral("JioSaavn");
     default:                            return QStringLiteral("Stream");
     }
+}
+
+// What JioSaavn needs to find a song: its name, who made it and how long it
+// is — the length being what tells one recording from another.
+Saavn::Target saavnTarget(const QVariantMap &track)
+{
+    Saavn::Target target;
+    target.videoId = track.value(QStringLiteral("sourceId")).toString();
+    target.title = track.value(QStringLiteral("title")).toString();
+    target.artist = track.value(QStringLiteral("artist")).toString();
+    target.album = track.value(QStringLiteral("album")).toString();
+    target.durationMs = track.value(QStringLiteral("durationMs")).toLongLong();
+    return target;
 }
 
 QList<QueueTrack> tracksFromModel(QAbstractItemModel *model)
@@ -139,6 +155,22 @@ PlaybackController::PlaybackController(MpvEngine *engine,
             if (m_streamTier >= 0) {
                 qWarning("playback: %s would not play from %s: %s", qPrintable(m_streamVideoId),
                          qPrintable(tierLabel(m_streamTier)), qPrintable(reason));
+            }
+            // JioSaavn's link refused: the match is forgotten, and YouTube's
+            // ladder takes the song from the top, from the second it had
+            // reached. The ladder most likely has its link already — its
+            // half of the race carried on into the cache.
+            if (m_streamTier == StreamResolver::TierJioSaavn && m_resolver) {
+                m_streamTier = -1;
+                m_refusedTiers.insert(StreamResolver::TierJioSaavn);
+                m_resolver->refuseSaavn(m_streamVideoId);
+                m_pendingVideoId = m_streamVideoId;
+                m_resumeAt = m_position;
+                qInfo("playback: %s back to YouTube from %lld ms", qPrintable(m_pendingVideoId),
+                      static_cast<long long>(m_resumeAt));
+                setStatus(QStringLiteral("Trying another source…"), QString(), true);
+                m_resolver->resolve(m_pendingVideoId);
+                return;
             }
             // A URL can resolve and still be refused when mpv opens it: a link
             // the CDN rejects now and then, or an instance serving an error
@@ -346,6 +378,14 @@ void PlaybackController::restoreSettings()
         Q_EMIT autoplayChanged();
     }
 
+    // On unless turned off: a setting never written reads as on.
+    if (m_resolver) {
+        m_resolver->setSaavnEnabled(m_library->settingValue(kSaavnKey) != QLatin1String("0"));
+        m_resolver->setSaavnIndiaHeaders(m_library->settingValue(kSaavnIndiaKey) != QLatin1String("0"),
+                                         /*forgetNoMatches=*/false);
+        Q_EMIT saavnChanged();
+    }
+
     // Used as soon as mpv has said which devices are there; until then, and
     // for as long as the device is not among them, Auto plays.
     const QString device = m_library->settingValue(kAudioDeviceKey);
@@ -367,6 +407,35 @@ void PlaybackController::saveSetting(const QString &key, const QString &value)
 void PlaybackController::saveVolume()
 {
     saveSetting(kVolumeKey, QString::number(m_volume, 'f', 3));
+}
+
+bool PlaybackController::saavnEnabled() const
+{
+    return m_resolver && m_resolver->saavnEnabled();
+}
+
+// From the next song on: the one playing keeps the sound it has.
+void PlaybackController::setSaavnEnabled(bool on)
+{
+    if (!m_resolver || on == m_resolver->saavnEnabled())
+        return;
+    m_resolver->setSaavnEnabled(on);
+    saveSetting(kSaavnKey, on ? QStringLiteral("1") : QStringLiteral("0"));
+    Q_EMIT saavnChanged();
+}
+
+bool PlaybackController::saavnIndiaHeaders() const
+{
+    return m_resolver && m_resolver->saavnIndiaHeaders();
+}
+
+void PlaybackController::setSaavnIndiaHeaders(bool on)
+{
+    if (!m_resolver || on == m_resolver->saavnIndiaHeaders())
+        return;
+    m_resolver->setSaavnIndiaHeaders(on);
+    saveSetting(kSaavnIndiaKey, on ? QStringLiteral("1") : QStringLiteral("0"));
+    Q_EMIT saavnChanged();
 }
 
 void PlaybackController::setAudioDevice(const QString &name)
@@ -766,7 +835,8 @@ void PlaybackController::prefetchUpcoming()
         return;
     if (m_downloads && !m_downloads->localPathFor(upcoming->videoId).isEmpty())
         return;
-    m_resolver->prefetch(upcoming->videoId);
+    // JioSaavn too, so the next song finds its answer already there.
+    m_resolver->prefetchTrack(saavnTarget(upcoming->toMap()));
 }
 
 // ------------------------------------------------------------ source ladder
@@ -1014,7 +1084,7 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
     if (!videoId.isEmpty() && m_resolver) {
         m_pendingVideoId = videoId;
         setStatus(QStringLiteral("Resolving source…"), QString(), true);
-        m_resolver->resolve(videoId);
+        m_resolver->resolveTrack(saavnTarget(m_currentTrack));
         return;
     }
 
@@ -1040,7 +1110,12 @@ void PlaybackController::handleResolved(const QString &videoId, const QString &u
         return;                       // a later track superseded this one
     m_pendingVideoId.clear();
 
-    setStatus(QStringLiteral("Streaming"), tierLabel(tier), false);
+    // JioSaavn's links name their bitrate, and that is the point of them, so
+    // the label says it: "JioSaavn · 320 kbps".
+    const bool fromSaavn = tier == StreamResolver::TierJioSaavn;
+    const int kbps = fromSaavn && m_resolver ? m_resolver->saavnKbps(videoId) : 0;
+    setStatus(QStringLiteral("Streaming"),
+              kbps > 0 ? QStringLiteral("JioSaavn · %1 kbps").arg(kbps) : tierLabel(tier), false);
     m_consecutiveFailures = 0;
     m_streamVideoId = videoId;
     m_streamTier = tier;
@@ -1050,10 +1125,11 @@ void PlaybackController::handleResolved(const QString &videoId, const QString &u
     if (m_autoPlayAfterResolve)
         startListening();
     // A link some tiers only serve to the client that asked for it (the muxed
-    // stream's) comes with the headers to ask as.
+    // stream's) comes with the headers to ask as. JioSaavn's CDN wants none,
+    // and must not be sent a YouTube client's.
     if (m_engine)
         m_engine->load(url, m_autoPlayAfterResolve, QString(), m_resumeAt,
-                       m_resolver ? m_resolver->headersFor(videoId) : QVariantMap());
+                       m_resolver && !fromSaavn ? m_resolver->headersFor(videoId) : QVariantMap());
     m_resumeAt = 0;
     prefetchUpcoming();
 }
@@ -1137,7 +1213,9 @@ void PlaybackController::backToSound(bool keepPlaying, const QString &resolvingT
     m_autoPlayAfterResolve = keepPlaying;
     m_pendingVideoId = videoId;
     setStatus(resolvingText, QString(), true);
-    m_resolver->resolve(videoId);
+    // The sound as it would be for the song begun afresh: JioSaavn's copy
+    // where it has one and it was not refused.
+    m_resolver->resolveTrack(saavnTarget(m_currentTrack));
 }
 
 // True when a video that never proved itself has just been dropped, and the

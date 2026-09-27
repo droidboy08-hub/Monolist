@@ -1,0 +1,472 @@
+#include "saavnselftest.h"
+
+#include "des.h"
+#include "jiosaavn.h"
+
+#include <QEventLoop>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QRegularExpression>
+#include <QUrl>
+
+namespace {
+
+// One line per check, and a count at the end, as the other self-tests do.
+// Descriptions stay ASCII: the console these are read in is not always UTF-8.
+class Checks
+{
+public:
+    bool check(bool ok, const QString &what, const QString &detail = QString())
+    {
+        ++m_count;
+        if (!ok)
+            ++m_failed;
+        const QString line = ok || detail.isEmpty() ? what : what + QStringLiteral("  -- ") + detail;
+        qWarning("saavn-test: %s  %s", ok ? "ok  " : "FAIL", qPrintable(line));
+        return ok;
+    }
+
+    int finish()
+    {
+        qWarning("saavn-test: %d checks, %d failed", m_count, m_failed);
+        return m_failed;
+    }
+
+private:
+    int m_count = 0;
+    int m_failed = 0;
+};
+
+QString hex(quint64 value)
+{
+    return QStringLiteral("%1").arg(value, 16, 16, QLatin1Char('0')).toUpper();
+}
+
+Saavn::Target song(const QString &title, const QString &artist, int seconds)
+{
+    Saavn::Target target;
+    target.videoId = QStringLiteral("selftest");
+    target.title = title;
+    target.artist = artist;
+    target.durationMs = qint64(seconds) * 1000;
+    return target;
+}
+
+Saavn::Row row(const QString &title, const QStringList &artists, int seconds,
+               bool explicitContent = false, bool has320 = true, const QString &id = QString())
+{
+    Saavn::Row r;
+    static int next = 0;
+    r.id = id.isEmpty() ? QStringLiteral("row%1").arg(++next) : id;
+    r.title = Saavn::decodeEntities(title);
+    r.artists = artists;
+    r.durationSec = seconds;
+    r.explicitContent = explicitContent;
+    r.has320 = has320;
+    r.encryptedUrl = QStringLiteral("unused");
+    return r;
+}
+
+QJsonObject json(const char *text)
+{
+    return QJsonDocument::fromJson(QByteArray(text)).object();
+}
+
+void testDes(Checks &t)
+{
+    // FIPS 46-3's worked example, and the one in "The DES Algorithm
+    // Illustrated", which encrypts to all zeros.
+    const quint64 key = Q_UINT64_C(0x133457799BBCDFF1);
+    const quint64 plain = Q_UINT64_C(0x0123456789ABCDEF);
+    const quint64 cipher = Des::encryptBlock(key, plain);
+    t.check(cipher == Q_UINT64_C(0x85E813540F0AB405),
+            QStringLiteral("DES known answer: 133457799BBCDFF1 / 0123456789ABCDEF -> 85E813540F0AB405"),
+            hex(cipher));
+    t.check(Des::decryptBlock(key, Q_UINT64_C(0x85E813540F0AB405)) == plain,
+            QStringLiteral("DES known answer decrypts back to 0123456789ABCDEF"));
+    const quint64 zeros = Des::encryptBlock(Q_UINT64_C(0x0E329232EA6D0D73), Q_UINT64_C(0x8787878787878787));
+    t.check(zeros == 0, QStringLiteral("DES known answer: 0E329232EA6D0D73 / 8787878787878787 -> 0000000000000000"),
+            hex(zeros));
+
+    // Round trips at every length across two blocks, padding included.
+    bool roundTrips = true;
+    bool sizesRight = true;
+    const QByteArray keyBytes = QByteArrayLiteral("38346591");
+    for (int length = 0; length <= 24; ++length) {
+        QByteArray data(length, Qt::Uninitialized);
+        for (int i = 0; i < length; ++i)
+            data[i] = char((i * 37 + length * 11) & 0xFF);
+        const QByteArray sealed = Des::encryptEcb(keyBytes, data);
+        bool ok = false;
+        const QByteArray opened = Des::decryptEcb(keyBytes, sealed, &ok);
+        roundTrips = roundTrips && ok && opened == data;
+        sizesRight = sizesRight && sealed.size() == (length / 8 + 1) * 8;
+    }
+    t.check(roundTrips, QStringLiteral("ECB with PKCS#5 round-trips every length from 0 to 24 bytes"));
+    t.check(sizesRight, QStringLiteral("padding always adds 1 to 8 bytes, a whole block when the input is whole"));
+
+    bool ok = true;
+    Des::decryptEcb(keyBytes, QByteArray(7, 'x'), &ok);
+    t.check(!ok, QStringLiteral("seven bytes are not a DES ciphertext"));
+    const QByteArray sealed = Des::encryptEcb(keyBytes, QByteArrayLiteral("https://example.invalid/a_96.mp4"));
+    const QByteArray wrong = Des::decryptEcb(QByteArrayLiteral("12345678"), sealed, &ok);
+    t.check(!ok || !wrong.startsWith("https://"), QStringLiteral("the wrong key does not give the link back"));
+}
+
+void testLinks(Checks &t)
+{
+    // Made with another DES (.NET's System.Security.Cryptography.DES, ECB,
+    // PKCS7) under the same key, so the two implementations are checked
+    // against each other and not only against themselves.
+    const QString foreign = QStringLiteral(
+        "ID2ieOjCrwfgWvL5sXl4B1ImC5QfbsDyz3UyV/YLalw1cUlUmSS0ruFL/YJ1TKRIZLZvCat1fiU4wrMSvgh34xw7tS9a8Gtq");
+    const QString link = QStringLiteral("https://aac.saavncdn.com/815/0f1e2d3c4b5a69788796a5b4c3d2e1f0_96.mp4");
+    t.check(Saavn::decryptMediaUrl(foreign) == link,
+            QStringLiteral("a link encrypted by another DES decrypts to the fixture"),
+            Saavn::decryptMediaUrl(foreign));
+    t.check(Saavn::encryptMediaUrl(link) == foreign,
+            QStringLiteral("and this encryptor makes exactly the same bytes from it"));
+
+    const QString own = QStringLiteral("https://aac.saavncdn.com/123/selftest-link_160.mp4");
+    t.check(Saavn::decryptMediaUrl(Saavn::encryptMediaUrl(own)) == own,
+            QStringLiteral("a fixture link made with this encryptor decrypts back"));
+    t.check(Saavn::decryptMediaUrl(QStringLiteral("  ") + Saavn::encryptMediaUrl(own) + QStringLiteral("\n")) == own,
+            QStringLiteral("whitespace around the encrypted link is ignored"));
+    t.check(Saavn::decryptMediaUrl(QStringLiteral("not base64 at all!")).isEmpty(),
+            QStringLiteral("text that is not Base64 gives no link"));
+    t.check(Saavn::decryptMediaUrl(Saavn::encryptMediaUrl(QStringLiteral("ftp://x/y_96.mp4"))).isEmpty(),
+            QStringLiteral("something that decrypts but is not a web link gives no link"));
+}
+
+void testBitrates(Checks &t)
+{
+    const QString base = QStringLiteral("https://aac.saavncdn.com/815/abc");
+    struct Case {
+        QString url;
+        bool has320;
+        QString expectUrl;
+        int expectKbps;
+        bool readable;
+        bool accepted;
+        const char *what;
+    };
+    const QList<Case> cases = {
+        { base + "_96.mp4", true, base + "_320.mp4", 320, true, true, "_96 with 320 on offer is moved up to _320" },
+        { base + "_96.mp4", false, base + "_96.mp4", 96, true, false, "_96 with no 320 stays 96, and 96 is refused" },
+        { base + "_160.mp4", false, base + "_160.mp4", 160, true, true, "_160 with no 320 stays 160, and is taken" },
+        { base + "_320.mp4", true, base + "_320.mp4", 320, true, true, "_320 stays as it is" },
+        { base + "_48.mp4", false, base + "_48.mp4", 48, true, false, "_48 is refused" },
+        { base + ".mp4", false, base + ".mp4", 0, false, true, "a link naming no bitrate is taken, unread" },
+        { base + "_96.mp4?t=1", true, base + "_320.mp4?t=1", 320, true, true, "the query string is left alone" },
+        { base + "_128.mp4", true, base + "_128.mp4", 0, false, true, "_128 is not one of JioSaavn's, so unread" },
+        { base + "_96.mp3", true, base + "_320.mp3", 320, true, true, "an mp3 rendition moves up the same way" },
+        { base + "_96.mp4/x.mp4", true, base + "_96.mp4/x.mp4", 0, false, true, "only the end of the path counts" },
+    };
+    for (const Case &c : cases) {
+        const Saavn::Stream stream = Saavn::streamFor(c.url, c.has320);
+        const bool accepted = Saavn::acceptable(stream);
+        t.check(stream.url == c.expectUrl && stream.kbps == c.expectKbps && stream.readable == c.readable
+                    && accepted == c.accepted,
+                QString::fromLatin1(c.what),
+                QStringLiteral("%1, %2 kbps, readable %3, accepted %4")
+                    .arg(QUrl(stream.url).fileName()).arg(stream.kbps).arg(stream.readable).arg(accepted));
+    }
+}
+
+void testParsing(Checks &t)
+{
+    // Entities as JioSaavn leaves them in titles.
+    t.check(Saavn::decodeEntities(QStringLiteral("Tum Hi Ho (From &quot;Aashiqui 2&quot;)"))
+                == QStringLiteral("Tum Hi Ho (From \"Aashiqui 2\")"),
+            QStringLiteral("entities: &quot;"));
+    t.check(Saavn::decodeEntities(QStringLiteral("Rock &amp; Roll")) == QStringLiteral("Rock & Roll"),
+            QStringLiteral("entities: &amp;"));
+    t.check(Saavn::decodeEntities(QStringLiteral("Don&#039;t Stop")) == QStringLiteral("Don't Stop"),
+            QStringLiteral("entities: &#039;"));
+    t.check(Saavn::decodeEntities(QStringLiteral("&#x41;&#66;&lt;&gt;&apos;")) == QStringLiteral("AB<>'"),
+            QStringLiteral("entities: hexadecimal, decimal, &lt; &gt; &apos;"));
+    t.check(Saavn::decodeEntities(QStringLiteral("&amp;quot;twice&amp;quot;")) == QStringLiteral("\"twice\""),
+            QStringLiteral("entities: encoded twice"));
+    t.check(Saavn::decodeEntities(QStringLiteral("AT&T & caf&eacute;")) == QStringLiteral("AT&T & caf&eacute;"),
+            QStringLiteral("entities: a bare & and an unknown name are left alone"));
+
+    // A search answer: songs kept, anything else skipped, fields read.
+    const QList<Saavn::Row> rows = Saavn::rowsFromSearch(json(R"json({"total":2,"results":[
+        {"id":"aRZbUYD7","title":"Tum Hi Ho (From &quot;Aashiqui 2&quot;)","type":"song","explicit_content":"1",
+         "more_info":{"album":"Aashiqui 2","duration":"262","320kbps":"true","encrypted_media_url":"ENC",
+           "artistMap":{"primary_artists":[{"name":"Mithoon"},{"name":"Arijit Singh"}],
+                        "featured_artists":[{"name":"Guest &amp; Friend"}],
+                        "artists":[{"name":"Lyricist Only","role":"lyricist"}]}}},
+        {"id":"alb1","title":"An album","type":"album","more_info":{}}]})json"));
+    const bool oneRow = rows.size() == 1;
+    t.check(oneRow, QStringLiteral("search answer: the song is read and the album skipped"),
+            QString::number(rows.size()));
+    if (oneRow) {
+        const Saavn::Row &r = rows.first();
+        t.check(r.title == QStringLiteral("Tum Hi Ho (From \"Aashiqui 2\")") && r.durationSec == 262 && r.has320
+                    && r.explicitContent && r.encryptedUrl == QStringLiteral("ENC")
+                    && r.album == QStringLiteral("Aashiqui 2"),
+                QStringLiteral("search row: title decoded, length, 320, explicit, link and album"));
+        t.check(r.artists == QStringList{ QStringLiteral("Mithoon"), QStringLiteral("Arijit Singh"),
+                                          QStringLiteral("Guest & Friend") },
+                QStringLiteral("search row: primary and featured artists, not the lyricist"),
+                r.artists.join(QStringLiteral(" | ")));
+    }
+
+    // song.getDetails, both shapes.
+    Saavn::Row details;
+    bool ok = Saavn::rowFromDetails(json(R"json({"songs":[{"id":"AbC123","title":"Kesariya","more_info":{
+        "encrypted_media_url":"E1","320kbps":"true","duration":"268",
+        "artistMap":{"primary_artists":[{"name":"Arijit Singh"}]}}}]})json"), QStringLiteral("AbC123"), &details);
+    t.check(ok && details.encryptedUrl == QStringLiteral("E1") && details.has320 && details.durationSec == 268
+                && details.artists == QStringList{ QStringLiteral("Arijit Singh") },
+            QStringLiteral("details as {\"songs\": [...]}"));
+    ok = Saavn::rowFromDetails(json(R"json({"AbC123":{"id":"AbC123","song":"Tum Hi Ho","primary_artists":"Mithoon, Arijit Singh",
+        "duration":"262","320kbps":"true","encrypted_media_url":"E2"}})json"), QStringLiteral("AbC123"), &details);
+    t.check(ok && details.title == QStringLiteral("Tum Hi Ho") && details.encryptedUrl == QStringLiteral("E2")
+                && details.artists == QStringList{ QStringLiteral("Mithoon"), QStringLiteral("Arijit Singh") }
+                && details.has320 && details.durationSec == 262,
+            QStringLiteral("details as {\"<id>\": {...}}, with the older flat fields"));
+    ok = Saavn::rowFromDetails(json(R"json({"songs":[{"id":"Other","title":"Not this","more_info":{"encrypted_media_url":"E3"}}]})json"),
+                               QStringLiteral("AbC123"), &details);
+    t.check(!ok, QStringLiteral("details for another id are never taken for this one"));
+    ok = Saavn::rowFromDetails(json(R"json({"Other":{"id":"Other","song":"Not this"}})json"), QStringLiteral("AbC123"), &details);
+    t.check(!ok, QStringLiteral("nor in the keyed shape"));
+
+    // Queries: the title, its version, the lead artist.
+    const auto query = [](const char *title, const char *artist) {
+        return Saavn::searchQuery(song(QString::fromUtf8(title), QString::fromUtf8(artist), 0));
+    };
+    QString q = query("Get Lucky (feat. Pharrell Williams and Nile Rodgers)", "Daft Punk, Pharrell Williams & Nile Rodgers");
+    t.check(q == QStringLiteral("get lucky daft punk"), QStringLiteral("query: credits out, lead artist in"), q);
+    q = query("Dancing with a Stranger", "Sam Smith & Normani");
+    t.check(q == QStringLiteral("dancing with a stranger sam smith and normani"),
+            QStringLiteral("query: a bare \"with\" stays in the title, \"&\" is spelt \"and\""), q);
+    q = query("Yellow - Live in Buenos Aires", "Coldplay");
+    t.check(q == QStringLiteral("yellow live coldplay"), QStringLiteral("query: the version is searched for too"), q);
+    q = query("Simon & Garfunkel - The Boxer", "Simon & Garfunkel");
+    t.check(q == QStringLiteral("the boxer simon and garfunkel"),
+            QStringLiteral("query: an \"Artist - \" head is not part of the title"), q);
+}
+
+void testMatcher(Checks &t)
+{
+    struct Case {
+        const char *what;
+        Saavn::Target target;
+        Saavn::Row row;
+        bool expect;
+    };
+    const QString devanagariTitle = QString::fromUtf8("\xE0\xA4\x95\xE0\xA5\x87\xE0\xA4\xB8\xE0\xA4\xB0\xE0\xA4\xBF"
+                                                      "\xE0\xA4\xAF\xE0\xA4\xBE");   // Kesariya
+    const QString devanagariArtist = QString::fromUtf8("\xE0\xA4\x85\xE0\xA4\xB0\xE0\xA4\xBF\xE0\xA4\x9C\xE0\xA5\x80"
+                                                       "\xE0\xA4\xA4 \xE0\xA4\xB8\xE0\xA4\xBF\xE0\xA4\x82\xE0\xA4\xB9");
+    const QList<Case> cases = {
+        { "same song, composer credited first on JioSaavn",
+          song("Tum Hi Ho", "Arijit Singh", 262), row("Tum Hi Ho", { "Mithoon", "Arijit Singh" }, 262), true },
+        { "same song, entities and a (From \"film\") aside",
+          song("Tum Hi Ho", "Arijit Singh", 262),
+          row("Tum Hi Ho (From &quot;Aashiqui 2&quot;)", { "Arijit Singh", "Mithoon" }, 261), true },
+        { "remaster on our side",
+          song("Bohemian Rhapsody (Remastered 2011)", "Queen", 355), row("Bohemian Rhapsody", { "Queen" }, 355), true },
+        { "remaster on theirs, after a dash",
+          song("Bohemian Rhapsody", "Queen", 355), row("Bohemian Rhapsody - Remastered 2011", { "Queen" }, 354), true },
+        { "live row refused for a studio song",
+          song("Yellow", "Coldplay", 269), row("Yellow (Live)", { "Coldplay" }, 270), false },
+        { "studio row refused for a live song",
+          song("Yellow - Live in Buenos Aires", "Coldplay", 300), row("Yellow", { "Coldplay" }, 300), false },
+        { "two live takes from different places refused",
+          song("Yellow (Live at Glastonbury)", "Coldplay", 280),
+          row("Yellow (Live in Buenos Aires)", { "Coldplay" }, 280), false },
+        { "remix refused for the original",
+          song("Blinding Lights", "The Weeknd", 200),
+          row("Blinding Lights (Chromatics Remix)", { "The Weeknd", "Chromatics" }, 200), false },
+        { "the same remix, written two ways",
+          song("Blinding Lights (Chromatics Remix)", "The Weeknd", 200),
+          row("Blinding Lights - Chromatics Remix", { "The Weeknd" }, 201), true },
+        { "another remixer's remix refused",
+          song("Blinding Lights (Chromatics Remix)", "The Weeknd", 200),
+          row("Blinding Lights (Major Lazer Remix)", { "The Weeknd" }, 200), false },
+        { "wrong artist refused",
+          song("Hallelujah", "Jeff Buckley", 413), row("Hallelujah", { "Leonard Cohen" }, 413), false },
+        { "2 s off accepted",
+          song("Smells Like Teen Spirit", "Nirvana", 302), row("Smells Like Teen Spirit", { "Nirvana" }, 300), true },
+        { "3 s off accepted",
+          song("Smells Like Teen Spirit", "Nirvana", 302), row("Smells Like Teen Spirit", { "Nirvana" }, 305), true },
+        { "5 s off refused",
+          song("Smells Like Teen Spirit", "Nirvana", 302), row("Smells Like Teen Spirit", { "Nirvana" }, 307), false },
+        { "feat. credits in our title and artist line",
+          song("Get Lucky (feat. Pharrell Williams and Nile Rodgers)", "Daft Punk, Pharrell Williams & Nile Rodgers", 369),
+          row("Get Lucky", { "Daft Punk", "Pharrell Williams", "Nile Rodgers" }, 369), true },
+        { "feat. credits only in their title",
+          song("Get Lucky", "Daft Punk", 369),
+          row("Get Lucky (feat. Pharrell Williams & Nile Rodgers)", { "Daft Punk" }, 369), true },
+        { "\"with\" inside brackets is a credit",
+          song("Stay", "The Kid LAROI & Justin Bieber", 141),
+          row("Stay (with Justin Bieber)", { "The Kid LAROI" }, 141), true },
+        { "a bare \"with\" is part of the title (S7)",
+          song("Dancing with a Stranger", "Sam Smith & Normani", 171),
+          row("Dancing With A Stranger (with Normani)", { "Sam Smith", "Normani" }, 171), true },
+        { "and is not cut off there (S7)",
+          song("Dancing with a Stranger", "Sam Smith", 171), row("Dancing", { "Sam Smith" }, 171), false },
+        { "\"&\" in a name",
+          song("The Boxer", "Simon & Garfunkel", 308), row("The Boxer", { "Simon & Garfunkel" }, 308), true },
+        { "\"and\" against \"&\" (S7)",
+          song("The Boxer", "Simon and Garfunkel", 308), row("The Boxer", { "Simon & Garfunkel" }, 308), true },
+        { "\"Artist - Title\" video title",
+          song("Simon & Garfunkel - The Boxer", "Simon & Garfunkel", 308),
+          row("The Boxer", { "Simon & Garfunkel" }, 308), true },
+        { "\"Simon & Garfunkel\" is not \"Paul Simon\"",
+          song("The Boxer", "Simon & Garfunkel", 308), row("The Boxer", { "Paul Simon" }, 308), false },
+        { "Devanagari title and artist on both sides",
+          song(devanagariTitle, devanagariArtist, 268), row(devanagariTitle, { devanagariArtist }, 268), true },
+        { "Devanagari title against its transliteration refused",
+          song(devanagariTitle, "Arijit Singh", 268), row("Kesariya", { "Arijit Singh" }, 268), false },
+        { "a cover by another artist refused",
+          song("Kesariya", "Arijit Singh", 268), row("Kesariya (Cover)", { "Aditi Rao" }, 268), false },
+        { "an unmarked cover by another artist refused",
+          song("Kesariya", "Arijit Singh", 268), row("Kesariya", { "Jubin Nautiyal" }, 268), false },
+        { "a cover credited to the same name still refused",
+          song("Kesariya", "Arijit Singh", 268), row("Kesariya - Cover Version", { "Arijit Singh" }, 268), false },
+        { "acoustic refused",
+          song("Perfect", "Ed Sheeran", 263), row("Perfect (Acoustic)", { "Ed Sheeran" }, 263), false },
+        { "sped up refused",
+          song("Kesariya", "Arijit Singh", 268), row("Kesariya (Sped Up)", { "Arijit Singh" }, 268), false },
+        { "slowed + reverb against slowed & reverb",
+          song("Kesariya (Slowed + Reverb)", "Arijit Singh", 300),
+          row("Kesariya (Slowed and Reverb)", { "Arijit Singh" }, 300), true },
+        { "a style remix credited to the original artist refused",
+          song("The Fate of Ophelia", "Taylor Swift", 227),
+          row("The Fate of Ophelia (Garage)", { "Taylor Swift" }, 227), false },
+        { "a song sung again in another language refused",
+          song("Srivalli", "Sid Sriram", 224), row("Srivalli (Hindi)", { "Sid Sriram" }, 224), false },
+        { "the same language version on both sides",
+          song("Srivalli (Hindi)", "Javed Ali", 224), row("Srivalli (Hindi)", { "Javed Ali" }, 224), true },
+        { "instrumental refused",
+          song("Tum Hi Ho", "Mithoon", 262), row("Tum Hi Ho (Instrumental)", { "Mithoon" }, 262), false },
+        { "karaoke refused",
+          song("Tum Hi Ho", "Mithoon", 262), row("Tum Hi Ho (Karaoke Version)", { "Mithoon" }, 262), false },
+        { "Taylor's Version refused for the original",
+          song("Love Story", "Taylor Swift", 236),
+          row(QString::fromUtf8("Love Story (Taylor\xE2\x80\x99s Version)"), { "Taylor Swift" }, 236), false },
+        { "the same parts, written two ways",
+          song("Shine On You Crazy Diamond (Pts. 1-5)", "Pink Floyd", 812),
+          row("Shine On You Crazy Diamond, Pts. 1-5", { "Pink Floyd" }, 811), true },
+        { "\"Part 1 - Part 5\" is \"Pts. 1-5\"",
+          song("Shine On You Crazy Diamond (Pts. 1-5)", "Pink Floyd", 812),
+          row("Shine On You Crazy Diamond (Part 1 - Part 5)", { "Pink Floyd" }, 812), true },
+        { "other parts refused",
+          song("Shine On You Crazy Diamond (Pts. 1-5)", "Pink Floyd", 812),
+          row("Shine On You Crazy Diamond (Pts. 6-9)", { "Pink Floyd" }, 812), false },
+        { "apostrophes",
+          song("Don't Start Now", "Dua Lipa", 183), row("Dont Start Now", { "Dua Lipa" }, 183), true },
+        { "accents",
+          song("Halo", QString::fromUtf8("Beyonc\xC3\xA9"), 261), row("Halo", { "Beyonce" }, 261), true },
+        { "Radio Edit is the same recording (the length decides)",
+          song("Get Lucky (Radio Edit)", "Daft Punk", 248), row("Get Lucky", { "Daft Punk" }, 248), true },
+        { "a video's title noise and a VEVO channel",
+          song("Coldplay - Yellow (Official Video)", "ColdplayVEVO", 269), row("Yellow", { "Coldplay" }, 269), true },
+        { "\"Official Video\" without brackets",
+          song("Yellow Official Video", "Coldplay", 269), row("Yellow", { "Coldplay" }, 269), true },
+    };
+    for (const Case &c : cases) {
+        const Saavn::Judgement judgement = Saavn::judge(c.target, c.row);
+        // A refusal says why, so a refusal for the wrong reason shows.
+        QString what = QStringLiteral("match: ") + QString::fromLatin1(c.what);
+        if (!judgement.accepted && !c.expect)
+            what += QStringLiteral(" [") + judgement.reason + QLatin1Char(']');
+        t.check(judgement.accepted == c.expect, what,
+                judgement.accepted ? QStringLiteral("accepted") : QStringLiteral("refused: ") + judgement.reason);
+    }
+
+    // Ties between rows that all fit.
+    const Saavn::Target tum = song("Tum Hi Ho", "Arijit Singh", 262);
+    Saavn::Choice choice = Saavn::choose(tum, { row("Tum Hi Ho", { "Arijit Singh" }, 262, false),
+                                                row("Tum Hi Ho", { "Arijit Singh" }, 262, true) });
+    t.check(choice.accepted.value(0, -1) == 1, QStringLiteral("choose: the explicit row before the clean one"));
+    choice = Saavn::choose(tum, { row("Tum Hi Ho", { "Arijit Singh" }, 262, false, false),
+                                  row("Tum Hi Ho", { "Arijit Singh" }, 262, false, true) });
+    t.check(choice.accepted.value(0, -1) == 1, QStringLiteral("choose: then the row offered at 320 kbps"));
+    choice = Saavn::choose(tum, { row("Tum Hi Ho", { "Arijit Singh" }, 264), row("Tum Hi Ho", { "Arijit Singh" }, 263),
+                                  row("Tum Hi Ho", { "Arijit Singh" }, 262) });
+    t.check(choice.accepted == QList<int>{ 2, 1, 0 }, QStringLiteral("choose: then the closest in length"));
+    choice = Saavn::choose(tum, { row("Tum Hi Ho", { "Arijit Singh" }, 264, true, false),
+                                  row("Tum Hi Ho", { "Arijit Singh" }, 262, false, true) });
+    t.check(choice.accepted.value(0, -1) == 0,
+            QStringLiteral("choose: explicit outranks 320 kbps and length, in that order"));
+
+    const Saavn::Target unknown = song("Tum Hi Ho", "Arijit Singh", 0);
+    choice = Saavn::choose(unknown, { row("Tum Hi Ho", { "Arijit Singh" }, 262), row("Tum Hi Ho", { "Arijit Singh" }, 250) });
+    t.check(choice.accepted.isEmpty(), QStringLiteral("choose: length unknown and two rows fit: neither is taken"),
+            choice.reason);
+    choice = Saavn::choose(unknown, { row("Tum Hi Ho", { "Arijit Singh" }, 262), row("Tum Hi Ho (Live)", { "Arijit Singh" }, 400) });
+    t.check(choice.accepted == QList<int>{ 0 }, QStringLiteral("choose: length unknown and one row fits: it is taken"));
+    choice = Saavn::choose(unknown, { row("Tum Hi Ho", { "Arijit Singh" }, 262, false, true, QStringLiteral("same")),
+                                      row("Tum Hi Ho", { "Arijit Singh" }, 262, false, true, QStringLiteral("same")) });
+    t.check(choice.accepted.size() == 1, QStringLiteral("choose: the same id listed twice counts once"));
+    choice = Saavn::choose(tum, {});
+    t.check(choice.accepted.isEmpty() && !choice.reason.isEmpty(), QStringLiteral("choose: no rows, no match, a reason"));
+    choice = Saavn::choose(tum, { row("Tum Hi Ho (Live)", { "Arijit Singh" }, 262), row("Tum Hi Ho", { "Arijit Singh" }, 262) });
+    t.check(choice.accepted == QList<int>{ 1 } && choice.refusals.size() == 1,
+            QStringLiteral("choose: the refused row is listed with its reason"), choice.refusals.join(QStringLiteral(" | ")));
+}
+
+} // namespace
+
+int runSaavnSelfTest()
+{
+    Checks t;
+    testDes(t);
+    testLinks(t);
+    testBitrates(t);
+    testParsing(t);
+    testMatcher(t);
+    return t.finish();
+}
+
+int runSaavnLookup(const QString &title, const QString &artist, qint64 durationMs, bool indiaHeaders)
+{
+    JioSaavn client;
+    client.setIndiaHeaders(indiaHeaders);
+    Saavn::Target target;
+    target.title = title;
+    target.artist = artist;
+    target.durationMs = durationMs;
+
+    qWarning("saavn: \"%s\" by %s, %s; Indian headers %s; searching \"%s\"", qPrintable(title), qPrintable(artist),
+             durationMs > 0 ? qPrintable(QStringLiteral("%1 s").arg(durationMs / 1000)) : "length unknown",
+             indiaHeaders ? "on" : "off", qPrintable(Saavn::searchQuery(target)));
+
+    QEventLoop loop;
+    JioSaavn::Result answer;
+    client.lookup(target, [&answer, &loop](const JioSaavn::Result &result) {
+        answer = result;
+        loop.quit();
+    });
+    loop.exec();
+
+    qWarning("saavn: %d rows in %lld ms", answer.rows, static_cast<long long>(answer.elapsedMs));
+    for (const QString &refused : std::as_const(answer.refusals))
+        qWarning("saavn:   refused  %s", qPrintable(refused));
+
+    switch (answer.kind) {
+    case JioSaavn::Result::Match: {
+        // The host and the rendition, never the whole link.
+        const QUrl url(answer.url);
+        static const QRegularExpression rendition(QStringLiteral("_\\d+\\.\\w+$"));
+        const QString tail = rendition.match(url.path()).captured(0);
+        qWarning("saavn: MATCH \"%s\" by %s (%s, %d s), %s from %s (...%s)", qPrintable(answer.title),
+                 qPrintable(answer.artists), qPrintable(answer.saavnId), answer.durationSec,
+                 answer.kbps > 0 ? qPrintable(QStringLiteral("%1 kbps").arg(answer.kbps)) : "bitrate not stated",
+                 qPrintable(url.host()), qPrintable(tail.isEmpty() ? QStringLiteral("no rendition in the path") : tail));
+        return 0;
+    }
+    case JioSaavn::Result::NoMatch:
+        qWarning("saavn: NO MATCH: %s", qPrintable(answer.reason));
+        return 1;
+    case JioSaavn::Result::Failed:
+        break;
+    }
+    qWarning("saavn: FAILED: %s", qPrintable(answer.reason));
+    return 2;
+}

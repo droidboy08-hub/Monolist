@@ -32,6 +32,8 @@ class DownloadManager;
 //
 //   local file present  -> play from disk                      (Melody: LOCAL)
 //   otherwise           -> StreamResolver, then play that URL   (Melody: STEALTH)
+//                          (JioSaavn's copy of the same song where it wins
+//                          the race against YouTube; see StreamResolver)
 //
 // Melody's third rung, the hidden YouTube iframe, has no equivalent here and
 // needs none: it existed only because a browser cannot play an arbitrary audio
@@ -81,6 +83,11 @@ class PlaybackController : public QObject
     // "auto" while the choice is not there.
     Q_PROPERTY(QVariantList audioDevices READ audioDevices NOTIFY audioDevicesChanged)
     Q_PROPERTY(QString audioDevice READ audioDevice NOTIFY audioDevicesChanged)
+    // JioSaavn as a source of sound where it has the same song (see
+    // StreamResolver), and whether its requests say they come from India.
+    // Both on until the listener turns them off in Settings.
+    Q_PROPERTY(bool saavnEnabled READ saavnEnabled WRITE setSaavnEnabled NOTIFY saavnChanged)
+    Q_PROPERTY(bool saavnIndiaHeaders READ saavnIndiaHeaders WRITE setSaavnIndiaHeaders NOTIFY saavnChanged)
 public:
     enum RepeatMode { RepeatOff = 0, RepeatAll = 1, RepeatOne = 2 };
     Q_ENUM(RepeatMode)
@@ -141,6 +148,10 @@ public:
     void setVideoHeight(int height);
     QVariantList audioDevices() const { return m_audioDevices; }
     QString audioDevice() const { return m_audioDevice; }
+    bool saavnEnabled() const;
+    void setSaavnEnabled(bool on);
+    bool saavnIndiaHeaders() const;
+    void setSaavnIndiaHeaders(bool on);
 
 public Q_SLOTS:
     void play();
@@ -221,6 +232,7 @@ Q_SIGNALS:
     void statusChanged();
     void videoChanged();
     void audioDevicesChanged();
+    void saavnChanged();
     void playbackError(const QString &reason);
     // Something the user should be told, in their words, for the toast.
     void notice(const QString &text);

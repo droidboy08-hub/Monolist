@@ -33,6 +33,11 @@ Rectangle {
     readonly property string switchTip: !Player.videoAvailable ? "This song has no video"
                                       : videoShowing ? "Show the cover"
                                       : "Play the video"
+    // Where the sound is coming from, once it is: "SOUND: JIOSAAVN · 320
+    // KBPS", or the YouTube tier. Set like the lyrics' credit, since it is
+    // the same kind of note.
+    readonly property string soundSource: hasTrack && !Player.resolving && Player.sourceLabel.length > 0
+                                          ? "SOUND: " + Player.sourceLabel.toUpperCase() : ""
 
     // The cover's colour as the field, signal red until it is known.
     property color field: Theme.accent
@@ -200,6 +205,18 @@ Rectangle {
                     color: root.posterInk
                     opacity: 0.8
                 }
+                Text {
+                    visible: text.length > 0
+                    width: parent.width
+                    text: root.soundSource
+                    elide: Text.ElideRight
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 11
+                    font.weight: Font.Bold
+                    font.letterSpacing: Theme.tracking(11, 0.1)
+                    color: root.posterInk
+                    opacity: 0.65
+                }
             }
         }
     }
@@ -314,6 +331,17 @@ Rectangle {
                     font.family: Theme.fontFamily
                     font.pixelSize: 14
                     color: Theme.neutral700
+                }
+                Text {
+                    visible: text.length > 0
+                    width: parent.width
+                    text: root.soundSource
+                    elide: Text.ElideRight
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 11
+                    font.weight: Font.Bold
+                    font.letterSpacing: Theme.tracking(11, 0.1)
+                    color: Theme.neutral600
                 }
             }
 

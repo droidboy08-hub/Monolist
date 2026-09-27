@@ -1,9 +1,11 @@
 #include "streamresolver.h"
+#include "appdatabase.h"
 #include "ytdlp.h"
 
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QSqlQuery>
 #include <QTimeZone>
 #include <QUrlQuery>
 #include <QNetworkAccessManager>
@@ -15,6 +17,26 @@
 #include <utility>
 
 namespace {
+
+// How long YouTube's answer is held for JioSaavn's, counted from when both
+// were asked. A warm YouTube link answers in milliseconds, and JioSaavn's
+// search in several hundred on a good day, so this is enough for it to win
+// most races it can win at all, and short enough that nobody notices the
+// wait when it does not. Past it YouTube plays, and JioSaavn's answer is
+// kept for the next time the song comes round. A first guess, to be tuned
+// against measurements.
+constexpr int kSaavnGraceMs = 1200;
+// JioSaavn's answers, remembered. Its links are plain CDN paths that last,
+// so a match is kept a week; "not there" a day, since catalogues grow.
+constexpr int kSaavnMatchDays = 7;
+constexpr int kSaavnNoMatchHours = 24;
+// A link mpv refused: JioSaavn left out for this song for ten minutes, the
+// time a fault at their end usually takes to pass, then asked afresh.
+constexpr int kSaavnRefusedMinutes = 10;
+// Three failures in a row (no answer at all, not "not found") and JioSaavn
+// is left alone for five minutes.
+constexpr int kSaavnFailuresBeforeRest = 3;
+constexpr int kSaavnRestMinutes = 5;
 
 constexpr int kPipedTimeoutMs = 8000;
 constexpr int kInvidiousTimeoutMs = 6000;
@@ -110,7 +132,7 @@ void StreamResolver::resolve(const QString &videoId, int firstTier)
         if (cached != m_cache.constEnd() && cached->expires > QDateTime::currentDateTimeUtc()) {
             const CacheEntry entry = *cached;
             QMetaObject::invokeMethod(this, [this, videoId, entry]() {
-                Q_EMIT resolved(videoId, entry.url, entry.tier, /*fromCache=*/true);
+                report(videoId, entry.url, entry.tier, /*fromCache=*/true);
             }, Qt::QueuedConnection);
             return;
         }
@@ -138,7 +160,7 @@ void StreamResolver::resolveVia(const QString &videoId, const QList<int> &tiers)
 
 void StreamResolver::start(const QString &videoId, QList<int> tiers)
 {
-    cancel(videoId);
+    cancelJob(videoId);
 
     auto *job = new Job;
     job->videoId = videoId;
@@ -296,7 +318,7 @@ void StreamResolver::startTier(Job *job, int tier)
         const bool silent = job->prefetch;
         discard(job);
         if (!silent)
-            Q_EMIT failed(id, reason);
+            reportFailure(id, reason);
         break;
     }
     }
@@ -571,7 +593,7 @@ void StreamResolver::succeed(Job *job, const QString &url, const QVariantMap &he
     discard(job);
 
     if (!silent)
-        Q_EMIT resolved(videoId, url, tier, /*fromCache=*/false);
+        report(videoId, url, tier, /*fromCache=*/false);
 }
 
 void StreamResolver::tierExhausted(Job *job, const QString &reason)
@@ -610,6 +632,12 @@ void StreamResolver::discard(Job *job)
 
 void StreamResolver::cancel(const QString &videoId)
 {
+    m_races.remove(videoId);
+    cancelJob(videoId);
+}
+
+void StreamResolver::cancelJob(const QString &videoId)
+{
     Job *job = m_jobs.value(videoId);
     if (!job)
         return;
@@ -620,8 +648,315 @@ void StreamResolver::cancel(const QString &videoId)
 
 void StreamResolver::cancelAll()
 {
+    m_races.clear();
     const QStringList ids = m_jobs.keys();
     for (const QString &id : ids)
-        cancel(id);
+        cancelJob(id);
+}
+
+// ------------------------------------------------------------------ the race
+
+void StreamResolver::resolveTrack(const Saavn::Target &track)
+{
+    const QString videoId = track.videoId;
+    if (videoId.isEmpty()) {
+        Q_EMIT failed(videoId, QStringLiteral("Empty video id."));
+        return;
+    }
+    // Asked again for the same song: the earlier race is over, unheard.
+    m_races.remove(videoId);
+
+    const bool resting = m_saavnRestUntil.isValid() && m_saavnRestUntil > QDateTime::currentDateTimeUtc();
+    if (!m_saavnEnabled || track.title.trimmed().isEmpty()) {
+        resolve(videoId);
+        return;
+    }
+
+    const SaavnVerdict verdict = saavnVerdict(videoId);
+    if (verdict.kind == SaavnVerdict::Match) {
+        qInfo("jiosaavn: %s plays from the match found before (%s, %d kbps)", qPrintable(videoId),
+              qPrintable(verdict.saavnId), verdict.kbps);
+        const QString url = handOverSaavn(videoId, verdict.url);
+        // Queued, like a remembered YouTube link, so the caller sees the
+        // same order of events either way.
+        QMetaObject::invokeMethod(this, [this, videoId, url]() {
+            Q_EMIT resolved(videoId, url, TierJioSaavn, /*fromCache=*/true);
+        }, Qt::QueuedConnection);
+        return;
+    }
+    if (verdict.kind != SaavnVerdict::Unknown || resting) {
+        resolve(videoId);
+        return;
+    }
+
+    // Both at once. The ladder's answer comes back through report(), which
+    // finds the race and holds it there.
+    Race race;
+    race.clock.start();
+    race.generation = ++m_raceGeneration;
+    m_races.insert(videoId, race);
+    startSaavnLookup(track);
+    resolve(videoId);
+}
+
+void StreamResolver::prefetchTrack(const Saavn::Target &track)
+{
+    if (track.videoId.isEmpty())
+        return;
+    const bool resting = m_saavnRestUntil.isValid() && m_saavnRestUntil > QDateTime::currentDateTimeUtc();
+    if (m_saavnEnabled && !track.title.trimmed().isEmpty()) {
+        const SaavnVerdict verdict = saavnVerdict(track.videoId);
+        // JioSaavn's link is already known, so there will be no race to
+        // win: nothing to fetch ahead.
+        if (verdict.kind == SaavnVerdict::Match)
+            return;
+        if (verdict.kind == SaavnVerdict::Unknown && !resting)
+            startSaavnLookup(track);
+    }
+    prefetch(track.videoId);
+}
+
+void StreamResolver::report(const QString &videoId, const QString &url, int tier, bool fromCache)
+{
+    const auto race = m_races.find(videoId);
+    if (race == m_races.end()) {
+        Q_EMIT resolved(videoId, url, tier, fromCache);
+        return;
+    }
+    race->youtubeReady = true;
+    race->url = url;
+    race->tier = tier;
+    race->fromCache = fromCache;
+    const qint64 left = kSaavnGraceMs - race->clock.elapsed();
+    if (left <= 0) {
+        qInfo("jiosaavn: %s has not answered; YouTube plays", qPrintable(videoId));
+        youtubeWins(videoId);
+        return;
+    }
+    const int generation = race->generation;
+    QTimer::singleShot(int(left), this, [this, videoId, generation]() {
+        const auto race = m_races.constFind(videoId);
+        if (race == m_races.constEnd() || race->generation != generation)
+            return;
+        qInfo("jiosaavn: %s did not answer within %d ms; YouTube plays, and a later answer is kept",
+              qPrintable(videoId), kSaavnGraceMs);
+        youtubeWins(videoId);
+    });
+}
+
+// The ladder found nothing. With a race on, JioSaavn is all that is left and
+// is waited for — its own timeouts bound the wait — before the failure is
+// told.
+void StreamResolver::reportFailure(const QString &videoId, const QString &reason)
+{
+    const auto race = m_races.find(videoId);
+    if (race == m_races.end()) {
+        Q_EMIT failed(videoId, reason);
+        return;
+    }
+    race->youtubeFailed = true;
+    race->failure = reason;
+}
+
+void StreamResolver::youtubeWins(const QString &videoId)
+{
+    const Race race = m_races.take(videoId);
+    Q_EMIT resolved(videoId, race.url, race.tier, race.fromCache);
+}
+
+void StreamResolver::startSaavnLookup(const Saavn::Target &track)
+{
+    if (m_saavnAsking.contains(track.videoId))
+        return;   // already on its way; its answer serves this too
+    m_saavnAsking.insert(track.videoId);
+    const QString videoId = track.videoId;
+    m_saavn.lookup(track, [this, videoId](const JioSaavn::Result &result) {
+        saavnAnswered(videoId, result);
+    });
+}
+
+void StreamResolver::saavnAnswered(const QString &videoId, const JioSaavn::Result &result)
+{
+    m_saavnAsking.remove(videoId);
+    const QDateTime now = QDateTime::currentDateTimeUtc();
+
+    switch (result.kind) {
+    case JioSaavn::Result::Match: {
+        m_saavnFailuresInARow = 0;
+        SaavnVerdict verdict;
+        verdict.kind = SaavnVerdict::Match;
+        verdict.url = result.url;
+        verdict.kbps = result.kbps;
+        verdict.saavnId = result.saavnId;
+        verdict.expires = now.addDays(kSaavnMatchDays);
+        rememberSaavn(videoId, verdict);
+        // The host and the bitrate: the link itself stays out of the log.
+        qInfo("jiosaavn: %s is \"%s\" by %s (%s, %d s) at %d kbps from %s, found in %lld ms", qPrintable(videoId),
+              qPrintable(result.title), qPrintable(result.artists), qPrintable(result.saavnId), result.durationSec,
+              result.kbps, qPrintable(QUrl(result.url).host()), static_cast<long long>(result.elapsedMs));
+        break;
+    }
+    case JioSaavn::Result::NoMatch: {
+        m_saavnFailuresInARow = 0;
+        SaavnVerdict verdict;
+        verdict.kind = SaavnVerdict::NoMatch;
+        verdict.expires = now.addSecs(kSaavnNoMatchHours * 3600);
+        rememberSaavn(videoId, verdict);
+        qInfo("jiosaavn: %s not taken from JioSaavn: %s (%d rows, %lld ms)", qPrintable(videoId),
+              qPrintable(result.reason), result.rows, static_cast<long long>(result.elapsedMs));
+        // The first few reasons, so a song that should have matched can be
+        // looked into from the log.
+        for (qsizetype i = 0; i < result.refusals.size() && i < 3; ++i)
+            qInfo("jiosaavn:   %s", qPrintable(result.refusals.at(i)));
+        break;
+    }
+    case JioSaavn::Result::Failed:
+        // No verdict: JioSaavn was not heard from, so nothing is remembered
+        // about the song and it is asked again next time.
+        qWarning("jiosaavn: %s could not be looked up: %s", qPrintable(videoId), qPrintable(result.reason));
+        if (++m_saavnFailuresInARow >= kSaavnFailuresBeforeRest) {
+            m_saavnFailuresInARow = 0;
+            m_saavnRestUntil = now.addSecs(kSaavnRestMinutes * 60);
+            qWarning("jiosaavn: %d lookups failed in a row; not asking for %d minutes",
+                     kSaavnFailuresBeforeRest, kSaavnRestMinutes);
+        }
+        break;
+    }
+
+    const auto race = m_races.find(videoId);
+    if (race == m_races.end())
+        return;   // a prefetch, or a song the race already gave to YouTube
+    if (result.kind == JioSaavn::Result::Match) {
+        m_races.erase(race);
+        // YouTube's leg carries on unheard, into the cache: should mpv refuse
+        // JioSaavn's link, the way back is already there.
+        if (Job *job = m_jobs.value(videoId))
+            job->prefetch = true;
+        Q_EMIT resolved(videoId, handOverSaavn(videoId, result.url), TierJioSaavn, /*fromCache=*/false);
+        return;
+    }
+    if (race->youtubeReady) {
+        youtubeWins(videoId);
+        return;
+    }
+    if (race->youtubeFailed) {
+        const QString reason = race->failure;
+        m_races.erase(race);
+        Q_EMIT failed(videoId, reason);
+        return;
+    }
+    // YouTube is still on its way, and is now simply the answer.
+    m_races.erase(race);
+}
+
+StreamResolver::SaavnVerdict StreamResolver::saavnVerdict(const QString &videoId)
+{
+    const QDateTime now = QDateTime::currentDateTimeUtc();
+    const auto known = m_saavnVerdicts.constFind(videoId);
+    if (known != m_saavnVerdicts.constEnd()) {
+        if (known->expires > now)
+            return *known;
+        m_saavnVerdicts.remove(videoId);
+        return {};   // the table's copy expired with it
+    }
+
+    QSqlDatabase db = AppDatabase::connection();
+    if (!db.isOpen())
+        return {};
+    QSqlQuery query(db);
+    query.prepare(QStringLiteral(
+        "SELECT matched, saavn_id, url, kbps, expires_at FROM saavn_matches WHERE video_id = ?"));
+    query.addBindValue(videoId);
+    if (!query.exec() || !query.next())
+        return {};
+    SaavnVerdict verdict;
+    verdict.expires = QDateTime::fromSecsSinceEpoch(query.value(4).toLongLong(), QTimeZone::UTC);
+    if (verdict.expires <= now)
+        return {};
+    verdict.kind = query.value(0).toInt() == 1 ? SaavnVerdict::Match : SaavnVerdict::NoMatch;
+    verdict.saavnId = query.value(1).toString();
+    verdict.url = query.value(2).toString();
+    verdict.kbps = query.value(3).toInt();
+    if (verdict.kind == SaavnVerdict::Match && verdict.url.isEmpty())
+        return {};
+    m_saavnVerdicts.insert(videoId, verdict);
+    return verdict;
+}
+
+void StreamResolver::rememberSaavn(const QString &videoId, const SaavnVerdict &verdict)
+{
+    m_saavnVerdicts.insert(videoId, verdict);
+    if (verdict.kind != SaavnVerdict::Match && verdict.kind != SaavnVerdict::NoMatch)
+        return;   // a refusal is for this session only
+    QSqlDatabase db = AppDatabase::connection();
+    if (!db.isOpen())
+        return;
+    QSqlQuery query(db);
+    query.prepare(QStringLiteral(
+        "INSERT OR REPLACE INTO saavn_matches (video_id, matched, saavn_id, url, kbps, checked_at, expires_at)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?)"));
+    query.addBindValue(videoId);
+    query.addBindValue(verdict.kind == SaavnVerdict::Match ? 1 : 0);
+    query.addBindValue(AppDatabase::text(verdict.saavnId));
+    query.addBindValue(AppDatabase::text(verdict.url));
+    query.addBindValue(verdict.kbps);
+    query.addBindValue(QDateTime::currentSecsSinceEpoch());
+    query.addBindValue(verdict.expires.toSecsSinceEpoch());
+    if (!query.exec())
+        qWarning("jiosaavn: could not remember the answer for %s", qPrintable(videoId));
+}
+
+void StreamResolver::refuseSaavn(const QString &videoId)
+{
+    SaavnVerdict verdict;
+    verdict.kind = SaavnVerdict::Refused;
+    verdict.expires = QDateTime::currentDateTimeUtc().addSecs(kSaavnRefusedMinutes * 60);
+    m_saavnVerdicts.insert(videoId, verdict);
+    QSqlDatabase db = AppDatabase::connection();
+    if (db.isOpen()) {
+        QSqlQuery query(db);
+        query.prepare(QStringLiteral("DELETE FROM saavn_matches WHERE video_id = ?"));
+        query.addBindValue(videoId);
+        query.exec();
+    }
+}
+
+QString StreamResolver::handOverSaavn(const QString &videoId, const QString &url)
+{
+    if (videoId != m_spoilSaavn)
+        return url;
+    m_spoilSaavn.clear();
+    // A file the CDN does not have, on the host it does serve: refused the
+    // way a moved or withdrawn file would be.
+    QUrl spoiled(url);
+    spoiled.setPath(QStringLiteral("/000/monolist-selftest-missing_320.mp4"));
+    qInfo("jiosaavn: %s handed over spoiled, for the self-test", qPrintable(videoId));
+    return spoiled.toString(QUrl::FullyEncoded);
+}
+
+int StreamResolver::saavnKbps(const QString &videoId) const
+{
+    const auto known = m_saavnVerdicts.constFind(videoId);
+    return known != m_saavnVerdicts.constEnd() && known->kind == SaavnVerdict::Match ? known->kbps : 0;
+}
+
+void StreamResolver::setSaavnIndiaHeaders(bool on, bool forgetNoMatches)
+{
+    if (on == m_saavn.indiaHeaders())
+        return;
+    m_saavn.setIndiaHeaders(on);
+    if (!forgetNoMatches)
+        return;
+    for (auto it = m_saavnVerdicts.begin(); it != m_saavnVerdicts.end();) {
+        if (it->kind == SaavnVerdict::NoMatch)
+            it = m_saavnVerdicts.erase(it);
+        else
+            ++it;
+    }
+    QSqlDatabase db = AppDatabase::connection();
+    if (db.isOpen()) {
+        QSqlQuery query(db);
+        query.exec(QStringLiteral("DELETE FROM saavn_matches WHERE matched = 0"));
+    }
 }
 

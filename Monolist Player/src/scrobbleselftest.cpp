@@ -543,6 +543,8 @@ int runListenSelfTest()
         return t.finish();
     }
     StreamResolver resolver;
+    // The test plays the resolver's part itself; JioSaavn would only race it.
+    resolver.setSaavnEnabled(false);
     PlaybackController player(&engine, &resolver, nullptr);
     // Only the songs each scenario plays: no radio asked for.
     player.setAutoplay(false);

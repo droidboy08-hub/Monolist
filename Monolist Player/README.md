@@ -89,6 +89,29 @@ plays, so replaying or skipping forward rarely waits on yt-dlp. A link that
 resolves but will not open in mpv is retried: a stale cached link is fetched
 fresh, anything else moves on to the next tier.
 
+### JioSaavn
+
+JioSaavn has much of the same music as AAC at up to 320 kbps. While it is on
+(Settings → Playback, on by default), `StreamResolver::resolveTrack` asks it
+and YouTube at the same moment: one search for "title lead-artist", whose
+rows already carry their links (DES-encrypted, decrypted by `des.*`). A row
+is taken only when it is the same recording: the same title once asides,
+credits and release noise are set aside; the same version (live, remix,
+acoustic, sped up, a cover, a part, a style or a language version… must agree
+both ways, a remaster may differ); an artist credited on both sides; and a length within 3 s — with no
+length known, only a lone candidate. Of those that pass, the uncensored one,
+then the one at 320 kbps, then the closest in length. A link at 96 kbps or
+less is refused, since YouTube does better.
+
+If JioSaavn answers first, or within 1.2 s of when both were asked, its link
+plays; otherwise YouTube's does, and JioSaavn's answer is kept for the next
+play. Answers are remembered in the `saavn_matches` table: a match for a
+week, "not there" for a day. A JioSaavn link mpv refuses is forgotten and the
+song carries on from YouTube's ladder at the same second. Requests carry an
+Indian `X-Forwarded-For` while "Send Indian region headers" is on, because
+some songs are offered only in India. Now Playing says which source is
+playing ("SOUND: JIOSAAVN · 320 KBPS"). Downloads and lyrics do not use it.
+
 ### Downloads
 
 `DownloadManager` runs up to three yt-dlp downloads at a time into
@@ -184,7 +207,11 @@ whichever contrasts better.
       artistselftest.*       --artist-links-test
       lyrics.*               LRCLIB and YouTube Music lyrics, synced to playback
       ytdlp.*                QProcess wrapper around yt-dlp; finds FFmpeg and Deno
-      streamresolver.*       the tiered source ladder and its link cache
+      streamresolver.*       the tiered source ladder and its link cache, and the
+                             race against JioSaavn
+      jiosaavn.*  des.*      JioSaavn's search, links and the same-recording matcher;
+                             DES (FIPS 46-3) for its encrypted links
+      saavnselftest.*        --saavn-test and --saavn
       downloadmanager.*      offline library: queue, options, files, DB rows
       downloadmodels.*       the queue and offline-set models for QML
       downloadselftest.*     --download-cleanup-test
@@ -340,12 +367,23 @@ see the log there, and with `MONOLIST_MPV_LOG=warn` (or `info`, `v`) to add
 mpv's own messages.
 
     monolist --play <videoId> [seconds] [--again] [--at <s>] [--spoil] [--video [--switch-at <s>]]
+             [--as "<title>" "<artist>" [length s]] [--spoil-saavn]
                                                     resolve and play; --again replays from the cache,
                                                     --at jumps into the song; --spoil hands InnerTube's
                                                     link over spoiled, so mpv refuses it and the track is
                                                     retried as its muxed stream (itag 18), which the log
                                                     names; --video plays it as a music video and
-                                                    --switch-at asks for the picture after that long
+                                                    --switch-at asks for the picture after that long;
+                                                    --as names the song, which JioSaavn is asked about;
+                                                    --spoil-saavn hands its JioSaavn link over pointing at
+                                                    a missing file, so the way back to YouTube shows
+    monolist --saavn-test                           JioSaavn with no network: DES known answers and a link
+                                                    made by another DES, 320 kbps and the 96 kbps floor,
+                                                    both details shapes, entities, and the matcher on 45
+                                                    invented pairs and its tie-breaks
+    monolist --saavn "<title>" "<artist>" [seconds] [--no-india-headers]
+                                                    one real JioSaavn lookup: the row taken, its bitrate and
+                                                    host (never the whole link), and every refusal's reason
     monolist --queue-test <videoId>... [--early]    load paused, Play, Next near the end, Previous twice,
                                                     Next while paused: the clock and what was recorded at
                                                     each step. One id that will not resolve checks the

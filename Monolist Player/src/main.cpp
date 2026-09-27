@@ -35,6 +35,7 @@
 #include "mediaextractor.h"
 #include "mpvengine.h"
 #include "playbackcontroller.h"
+#include "saavnselftest.h"
 #include "scrollselftest.h"
 #include "streamresolver.h"
 #include "trackmodel.h"
@@ -108,6 +109,10 @@ int main(int argc, char *argv[])
     // known answers, on invented cookies (ytmselftest.cpp).
     if (app.arguments().contains(QStringLiteral("--cookie-test")))
         return runCookieImportSelfTest() == 0 ? 0 : 1;
+    // --saavn-test: JioSaavn's DES, links, bitrates, answers and the matcher,
+    // on fixtures, with no network (saavnselftest.cpp).
+    if (app.arguments().contains(QStringLiteral("--saavn-test")))
+        return runSaavnSelfTest() == 0 ? 0 : 1;
 
     AppDatabase database;
     if (!database.open())
@@ -182,6 +187,18 @@ int main(int argc, char *argv[])
              i = arguments.indexOf(QStringLiteral("--set"), i + 1)) {
             library.setSetting(arguments.at(i + 1), arguments.at(i + 2));
             qWarning("Monolist: setting %s = %s", qPrintable(arguments.at(i + 1)), qPrintable(arguments.at(i + 2)));
+        }
+
+        // --saavn "<title>" "<artist>" [seconds] [--no-india-headers]: one
+        // real JioSaavn lookup, as playback would make it, with the Indian
+        // headers as Settings has them unless the flag turns them off.
+        if (const int saavnFlag = arguments.indexOf(QStringLiteral("--saavn"));
+            saavnFlag >= 0 && saavnFlag + 2 < arguments.size()) {
+            const qint64 seconds = saavnFlag + 3 < arguments.size() ? arguments.at(saavnFlag + 3).toLongLong() : 0;
+            const bool india = library.settingValue(QStringLiteral("jiosaavn.india_headers")) != QLatin1String("0")
+                               && !arguments.contains(QStringLiteral("--no-india-headers"));
+            return runSaavnLookup(arguments.at(saavnFlag + 1), arguments.at(saavnFlag + 2),
+                                  qMax<qint64>(0, seconds) * 1000, india);
         }
     }
 
@@ -408,11 +425,23 @@ int main(int argc, char *argv[])
         // turned down.
         if (args.contains(QStringLiteral("--spoil")))
             resolver.spoilNextStream(videoId);
+        // --spoil-saavn does the same to the track's JioSaavn link, so the
+        // way back to YouTube, from the same second, can be watched.
+        if (args.contains(QStringLiteral("--spoil-saavn")))
+            resolver.spoilNextSaavn(videoId);
         auto clock = std::make_shared<QElapsedTimer>();
         // A library song plays under its own name, so the lyrics can be found.
         QVariantMap known;
         if (const int row = library.tracks()->indexOfSource(videoId); row >= 0)
             known = library.tracks()->get(row);
+        // --as "<title>" "<artist>" [seconds]: plays it under that name and
+        // length, which is what JioSaavn is asked about.
+        if (const int asFlag = args.indexOf(QStringLiteral("--as")); asFlag >= 0 && asFlag + 2 < args.size()) {
+            known.insert(QStringLiteral("title"), args.at(asFlag + 1));
+            known.insert(QStringLiteral("artist"), args.at(asFlag + 2));
+            if (asFlag + 3 < args.size() && args.at(asFlag + 3).toLongLong() > 0)
+                known.insert(QStringLiteral("durationMs"), args.at(asFlag + 3).toLongLong() * 1000);
+        }
         const QString title = known.value(QStringLiteral("title"), QStringLiteral("Selftest")).toString();
         const QString artist = known.value(QStringLiteral("artist"), QStringLiteral("Selftest")).toString();
         // --at <seconds> jumps there once the audio starts.

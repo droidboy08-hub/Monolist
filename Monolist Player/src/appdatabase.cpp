@@ -232,6 +232,20 @@ void AppDatabase::createSchema()
         " browse_id TEXT NOT NULL,"
         " artist_page INTEGER NOT NULL DEFAULT 1,"
         " seen_at TEXT NOT NULL DEFAULT (datetime('now')))"));
+
+    // What JioSaavn answered for a song, so it is asked once a week rather
+    // than at every play (StreamResolver): its link and bitrate where it has
+    // the same recording (`matched` 1), or that it has not (`matched` 0),
+    // which is asked again sooner. Times are UTC seconds.
+    q.exec(QStringLiteral(
+        "CREATE TABLE IF NOT EXISTS saavn_matches ("
+        " video_id TEXT PRIMARY KEY,"
+        " matched INTEGER NOT NULL DEFAULT 0,"
+        " saavn_id TEXT NOT NULL DEFAULT '',"
+        " url TEXT NOT NULL DEFAULT '',"
+        " kbps INTEGER NOT NULL DEFAULT 0,"
+        " checked_at INTEGER NOT NULL DEFAULT 0,"
+        " expires_at INTEGER NOT NULL DEFAULT 0)"));
 }
 
 bool AppDatabase::hasColumn(const QString &table, const QString &column)
