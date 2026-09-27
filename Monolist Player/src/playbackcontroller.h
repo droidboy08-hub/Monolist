@@ -72,6 +72,10 @@ class PlaybackController : public QObject
     Q_PROPERTY(bool videoAvailable READ videoAvailable NOTIFY currentTrackChanged)
     Q_PROPERTY(bool videoWanted READ videoWanted WRITE setVideoWanted NOTIFY videoChanged)
     Q_PROPERTY(bool videoPlaying READ videoPlaying NOTIFY videoChanged)
+    // The switch left on: every song with a picture shows it, from one song
+    // to the next, until the listener turns it off. videoWanted is this
+    // song's; this is the listener's.
+    Q_PROPERTY(bool videoPreferred READ videoPreferred NOTIFY videoChanged)
     Q_PROPERTY(int videoHeight READ videoHeight WRITE setVideoHeight NOTIFY videoChanged)
     // Where the sound goes: the player bar's output menu. `audioDevices` is
     // what it offers, each {name, description, missing}: Auto first, then the
@@ -137,6 +141,7 @@ public:
     bool videoAvailable() const;
     bool videoWanted() const { return m_videoWanted; }
     bool videoPlaying() const { return m_videoPlaying; }
+    bool videoPreferred() const { return m_videoPreferred; }
     int videoHeight() const { return m_videoHeight; }
     void setVideoHeight(int height);
     QVariantList audioDevices() const { return m_audioDevices; }
@@ -246,6 +251,9 @@ private:
     void playWithVideo(bool video);
     // A picture that will not play must not cost the song: back to the sound,
     // from the same second, with a word about it.
+    void dropAddedVideo();
+    void applyVideo(const QString &videoUrl, const QString &audioUrl, const QVariantMap &headers);
+    void endVideoStatus();
     bool abandonVideo(const QString &reason);
     // The copy of `track` on disk: its download, or its own source where
     // that is a file. Empty when it has to be streamed.
@@ -344,10 +352,25 @@ private:
     bool m_favourite = false;
     bool m_videoWanted = false;
     bool m_videoPlaying = false;
+    bool m_videoPreferred = false;
+    // A song's picture that arrived before its sound had loaded: joined to it
+    // once it has (MpvEngine::fileLoaded).
+    struct PictureAwaitingSound {
+        QString videoId;
+        QString videoUrl;
+        QString audioUrl;
+        QVariantMap headers;
+    };
+    PictureAwaitingSound m_pictureAwaitingSound;
+    // What the status line said before "Loading the video…", to go back to.
+    QString m_statusBeforeVideo;
     // True from asking mpv to play the picture until a frame proves it can:
     // anything that ends the file in between is the video's fault, not the
     // song's, and must not move the queue on.
     bool m_videoUnproven = false;
+    // The picture was added to the file already playing (MpvEngine::addVideo)
+    // rather than loaded with it: dropping it leaves the sound as it is.
+    bool m_videoAdded = false;
     qint64 m_resumeAt = 0;         // where the next load should begin
     int m_videoHeight = 720;
     QString m_videoPendingId;      // a picture being resolved for this track

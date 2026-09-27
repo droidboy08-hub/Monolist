@@ -191,6 +191,7 @@ qt_add_qml_module(monolist
     # compiler know them like any other component.
     SOURCES
         src/videosurface.h             src/videosurface.cpp
+        src/systempip.h
     QML_FILES
         Main.qml
         Theme.qml
@@ -287,6 +288,11 @@ else()
     target_link_libraries(monolist PRIVATE Mpv::Mpv)
 endif()
 
+# The system's picture in picture is the Mac's; elsewhere the app's own panel.
+if(NOT APPLE)
+    target_sources(monolist PRIVATE src/systempip_stub.cpp)
+endif()
+
 if(WIN32)
     # WindowChrome: the drop shadow and square corners of the caption-less frame.
     # netapi32: the account's full name, for the sidebar (Library).
@@ -302,13 +308,18 @@ if(APPLE)
         src/macos/mediasession.h       src/macos/mediasession.mm
         # yt-dlp and Deno: unpacked from the app, then kept current.
         src/macos/toolstore.h          src/macos/toolstore.cpp
+        # The system's own picture in picture (SystemPip).
+        src/macos/systempip.mm
         macos/Monolist.icns
     )
     set_source_files_properties(src/macos/macwindow.mm src/macos/mediasession.mm
+                                src/macos/systempip.mm
         PROPERTIES COMPILE_OPTIONS "-fobjc-arc")
     set_source_files_properties(macos/Monolist.icns
         PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
-    target_link_libraries(monolist PRIVATE "-framework AppKit" "-framework MediaPlayer")
+    target_link_libraries(monolist PRIVATE "-framework AppKit" "-framework MediaPlayer"
+        "-framework AVFoundation" "-framework AVKit" "-framework CoreMedia" "-framework CoreVideo"
+        "-framework QuartzCore")
 
     # The build number the stamp above just worked out, for CFBundleVersion.
     file(STRINGS "${MONOLIST_BUILDINFO}" _monolist_build_line REGEX "MONOLIST_BUILD_NUMBER")

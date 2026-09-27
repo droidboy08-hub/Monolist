@@ -43,6 +43,17 @@ public:
               const QString &audioUrl = QString(), qint64 startAt = 0,
               const QVariantMap &headers = QVariantMap());
     void stop();
+    // The picture added to the file already playing, as a track of its own
+    // (mpv's video-add), rather than the file loaded again with it: the sound
+    // plays on without a gap, and mpv keeps the picture in time with it.
+    // Fetched with `headers`, as load() does. videoAddFailed if it would not
+    // open. Only for a file that has loaded (hasLoadedFile).
+    void addVideo(const QString &url, const QVariantMap &headers = QVariantMap());
+    // The latest load's file is open (fileLoaded has been sent for it), so a
+    // picture can be added to it.
+    bool hasLoadedFile() const { return m_fileLoaded; }
+    // A load is on its way and has not yet opened, failed or been stopped.
+    bool isLoadingFile() const { return m_loadingFile; }
     void setPaused(bool paused);
     void seekAbsolute(qint64 ms);
     void setVolume(qreal volume);        // 0.0 – 1.0
@@ -83,6 +94,10 @@ Q_SIGNALS:
     void bufferingChanged(bool buffering);
     void endOfFile();                    // natural end, not a manual stop
     void loadFailed(const QString &reason);
+    void videoAddFailed(const QString &reason);
+    // The latest load's file is open: its tracks are known, and a picture
+    // can join it.
+    void fileLoaded();
     void metadataChanged(const QString &title, const QString &artist);
     // Empty until the file being played turns out to have a picture.
     void videoSizeChanged(const QSize &size);
@@ -96,6 +111,8 @@ private:
     void observeProperties();
     void applyBaseOptions();
     void setOption(const char *name, const char *value);
+    // The link's own headers, for whatever is opened next.
+    void applyHeaders(const QVariantMap &headers);
     // True once the file of the latest load has started: what mpv reports
     // from then on is about it.
     bool currentFileStarted() const { return m_currentEntry > 0 && m_startedEntry == m_currentEntry; }
@@ -107,6 +124,9 @@ private:
     // its way); -1 is an mpv whose answer named no entry, so the next file to
     // start is taken to be it.
     quint64 m_loadRequest = 0;
+    // The latest addVideo, numbered apart from the loads (kAddVideoTag set).
+    quint64 m_addVideoRequest = 0;
+    quint64 m_addVideoCount = 0;
     qint64 m_currentEntry = 0;
     qint64 m_startedEntry = 0;
     QString m_lastError;
@@ -114,6 +134,8 @@ private:
     bool m_buffering = false;
     bool m_video = false;
     bool m_watched = true;   // until a surface says otherwise
+    bool m_fileLoaded = false;
+    bool m_loadingFile = false;
     QSize m_videoSize;
     qint64 m_duration = 0;
     QVariantList m_audioDevices;

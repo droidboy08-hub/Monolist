@@ -33,20 +33,60 @@ ApplicationWindow {
     property int pendingDelete: 0
     // Now Playing covers everything above the player bar.
     property bool nowPlayingOpen: false
+    // Opening Now Playing takes the picture back from the small panel; closing
+    // it again leaves the picture off until the panel is asked for once more.
+    onNowPlayingOpenChanged: if (nowPlayingOpen) videoPip = false
     // The part of Settings a link asked for, until Settings has scrolled to it.
     property string settingsSection: ""
 
     // — the picture —
     // Where the video goes while there is one: full screen when asked for,
-    // Now Playing while that is open, and the mini panel above the player bar
-    // otherwise. One place at a time, and always one: a picture nobody can see
-    // is not decoded, so closing Now Playing moves it rather than hiding it,
-    // and the mini panel's close button is the switch turning off.
+    // Now Playing while that is open, and picture in picture only when its
+    // button in Now Playing was pressed. Otherwise nowhere: the song carries
+    // on as sound, and a picture nobody can see is not decoded. Keeping it
+    // out of picture in picture unless asked keeps a second picture from
+    // being drawn while Now Playing comes and goes.
+    //
+    // Picture in picture is the system's own window where there is one
+    // (macOS), which is drawn outside this window and so costs it nothing;
+    // the app's own panel (MiniVideo) otherwise, or if the system's would
+    // not open.
+    //
+    // The video switch stays on from song to song (Player.videoPreferred),
+    // and so does picture in picture: a song with no video shows its cover
+    // there until one with a video comes, which plays in it.
     property bool videoFullscreen: false
-    readonly property string videoPlace: !Player.videoWanted && !Player.videoPlaying ? ""
-                                       : videoFullscreen ? "fullscreen"
-                                       : nowPlayingOpen ? "nowplaying"
-                                       : "mini"
+    property bool videoPip: false
+    property bool systemPipFailed: false
+    readonly property bool useSystemPip: SystemPip.supported && !systemPipFailed
+    readonly property bool videoOn: Player.videoWanted || Player.videoPlaying
+    readonly property string videoPlace: videoFullscreen && videoOn ? "fullscreen"
+                                       : nowPlayingOpen ? (videoOn ? "nowplaying" : "")
+                                       : videoPip && (videoOn || Player.videoPreferred)
+                                         ? (useSystemPip ? "system" : "mini")
+                                       : ""
+    // The system's window opens with picture in picture and closes as soon as
+    // the picture goes anywhere else. Between songs it stays, on the cover.
+    readonly property bool systemPipWanted: videoPlace === "system"
+    onSystemPipWantedChanged: systemPipWanted ? SystemPip.start() : SystemPip.stop()
+
+    Connections {
+        target: SystemPip
+        // Its own close button: the picture off, the song on as sound.
+        function onStopped() { window.videoPip = false }
+        // Its button back to the app: Now Playing, which takes the picture.
+        function onRestoreRequested() { window.nowPlayingOpen = true }
+        function onFailed(reason) {
+            window.systemPipFailed = true
+            toast.show(reason + " — using the app's own")
+        }
+    }
+
+    // Now Playing's picture to the small panel, and Now Playing away.
+    function enterVideoPip() {
+        videoPip = true
+        nowPlayingOpen = false
+    }
     // How the window was before full screen, to go back to.
     property int visibilityBeforeFullscreen: Window.Windowed
 
@@ -524,9 +564,14 @@ ApplicationWindow {
         y: window.nowPlayingOpen ? 0 : height
         visible: y < height
         z: 800
-        videoHere: window.videoPlace === "nowplaying"
+        // The picture only once Now Playing is all the way up, and not from
+        // the moment it starts closing: drawing video frames into a view that
+        // is sliding is what made it stutter. The cover stands in meanwhile.
+        readonly property bool settled: window.nowPlayingOpen && y === 0
+        videoHere: window.videoPlace === "nowplaying" && settled
         onCloseRequested: window.nowPlayingOpen = false
         onFullscreenRequested: window.enterVideoFullscreen()
+        onPipRequested: window.enterVideoPip()
 
         Behavior on y {
             NumberAnimation {
@@ -537,8 +582,9 @@ ApplicationWindow {
     }
 
     // — the picture, while Now Playing is closed —
-    // Under Now Playing, which rises over it and takes the picture as it
-    // comes, and over the page and the queue, beside which it stands.
+    // Only when asked for, from its button in Now Playing. Under Now Playing,
+    // and over the page and the queue, beside which it stands. It waits for
+    // Now Playing to have gone down before it takes the picture.
     MiniVideo {
         id: miniVideo
         z: 790
@@ -546,9 +592,10 @@ ApplicationWindow {
         anchors.rightMargin: Theme.space6 + (queuePanel.visible ? queuePanel.width : 0)
         anchors.bottom: playerBar.top
         anchors.bottomMargin: Theme.space6
-        active: window.videoPlace === "mini" && Player.videoPlaying
+        active: window.videoPlace === "mini" && !nowPlaying.visible
         onOpenRequested: window.nowPlayingOpen = true
         onFullscreenRequested: window.enterVideoFullscreen()
+        onCloseRequested: window.videoPip = false
     }
 
     // The pages leave room for it below their ends while it is up, so the
@@ -733,8 +780,13 @@ ApplicationWindow {
         // The picture gone — the switch turned off, the next song begun, a
         // video that would not play — takes full screen with it.
         function onVideoChanged() {
-            if (!Player.videoWanted && !Player.videoPlaying)
+            if (!Player.videoWanted && !Player.videoPlaying) {
                 window.leaveVideoFullscreen()
+                // Picture in picture outlasts a song with no video; only the
+                // switch turned off puts it away.
+                if (!Player.videoPreferred)
+                    window.videoPip = false
+            }
         }
     }
 

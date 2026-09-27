@@ -14,11 +14,13 @@ Rectangle {
     // "lyrics" or "queue"
     property string pane: "lyrics"
     // Whether the video's place is here. Main gives the picture one place at
-    // a time: full screen takes it from here, and closing this view sends it
-    // to the mini panel above the player bar.
+    // a time: full screen takes it from here, and the picture-in-picture
+    // button sends it to the small panel above the player bar. Main also
+    // holds it back while this view slides in or out.
     property bool videoHere: true
     signal closeRequested()
     signal fullscreenRequested()
+    signal pipRequested()
 
     readonly property var track: Player.currentTrack
     readonly property bool hasTrack: track.title !== undefined
@@ -307,16 +309,26 @@ Rectangle {
                     onDoubleTapped: if (root.videoShowing) root.fullscreenRequested()
                 }
 
-                // Full screen sits on the picture it enlarges, once it plays.
+                // Picture in picture and full screen sit on the picture, once
+                // it plays.
                 // The cover / video switch is in the strip above.
-                PlateButton {
+                Row {
                     visible: root.videoShowing
                     anchors.right: parent.right
                     anchors.bottom: parent.bottom
                     anchors.margins: Theme.space3
-                    iconName: "fullscreen"
-                    tip: "Full screen (F)"
-                    onClicked: root.fullscreenRequested()
+                    spacing: Theme.space1
+
+                    PlateButton {
+                        iconName: "pip"
+                        tip: "Picture in picture"
+                        onClicked: root.pipRequested()
+                    }
+                    PlateButton {
+                        iconName: "fullscreen"
+                        tip: "Full screen (F)"
+                        onClicked: root.fullscreenRequested()
+                    }
                 }
             }
 
@@ -601,14 +613,23 @@ Rectangle {
                 onDoubleTapped: if (root.videoShowing) root.fullscreenRequested()
             }
 
-            PlateButton {
+            Row {
                 visible: root.videoShowing
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 anchors.margins: Theme.space3
-                iconName: "fullscreen"
-                tip: "Full screen (F)"
-                onClicked: root.fullscreenRequested()
+                spacing: Theme.space1
+
+                PlateButton {
+                    iconName: "pip"
+                    tip: "Picture in picture"
+                    onClicked: root.pipRequested()
+                }
+                PlateButton {
+                    iconName: "fullscreen"
+                    tip: "Full screen (F)"
+                    onClicked: root.fullscreenRequested()
+                }
             }
         }
 

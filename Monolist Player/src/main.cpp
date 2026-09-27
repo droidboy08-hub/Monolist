@@ -39,6 +39,7 @@
 #include "streamresolver.h"
 #include "trackmodel.h"
 #include "videosurface.h"
+#include "systempip.h"
 #include "windowchrome.h"
 #include "ytmselftest.h"
 #include "ytmsession.h"
@@ -297,7 +298,11 @@ int main(int argc, char *argv[])
     MacMediaSession mediaSession(&player, artworkFetcher.network());
 #endif
 
+    // The system's own picture in picture, where there is one.
+    SystemPip systemPip(&player, &engine, artworkFetcher.network());
+
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Library",   &library);
+    qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "SystemPip", &systemPip);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Player",    &player);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Extractor", &extractor);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Downloads", &downloads);
@@ -513,6 +518,50 @@ int main(int argc, char *argv[])
                 clock->start();
                 start();
             });
+        }
+        // --pip-at <s> opens the system's picture in picture then, and reports
+        // what it draws each second after.
+        const int pipFlag = args.indexOf(QStringLiteral("--pip-at"));
+        if (pipFlag >= 0 && pipFlag + 1 < args.size()) {
+            const int after = qMax(1, args.at(pipFlag + 1).toInt());
+            QTimer::singleShot(after * 1000, &app, [&systemPip]() {
+                qWarning("selftest: opening picture in picture (supported: %s)",
+                         systemPip.supported() ? "yes" : "no");
+                systemPip.start();
+            });
+            for (int tick = -2; after + tick < seconds; ++tick) {
+                QTimer::singleShot((after + tick) * 1000, &app, [&systemPip, tick]() {
+                    qWarning("selftest: pip %s", qPrintable(systemPip.diagnostics()));
+                    if (tick == 6)
+                        qWarning("selftest: windows\n%s", qPrintable(systemPip.windowTree()));
+                });
+            }
+        }
+        // --next-at <s> moves on to the next song then, as Next would, and
+        // reports the video's state each second after. With --next-plain
+        // <videoId>, that song is played instead, as one with no video.
+        const int nextFlag = args.indexOf(QStringLiteral("--next-at"));
+        const int plainFlag = args.indexOf(QStringLiteral("--next-plain"));
+        const QString plainId = plainFlag >= 0 && plainFlag + 1 < args.size() ? args.at(plainFlag + 1) : QString();
+        if (nextFlag >= 0 && nextFlag + 1 < args.size()) {
+            const int after = qMax(1, args.at(nextFlag + 1).toInt());
+            QTimer::singleShot(after * 1000, &app, [&player, plainId]() {
+                qWarning("selftest: next song (video preferred: %s)",
+                         player.videoPreferred() ? "yes" : "no");
+                if (plainId.isEmpty())
+                    player.next();
+                else
+                    player.playSource(plainId, QStringLiteral("No video song"), QStringLiteral("Selftest"),
+                                      QString(), 0, QString(), /*isVideo=*/false);
+            });
+            for (int tick = 1; after + tick < seconds; ++tick) {
+                QTimer::singleShot((after + tick) * 1000, &app, [&player]() {
+                    qWarning("selftest: now \"%s\" has video %s, wanted %s, playing %s, preferred %s",
+                             qPrintable(player.currentTrack().value(QStringLiteral("title")).toString()),
+                             player.videoAvailable() ? "yes" : "no", player.videoWanted() ? "yes" : "no",
+                             player.videoPlaying() ? "yes" : "no", player.videoPreferred() ? "yes" : "no");
+                });
+            }
         }
         QTimer::singleShot(seconds * 1000, &app, [&player]() {
             // A position that moved is the proof audio was actually decoded.

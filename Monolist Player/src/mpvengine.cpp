@@ -6,6 +6,10 @@
 #include <mpv/client.h>
 
 namespace {
+
+// Set on the number a video-add is asked with, so its answer is never taken
+// for a loadfile's. The loads count up from 1 and never reach it.
+constexpr quint64 kAddVideoTag = quint64(1) << 62;
 // What yt-dlp presents itself as, and therefore what the links it hands back
 // must be fetched as.
 const char *kBrowserUserAgent =
@@ -129,6 +133,13 @@ void MpvEngine::applyBaseOptions()
     // The picture is drawn by whoever holds the render context (VideoSurface),
     // never by mpv into a window of its own.
     setOption("vo", "libmpv");
+    // The picture is drawn by the CPU (VideoSurface, SystemPip), scaled from
+    // the video's size to the one shown. mpv's default scaler for that
+    // (lanczos, dithered) took 44 ms a frame for 1080p on an M-series Mac —
+    // more than a frame lasts, so the picture fell behind and the sound could
+    // run dry. Bilinear takes 1-2 ms and, at these sizes, looks the same.
+    setOption("zimg-scaler", "bilinear");
+    setOption("zimg-dither", "no");
 
     // Stream URLs are resolved by StreamResolver (yt-dlp / Piped / Invidious)
     // before they reach mpv, so mpv's own ytdl hook is redundant and would add
@@ -287,6 +298,22 @@ void MpvEngine::drainEvents()
         }
 
         case MPV_EVENT_COMMAND_REPLY: {
+            // mpv's answer to a video-add: the picture joins the file playing,
+            // or it would not open and the sound plays on as it was.
+            if (event->reply_userdata & kAddVideoTag) {
+                if (event->reply_userdata != m_addVideoRequest)
+                    break;
+                m_addVideoRequest = 0;
+                if (event->error < 0) {
+                    Q_EMIT videoAddFailed(QString::fromUtf8(mpv_error_string(event->error)));
+                    break;
+                }
+                // Added while nothing showed it: selecting it decoded it, so
+                // put it aside until something does.
+                if (!m_watched || !m_video)
+                    mpv_set_property_string(m_mpv, "vid", "no");
+                break;
+            }
             // mpv's answer to a loadfile, naming the entry it made. Only the
             // latest load's answer counts: an earlier one was replaced, or
             // stopped, before it could matter. (stop() asks with 0, and no
@@ -294,10 +321,22 @@ void MpvEngine::drainEvents()
             if (event->reply_userdata == 0 || event->reply_userdata != m_loadRequest)
                 break;
             if (event->error < 0) {
+                m_loadingFile = false;
                 Q_EMIT loadFailed(QString::fromUtf8(mpv_error_string(event->error)));
                 break;
             }
             m_currentEntry = playlistEntryOf(static_cast<mpv_event_command *>(event->data)->result);
+            break;
+        }
+
+        case MPV_EVENT_FILE_LOADED: {
+            // For the file last asked for only: one it replaced can still
+            // report having opened, after the new load was sent.
+            if (!currentFileStarted())
+                break;
+            m_fileLoaded = true;
+            m_loadingFile = false;
+            Q_EMIT fileLoaded();
             break;
         }
 
@@ -315,6 +354,8 @@ void MpvEngine::drainEvents()
             // error would be blamed on it.
             if (m_currentEntry <= 0 || end->playlist_entry_id != m_currentEntry)
                 break;
+            m_fileLoaded = false;
+            m_loadingFile = false;
             if (end->reason == MPV_END_FILE_REASON_ERROR) {
                 Q_EMIT loadFailed(QString::fromUtf8(mpv_error_string(end->error)));
             } else if (end->reason == MPV_END_FILE_REASON_EOF) {
@@ -340,14 +381,8 @@ void MpvEngine::drainEvents()
     }
 }
 
-void MpvEngine::load(const QString &urlOrPath, bool startPlaying, const QString &audioUrl,
-                     qint64 startAt, const QVariantMap &headers)
+void MpvEngine::applyHeaders(const QVariantMap &headers)
 {
-    if (!m_mpv)
-        return;
-
-    // Fetch the link the way it was obtained. Always set, so one file's
-    // headers are never sent for the next one's.
     const QString agent = headers.value(QStringLiteral("User-Agent")).toString();
     mpv_set_option_string(m_mpv, "user-agent",
                           agent.isEmpty() ? kBrowserUserAgent : agent.toUtf8().constData());
@@ -360,6 +395,32 @@ void MpvEngine::load(const QString &urlOrPath, bool startPlaying, const QString 
         const char *add[] = { "change-list", "http-header-fields", "append", field.constData(), nullptr };
         mpv_command(m_mpv, add);
     }
+}
+
+void MpvEngine::addVideo(const QString &url, const QVariantMap &headers)
+{
+    if (!m_mpv || url.isEmpty())
+        return;
+    applyHeaders(headers);
+    // Asynchronously: opening the link takes as long as the network does,
+    // and the window must not wait for it.
+    m_addVideoRequest = kAddVideoTag | ++m_addVideoCount;
+    const QByteArray target = url.toUtf8();
+    const char *args[] = { "video-add", target.constData(), "select", nullptr };
+    const int rc = mpv_command_async(m_mpv, m_addVideoRequest, args);
+    if (rc < 0)
+        Q_EMIT videoAddFailed(QString::fromUtf8(mpv_error_string(rc)));
+}
+
+void MpvEngine::load(const QString &urlOrPath, bool startPlaying, const QString &audioUrl,
+                     qint64 startAt, const QVariantMap &headers)
+{
+    if (!m_mpv)
+        return;
+
+    // Fetch the link the way it was obtained. Always set, so one file's
+    // headers are never sent for the next one's.
+    applyHeaders(headers);
 
     // Forget the previous file's duration. Change events are compared against
     // it, and reloading a file of the same length would otherwise never report
@@ -393,6 +454,9 @@ void MpvEngine::load(const QString &urlOrPath, bool startPlaying, const QString 
                           startAt > 0 ? QByteArray::number(startAt / 1000.0, 'f', 3).constData()
                                       : "none");
 
+    m_fileLoaded = false;
+    m_loadingFile = true;
+
     const QByteArray target = urlOrPath.toUtf8();
     // "replace" tears down the previous file. From here until mpv answers
     // with the new entry, no file is current, so whatever the previous one
@@ -417,6 +481,8 @@ void MpvEngine::stop()
     ++m_loadRequest;
     m_currentEntry = 0;
     m_duration = 0;
+    m_fileLoaded = false;
+    m_loadingFile = false;
     if (!m_videoSize.isEmpty()) {
         m_videoSize = QSize();
         Q_EMIT videoSizeChanged(m_videoSize);
