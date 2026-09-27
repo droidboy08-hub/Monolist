@@ -8,10 +8,13 @@
 
 class PlaybackController;
 class MpvEngine;
+class QNetworkAccessManager;
 
 // The system's own picture in picture, where there is one (macOS 12 and
 // later): the video in a small window of the system's, floating over every
-// app, with its own play and pause and a button back to Now Playing.
+// app, with its own play and pause and a button back to Now Playing. It stays
+// up from one song to the next: a song with no video, or one whose video is
+// still on its way, shows its cover there with a line saying so.
 //
 // It is lighter than the app's own small panel (MiniVideo): the frames are
 // drawn on a thread of their own straight into a layer the system shows,
@@ -28,7 +31,9 @@ class SystemPip : public QObject
     // The system's window is up, or on its way.
     Q_PROPERTY(bool active READ active NOTIFY activeChanged)
 public:
-    SystemPip(PlaybackController *player, MpvEngine *engine, QObject *parent = nullptr);
+    // `network` fetches covers through the artwork cache.
+    SystemPip(PlaybackController *player, MpvEngine *engine, QNetworkAccessManager *network,
+              QObject *parent = nullptr);
     ~SystemPip() override;
 
     bool supported() const;

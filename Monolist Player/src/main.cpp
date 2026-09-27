@@ -299,7 +299,7 @@ int main(int argc, char *argv[])
 #endif
 
     // The system's own picture in picture, where there is one.
-    SystemPip systemPip(&player, &engine);
+    SystemPip systemPip(&player, &engine, artworkFetcher.network());
 
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Library",   &library);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "SystemPip", &systemPip);
@@ -534,6 +534,32 @@ int main(int argc, char *argv[])
                     qWarning("selftest: pip %s", qPrintable(systemPip.diagnostics()));
                     if (tick == 6)
                         qWarning("selftest: windows\n%s", qPrintable(systemPip.windowTree()));
+                });
+            }
+        }
+        // --next-at <s> moves on to the next song then, as Next would, and
+        // reports the video's state each second after. With --next-plain
+        // <videoId>, that song is played instead, as one with no video.
+        const int nextFlag = args.indexOf(QStringLiteral("--next-at"));
+        const int plainFlag = args.indexOf(QStringLiteral("--next-plain"));
+        const QString plainId = plainFlag >= 0 && plainFlag + 1 < args.size() ? args.at(plainFlag + 1) : QString();
+        if (nextFlag >= 0 && nextFlag + 1 < args.size()) {
+            const int after = qMax(1, args.at(nextFlag + 1).toInt());
+            QTimer::singleShot(after * 1000, &app, [&player, plainId]() {
+                qWarning("selftest: next song (video preferred: %s)",
+                         player.videoPreferred() ? "yes" : "no");
+                if (plainId.isEmpty())
+                    player.next();
+                else
+                    player.playSource(plainId, QStringLiteral("No video song"), QStringLiteral("Selftest"),
+                                      QString(), 0, QString(), /*isVideo=*/false);
+            });
+            for (int tick = 1; after + tick < seconds; ++tick) {
+                QTimer::singleShot((after + tick) * 1000, &app, [&player]() {
+                    qWarning("selftest: now \"%s\" has video %s, wanted %s, playing %s, preferred %s",
+                             qPrintable(player.currentTrack().value(QStringLiteral("title")).toString()),
+                             player.videoAvailable() ? "yes" : "no", player.videoWanted() ? "yes" : "no",
+                             player.videoPlaying() ? "yes" : "no", player.videoPreferred() ? "yes" : "no");
                 });
             }
         }

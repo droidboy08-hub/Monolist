@@ -13,7 +13,15 @@
 #include <QSqlQuery>
 #include <QVariant>
 
+#include <utility>
+
 namespace {
+
+// The status line while a picture is fetched for the song playing.
+QString loadingVideoText()
+{
+    return QStringLiteral("Loading the video…");
+}
 
 // Autoplay asks for more once fewer songs than this are left, so the next one
 // can be prefetched before it is needed.
@@ -130,6 +138,17 @@ PlaybackController::PlaybackController(MpvEngine *engine,
                 m_videoUnproven = false;
         });
 
+        // The sound of a song begun with the switch on has loaded: its
+        // picture, if it came first, joins it now.
+        connect(m_engine, &MpvEngine::fileLoaded, this, [this]() {
+            if (m_pictureAwaitingSound.videoId.isEmpty())
+                return;
+            const PictureAwaitingSound picture = std::exchange(m_pictureAwaitingSound, {});
+            if (picture.videoId != currentSourceId() || !m_videoWanted)
+                return;
+            applyVideo(picture.videoUrl, picture.audioUrl, picture.headers);
+        });
+
         // An added picture that would not open: the sound never stopped.
         connect(m_engine, &MpvEngine::videoAddFailed, this, [this](const QString &reason) {
             if (!m_videoAdded)
@@ -233,9 +252,10 @@ PlaybackController::PlaybackController(MpvEngine *engine,
                     if (videoId != m_videoPendingId)
                         return;
                     m_videoPendingId.clear();
-                    // Back to sound alone, where it never stopped.
+                    // Back to sound alone, where it never stopped. The switch
+                    // stays on for the songs to come (m_videoPreferred).
                     m_videoWanted = false;
-                    setStatus(QStringLiteral("Streaming"), m_sourceLabel, false);
+                    endVideoStatus();
                     Q_EMIT videoChanged();
                     Q_EMIT playbackError(reason);
                 });
@@ -773,6 +793,10 @@ void PlaybackController::prefetchUpcoming()
         upcoming = m_queue.at(0);
     if (!upcoming || upcoming->videoId.isEmpty())
         return;
+    // With the switch on, the next song's picture too, so it is there as
+    // that song begins. A downloaded song still streams its picture.
+    if (m_videoPreferred && upcoming->isVideo)
+        m_resolver->resolveVideo(upcoming->videoId, m_videoHeight);
     if (m_downloads && !m_downloads->localPathFor(upcoming->videoId).isEmpty())
         return;
     m_resolver->prefetch(upcoming->videoId);
@@ -954,21 +978,27 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
     if (engineAvailable())
         m_engine->stop();
 
-    // Every track starts as sound: the picture is asked for, never assumed.
+    // Every track starts as sound. Its picture follows only if the listener
+    // left the switch on (m_videoPreferred) and the song has one: asked for
+    // beside the sound, below, and joined to it once that has loaded.
     if (!m_videoPendingId.isEmpty() && m_resolver)
         m_resolver->cancelVideo(m_videoPendingId);
     m_videoPendingId.clear();
+    m_pictureAwaitingSound = {};
     m_videoUnproven = false;
     m_videoAdded = false;
-    if (m_videoWanted || m_videoPlaying) {
-        m_videoWanted = false;
-        m_videoPlaying = false;
-        if (m_engine)
-            m_engine->setVideoEnabled(false);
-        Q_EMIT videoChanged();
-    }
+    const bool hadVideo = m_videoWanted || m_videoPlaying;
+    m_videoWanted = false;
+    m_videoPlaying = false;
+    if (hadVideo && m_engine)
+        m_engine->setVideoEnabled(false);
 
     m_currentTrack = track;
+    // Set once, for the new song, so what shows the picture sees the switch
+    // stay on across the change rather than go off and on again.
+    m_videoWanted = m_videoPreferred && videoAvailable();
+    if (hadVideo || m_videoWanted)
+        Q_EMIT videoChanged();
 
     // Library rows written before artwork was captured still have a source id;
     // derive the thumbnail rather than showing an empty plate.
@@ -1007,6 +1037,13 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
     }
 
     const QString videoId = currentSourceId();
+
+    // The switch left on: the picture is asked for now, beside the sound,
+    // rather than after it, so it is ready sooner.
+    if (m_videoWanted && m_resolver && !videoId.isEmpty()) {
+        m_videoPendingId = videoId;
+        m_resolver->resolveVideo(videoId, m_videoHeight);
+    }
 
     // 1 — a downloaded copy, or any source that is already a local file.
     const QString localPath = localCopyOf(track);
@@ -1161,7 +1198,7 @@ void PlaybackController::dropAddedVideo()
     m_videoPlaying = false;
     if (m_engine)
         m_engine->setVideoEnabled(false);
-    setStatus(QStringLiteral("Streaming"), m_sourceLabel, false);
+    endVideoStatus();
     if (changed)
         Q_EMIT videoChanged();
 }
@@ -1391,11 +1428,22 @@ void PlaybackController::setVideoHeight(int height)
 
 void PlaybackController::setVideoWanted(bool wanted)
 {
+    // The switch is the listener's choice for the songs to come as well:
+    // off turns it off for them even on a song with no picture to stop.
+    if (!wanted && m_videoPreferred) {
+        m_videoPreferred = false;
+        if (!m_videoWanted) {
+            Q_EMIT videoChanged();
+            return;
+        }
+    }
     if (wanted == m_videoWanted)
         return;
     if (wanted && !videoAvailable())
         return;
     m_videoWanted = wanted;
+    if (wanted)
+        m_videoPreferred = true;
     Q_EMIT videoChanged();
     playWithVideo(wanted);
 }
@@ -1409,13 +1457,17 @@ void PlaybackController::playWithVideo(bool video)
 
     if (video) {
         m_videoPendingId = videoId;
-        setStatus(QStringLiteral("Loading the video…"), m_sourceLabel, true);
+        if (m_statusText != loadingVideoText())
+            m_statusBeforeVideo = m_statusText;
+        setStatus(loadingVideoText(), m_sourceLabel, true);
         m_resolver->resolveVideo(videoId, m_videoHeight);
         return;
     }
 
     m_resolver->cancelVideo(videoId);
     m_videoPendingId.clear();
+    m_pictureAwaitingSound = {};
+    endVideoStatus();
     // Added to the file playing: put aside, and the sound plays on untouched.
     if (m_videoAdded) {
         dropAddedVideo();
@@ -1438,19 +1490,33 @@ void PlaybackController::handleVideoResolved(const QString &videoId, const QStri
                                              const QString &audioUrl, const QVariantMap &headers)
 {
     if (videoId != m_videoPendingId)
-        return;   // another track, or the switch went off again
+        return;   // another track, the next one's fetched ahead, or the switch went off
     m_videoPendingId.clear();
     if (!m_engine)
         return;
 
+    // A song just begun, its sound still on its way: the picture waits for
+    // it and joins it once it has loaded. Loaded together instead, the
+    // sound's own arrival would then replace them both.
+    if (!m_engine->hasLoadedFile() && (m_engine->isLoadingFile() || !m_pendingVideoId.isEmpty())) {
+        m_pictureAwaitingSound = { videoId, videoUrl, audioUrl, headers };
+        return;
+    }
+    applyVideo(videoUrl, audioUrl, headers);
+}
+
+// The picture onto what is playing: added to the file already open, so the
+// sound plays on without a gap, or loaded with its own sound where nothing
+// is (the song's sound would not load, say).
+void PlaybackController::applyVideo(const QString &videoUrl, const QString &audioUrl,
+                                    const QVariantMap &headers)
+{
     m_engine->setVideoEnabled(true);
     // Unproven until a frame arrives: see abandonVideo.
     m_videoUnproven = true;
-    // The song already playing keeps playing: the picture joins it. Loading
-    // the two again from this second stopped the sound while both buffered.
-    if (m_engine->hasStartedFile() && m_pendingVideoId.isEmpty()) {
+    if (m_engine->hasLoadedFile()) {
         m_videoAdded = true;
-        setStatus(QStringLiteral("Streaming"), m_sourceLabel, false);
+        endVideoStatus();
         m_engine->addVideo(videoUrl, headers);
     } else {
         m_videoAdded = false;
@@ -1461,6 +1527,16 @@ void PlaybackController::handleVideoResolved(const QString &videoId, const QStri
         m_videoPlaying = true;
         Q_EMIT videoChanged();
     }
+}
+
+// The status line back to what it said before "Loading the video…", if it
+// still says that.
+void PlaybackController::endVideoStatus()
+{
+    if (m_statusText != loadingVideoText())
+        return;
+    setStatus(m_statusBeforeVideo.isEmpty() ? QStringLiteral("Streaming") : m_statusBeforeVideo,
+              m_sourceLabel, false);
 }
 
 void PlaybackController::setAutoplay(bool autoplay)

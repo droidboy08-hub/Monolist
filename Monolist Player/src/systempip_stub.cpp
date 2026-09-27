@@ -4,11 +4,13 @@
 // panel, MiniVideo, is used instead, and none of this is ever asked for.
 struct SystemPip::Private {};
 
-SystemPip::SystemPip(PlaybackController *player, MpvEngine *engine, QObject *parent)
+SystemPip::SystemPip(PlaybackController *player, MpvEngine *engine, QNetworkAccessManager *network,
+                     QObject *parent)
     : QObject(parent)
     , m_player(player)
     , m_engine(engine)
 {
+    Q_UNUSED(network)
 }
 
 SystemPip::~SystemPip() = default;

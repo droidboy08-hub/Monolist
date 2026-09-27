@@ -51,18 +51,23 @@ ApplicationWindow {
     // (macOS), which is drawn outside this window and so costs it nothing;
     // the app's own panel (MiniVideo) otherwise, or if the system's would
     // not open.
+    //
+    // The video switch stays on from song to song (Player.videoPreferred),
+    // and so does picture in picture: a song with no video shows its cover
+    // there until one with a video comes, which plays in it.
     property bool videoFullscreen: false
     property bool videoPip: false
     property bool systemPipFailed: false
     readonly property bool useSystemPip: SystemPip.supported && !systemPipFailed
-    readonly property string videoPlace: !Player.videoWanted && !Player.videoPlaying ? ""
-                                       : videoFullscreen ? "fullscreen"
-                                       : nowPlayingOpen ? "nowplaying"
-                                       : videoPip ? (useSystemPip ? "system" : "mini")
+    readonly property bool videoOn: Player.videoWanted || Player.videoPlaying
+    readonly property string videoPlace: videoFullscreen && videoOn ? "fullscreen"
+                                       : nowPlayingOpen ? (videoOn ? "nowplaying" : "")
+                                       : videoPip && (videoOn || Player.videoPreferred)
+                                         ? (useSystemPip ? "system" : "mini")
                                        : ""
-    // The system's window opens once the picture is there to show, and closes
-    // as soon as the picture goes anywhere else.
-    readonly property bool systemPipWanted: videoPlace === "system" && Player.videoPlaying
+    // The system's window opens with picture in picture and closes as soon as
+    // the picture goes anywhere else. Between songs it stays, on the cover.
+    readonly property bool systemPipWanted: videoPlace === "system"
     onSystemPipWantedChanged: systemPipWanted ? SystemPip.start() : SystemPip.stop()
 
     Connections {
@@ -587,7 +592,7 @@ ApplicationWindow {
         anchors.rightMargin: Theme.space6 + (queuePanel.visible ? queuePanel.width : 0)
         anchors.bottom: playerBar.top
         anchors.bottomMargin: Theme.space6
-        active: window.videoPlace === "mini" && Player.videoPlaying && !nowPlaying.visible
+        active: window.videoPlace === "mini" && !nowPlaying.visible
         onOpenRequested: window.nowPlayingOpen = true
         onFullscreenRequested: window.enterVideoFullscreen()
         onCloseRequested: window.videoPip = false
@@ -777,7 +782,10 @@ ApplicationWindow {
         function onVideoChanged() {
             if (!Player.videoWanted && !Player.videoPlaying) {
                 window.leaveVideoFullscreen()
-                window.videoPip = false
+                // Picture in picture outlasts a song with no video; only the
+                // switch turned off puts it away.
+                if (!Player.videoPreferred)
+                    window.videoPip = false
             }
         }
     }

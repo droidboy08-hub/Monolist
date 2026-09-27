@@ -47,10 +47,13 @@ public:
     // (mpv's video-add), rather than the file loaded again with it: the sound
     // plays on without a gap, and mpv keeps the picture in time with it.
     // Fetched with `headers`, as load() does. videoAddFailed if it would not
-    // open. Only for a file that has started (hasStartedFile).
+    // open. Only for a file that has loaded (hasLoadedFile).
     void addVideo(const QString &url, const QVariantMap &headers = QVariantMap());
-    // The latest load's file has started, so a picture can be added to it.
-    bool hasStartedFile() const { return currentFileStarted(); }
+    // The latest load's file is open (fileLoaded has been sent for it), so a
+    // picture can be added to it.
+    bool hasLoadedFile() const { return m_fileLoaded; }
+    // A load is on its way and has not yet opened, failed or been stopped.
+    bool isLoadingFile() const { return m_loadingFile; }
     void setPaused(bool paused);
     void seekAbsolute(qint64 ms);
     void setVolume(qreal volume);        // 0.0 – 1.0
@@ -92,6 +95,9 @@ Q_SIGNALS:
     void endOfFile();                    // natural end, not a manual stop
     void loadFailed(const QString &reason);
     void videoAddFailed(const QString &reason);
+    // The latest load's file is open: its tracks are known, and a picture
+    // can join it.
+    void fileLoaded();
     void metadataChanged(const QString &title, const QString &artist);
     // Empty until the file being played turns out to have a picture.
     void videoSizeChanged(const QSize &size);
@@ -128,6 +134,8 @@ private:
     bool m_buffering = false;
     bool m_video = false;
     bool m_watched = true;   // until a surface says otherwise
+    bool m_fileLoaded = false;
+    bool m_loadingFile = false;
     QSize m_videoSize;
     qint64 m_duration = 0;
     QVariantList m_audioDevices;

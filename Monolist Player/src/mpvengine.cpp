@@ -321,10 +321,22 @@ void MpvEngine::drainEvents()
             if (event->reply_userdata == 0 || event->reply_userdata != m_loadRequest)
                 break;
             if (event->error < 0) {
+                m_loadingFile = false;
                 Q_EMIT loadFailed(QString::fromUtf8(mpv_error_string(event->error)));
                 break;
             }
             m_currentEntry = playlistEntryOf(static_cast<mpv_event_command *>(event->data)->result);
+            break;
+        }
+
+        case MPV_EVENT_FILE_LOADED: {
+            // For the file last asked for only: one it replaced can still
+            // report having opened, after the new load was sent.
+            if (!currentFileStarted())
+                break;
+            m_fileLoaded = true;
+            m_loadingFile = false;
+            Q_EMIT fileLoaded();
             break;
         }
 
@@ -342,6 +354,8 @@ void MpvEngine::drainEvents()
             // error would be blamed on it.
             if (m_currentEntry <= 0 || end->playlist_entry_id != m_currentEntry)
                 break;
+            m_fileLoaded = false;
+            m_loadingFile = false;
             if (end->reason == MPV_END_FILE_REASON_ERROR) {
                 Q_EMIT loadFailed(QString::fromUtf8(mpv_error_string(end->error)));
             } else if (end->reason == MPV_END_FILE_REASON_EOF) {
@@ -440,6 +454,9 @@ void MpvEngine::load(const QString &urlOrPath, bool startPlaying, const QString 
                           startAt > 0 ? QByteArray::number(startAt / 1000.0, 'f', 3).constData()
                                       : "none");
 
+    m_fileLoaded = false;
+    m_loadingFile = true;
+
     const QByteArray target = urlOrPath.toUtf8();
     // "replace" tears down the previous file. From here until mpv answers
     // with the new entry, no file is current, so whatever the previous one
@@ -464,6 +481,8 @@ void MpvEngine::stop()
     ++m_loadRequest;
     m_currentEntry = 0;
     m_duration = 0;
+    m_fileLoaded = false;
+    m_loadingFile = false;
     if (!m_videoSize.isEmpty()) {
         m_videoSize = QSize();
         Q_EMIT videoSizeChanged(m_videoSize);
