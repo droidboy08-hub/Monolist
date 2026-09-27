@@ -429,6 +429,12 @@ mpv's own messages.
                                                     stand-in: asked only when 1.02's answer has no plain
                                                     stream, at once and as the same app, never after no
                                                     answer at all; no retry and 3 s of its own; the switch
+    monolist --format-test                          which of /player's formats is played, against the same
+                                                    stand-in: two real answers (URLs replaced) and invented
+                                                    ones; Opus 774, 251, then AAC 141, 140, then the rest by
+                                                    bitrate, DRC copies passed over, the video's own sound
+                                                    before a dub, itag 18 from formats[] alone, the itag,
+                                                    codec and kbps logged, and the switch back
     monolist --player-canary [videoId...]           each /player client alone on real YouTube: its answer,
                                                     itag and time, n= or pot= in the link, and whether the
                                                     link serves its first and second MiB (never the link
@@ -471,8 +477,11 @@ be, for a look at a state:
                                                     invidious_instances; youtube.visitor launch|home
                                                     keeps the visitor id for one launch, as before;
                                                     youtube.player_client first|second asks /player as
-                                                    VISIONOS 1.02 or 0.1 alone; ytdlp.cancel wait has a
-                                                    cancelled lookup wait for its processes, as before)
+                                                    VISIONOS 1.02 or 0.1 alone; youtube.format bitrate
+                                                    plays the format with the highest bitrate, whatever
+                                                    its codec, as before Opus came first; ytdlp.cancel
+                                                    wait has a cancelled lookup wait for its processes,
+                                                    as before)
 
 `MONOLIST_DATA_DIR` keeps the database somewhere else, so a test never touches
 the real library; the scrobbling tests, `--ytm-session-test`,

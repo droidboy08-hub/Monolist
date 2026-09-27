@@ -151,6 +151,9 @@ int main(int argc, char *argv[])
         // /player's second client, against the same stand-in.
         if (arguments.contains(QStringLiteral("--player-client-test")))
             return runPlayerClientSelfTest() == 0 ? 0 : 1;
+        // Which of /player's formats is played, on saved and invented answers.
+        if (arguments.contains(QStringLiteral("--format-test")))
+            return runFormatSelfTest() == 0 ? 0 : 1;
         // A skip while yt-dlp resolves, timed on this thread; and each
         // /player client alone on real YouTube (resolveselftest.cpp).
         if (const int cancelFlag = arguments.indexOf(QStringLiteral("--cancel-test")); cancelFlag >= 0) {

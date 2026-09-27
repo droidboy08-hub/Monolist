@@ -28,6 +28,7 @@
 #include <QUrl>
 
 #include <functional>
+#include <iterator>
 #include <memory>
 #include <utility>
 
@@ -1163,15 +1164,17 @@ namespace {
 struct Played {
     bool done = false;
     QString url;
+    int itag = 0;
     QString error;
 };
 
 std::shared_ptr<Played> playLater(InnerTube &tube, const QString &videoId)
 {
     auto result = std::make_shared<Played>();
-    tube.player(videoId, [result](const QString &url, int, const QString &error) {
+    tube.player(videoId, [result](const QString &url, int itag, const QString &error) {
         result->done = true;
         result->url = url;
+        result->itag = itag;
         result->error = error;
     });
     return result;
@@ -1604,6 +1607,363 @@ int runVisitorSelfTest()
                 found << line.left(80);
         }
         t.check(found.isEmpty(), QStringLiteral("none of %1 lines logged holds a visitor id or a cookie value")
+                                     .arg(captured.size()), found.join(QStringLiteral(" | ")));
+    }
+
+    InnerTube::setVisitorStore({});
+    InnerTube::setTestServer(QString());
+    settle(50);
+    return t.finish();
+}
+
+// ---------------------------------------------------------------- which format is played
+
+namespace {
+
+// One audio format as /player lists it, but for its URL.
+struct Listed {
+    int itag;
+    const char *codecs;   // the mimeType's codecs=
+    int sampleRate;
+    int peak;             // bitrate
+    int average;          // averageBitrate
+    qint64 length;        // contentLength
+};
+
+// Two real answers, as VISIONOS 1.02 gave them on 2026-09-26 (the Step 2
+// loudness probe), cut down to their audio formats, in the order listed.
+//
+// IPeJ7iM55hc: AAC 140 peaks at 131,770 b/s, just above Opus 251's 130,713,
+// which is how the highest-bitrate rule came to play it as 44.1 kHz AAC.
+const Listed kIPeJ7iM55hc[] = {
+    { 139, "mp4a.40.5", 22050, 50488, 48875, 1179123 },
+    { 140, "mp4a.40.2", 44100, 131770, 129578, 3126061 },
+    { 249, "opus", 48000, 52004, 47518, 1146513 },
+    { 250, "opus", 48000, 67229, 62694, 1512676 },
+    { 251, "opus", 48000, 130713, 125463, 3027137 },
+};
+// CmThpha4Hoo ("Last Last"): no Opus is offered at all.
+const Listed kCmThpha4Hoo[] = {
+    { 139, "mp4a.40.5", 22050, 50358, 48856, 1052842 },
+    { 140, "mp4a.40.2", 44100, 131137, 129564, 2791186 },
+};
+// Invented: what a Premium account is offered besides (774, 141).
+const Listed kOpus774 = { 774, "opus", 48000, 270000, 250000, 6000000 };
+const Listed kAac141 = { 141, "mp4a.40.2", 44100, 262000, 255000, 6100000 };
+
+// The format as an answer lists it. Its URL names the itag (and `tag`), so a
+// check can tell which was chosen: a real one carries the listener's IP
+// address, which is why no real URL is kept here.
+QJsonObject formatOf(const Listed &listed, const QString &tag = QString())
+{
+    const bool opus = QByteArray(listed.codecs) == "opus";
+    return QJsonObject{
+        { QStringLiteral("itag"), listed.itag },
+        { QStringLiteral("url"), QStringLiteral("http://127.0.0.1/itag-%1%2").arg(listed.itag).arg(tag) },
+        { QStringLiteral("mimeType"), QStringLiteral("audio/%1; codecs=\"%2\"")
+                                          .arg(QLatin1String(opus ? "webm" : "mp4"), QLatin1String(listed.codecs)) },
+        { QStringLiteral("bitrate"), listed.peak },
+        { QStringLiteral("averageBitrate"), listed.average },
+        { QStringLiteral("audioSampleRate"), QString::number(listed.sampleRate) },
+        { QStringLiteral("contentLength"), QString::number(listed.length) },
+    };
+}
+
+// A picture alone, the kind every real answer lists first: never a choice,
+// whatever its bitrate.
+QJsonObject pictureFormat()
+{
+    return QJsonObject{
+        { QStringLiteral("itag"), 137 },
+        { QStringLiteral("url"), QStringLiteral("http://127.0.0.1/itag-137") },
+        { QStringLiteral("mimeType"), QStringLiteral("video/mp4; codecs=\"avc1.640028\"") },
+        { QStringLiteral("bitrate"), 4400000 },
+        { QStringLiteral("averageBitrate"), 2400000 },
+    };
+}
+
+// The progressive list's entries: the sound with a picture.
+QJsonObject muxedFormat(int itag)
+{
+    const bool eighteen = itag == 18;
+    return QJsonObject{
+        { QStringLiteral("itag"), itag },
+        { QStringLiteral("url"), QStringLiteral("http://127.0.0.1/itag-%1").arg(itag) },
+        { QStringLiteral("mimeType"), eighteen ? QStringLiteral("video/mp4; codecs=\"avc1.42001E, mp4a.40.2\"")
+                                               : QStringLiteral("video/3gpp; codecs=\"mp4v.20.3, mp4a.40.2\"") },
+        { QStringLiteral("bitrate"), eighteen ? 503513 : 80000 },
+        { QStringLiteral("audioSampleRate"), eighteen ? QStringLiteral("44100") : QStringLiteral("22050") },
+    };
+}
+
+template <size_t N>
+QJsonArray listedAll(const Listed (&formats)[N])
+{
+    QJsonArray list{ pictureFormat() };
+    for (const Listed &listed : formats)
+        list.append(formatOf(listed));
+    return list;
+}
+
+QByteArray answerWith(const QJsonArray &adaptive, const QJsonArray &progressive = QJsonArray())
+{
+    QJsonObject streaming{ { QStringLiteral("adaptiveFormats"), adaptive } };
+    if (!progressive.isEmpty())
+        streaming.insert(QStringLiteral("formats"), progressive);
+    const QJsonObject root{
+        { QStringLiteral("playabilityStatus"), QJsonObject{ { QStringLiteral("status"), QStringLiteral("OK") } } },
+        { QStringLiteral("streamingData"), streaming },
+    };
+    return QJsonDocument(root).toJson(QJsonDocument::Compact);
+}
+
+// xtags as /player sends them: a protobuf of key/value pairs, base64url.
+QString xtagsOf(const QByteArray &key, const QByteArray &value)
+{
+    QByteArray pair;
+    pair += char(0x0a);
+    pair += char(key.size());
+    pair += key;
+    pair += char(0x12);
+    pair += char(value.size());
+    pair += value;
+    QByteArray message;
+    message += char(0x0a);
+    message += char(pair.size());
+    message += pair;
+    return QString::fromLatin1(message.toBase64(QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals));
+}
+
+}
+
+int runFormatSelfTest()
+{
+    Checks t("formats");
+    QStringList captured;
+    g_captured = &captured;
+    g_previousHandler = qInstallMessageHandler(captureMessage);
+
+    StandIn standIn;
+    if (!t.check(standIn.listen(), QStringLiteral("a stand-in server on this computer"))) {
+        qInstallMessageHandler(g_previousHandler);
+        g_captured = nullptr;
+        return t.finish();
+    }
+    InnerTube::setTestServer(standIn.base());
+    t.note(QStringLiteral("every request goes to ") + standIn.base() + QStringLiteral(", none to YouTube"));
+
+    // What /player answers for each video id.
+    QHash<QString, QByteArray> answers;
+    standIn.respond = [&answers](const StandIn::Request &request) {
+        StandIn::Answer answer;
+        if (request.path == "/sw.js_data") {
+            answer.body = swJsData(QStringLiteral("TESTVISITORformats0001"));
+            return answer;
+        }
+        if (request.path.contains("/player")) {
+            answer.body = answers.value(request.json().value(QStringLiteral("videoId")).toString(),
+                                        R"({"playabilityStatus":{"status":"UNPLAYABLE"}})");
+        }
+        return answer;
+    };
+    // The line the choice logged for `videoId` since `from`.
+    const auto choseLine = [&captured](int from, const QString &videoId) {
+        for (int i = from; i < captured.size(); ++i) {
+            if (captured.at(i).contains(videoId + QStringLiteral(" chose itag")))
+                return captured.at(i);
+        }
+        return QString();
+    };
+
+    QHash<QString, QString> settings;
+    // One client: every check here is one /player answer, and the second
+    // client is --player-client-test's.
+    settings.insert(QStringLiteral("youtube.player_client"), QStringLiteral("first"));
+    const auto launch = [&settings]() {
+        InnerTube::setVisitorStore({
+            [&settings](const QString &key) { return settings.value(key); },
+            [&settings](const QString &key, const QString &value) { settings.insert(key, value); } });
+    };
+    launch();
+
+    // — 1. the real answers —
+    answers.insert(QStringLiteral("IPeJ7iM55hc"), answerWith(listedAll(kIPeJ7iM55hc)));
+    answers.insert(QStringLiteral("CmThpha4Hoo"), answerWith(listedAll(kCmThpha4Hoo)));
+    {
+        InnerTube tube;
+        int from = int(captured.size());
+        Played played = playNow(tube, QStringLiteral("IPeJ7iM55hc"));
+        t.check(played.itag == 251 && played.url.endsWith(QLatin1String("/itag-251")),
+                QStringLiteral("IPeJ7iM55hc as answered: Opus 251, though AAC 140 peaks higher "
+                               "(131,770 against 130,713 b/s)"), played.url + played.error);
+        QString line = choseLine(from, QStringLiteral("IPeJ7iM55hc"));
+        t.check(line.endsWith(QLatin1String("chose itag 251: opus, 48 kHz, 125 kbps (of 139 140 249 250 251)")),
+                QStringLiteral("the log: the itag, the codec from the mimeType, the rate, kbps from "
+                               "averageBitrate, and every audio format offered"), line);
+
+        // The same formats listed the other way round: the same choice.
+        QJsonArray reversed{ pictureFormat() };
+        for (auto listed = std::rbegin(kIPeJ7iM55hc); listed != std::rend(kIPeJ7iM55hc); ++listed)
+            reversed.append(formatOf(*listed));
+        answers.insert(QStringLiteral("vid-reversed"), answerWith(reversed));
+        played = playNow(tube, QStringLiteral("vid-reversed"));
+        t.check(played.itag == 251 && played.url.endsWith(QLatin1String("/itag-251")),
+                QStringLiteral("the same formats listed in reverse: the same choice"), played.url + played.error);
+
+        from = int(captured.size());
+        played = playNow(tube, QStringLiteral("CmThpha4Hoo"));
+        t.check(played.itag == 140 && played.url.endsWith(QLatin1String("/itag-140")),
+                QStringLiteral("CmThpha4Hoo as answered: AAC 140, since no Opus is offered"),
+                played.url + played.error);
+        line = choseLine(from, QStringLiteral("CmThpha4Hoo"));
+        t.check(line.endsWith(QLatin1String("chose itag 140: aac, 44.1 kHz, 130 kbps (of 139 140)")),
+                QStringLiteral("and the log calls it AAC at 44.1 kHz"), line);
+    }
+
+    // — 2. DRC copies —
+    {
+        const Listed &opus = kIPeJ7iM55hc[4];
+        const Listed &aac = kIPeJ7iM55hc[1];
+        // A copy marked isDrc, listed first and with the higher bitrate.
+        const Listed louder = { 251, "opus", 48000, 140000, 135000, 3100000 };
+        QJsonObject flagged = formatOf(louder, QStringLiteral("-drc"));
+        flagged.insert(QStringLiteral("isDrc"), true);
+        answers.insert(QStringLiteral("vid-drc-flag"),
+                       answerWith({ pictureFormat(), flagged, formatOf(opus), formatOf(aac) }));
+        // One marked only by its xtags.
+        QJsonObject tagged = formatOf(louder, QStringLiteral("-drc"));
+        tagged.insert(QStringLiteral("xtags"), xtagsOf("drc", "1"));
+        answers.insert(QStringLiteral("vid-drc-xtags"), answerWith({ pictureFormat(), tagged, formatOf(opus) }));
+        // Nothing but copies, and the muxed stream.
+        QJsonObject flaggedAac = formatOf(aac, QStringLiteral("-drc"));
+        flaggedAac.insert(QStringLiteral("isDrc"), true);
+        answers.insert(QStringLiteral("vid-drc-only"),
+                       answerWith({ pictureFormat(), flaggedAac, flagged }, { muxedFormat(18) }));
+
+        InnerTube tube;
+        int from = int(captured.size());
+        Played played = playNow(tube, QStringLiteral("vid-drc-flag"));
+        t.check(played.itag == 251 && played.url.endsWith(QLatin1String("/itag-251")),
+                QStringLiteral("a DRC copy of 251 (isDrc), listed first and at a higher bitrate: the ordinary 251"),
+                played.url);
+        const QString line = choseLine(from, QStringLiteral("vid-drc-flag"));
+        t.check(line.endsWith(QLatin1String("(of 251-drc 251 140)")),
+                QStringLiteral("and the log lists the copy as offered and passed over"), line);
+        played = playNow(tube, QStringLiteral("vid-drc-xtags"));
+        t.check(played.url.endsWith(QLatin1String("/itag-251")),
+                QStringLiteral("a copy marked only by \"drc\" in its xtags is passed over too"), played.url);
+        from = int(captured.size());
+        played = playNow(tube, QStringLiteral("vid-drc-only"));
+        t.check(played.itag == 251 && played.url.endsWith(QLatin1String("/itag-251-drc"))
+                    && choseLine(from, QStringLiteral("vid-drc-only")).contains(QLatin1String("DRC")),
+                QStringLiteral("only DRC copies offered: the best of them (251), not the muxed stream, "
+                               "and the log says it is DRC"), played.url + QStringLiteral(" / ")
+                    + choseLine(from, QStringLiteral("vid-drc-only")));
+    }
+
+    // — 3. the order —
+    {
+        answers.insert(QStringLiteral("vid-premium"),
+                       answerWith({ pictureFormat(), formatOf(kAac141), formatOf(kIPeJ7iM55hc[1]),
+                                    formatOf(kIPeJ7iM55hc[4]), formatOf(kOpus774) }));
+        answers.insert(QStringLiteral("vid-no-251"),
+                       answerWith({ pictureFormat(), formatOf(kIPeJ7iM55hc[2]), formatOf(kIPeJ7iM55hc[3]),
+                                    formatOf(kIPeJ7iM55hc[1]), formatOf(kAac141) }));
+        answers.insert(QStringLiteral("vid-rest"),
+                       answerWith({ pictureFormat(), formatOf(kIPeJ7iM55hc[0]), formatOf(kIPeJ7iM55hc[2]),
+                                    formatOf(kIPeJ7iM55hc[3]) }));
+        // A signatureCipher-only 251 and a plain 140.
+        QJsonObject ciphered = formatOf(kIPeJ7iM55hc[4]);
+        ciphered.remove(QStringLiteral("url"));
+        ciphered.insert(QStringLiteral("signatureCipher"),
+                        QStringLiteral("s=TEST&sp=sig&url=http%3A%2F%2F127.0.0.1%2Fciphered"));
+        answers.insert(QStringLiteral("vid-cipher"),
+                       answerWith({ pictureFormat(), ciphered, formatOf(kIPeJ7iM55hc[1]) }));
+        answers.insert(QStringLiteral("vid-muxed-only"),
+                       answerWith({ pictureFormat() }, { muxedFormat(17), muxedFormat(18) }));
+
+        InnerTube tube;
+        Played played = playNow(tube, QStringLiteral("vid-premium"));
+        t.check(played.itag == 774, QStringLiteral("774, 251, 141 and 140 offered: Opus 774"), played.url);
+        played = playNow(tube, QStringLiteral("vid-no-251"));
+        t.check(played.itag == 141, QStringLiteral("no 774 or 251: AAC 141 ahead of Opus 250 and 249"), played.url);
+        played = playNow(tube, QStringLiteral("vid-rest"));
+        t.check(played.itag == 250, QStringLiteral("none of the four: the rest by bitrate (250 over 139 and 249)"),
+                played.url);
+        played = playNow(tube, QStringLiteral("vid-cipher"));
+        t.check(played.itag == 140 && played.url.endsWith(QLatin1String("/itag-140")),
+                QStringLiteral("251 behind signatureCipher only: the plain 140, as before"), played.url);
+        const int from = int(captured.size());
+        played = playNow(tube, QStringLiteral("vid-muxed-only"));
+        const QString line = choseLine(from, QStringLiteral("vid-muxed-only"));
+        t.check(played.itag == 18 && played.url.endsWith(QLatin1String("/itag-18"))
+                    && line.contains(QLatin1String("chose itag 18: aac, 44.1 kHz, muxed with a picture"))
+                    && line.endsWith(QLatin1String("(no audio-only format offered)")),
+                QStringLiteral("formats[] alone: itag 18 still, logged as AAC muxed with a picture"),
+                played.url + QStringLiteral(" / ") + line);
+    }
+
+    // — 4. dubbed sound —
+    {
+        const Listed &opus = kIPeJ7iM55hc[4];
+        QJsonObject dub = formatOf({ 251, "opus", 48000, 150000, 140000, 3300000 }, QStringLiteral("-dub"));
+        dub.insert(QStringLiteral("audioTrack"),
+                   QJsonObject{ { QStringLiteral("displayName"), QStringLiteral("Spanish") },
+                                { QStringLiteral("id"), QStringLiteral("es.3") },
+                                { QStringLiteral("audioIsDefault"), false } });
+        dub.insert(QStringLiteral("xtags"), xtagsOf("acont", "dubbed"));
+        QJsonObject own = formatOf(opus);
+        own.insert(QStringLiteral("audioTrack"),
+                   QJsonObject{ { QStringLiteral("displayName"), QStringLiteral("English original") },
+                                { QStringLiteral("id"), QStringLiteral("en.4") },
+                                { QStringLiteral("audioIsDefault"), true } });
+        own.insert(QStringLiteral("xtags"), xtagsOf("acont", "original"));
+        answers.insert(QStringLiteral("vid-dub"), answerWith({ pictureFormat(), dub, own }));
+
+        InnerTube tube;
+        const int from = int(captured.size());
+        const Played played = playNow(tube, QStringLiteral("vid-dub"));
+        t.check(played.url.endsWith(QLatin1String("/itag-251")) && choseLine(from, QStringLiteral("vid-dub"))
+                                                                        .endsWith(QLatin1String("(of 251-dub 251)")),
+                QStringLiteral("a dubbed 251 listed first, at a higher bitrate: the video's own 251, and "
+                               "xtags that are not \"drc\" mark nothing"),
+                played.url + QStringLiteral(" / ") + choseLine(from, QStringLiteral("vid-dub")));
+    }
+
+    // — 5. the switch back: youtube.format=bitrate —
+    {
+        settings.insert(QStringLiteral("youtube.format"), QStringLiteral("bitrate"));
+        launch();
+        InnerTube tube;
+        const int from = int(captured.size());
+        Played played = playNow(tube, QStringLiteral("IPeJ7iM55hc"));
+        const QString line = choseLine(from, QStringLiteral("IPeJ7iM55hc"));
+        t.check(played.itag == 140 && line.contains(QLatin1String("youtube.format=bitrate")),
+                QStringLiteral("youtube.format=bitrate: IPeJ7iM55hc is AAC 140 again, by its peak bitrate, "
+                               "and the log says why"), played.url + QStringLiteral(" / ") + line);
+        played = playNow(tube, QStringLiteral("vid-drc-flag"));
+        t.check(played.url.endsWith(QLatin1String("/itag-251-drc")),
+                QStringLiteral("and a DRC copy with the highest bitrate is taken, as before"), played.url);
+        played = playNow(tube, QStringLiteral("vid-muxed-only"));
+        t.check(played.itag == 18, QStringLiteral("and formats[] alone still gives itag 18"), played.url);
+
+        settings.remove(QStringLiteral("youtube.format"));
+        launch();
+        InnerTube again;
+        played = playNow(again, QStringLiteral("IPeJ7iM55hc"));
+        t.check(played.itag == 251, QStringLiteral("the setting taken away: Opus 251 at the next launch"), played.url);
+    }
+
+    // — 6. the log —
+    {
+        g_captured = nullptr;
+        qInstallMessageHandler(g_previousHandler);
+        QStringList found;
+        for (const QString &line : std::as_const(captured)) {
+            if (line.contains(QLatin1String("127.0.0.1/itag-")) || line.contains(QLatin1String("TESTVISITOR")))
+                found << line.left(80);
+        }
+        t.check(found.isEmpty(), QStringLiteral("none of %1 lines logged holds a stream URL or the visitor id")
                                      .arg(captured.size()), found.join(QStringLiteral(" | ")));
     }
 

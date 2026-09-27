@@ -42,3 +42,13 @@ int runVisitorSelfTest();
 // a 3 s limit of its own; both refusals in the error and the log; the switch
 // (youtube.player_client first|second); no id or cookie value in the log.
 int runPlayerClientSelfTest();
+
+// --format-test: which of /player's formats is played, against the same
+// stand-in. Two real answers with their URLs replaced (IPeJ7iM55hc: Opus 251
+// although AAC 140 peaks higher; CmThpha4Hoo: 140, with no Opus offered) and
+// invented ones: DRC copies marked by isDrc or by xtags passed over, 774 >
+// 251 > 141 > 140 > the rest by bitrate, a dubbed track, a ciphered format,
+// formats[] alone giving itag 18, the same choice whatever the listed order,
+// the itag, codec and kbps in the log (never a URL), and the switch back
+// (youtube.format=bitrate).
+int runFormatSelfTest();

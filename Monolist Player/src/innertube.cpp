@@ -18,6 +18,7 @@
 
 #include <algorithm>
 #include <initializer_list>
+#include <iterator>
 #include <utility>
 
 namespace {
@@ -201,6 +202,28 @@ struct PlayerClientsSwitch {
     InnerTube::PlayerClients clients = InnerTube::PlayerClients::Both;
 };
 PlayerClientsSwitch g_playerClients;
+
+// youtube.format, read the same way: "bitrate" takes the audio format with
+// the highest bitrate, whatever its codec, as before the order in
+// pickStream existed.
+const QString kFormatRuleKey = QStringLiteral("youtube.format");
+struct FormatRuleSwitch {
+    bool loaded = false;
+    bool byBitrate = false;
+};
+FormatRuleSwitch g_formatRule;
+
+bool chooseByBitrate()
+{
+    FormatRuleSwitch &s = g_formatRule;
+    if (s.loaded)
+        return s.byBitrate;
+    s.loaded = true;
+    s.byBitrate = g_visitor.store.read && g_visitor.store.read(kFormatRuleKey) == QLatin1String("bitrate");
+    if (s.byBitrate)
+        qInfo("innertube: youtube.format=bitrate: /player's audio format is chosen by bitrate alone, as before");
+    return s.byBitrate;
+}
 
 SharedJar *sharedJar()
 {
@@ -921,30 +944,151 @@ InnerTube::Watch watchOf(const QJsonValue &endpoint)
     return watch;
 }
 
-// The stream a /player answer offers for listening, and its itag: the best
-// audio-only one that carries a plain URL. A format offering only
-// `signatureCipher` needs the player JavaScript run to unpick it, which is
-// exactly the work these clients exist to avoid — so it is passed over, and
-// if that leaves nothing, the caller moves on. Empty when there is none.
-QString pickStream(const QJsonObject &root, int *itag)
+// One stream a /player answer offers, as the choice below sees it.
+struct Offer {
+    QString url;
+    int itag = 0;
+    QString codec;          // from the mimeType, never assumed from the itag
+    int peakBitrate = 0;    // `bitrate`, the peak, which the old rule compared
+    int bitrate = 0;        // averageBitrate where given, else the peak
+    int sampleRate = 0;     // Hz, 0 when not given
+    bool drc = false;       // a dynamic-range-compressed copy
+    bool ownSound = true;   // the video's own sound, not a dubbed track
+    bool muxed = false;     // the sound with a picture (itag 18)
+};
+
+// The sound's codec, as a mimeType names it: `audio/webm; codecs="opus"`,
+// `audio/mp4; codecs="mp4a.40.2"`, `video/mp4; codecs="avc1.42001E,
+// mp4a.40.2"`. A muxed format names its picture's codec too, which is not
+// what is heard, so that one is passed over.
+QString codecOf(const QString &mimeType)
 {
-    QString best;
-    int bestItag = 0;
-    int bestBitrate = -1;
+    const qsizetype at = mimeType.indexOf(QLatin1String("codecs="));
+    if (at < 0)
+        return QStringLiteral("unknown");
+    QString list = mimeType.mid(at + 7);
+    list.remove(QLatin1Char('"'));
+    static const char *const pictures[] = { "avc1", "avc3", "vp8", "vp9", "vp09", "av01", "hev1", "hvc1" };
+    for (QString codec : list.split(QLatin1Char(','))) {
+        codec = codec.trimmed().toLower();
+        if (codec == QLatin1String("mp4a.40.5") || codec == QLatin1String("mp4a.40.29"))
+            return QStringLiteral("he-aac");
+        if (codec.startsWith(QLatin1String("mp4a")))
+            return QStringLiteral("aac");
+        const bool picture = std::any_of(std::begin(pictures), std::end(pictures), [&codec](const char *name) {
+            return codec.startsWith(QLatin1String(name));
+        });
+        if (!picture && !codec.isEmpty())
+            return codec;
+    }
+    return QStringLiteral("unknown");
+}
+
+// YouTube offers some formats a second time, dynamic-range compressed, under
+// the same itag. Compression that has already been applied cannot be undone,
+// and any loudness levelling would be stacked on top of it. Neither of the
+// fields that mark such a copy is documented, so both are read: isDrc, and
+// "drc" among the format's xtags (a protobuf, base64url-encoded).
+bool isDrc(const QJsonObject &format)
+{
+    if (format.value(QStringLiteral("isDrc")).toBool())
+        return true;
+    const QByteArray xtags = format.value(QStringLiteral("xtags")).toString().toLatin1();
+    return !xtags.isEmpty() && QByteArray::fromBase64(xtags, QByteArray::Base64UrlEncoding).contains("drc");
+}
+
+Offer offerOf(const QJsonObject &format, bool muxed)
+{
+    Offer offer;
+    offer.url = format.value(QStringLiteral("url")).toString();
+    offer.itag = format.value(QStringLiteral("itag")).toInt();
+    offer.codec = codecOf(format.value(QStringLiteral("mimeType")).toString());
+    offer.peakBitrate = format.value(QStringLiteral("bitrate")).toInt();
+    const int average = format.value(QStringLiteral("averageBitrate")).toInt();
+    offer.bitrate = average > 0 ? average : offer.peakBitrate;
+    // A string in every answer seen, but a number would do as well.
+    const QJsonValue rate = format.value(QStringLiteral("audioSampleRate"));
+    offer.sampleRate = rate.isString() ? rate.toString().toInt() : rate.toInt();
+    offer.drc = !muxed && isDrc(format);
+    // A video with dubbed sound lists each track's formats under the same
+    // itags; audioIsDefault marks its own. With no audioTrack there is only
+    // the one.
+    const QJsonValue track = format.value(QStringLiteral("audioTrack"));
+    offer.ownSound = !track.isObject()
+                     || track.toObject().value(QStringLiteral("audioIsDefault")).toBool(true);
+    offer.muxed = muxed;
+    return offer;
+}
+
+// The order of choice: Opus 774 (about 256 kbps, offered to Premium
+// accounts), Opus 251 (about 130-160), AAC 141 (256, Premium), AAC 140 (about
+// 130). Opus comes at 48 kHz, the rate the outputs here run at, and
+// YouTube's AAC at 44.1 kHz, which has to be resampled on the way out. Any
+// other format comes after these four.
+int rankOf(int itag)
+{
+    switch (itag) {
+    case 774: return 0;
+    case 251: return 1;
+    case 141: return 2;
+    case 140: return 3;
+    default:  return 4;
+    }
+}
+
+// Whether `a` is the better choice than `b`: an ordinary format before a DRC
+// copy (so a copy is played only when nothing else is offered), the video's
+// own sound before a dub, the order above, then bitrate among the rest.
+// Nothing here depends on the order the answer lists its formats in, so a
+// second /player call for the same song makes the same choice; only two
+// entries alike in every one of these ways are left in the listed order.
+bool better(const Offer &a, const Offer &b)
+{
+    if (a.drc != b.drc)
+        return !a.drc;
+    if (a.ownSound != b.ownSound)
+        return a.ownSound;
+    const int rankA = rankOf(a.itag);
+    const int rankB = rankOf(b.itag);
+    if (rankA != rankB)
+        return rankA < rankB;
+    if (a.bitrate != b.bitrate)
+        return a.bitrate > b.bitrate;
+    return a.itag > b.itag;
+}
+
+// What pickStream chose, and what it chose from, for the log.
+struct Choice {
+    Offer chosen;          // url empty when nothing is playable without the cipher
+    QStringList offered;   // the audio-only itags with a plain URL, as listed
+};
+
+// The stream a /player answer offers for listening: the best audio-only one
+// that carries a plain URL, by the order above, or with `byBitrate` (the
+// setting youtube.format=bitrate) the one with the highest peak bitrate
+// whatever its codec, as before. That rule is what made the app play 44.1 kHz
+// AAC where Opus was offered, whenever 140's peak came out a little above
+// 251's. A format offering only `signatureCipher` needs the player
+// JavaScript run to unpick it, which is exactly the work these clients exist
+// to avoid, so it is passed over, and if that leaves nothing, the caller
+// moves on.
+Choice pickStream(const QJsonObject &root, bool byBitrate)
+{
+    Choice choice;
     const QJsonArray formats = dig(root, { "streamingData", "adaptiveFormats" }).toArray();
     for (const QJsonValue &value : formats) {
         const QJsonObject format = value.toObject();
-        const QString url = format.value(QStringLiteral("url")).toString();
-        if (url.isEmpty())
+        if (format.value(QStringLiteral("url")).toString().isEmpty())
             continue;
         if (!format.value(QStringLiteral("mimeType")).toString().startsWith(QLatin1String("audio")))
             continue;
-        const int bitrate = format.value(QStringLiteral("bitrate")).toInt();
-        if (bitrate > bestBitrate) {
-            bestBitrate = bitrate;
-            bestItag = format.value(QStringLiteral("itag")).toInt();
-            best = url;
-        }
+        const Offer offer = offerOf(format, /*muxed=*/false);
+        choice.offered << QString::number(offer.itag) + (offer.drc ? QStringLiteral("-drc") : QString())
+                              + (offer.ownSound ? QString() : QStringLiteral("-dub"));
+        const bool take = choice.chosen.url.isEmpty()
+                          || (byBitrate ? offer.peakBitrate > choice.chosen.peakBitrate : better(offer, choice.chosen));
+        if (take)
+            choice.chosen = offer;
     }
     // Nothing audio-only: fall back to the progressive list, where itag 18
     // lives — one file with the sound and a small picture muxed together. It
@@ -953,25 +1097,37 @@ QString pickStream(const QJsonObject &root, int *itag)
     // which is why it is not preferred above. But some tracks publish nothing
     // else, and half a megabyte of wasted picture on those few beats sending
     // the track down to yt-dlp and waiting three seconds.
-    if (best.isEmpty()) {
+    if (choice.chosen.url.isEmpty()) {
         const QJsonArray progressive = dig(root, { "streamingData", "formats" }).toArray();
         for (const QJsonValue &value : progressive) {
             const QJsonObject format = value.toObject();
-            const QString url = format.value(QStringLiteral("url")).toString();
-            if (url.isEmpty())
+            if (format.value(QStringLiteral("url")).toString().isEmpty())
                 continue;
             // Muxed formats carry no `bitrate` worth comparing across codecs;
             // take the highest itag that answers, which orders 18 ahead of
             // the smaller ones.
-            const int formatItag = format.value(QStringLiteral("itag")).toInt();
-            if (formatItag > bestItag) {
-                bestItag = formatItag;
-                best = url;
-            }
+            if (format.value(QStringLiteral("itag")).toInt() > choice.chosen.itag)
+                choice.chosen = offerOf(format, /*muxed=*/true);
         }
     }
-    *itag = best.isEmpty() ? 0 : bestItag;
-    return best;
+    return choice;
+}
+
+// "opus, 48 kHz, 133 kbps" for the log: what the chosen stream is, as the
+// answer describes it.
+QString describe(const Offer &offer)
+{
+    QStringList parts{ offer.codec };
+    if (offer.sampleRate > 0)
+        parts << QString::number(offer.sampleRate / 1000.0) + QStringLiteral(" kHz");
+    const QString kbps = QString::number(qRound(offer.bitrate / 1000.0)) + QStringLiteral(" kbps");
+    // A muxed format's bitrate is the picture's and the sound's together.
+    parts << (offer.muxed ? QStringLiteral("muxed with a picture, ") + kbps + QStringLiteral(" in all") : kbps);
+    if (offer.drc)
+        parts << QStringLiteral("DRC");
+    if (!offer.ownSound)
+        parts << QStringLiteral("dubbed");
+    return parts.join(QStringLiteral(", "));
 }
 
 } // namespace
@@ -1095,6 +1251,7 @@ void InnerTube::setVisitorStore(VisitorStore store)
     if (v.jar)
         v.jar->clear();
     g_playerClients = {};
+    g_formatRule = {};
     // Nobody is left waiting on a fetch whose answer will now be dropped.
     const auto waiters = std::exchange(v.waiters, {});
     for (const auto &waiter : waiters)
@@ -1464,12 +1621,20 @@ void InnerTube::askPlayer(Client client, std::shared_ptr<PlayerAsk> ask)
                  if (g_visitor.refreshDue)
                      renewVisitorSoon();
 
-                 int itag = 0;
-                 const QString url = pickStream(root, &itag);
-                 if (url.isEmpty()) {
+                 const bool byBitrate = chooseByBitrate();
+                 const Choice choice = pickStream(root, byBitrate);
+                 if (choice.chosen.url.isEmpty()) {
                      playerRefused(client, QStringLiteral("no plain audio stream offered"), ask);
                      return;
                  }
+                 // What was chosen, from what, on every resolve: the one place
+                 // that tells which rendition played and why, and that Opus
+                 // was not offered when the song plays as AAC.
+                 const QString from = choice.offered.isEmpty() ? QStringLiteral("no audio-only format offered")
+                                                               : QStringLiteral("of ") + choice.offered.join(QLatin1Char(' '));
+                 qInfo("innertube: %s chose itag %d: %s (%s%s)", qPrintable(videoId), choice.chosen.itag,
+                       qPrintable(describe(choice.chosen)), qPrintable(from),
+                       byBitrate ? ", by bitrate alone: youtube.format=bitrate" : "");
                  // Which client answered is in the log only when it was not
                  // the usual one, which is exactly when it matters.
                  if (client != Client::Player) {
@@ -1478,7 +1643,7 @@ void InnerTube::askPlayer(Client client, std::shared_ptr<PlayerAsk> ask)
                      qInfo("innertube: %s answered as %s in %lld ms%s", qPrintable(videoId),
                            qPrintable(playerClientName(client)), (long long)ask->clock.elapsed(), qPrintable(after));
                  }
-                 ask->done(url, itag, QString());
+                 ask->done(choice.chosen.url, choice.chosen.itag, QString());
              },
              /*retries=*/second ? 0 : 1);
     });

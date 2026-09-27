@@ -390,6 +390,12 @@ public:
     // One /player call: the audio stream for a track, in one round trip and
     // in this process, where the alternative is starting yt-dlp.
     //
+    // Of the formats offered, Opus is taken first (774, 251), then AAC (141,
+    // 140), never a DRC copy while another is offered, and the log says which
+    // itag, codec and bitrate were chosen from what (pickStream, innertube.cpp).
+    // The setting youtube.format=bitrate takes the highest bitrate instead,
+    // as before.
+    //
     // `url` is empty whenever anything at all went wrong and `error` says
     // what, client by client; the caller is expected to fall through to
     // yt-dlp rather than show it, because yt-dlp still resolves things this
