@@ -421,6 +421,10 @@ mpv's own messages.
                                                     this computer: signed-out requests byte for byte, the
                                                     check, rotation, 400/401/403, restart, sign-out, the
                                                     offer to delete the imported file, no value in the log
+    monolist --visitor-test                         the one visitor id every InnerTube shares, against the
+                                                    same stand-in: one fetch, a stored id used at once, the
+                                                    30-day limit, LOGIN_REQUIRED renewed and asked once
+                                                    more, the shared jar, Clear history, the switch back
     monolist --audio-devices [<videoId>]            the output menu: every device mpv lists, what the menu
                                                     offers (Auto, then the WASAPI or CoreAudio devices, then
                                                     a chosen one that is not connected), the kept choice and
@@ -453,7 +457,8 @@ be, for a look at a state:
                                                     or rejected, with an invented account and no cookies;
                                                     +file adds the offer to delete an imported file
     monolist --set <key> <value>                    write a setting first (lrclib_url, piped_instances,
-                                                    invidious_instances)
+                                                    invidious_instances; youtube.visitor launch|home
+                                                    keeps the visitor id for one launch, as before)
 
 `MONOLIST_DATA_DIR` keeps the database somewhere else, so a test never touches
 the real library; the scrobbling tests, `--ytm-session-test`,

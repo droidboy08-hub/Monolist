@@ -877,6 +877,9 @@ void Library::clearHistory()
     QSqlQuery q(AppDatabase::connection());
     q.exec(QStringLiteral("DELETE FROM recent"));
     q.exec(QStringLiteral("DELETE FROM history"));
+    // And the stored visitor id, by which YouTube could still link what is
+    // played next to what was just cleared.
+    InnerTube::forgetVisitorData();
     reloadHistory();
     Q_EMIT historyChanged();
     Q_EMIT notice(QStringLiteral("History cleared"));

@@ -7,15 +7,19 @@
 #include "secretstore.h"
 #include "ytmsession.h"
 
+#include <QDateTime>
 #include <QDir>
 #include <QEventLoop>
 #include <QFile>
 #include <QFileInfo>
+#include <QHash>
 #include <QHostAddress>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QNetworkCookie>
 #include <QRegularExpression>
+#include <QSet>
 #include <QSqlQuery>
 #include <QTcpServer>
 #include <QTcpSocket>
@@ -1143,6 +1147,460 @@ int runYtmSessionSelfTest(Library *library)
     SecretStore::remove(secretName);
     library->setSetting(nameKey, QString());
     InnerTube::setRegionRejectedHandler({});
+    InnerTube::setTestServer(QString());
+    settle(50);
+    return t.finish();
+}
+
+// ---------------------------------------------------------------- the visitor id
+
+namespace {
+
+struct Played {
+    bool done = false;
+    QString url;
+    QString error;
+};
+
+std::shared_ptr<Played> playLater(InnerTube &tube, const QString &videoId)
+{
+    auto result = std::make_shared<Played>();
+    tube.player(videoId, [result](const QString &url, int, const QString &error) {
+        result->done = true;
+        result->url = url;
+        result->error = error;
+    });
+    return result;
+}
+
+Played playNow(InnerTube &tube, const QString &videoId)
+{
+    const auto result = playLater(tube, videoId);
+    waitUntil([result]() { return result->done; }, 20000);
+    return *result;
+}
+
+// sw.js_data as it is shaped: ")]}'" and nested arrays, the id at
+// [0][2][0][0][13] and again at [0][2][6].
+QByteArray swJsData(const QString &id)
+{
+    const QJsonValue value = id.isEmpty() ? QJsonValue() : QJsonValue(id);
+    QJsonArray device;                 // [0][2][0][0]
+    for (int i = 0; i < 13; ++i)
+        device.append(QJsonValue());
+    device.append(value);              // [13]
+    QJsonArray devices;                // [0][2][0]
+    devices.append(device);
+    QJsonArray config;                 // [0][2]
+    config.append(devices);
+    config.append(QStringLiteral("TESTKEY"));
+    for (int i = 2; i < 6; ++i)
+        config.append(QJsonValue());
+    config.append(value);              // [6]
+    QJsonArray entry;                  // [0]
+    entry.append(QStringLiteral("yt.sw.adr"));
+    entry.append(QJsonValue());
+    entry.append(config);
+    QJsonArray root;
+    root.append(entry);
+    return ")]}'\n" + QJsonDocument(root).toJson(QJsonDocument::Compact);
+}
+
+QString visitorOf(const StandIn::Request &request)
+{
+    return request.json().value(QStringLiteral("context")).toObject().value(QStringLiteral("client"))
+        .toObject().value(QStringLiteral("visitorData")).toString();
+}
+
+}
+
+int runVisitorSelfTest()
+{
+    Checks t("visitor");
+    QStringList captured;
+    g_captured = &captured;
+    g_previousHandler = qInstallMessageHandler(captureMessage);
+
+    StandIn standIn;
+    if (!t.check(standIn.listen(), QStringLiteral("a stand-in server on this computer"))) {
+        qInstallMessageHandler(g_previousHandler);
+        g_captured = nullptr;
+        return t.finish();
+    }
+    InnerTube::setTestServer(standIn.base());
+    t.note(QStringLiteral("every request goes to ") + standIn.base() + QStringLiteral(", none to YouTube"));
+
+    // How the stand-in answers. Every id and cookie is invented, and each
+    // fetch hands out a new one, so the checks can tell them apart.
+    int minted = 0;
+    bool swFails = false;
+    bool swNoId = false;
+    bool homeNoId = false;
+    bool refuseAll = false;
+    QSet<QString> refused;
+    const auto nextId = [&minted](const char *kind) {
+        return QStringLiteral("TESTVISITOR%1%2").arg(QLatin1String(kind)).arg(++minted, 4, 10, QLatin1Char('0'));
+    };
+    QStringList mintedIds;
+    standIn.respond = [&](const StandIn::Request &request) {
+        StandIn::Answer answer;
+        if (request.path == "/sw.js_data") {
+            if (swFails) {
+                answer.status = 404;
+                answer.body = "{}";
+                return answer;
+            }
+            const QString id = swNoId ? QString() : nextId("sw");
+            mintedIds << id;
+            answer.body = swJsData(id);
+            if (!id.isEmpty())
+                answer.extra << "Set-Cookie: VISITOR_INFO1_LIVE=TESTCOOKIE" + QByteArray::number(minted) + "; Path=/";
+            return answer;
+        }
+        if (request.path == "/") {
+            const QString id = homeNoId ? QString() : nextId("home");
+            mintedIds << id;
+            answer.body = "<html><script>var ytcfg={\"INNERTUBE_CONTEXT\":{\"client\":{"
+                          + (id.isEmpty() ? QByteArray() : "\"visitorData\":\"" + id.toUtf8() + "\",")
+                          + "\"hl\":\"en\"}}};</script></html>";
+            return answer;
+        }
+        if (request.path.contains("/player")) {
+            // So the jar is never empty when a renewal is sent, which must
+            // still go without it.
+            answer.extra << "Set-Cookie: PLAYERTEST=TESTCOOKIEplayer; Path=/";
+            const QString visitor = QString::fromLatin1(request.header("x-goog-visitor-id"));
+            if (refuseAll || refused.contains(visitor)) {
+                answer.body = R"({"playabilityStatus":{"status":"LOGIN_REQUIRED","reason":"Sign in to confirm you are not a bot"}})";
+            } else {
+                answer.body = R"({"playabilityStatus":{"status":"OK"},"streamingData":{"adaptiveFormats":[)"
+                              R"({"itag":251,"url":"http://127.0.0.1/audio-test","mimeType":"audio/webm; codecs=\"opus\"","bitrate":130000}]}})";
+            }
+            return answer;
+        }
+        return answer;   // browse and the rest: {}
+    };
+    const auto countSince = [&standIn](int from, const QByteArray &path) {
+        int n = 0;
+        for (int i = from; i < standIn.requests.size(); ++i)
+            n += path == "/player" ? standIn.requests.at(i).path.contains("/player") : standIn.requests.at(i).path == path;
+        return n;
+    };
+    // The paths asked since `from`, in order: "sw", "home", "player", "browse".
+    const auto orderSince = [&standIn](int from) {
+        QStringList order;
+        for (int i = from; i < standIn.requests.size(); ++i) {
+            const QByteArray path = standIn.requests.at(i).path;
+            order << (path == "/sw.js_data" ? QStringLiteral("sw") : path == "/" ? QStringLiteral("home")
+                      : path.contains("/player") ? QStringLiteral("player") : QStringLiteral("browse"));
+        }
+        return order.join(QLatin1Char(' '));
+    };
+    const auto lastPlayer = [&standIn]() {
+        for (qsizetype i = standIn.requests.size() - 1; i >= 0; --i) {
+            if (standIn.requests.at(i).path.contains("/player"))
+                return standIn.requests.at(i);
+        }
+        return StandIn::Request();
+    };
+
+    // The settings table, in memory. setVisitorStore starts the holder
+    // afresh, which is what a new launch does.
+    const QString idKey = QStringLiteral("youtube.visitor_data");
+    const QString atKey = QStringLiteral("youtube.visitor_data_at");
+    const QString modeKey = QStringLiteral("youtube.visitor");
+    QHash<QString, QString> settings;
+    const auto launch = [&settings]() {
+        InnerTube::setVisitorStore({
+            [&settings](const QString &key) { return settings.value(key); },
+            [&settings](const QString &key, const QString &value) { settings.insert(key, value); } });
+    };
+    const auto storedAgo = [&settings, &idKey, &atKey](const QString &id, qint64 seconds) {
+        settings.insert(idKey, id);
+        settings.insert(atKey, QDateTime::currentDateTimeUtc().addSecs(-seconds).toString(Qt::ISODate));
+    };
+    const auto storedAt = [&settings, &atKey]() {
+        return QDateTime::fromString(settings.value(atKey), Qt::ISODate);
+    };
+
+    // — 1. a first launch: one fetch however many ask, and it is stored —
+    launch();
+    {
+        InnerTube resolver;
+        InnerTube prefetch;
+        const int from = int(standIn.requests.size());
+        const auto a = playLater(resolver, QStringLiteral("vid-first-a"));
+        const auto b = playLater(prefetch, QStringLiteral("vid-first-b"));
+        waitUntil([a, b]() { return a->done && b->done; }, 20000);
+        const QString id = mintedIds.value(mintedIds.size() - 1);
+        bool named = true;
+        for (int i = from; i < standIn.requests.size(); ++i) {
+            const StandIn::Request &request = standIn.requests.at(i);
+            if (request.path.contains("/player"))
+                named = named && request.header("x-goog-visitor-id") == id.toUtf8() && visitorOf(request) == id;
+        }
+        t.check(!a->url.isEmpty() && !b->url.isEmpty(), QStringLiteral("two objects asking at once are both answered"),
+                a->error + b->error);
+        t.check(orderSince(from) == QLatin1String("sw player player"),
+                QStringLiteral("one sw.js_data fetch for both, before either /player; no home page"), orderSince(from));
+        t.check(named, QStringLiteral("both /player calls name that id, in the header and the context"));
+        t.check(!standIn.requests.at(from).has("cookie"), QStringLiteral("the fetch goes as a first visit, with no cookie"));
+        const QDateTime at = storedAt();
+        t.check(settings.value(idKey) == id && at.isValid() && qAbs(at.secsTo(QDateTime::currentDateTimeUtc())) < 60,
+                QStringLiteral("it is stored, with the time it was fetched"), settings.value(atKey));
+
+        // — 2. one jar: the fetch's cookie reaches an object that never fetched —
+        InnerTube catalog;
+        browseNow(catalog, QStringLiteral("FEtest_jar"), InnerTube::Auth::Anonymous);
+        const QByteArray cookie = standIn.requests.last().header("cookie");
+        t.check(cookie.contains("VISITOR_INFO1_LIVE=TESTCOOKIE"),
+                QStringLiteral("the cookie sw.js_data set goes on another object's browse (one shared jar)"),
+                QString::number(cookie.size()) + QStringLiteral(" bytes of Cookie"));
+    }
+
+    // — 3. the next launch: the stored id, and no fetch at all —
+    {
+        const QString id = settings.value(idKey);
+        launch();
+        InnerTube resolver;
+        const int from = int(standIn.requests.size());
+        const Played played = playNow(resolver, QStringLiteral("vid-stored"));
+        t.check(!played.url.isEmpty() && orderSince(from) == QLatin1String("player")
+                    && lastPlayer().header("x-goog-visitor-id") == id.toUtf8(),
+                QStringLiteral("a stored id: /player at once with it, nothing fetched"), orderSince(from));
+        settle(50);
+        t.check(countSince(from, "/sw.js_data") == 0 && settings.value(idKey) == id,
+                QStringLiteral("and under a day old, it is not renewed after the play"));
+    }
+
+    // — 4. a stored id over a day old is renewed after the first play —
+    {
+        const QString old = settings.value(idKey);
+        storedAgo(old, 2 * 24 * 3600);
+        launch();
+        InnerTube resolver;
+        const int from = int(standIn.requests.size());
+        const Played played = playNow(resolver, QStringLiteral("vid-old"));
+        const bool usedOld = lastPlayer().header("x-goog-visitor-id") == old.toUtf8();
+        waitUntil([&]() { return settings.value(idKey) != old; }, 5000);
+        t.check(!played.url.isEmpty() && usedOld && orderSince(from) == QLatin1String("player sw")
+                    && !settings.value(idKey).isEmpty() && settings.value(idKey) != old,
+                QStringLiteral("two days old: played with at once, then renewed in the background"), orderSince(from));
+        const StandIn::Request renewal = standIn.requests.value(from + 1);
+        InnerTube catalog;
+        browseNow(catalog, QStringLiteral("FEtest_renewed"), InnerTube::Auth::Anonymous);
+        t.check(!renewal.has("cookie") && standIn.requests.last().header("cookie").contains("PLAYERTEST="),
+                QStringLiteral("the renewal goes without the jar's cookies (which a browse still carries), "
+                               "so it is a new id, not the old one re-dated"));
+        const QString renewed = settings.value(idKey);
+        playNow(resolver, QStringLiteral("vid-after-renewal"));
+        t.check(lastPlayer().header("x-goog-visitor-id") == renewed.toUtf8(),
+                QStringLiteral("and the next /player names the new one"));
+    }
+
+    // — 5. past 30 days it is never used —
+    {
+        const QString old = settings.value(idKey);
+        storedAgo(old, 31 * 24 * 3600);
+        launch();
+        InnerTube resolver;
+        const int from = int(standIn.requests.size());
+        const Played played = playNow(resolver, QStringLiteral("vid-expired"));
+        const QByteArray used = lastPlayer().header("x-goog-visitor-id");
+        t.check(!played.url.isEmpty() && orderSince(from) == QLatin1String("sw player") && used != old.toUtf8()
+                    && used == settings.value(idKey).toUtf8(),
+                QStringLiteral("31 days old: dropped, a new one fetched first and stored"), orderSince(from));
+    }
+
+    // — 6. LOGIN_REQUIRED with the stored id: renewed, and asked once more —
+    {
+        const QString stale = QStringLiteral("TESTVISITORstale0001");
+        refused = { stale };
+        storedAgo(stale, 3600);
+        launch();
+        InnerTube resolver;
+        const int from = int(standIn.requests.size());
+        const Played played = playNow(resolver, QStringLiteral("vid-stale"));
+        t.check(!played.url.isEmpty() && orderSince(from) == QLatin1String("player sw player")
+                    && lastPlayer().header("x-goog-visitor-id") != stale.toUtf8(),
+                QStringLiteral("refused with the stored id: a new id, /player once more, answered"),
+                orderSince(from) + QStringLiteral(" ") + played.error);
+        t.check(settings.value(idKey) != stale && !settings.value(idKey).isEmpty(),
+                QStringLiteral("and the new id replaces the stored one"));
+
+        // Two at once, both refused: one renewal between them.
+        storedAgo(stale, 3600);
+        launch();
+        InnerTube other;
+        const int twoFrom = int(standIn.requests.size());
+        const auto a = playLater(resolver, QStringLiteral("vid-stale-a"));
+        const auto b = playLater(other, QStringLiteral("vid-stale-b"));
+        waitUntil([a, b]() { return a->done && b->done; }, 20000);
+        t.check(!a->url.isEmpty() && !b->url.isEmpty() && countSince(twoFrom, "/sw.js_data") == 1
+                    && countSince(twoFrom, "/player") == 4,
+                QStringLiteral("two refused at once share one renewal, and both are answered"), orderSince(twoFrom));
+
+        // — 7. and only once —
+        refuseAll = true;
+        storedAgo(stale, 3600);
+        launch();
+        const int onceFrom = int(standIn.requests.size());
+        const Played again = playNow(resolver, QStringLiteral("vid-refused"));
+        t.check(again.url.isEmpty() && again.error.startsWith(QLatin1String("LOGIN_REQUIRED"))
+                    && orderSince(onceFrom) == QLatin1String("player sw player"),
+                QStringLiteral("refused again with the new id: one retry only, then the tier below"),
+                orderSince(onceFrom) + QStringLiteral(" ") + again.error);
+        const int laterFrom = int(standIn.requests.size());
+        const Played later = playNow(resolver, QStringLiteral("vid-refused-later"));
+        t.check(later.url.isEmpty() && orderSince(laterFrom) == QLatin1String("player"),
+                QStringLiteral("and with an id fetched this launch, LOGIN_REQUIRED is the track's own answer"),
+                orderSince(laterFrom));
+        refuseAll = false;
+        refused.clear();
+    }
+
+    // — 8. sw.js_data fails: the home page, as before —
+    {
+        swFails = true;
+        settings.remove(idKey);
+        settings.remove(atKey);
+        launch();
+        InnerTube resolver;
+        const int from = int(standIn.requests.size());
+        const Played played = playNow(resolver, QStringLiteral("vid-home"));
+        t.check(!played.url.isEmpty() && orderSince(from) == QLatin1String("sw home player")
+                    && settings.value(idKey).startsWith(QLatin1String("TESTVISITORhome"))
+                    && lastPlayer().header("x-goog-visitor-id") == settings.value(idKey).toUtf8(),
+                QStringLiteral("sw.js_data refused: the id is read from the home page"), orderSince(from));
+        swFails = false;
+    }
+
+    // — 9. no id anywhere (the EU consent page): the stored one is kept —
+    {
+        const QString stale = QStringLiteral("TESTVISITORkept0001");
+        refused = { stale };
+        swNoId = true;
+        homeNoId = true;
+        storedAgo(stale, 3600);
+        launch();
+        InnerTube resolver;
+        const int before = int(captured.size());
+        const int from = int(standIn.requests.size());
+        const Played played = playNow(resolver, QStringLiteral("vid-consent"));
+        bool warned = false;
+        for (int i = before; i < captured.size(); ++i)
+            warned = warned || captured.at(i).contains(QLatin1String("gave no visitor id"));
+        t.check(played.url.isEmpty() && orderSince(from) == QLatin1String("player sw home")
+                    && settings.value(idKey) == stale && warned,
+                QStringLiteral("no id from either: the stored id is kept, a warning logged, the tier below asked"),
+                orderSince(from));
+        refused.clear();
+
+        // A first launch with no id to be had: /player still goes, without one.
+        settings.remove(idKey);
+        settings.remove(atKey);
+        launch();
+        InnerTube first;
+        const int noneFrom = int(standIn.requests.size());
+        const Played none = playNow(first, QStringLiteral("vid-no-id"));
+        t.check(!none.url.isEmpty() && orderSince(noneFrom) == QLatin1String("sw home player")
+                    && !lastPlayer().has("x-goog-visitor-id") && visitorOf(lastPlayer()).isEmpty(),
+                QStringLiteral("none to be had on a first launch: /player goes without one, as before"),
+                orderSince(noneFrom));
+        swNoId = false;
+        homeNoId = false;
+    }
+
+    // — 10. the switch back —
+    {
+        storedAgo(QStringLiteral("TESTVISITORswitch0001"), 3600);
+        settings.insert(modeKey, QStringLiteral("home"));
+        launch();
+        InnerTube resolver;
+        const int from = int(standIn.requests.size());
+        const Played played = playNow(resolver, QStringLiteral("vid-mode-home"));
+        t.check(!played.url.isEmpty() && orderSince(from) == QLatin1String("home player")
+                    && settings.value(idKey).isEmpty(),
+                QStringLiteral("youtube.visitor=home: the stored id dropped, the home page fetched, nothing stored"),
+                orderSince(from));
+        settings.insert(modeKey, QStringLiteral("launch"));
+        launch();
+        InnerTube other;
+        const int launchFrom = int(standIn.requests.size());
+        playNow(other, QStringLiteral("vid-mode-launch"));
+        t.check(orderSince(launchFrom) == QLatin1String("sw player") && settings.value(idKey).isEmpty(),
+                QStringLiteral("youtube.visitor=launch: fetched from sw.js_data, kept for the launch only"),
+                orderSince(launchFrom));
+        settings.remove(modeKey);
+    }
+
+    // — 11. Clear history —
+    {
+        settings.remove(idKey);
+        settings.remove(atKey);
+        launch();
+        InnerTube resolver;
+        playNow(resolver, QStringLiteral("vid-before-clear"));
+        const QString before = settings.value(idKey);
+        InnerTube::forgetVisitorData();
+        InnerTube catalog;
+        browseNow(catalog, QStringLiteral("FEtest_cleared"), InnerTube::Auth::Anonymous);
+        t.check(settings.value(idKey).isEmpty() && settings.value(atKey).isEmpty()
+                    && !standIn.requests.last().header("cookie").contains("VISITOR_INFO1_LIVE"),
+                QStringLiteral("forgotten: the stored id and the jar's cookies are gone"));
+        const int from = int(standIn.requests.size());
+        playNow(resolver, QStringLiteral("vid-after-clear"));
+        t.check(orderSince(from) == QLatin1String("sw player") && !settings.value(idKey).isEmpty()
+                    && settings.value(idKey) != before,
+                QStringLiteral("and the next play starts as a first visit, with a new id"), orderSince(from));
+    }
+
+    // — 12. the account's own id, kept apart from the anonymous one —
+    {
+        InnerTube::AccountHook hook;
+        hook.headers = [](InnerTube::Auth auth, const QByteArray &, QByteArray *cookie, QByteArray *) -> quint64 {
+            if (auth == InnerTube::Auth::Anonymous)
+                return 0;
+            *cookie = "SAPISID=TESTSAPISID123";
+            return 7;
+        };
+        InnerTube::setAccountHook(hook);
+        const QString sessionId = QStringLiteral("TESTSESSIONvisitor0001");
+        const QString anonymous = settings.value(idKey);
+        InnerTube tube;
+        browseNow(tube, QStringLiteral("FEtest_signed_in"), InnerTube::Auth::IfSignedIn);
+        t.check(!standIn.requests.last().has("x-goog-visitor-id") && visitorOf(standIn.requests.last()).isEmpty(),
+                QStringLiteral("with no account id supplied, the account's calls name no visitor, as before"));
+        InnerTube::setSessionVisitorData(sessionId);
+        browseNow(tube, QStringLiteral("FEtest_signed_in"), InnerTube::Auth::IfSignedIn);
+        t.check(standIn.requests.last().header("x-goog-visitor-id") == sessionId.toUtf8()
+                    && visitorOf(standIn.requests.last()) == sessionId,
+                QStringLiteral("with one: the account's call names the account's id"));
+        browseNow(tube, QStringLiteral("FEtest_anonymous"), InnerTube::Auth::Anonymous);
+        t.check(!standIn.requests.last().has("x-goog-visitor-id"),
+                QStringLiteral("an anonymous browse names neither"));
+        playNow(tube, QStringLiteral("vid-signed-in"));
+        t.check(lastPlayer().header("x-goog-visitor-id") == anonymous.toUtf8() && visitorOf(lastPlayer()) == anonymous,
+                QStringLiteral("and /player, anonymous, keeps the anonymous id: the two never meet"));
+        InnerTube::setSessionVisitorData(QString());
+        InnerTube::setAccountHook({});
+    }
+
+    // — 13. the log —
+    {
+        g_captured = nullptr;
+        qInstallMessageHandler(g_previousHandler);
+        QStringList found;
+        for (const QString &line : std::as_const(captured)) {
+            if (line.contains(QLatin1String("TESTVISITOR")) || line.contains(QLatin1String("TESTCOOKIE"))
+                || line.contains(QLatin1String("TESTSESSION")) || line.contains(QLatin1String("TESTSAPISID")))
+                found << line.left(80);
+        }
+        t.check(found.isEmpty(), QStringLiteral("none of %1 lines logged holds a visitor id or a cookie value")
+                                     .arg(captured.size()), found.join(QStringLiteral(" | ")));
+    }
+
+    InnerTube::setVisitorStore({});
     InnerTube::setTestServer(QString());
     settle(50);
     return t.finish();

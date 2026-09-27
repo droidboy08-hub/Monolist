@@ -238,9 +238,28 @@ public:
     // Credits as QML reads them: [{ text, id, link }], `link` for a name.
     static QVariantList creditsToVariant(const QList<Credit> &credits);
 
-    // `warmUp` opens the TLS connections and fetches the visitor id at once,
-    // for the objects that play and search. One that only makes the odd
-    // call (YtmSession's check) goes without.
+    // Where the visitor id /player needs is kept between launches, with the
+    // time it was fetched: reads and writes of the settings table, set once
+    // at start (main.cpp) before any InnerTube is made. Unset, the id lasts
+    // the launch. Setting one starts the id afresh (the self-test does).
+    struct VisitorStore {
+        std::function<QString(const QString &key)> read;
+        std::function<void(const QString &key, const QString &value)> write;
+    };
+    static void setVisitorStore(VisitorStore store);
+    // Clear history: the anonymous visitor id, its stored copy and YouTube's
+    // anonymous cookies are dropped, and the next call is a first visit.
+    static void forgetVisitorData();
+    // The signed-in account's own visitor id, for the sign-in work. It goes
+    // on the calls that carry the account, where it outranks the anonymous
+    // one, and on no other; the anonymous one never goes on those. Empty
+    // takes it away again.
+    static void setSessionVisitorData(const QString &visitorData);
+
+    // `warmUp` opens the TLS connections, and has the one visitor id every
+    // object shares fetched unless one is stored, for the objects that play
+    // and search. One that only makes the odd call (YtmSession's check) goes
+    // without. Every object on the application thread shares one cookie jar.
     explicit InnerTube(QObject *parent = nullptr, bool warmUp = true);
 
     // For the self-tests only: every request goes to this address
@@ -411,17 +430,18 @@ private:
     static QStringList parseSuggestions(const QJsonObject &root);
     static QList<Track> parseRadio(const QJsonObject &root);
 
-    // /player is refused with LOGIN_REQUIRED for most music without one of
-    // these: an anonymous visitor id, scraped from the YouTube home page and
-    // good for the session. Fetched once, in the background, at start-up, so
-    // the first track does not pay for it.
-    void fetchVisitorData();
+    // /player is refused with LOGIN_REQUIRED for most music without an
+    // anonymous visitor id. One is held for the whole process (innertube.cpp);
+    // `then` runs at once when it is there, and otherwise once a fetch has
+    // answered, whether or not it brought one.
     void withVisitorData(std::function<void()> then);
+    // One /player call; `retried` once it has been asked again with a new
+    // visitor id, which happens at most once.
+    void askPlayer(const QString &videoId,
+                   std::function<void(const QString &url, int itag, const QString &error)> done,
+                   bool retried);
 
     QNetworkAccessManager *m_network;
-    QString m_visitorData;
-    bool m_visitorPending = false;
-    std::vector<std::function<void()>> m_visitorWaiters;
     Slot m_search;
     Slot m_suggest;
     Slot m_radio;

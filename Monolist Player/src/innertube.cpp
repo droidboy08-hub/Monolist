@@ -1,14 +1,19 @@
 #include "innertube.h"
 
+#include <QCoreApplication>
 #include <QDate>
+#include <QDateTime>
+#include <QElapsedTimer>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonParseError>
 #include <QLocale>
 #include <QNetworkAccessManager>
+#include <QNetworkCookieJar>
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QRegularExpression>
+#include <QThread>
 #include <QTimer>
 
 #include <algorithm>
@@ -105,6 +110,290 @@ InnerTube::AccountHook g_account;
 QString g_testServer;
 // Told of every artist name an answer links (ArtistLinks). Set once at start.
 std::function<void(const QString &, const QString &, bool)> g_artistSeen;
+
+// — the visitor id, one for the whole process —
+//
+// /player refuses most music (LOGIN_REQUIRED) unless the request names a
+// visitor: the anonymous id YouTube hands every browser on its first visit.
+// Each InnerTube object used to fetch its own at start-up, six copies of the
+// 885 KB home page, and a track played the moment the window was up waited a
+// median 434.5 ms for its object's copy. Now one id serves every object. It
+// is kept in settings with the time it was fetched, so the next launch has it
+// at once, and it comes from www.youtube.com/sw.js_data, under 3 KB, with the
+// home page as the fallback.
+//
+// A stored id is something YouTube can follow from launch to launch, as it
+// can the cookie it stands for. So it is never used past 30 days, one over a
+// day old is replaced once something has played, and Clear history forgets
+// it. It is not a secret — it opens nothing — which is why settings, rather
+// than the secret store, is where it lives. The account's own id
+// (setSessionVisitorData) goes only on calls that carry the account.
+//
+// The setting "youtube.visitor" switches it back: "launch" keeps the id for
+// the launch only, as before, and "home" also takes it from the home page.
+const QString kVisitorKey = QStringLiteral("youtube.visitor_data");
+const QString kVisitorAtKey = QStringLiteral("youtube.visitor_data_at");
+const QString kVisitorModeKey = QStringLiteral("youtube.visitor");
+constexpr qint64 kVisitorMaxAgeSecs = 30 * 24 * 3600;
+constexpr qint64 kVisitorRefreshAgeSecs = 24 * 3600;
+// After the first play's /player answer: out of the way of its download.
+constexpr int kVisitorRefreshDelayMs = 10000;
+
+// One jar for every InnerTube object. YouTube's anonymous cookies
+// (VISITOR_INFO1_LIVE, YSC) come on whichever answer sets them, and still
+// reach browse, search and next, as they did when each object fetched its
+// own id into its own jar. The account's cookies never enter it (post()).
+class SharedJar : public QNetworkCookieJar
+{
+public:
+    using QNetworkCookieJar::QNetworkCookieJar;
+    void clear() { setAllCookies({}); }
+};
+
+struct Visitor {
+    enum class Mode { Stored, Launch, HomePage };
+    InnerTube::VisitorStore store;
+    Mode mode = Mode::Stored;
+    bool loaded = false;
+    QString anonymous;         // what every anonymous /player names
+    QDateTime fetchedAt;       // when YouTube gave it, UTC
+    QString fromSettings;      // the id this launch found stored, for LOGIN_REQUIRED
+    QString session;           // the signed-in account's own
+    bool refreshDue = false;   // stored and over a day old: replaced after the first play
+    bool pending = false;
+    quint64 generation = 0;    // a new store drops what an older fetch brings back
+    std::vector<std::function<void()>> waiters;
+    QPointer<QNetworkAccessManager> network;
+    QPointer<SharedJar> jar;
+};
+Visitor g_visitor;
+
+SharedJar *sharedJar()
+{
+    if (!g_visitor.jar)
+        g_visitor.jar = new SharedJar(QCoreApplication::instance());
+    return g_visitor.jar;
+}
+
+// Hands `manager` the shared jar. setCookieJar makes the manager its parent,
+// and so the last object made would take the jar with it when it went; it
+// belongs to the application instead. A jar is not thread-safe, so a manager
+// on another thread would keep its own; every InnerTube lives on this one.
+void shareJar(QNetworkAccessManager *manager)
+{
+    QCoreApplication *app = QCoreApplication::instance();
+    if (!app || manager->thread() != app->thread())
+        return;
+    SharedJar *jar = sharedJar();
+    manager->setCookieJar(jar);
+    jar->setParent(app);
+}
+
+// The fetch's own manager, the application's, so a fetch outlives whichever
+// object happened to ask for it.
+QNetworkAccessManager *visitorNetwork()
+{
+    if (!g_visitor.network) {
+        g_visitor.network = new QNetworkAccessManager(QCoreApplication::instance());
+        shareJar(g_visitor.network);
+    }
+    return g_visitor.network;
+}
+
+void writeVisitor(const QString &id, const QDateTime &at)
+{
+    if (!g_visitor.store.write)
+        return;
+    g_visitor.store.write(kVisitorKey, id);
+    g_visitor.store.write(kVisitorAtKey, at.isValid() ? at.toString(Qt::ISODate) : QString());
+}
+
+// What settings hold, read once a launch. Never the id itself in the log.
+void loadVisitor()
+{
+    Visitor &v = g_visitor;
+    if (v.loaded)
+        return;
+    v.loaded = true;
+    if (!v.store.read)
+        return;
+    const QString mode = v.store.read(kVisitorModeKey);
+    v.mode = mode == QLatin1String("launch") ? Visitor::Mode::Launch
+           : mode == QLatin1String("home")   ? Visitor::Mode::HomePage
+                                              : Visitor::Mode::Stored;
+    const QString id = v.store.read(kVisitorKey);
+    if (id.isEmpty())
+        return;
+    if (v.mode != Visitor::Mode::Stored) {
+        writeVisitor({}, {});
+        qInfo("innertube: youtube.visitor=%s keeps visitor ids for one launch; the stored one is dropped",
+              qPrintable(mode));
+        return;
+    }
+    const QDateTime at = QDateTime::fromString(v.store.read(kVisitorAtKey), Qt::ISODate);
+    const qint64 age = at.isValid() ? at.secsTo(QDateTime::currentDateTimeUtc()) : 0;
+    // A date well ahead of the clock means the clock went back: its age
+    // cannot be told, so it is treated as too old.
+    if (!at.isValid() || age < -3600 || age > kVisitorMaxAgeSecs) {
+        writeVisitor({}, {});
+        qInfo("innertube: the stored visitor id is %s; a new one is fetched",
+              age > kVisitorMaxAgeSecs ? "over 30 days old" : "of no known age");
+        return;
+    }
+    v.anonymous = id;
+    v.fetchedAt = at;
+    v.fromSettings = id;
+    v.refreshDue = age > kVisitorRefreshAgeSecs;
+    qInfo("innertube: using the stored visitor id, fetched %lld h ago%s", (long long)(qMax<qint64>(age, 0) / 3600),
+          v.refreshDue ? "; a new one is fetched after the first play" : "");
+}
+
+// An id is not used past the limit, even by a launch that has run for days.
+void expireVisitor()
+{
+    Visitor &v = g_visitor;
+    if (v.anonymous.isEmpty() || !v.fetchedAt.isValid()
+        || v.fetchedAt.secsTo(QDateTime::currentDateTimeUtc()) <= kVisitorMaxAgeSecs)
+        return;
+    v.anonymous.clear();
+    v.fetchedAt = QDateTime();
+    if (v.mode == Visitor::Mode::Stored)
+        writeVisitor({}, {});
+    qInfo("innertube: the visitor id is 30 days old; a new one is fetched");
+}
+
+bool looksLikeVisitorId(const QString &id)
+{
+    static const QRegularExpression shape(QStringLiteral("^[A-Za-z0-9_%=\\-]{16,4096}$"));
+    return shape.match(id).hasMatch();
+}
+
+// sw.js_data is the service worker's start-up data: ")]}'" and an array
+// without keys, which held the id at [0][2][0][0][13] and again at [0][2][6]
+// when this was written (September 2026). Taken only if it looks like one;
+// anything else sends the fetch on to the home page.
+QString visitorFromSwJsData(const QByteArray &body)
+{
+    const qsizetype start = body.indexOf('[');
+    if (start < 0)
+        return {};
+    const QJsonValue root = QJsonDocument::fromJson(body.mid(start)).array();
+    for (const QJsonValue &candidate : { dig(root, { "#0", "#2", "#0", "#0", "#13" }),
+                                         dig(root, { "#0", "#2", "#6" }) }) {
+        const QString id = candidate.toString();
+        if (looksLikeVisitorId(id))
+            return id;
+    }
+    return {};
+}
+
+QString visitorFromHomePage(const QByteArray &body)
+{
+    // A custom delimiter: the pattern itself contains `)"`, which would
+    // close an ordinary R"( … )" early.
+    static const QRegularExpression visitor(QStringLiteral(R"RX("visitorData":"(.*?)")RX"));
+    const QRegularExpressionMatch match = visitor.match(QString::fromUtf8(body));
+    if (!match.hasMatch())
+        return {};
+    // The page carries it JSON-escaped ("\x3d" and friends), so it is
+    // unescaped by parsing it as the JSON string it is.
+    const QJsonDocument quoted = QJsonDocument::fromJson("[\"" + match.captured(1).toUtf8() + "\"]");
+    return quoted.array().at(0).toString();
+}
+
+void settleVisitor(const QString &id, const char *source, const QString &why, qint64 ms, qint64 bytes)
+{
+    Visitor &v = g_visitor;
+    v.pending = false;
+    if (!id.isEmpty()) {
+        v.anonymous = id;
+        v.fetchedAt = QDateTime::currentDateTimeUtc();
+        v.refreshDue = false;
+        const bool store = v.mode == Visitor::Mode::Stored && v.store.write;
+        if (store)
+            writeVisitor(v.anonymous, v.fetchedAt);
+        qInfo("innertube: a new visitor id from %s, in %lld ms (%lld bytes)%s", source, (long long)ms,
+              (long long)bytes, store ? "; stored" : "");
+    } else {
+        // In the EU most likely the consent page. An id already held, stored
+        // or from earlier, is still better than none.
+        qWarning("innertube: YouTube gave no visitor id (%s); %s", qPrintable(why),
+                 v.anonymous.isEmpty() ? "/player goes without one" : "keeping the one held");
+    }
+    // Whether or not it worked: anyone waiting should stop waiting. An empty
+    // id still gets a request out, and it may still be answered.
+    const auto waiters = std::exchange(v.waiters, {});
+    for (const auto &waiter : waiters)
+        waiter();
+}
+
+void fetchVisitorFrom(bool homePage)
+{
+    const QString base = g_testServer.isEmpty() ? QStringLiteral("https://www.youtube.com") : g_testServer;
+    QNetworkRequest request(QUrl(base + (homePage ? QStringLiteral("/") : QStringLiteral("/sw.js_data"))));
+    request.setHeader(QNetworkRequest::UserAgentHeader, kVisionUserAgent);
+    request.setTransferTimeout(kPlayerTimeoutMs);
+    // Asked as a first visit. With the jar's cookies YouTube hands back the
+    // id they name, and a renewed id would be the old one with a new date,
+    // which would make the 30-day limit a fiction. What the answer sets goes
+    // into the shared jar as usual.
+    request.setAttribute(QNetworkRequest::CookieLoadControlAttribute, QNetworkRequest::Manual);
+    const quint64 generation = g_visitor.generation;
+    QElapsedTimer clock;
+    clock.start();
+    QNetworkAccessManager *network = visitorNetwork();
+    QNetworkReply *reply = network->get(request);
+    QObject::connect(reply, &QNetworkReply::finished, network, [reply, homePage, generation, clock]() {
+        reply->deleteLater();
+        if (g_visitor.generation != generation)
+            return;   // started afresh meanwhile (a new store)
+        const bool ok = reply->error() == QNetworkReply::NoError;
+        const QByteArray body = ok ? reply->readAll() : QByteArray();
+        const QString id = homePage ? visitorFromHomePage(body) : visitorFromSwJsData(body);
+        const QString why = !ok ? reply->errorString()
+                          : reply->url().host().startsWith(QLatin1String("consent."))
+                              ? QStringLiteral("redirected to the consent page")
+                              : QStringLiteral("none in the answer");
+        if (id.isEmpty() && !homePage) {
+            qInfo("innertube: sw.js_data gave no visitor id (%s); asking the home page", qPrintable(why));
+            fetchVisitorFrom(/*homePage=*/true);
+            return;
+        }
+        settleVisitor(id, homePage ? "the home page" : "sw.js_data", why, clock.elapsed(), body.size());
+    });
+}
+
+// Starts a fetch unless one is on its way; the waiters hear when it answers,
+// with an id or without.
+void fetchVisitor()
+{
+    Visitor &v = g_visitor;
+    if (v.pending)
+        return;
+    v.pending = true;
+    fetchVisitorFrom(v.mode == Visitor::Mode::HomePage);
+}
+
+// For a refused call: `then` runs once there is an id other than `used`,
+// or a fetch has come back without one. A fetch on its way is joined.
+void renewVisitor(const QString &used, std::function<void()> then)
+{
+    Visitor &v = g_visitor;
+    if (!v.anonymous.isEmpty() && v.anonymous != used)
+        return then();
+    v.waiters.push_back(std::move(then));
+    fetchVisitor();
+}
+
+// Once the first play has its answer: a stored id over a day old is
+// replaced in the background, so the next launch starts with a fresh one.
+void renewVisitorSoon()
+{
+    g_visitor.refreshDue = false;
+    QTimer::singleShot(g_testServer.isEmpty() ? kVisitorRefreshDelayMs : 0, visitorNetwork(), []() {
+        fetchVisitor();
+    });
+}
 
 // The web client's own locale, so results follow the user's language and the
 // region they are browsing. YouTube Music and YouTube name themselves
@@ -691,10 +980,49 @@ void InnerTube::setTestServer(const QString &baseUrl)
     g_testServer = baseUrl;
 }
 
+void InnerTube::setVisitorStore(VisitorStore store)
+{
+    Visitor &v = g_visitor;
+    ++v.generation;
+    v.store = std::move(store);
+    v.mode = Visitor::Mode::Stored;
+    v.loaded = false;
+    v.anonymous.clear();
+    v.fetchedAt = QDateTime();
+    v.fromSettings.clear();
+    v.refreshDue = false;
+    v.pending = false;
+    if (v.jar)
+        v.jar->clear();
+    // Nobody is left waiting on a fetch whose answer will now be dropped.
+    const auto waiters = std::exchange(v.waiters, {});
+    for (const auto &waiter : waiters)
+        waiter();
+}
+
+void InnerTube::forgetVisitorData()
+{
+    Visitor &v = g_visitor;
+    v.anonymous.clear();
+    v.fetchedAt = QDateTime();
+    v.fromSettings.clear();
+    v.refreshDue = false;
+    writeVisitor({}, {});
+    if (v.jar)
+        v.jar->clear();
+    qInfo("innertube: forgot the visitor id and YouTube's anonymous cookies");
+}
+
+void InnerTube::setSessionVisitorData(const QString &visitorData)
+{
+    g_visitor.session = visitorData;
+}
+
 InnerTube::InnerTube(QObject *parent, bool warmUp)
     : QObject(parent)
     , m_network(new QNetworkAccessManager(this))
 {
+    shareJar(m_network);
     if (!warmUp || !g_testServer.isEmpty())
         return;
     // Open the TLS connections now, so the first search and the first track
@@ -702,58 +1030,26 @@ InnerTube::InnerTube(QObject *parent, bool warmUp)
     // the handshake. www.youtube.com is where /player is asked.
     m_network->connectToHostEncrypted(QStringLiteral("music.youtube.com"));
     m_network->connectToHostEncrypted(QStringLiteral("www.youtube.com"));
-    // Off the critical path on purpose: by the time anything is played, this
-    // has usually already answered.
-    fetchVisitorData();
-}
-
-// The anonymous visitor id, scraped from the home page. Without one, /player
-// answers LOGIN_REQUIRED for most music.
-void InnerTube::fetchVisitorData()
-{
-    if (m_visitorPending || !m_visitorData.isEmpty())
-        return;
-    m_visitorPending = true;
-
-    QNetworkRequest request(QUrl(QStringLiteral("https://www.youtube.com/")));
-    request.setHeader(QNetworkRequest::UserAgentHeader, kVisionUserAgent);
-    request.setTransferTimeout(kPlayerTimeoutMs);
-    QNetworkReply *reply = m_network->get(request);
-
-    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
-        reply->deleteLater();
-        m_visitorPending = false;
-        if (reply->error() == QNetworkReply::NoError) {
-            // A custom delimiter: the pattern itself contains `)"`, which
-            // would close an ordinary R"( … )" early.
-            static const QRegularExpression visitor(
-                QStringLiteral(R"RX("visitorData":"(.*?)")RX"));
-            const QRegularExpressionMatch match = visitor.match(QString::fromUtf8(reply->readAll()));
-            if (match.hasMatch()) {
-                // The page carries it JSON-escaped ("\x3d" and friends), so it
-                // is unescaped by parsing it as the JSON string it is.
-                const QJsonDocument quoted = QJsonDocument::fromJson(
-                    "[\"" + match.captured(1).toUtf8() + "\"]");
-                m_visitorData = quoted.array().at(0).toString();
-            }
-        }
-        // Whether or not it worked: anyone waiting should stop waiting. An
-        // empty id still gets a request out, and it may still be answered.
-        const auto waiters = std::exchange(m_visitorWaiters, {});
-        for (const auto &waiter : waiters)
-            waiter();
-    });
+    // The visitor id: the stored one, or else fetched now, off the critical
+    // path and once however many objects are made.
+    loadVisitor();
+    if (g_visitor.anonymous.isEmpty())
+        fetchVisitor();
 }
 
 void InnerTube::withVisitorData(std::function<void()> then)
 {
-    if (!m_visitorData.isEmpty() || !m_visitorPending) {
-        if (m_visitorData.isEmpty())
-            fetchVisitorData();           // a previous attempt failed; try again
-        else
-            return then();
-    }
-    m_visitorWaiters.push_back(std::move(then));
+    loadVisitor();
+    expireVisitor();
+    if (!g_visitor.anonymous.isEmpty())
+        return then();
+    // The process holds the waiters, so one whose object has gone by the
+    // time the fetch answers must not be called.
+    g_visitor.waiters.push_back([self = QPointer<InnerTube>(this), then = std::move(then)]() {
+        if (self)
+            then();
+    });
+    fetchVisitor();   // unless one is on its way already
 }
 
 QNetworkReply *InnerTube::post(Client client, const QString &endpoint, QJsonObject body, int timeoutMs,
@@ -769,13 +1065,17 @@ QNetworkReply *InnerTube::post(Client client, const QString &endpoint, QJsonObje
     if (!g_testServer.isEmpty())
         host = g_testServer;
 
-    QJsonObject context = clientContext(client);
-    if (client == Client::Player && !m_visitorData.isEmpty()) {
+    // /player names the anonymous visitor (withVisitorData). The account
+    // only ever goes on Music calls, so the two never meet.
+    const QString visitor = client == Client::Player ? g_visitor.anonymous : QString();
+    const auto nameVisitor = [](QJsonObject &context, const QString &id) {
         QJsonObject inner = context.value(QStringLiteral("client")).toObject();
-        inner.insert(QStringLiteral("visitorData"), m_visitorData);
+        inner.insert(QStringLiteral("visitorData"), id);
         context.insert(QStringLiteral("client"), inner);
-    }
-    body.insert(QStringLiteral("context"), context);
+    };
+    QJsonObject context = clientContext(client);
+    if (!visitor.isEmpty())
+        nameVisitor(context, visitor);
 
     QNetworkRequest request(QUrl(host + QStringLiteral("/youtubei/v1/") + endpoint
                                  + QStringLiteral("?prettyPrint=false")));
@@ -783,8 +1083,8 @@ QNetworkReply *InnerTube::post(Client client, const QString &endpoint, QJsonObje
     request.setHeader(QNetworkRequest::UserAgentHeader, agent);
     request.setRawHeader("Origin", host.toUtf8());
     request.setRawHeader("Referer", (host + QLatin1Char('/')).toUtf8());
-    if (client == Client::Player && !m_visitorData.isEmpty())
-        request.setRawHeader("X-Goog-Visitor-Id", m_visitorData.toUtf8());
+    if (!visitor.isEmpty())
+        request.setRawHeader("X-Goog-Visitor-Id", visitor.toUtf8());
     request.setTransferTimeout(timeoutMs);
 
     // The account, on the few calls that ask for it and only while there is
@@ -815,12 +1115,19 @@ QNetworkReply *InnerTube::post(Client client, const QString &endpoint, QJsonObje
                 request.setRawHeader("Authorization", authorization);
             request.setRawHeader("X-Origin", host.toUtf8());
             request.setRawHeader("X-Goog-AuthUser", "0");
+            // The account's own visitor id, once the sign-in work supplies
+            // one. Until then its calls name none, as they always have.
+            if (!g_visitor.session.isEmpty()) {
+                nameVisitor(context, g_visitor.session);
+                request.setRawHeader("X-Goog-Visitor-Id", g_visitor.session.toUtf8());
+            }
         } else {
             account = 0;
         }
     }
     if (session)
         *session = account;
+    body.insert(QStringLiteral("context"), context);
     return m_network->post(request, QJsonDocument(body).toJson(QJsonDocument::Compact));
 }
 
@@ -951,8 +1258,17 @@ void InnerTube::player(const QString &videoId,
         done({}, 0, QStringLiteral("no video id"));
         return;
     }
+    askPlayer(videoId, std::move(done), /*retried=*/false);
+}
 
-    withVisitorData([this, videoId, done = std::move(done)]() mutable {
+void InnerTube::askPlayer(const QString &videoId,
+                          std::function<void(const QString &url, int itag, const QString &error)> done,
+                          bool retried)
+{
+    withVisitorData([this, videoId, retried, done = std::move(done)]() mutable {
+        // The id post() puts on this call: afterwards it tells whether the
+        // call went with the stored id, and whether a newer one has come.
+        const QString visitor = g_visitor.anonymous;
         const QJsonObject body{
             { QStringLiteral("videoId"), videoId },
             // Both are what the app itself sends; without them anything
@@ -961,7 +1277,7 @@ void InnerTube::player(const QString &videoId,
             { QStringLiteral("racyCheckOk"), true }
         };
         send(Client::Player, QStringLiteral("player"), body, kPlayerTimeoutMs, /*slot=*/nullptr,
-             [done](const QJsonObject &root, const QString &error) {
+             [this, videoId, retried, visitor, done](const QJsonObject &root, const QString &error) {
                  if (!error.isEmpty()) {
                      done({}, 0, error);
                      return;
@@ -971,10 +1287,41 @@ void InnerTube::player(const QString &videoId,
                      // LOGIN_REQUIRED, UNPLAYABLE, AGE_VERIFICATION_REQUIRED:
                      // all of them mean the tier below should try.
                      const QString reason = dig(root, { "playabilityStatus", "reason" }).toString();
-                     done({}, 0, reason.isEmpty() ? status
-                                                  : status + QStringLiteral(": ") + reason);
+                     const QString refused = reason.isEmpty() ? status : status + QStringLiteral(": ") + reason;
+                     // Except once. A stored id YouTube no longer honours is
+                     // answered LOGIN_REQUIRED, exactly as having none is, and
+                     // a new id and a second /player cost a few hundred ms
+                     // where yt-dlp costs seconds. Only for the id this launch
+                     // found stored: with one fetched this launch,
+                     // LOGIN_REQUIRED is the track's own answer.
+                     if (status == QLatin1String("LOGIN_REQUIRED") && !retried && !visitor.isEmpty()
+                         && visitor == g_visitor.fromSettings) {
+                         qInfo("innertube: %s refused with the stored visitor id (LOGIN_REQUIRED); "
+                               "fetching a new id and asking once more", qPrintable(videoId));
+                         renewVisitor(visitor, [self = QPointer<InnerTube>(this), videoId, visitor, refused, done]() {
+                             if (!self)
+                                 return;
+                             if (g_visitor.anonymous.isEmpty() || g_visitor.anonymous == visitor) {
+                                 qInfo("innertube: %s: no new visitor id to ask with", qPrintable(videoId));
+                                 done({}, 0, refused);
+                                 return;
+                             }
+                             self->askPlayer(videoId, done, /*retried=*/true);
+                         });
+                         return;
+                     }
+                     if (retried)
+                         qInfo("innertube: %s refused again with a new visitor id: %s", qPrintable(videoId),
+                               qPrintable(status));
+                     done({}, 0, refused);
                      return;
                  }
+                 if (retried)
+                     qInfo("innertube: %s answered with the new visitor id", qPrintable(videoId));
+                 // The first play has its answer: a stored id over a day old
+                 // is replaced now, in the background.
+                 if (g_visitor.refreshDue)
+                     renewVisitorSoon();
 
                  // The best audio-only stream that carries a plain URL. A
                  // format offering only `signatureCipher` needs the player

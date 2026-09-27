@@ -143,6 +143,10 @@ int main(int argc, char *argv[])
         // stand-in server on this computer; in MONOLIST_DATA_DIR only.
         if (arguments.contains(QStringLiteral("--ytm-session-test")))
             return runYtmSessionSelfTest(&library) == 0 ? 0 : 1;
+        // The one visitor id every InnerTube shares, against the same
+        // stand-in, with its store in memory.
+        if (arguments.contains(QStringLiteral("--visitor-test")))
+            return runVisitorSelfTest() == 0 ? 0 : 1;
         // What a failed or cancelled download may delete, on invented files,
         // and where downloads go under a scratch data folder
         // (downloadselftest.cpp); in MONOLIST_DATA_DIR only.
@@ -192,6 +196,15 @@ int main(int argc, char *argv[])
     InnerTube::setRegionRejectedHandler([&library](const QString &code) {
         library.dropRegion(code);
     });
+    // The visitor id /player needs, kept in settings between launches so the
+    // first track does not wait for one (innertube.cpp). Taken away again
+    // before the library goes, as the artist hook is.
+    InnerTube::setVisitorStore({
+        [&library](const QString &key) { return library.settingValue(key); },
+        [&library](const QString &key, const QString &value) { library.setSetting(key, value); } });
+    struct VisitorStoreGuard {
+        ~VisitorStoreGuard() { InnerTube::setVisitorStore({}); }
+    } visitorStoreGuard;
 
     // The YouTube Music account, if one was imported: restored from the
     // secret store and checked a few seconds in. Made here, before anything

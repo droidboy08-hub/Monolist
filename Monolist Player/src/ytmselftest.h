@@ -25,3 +25,12 @@ int runCookieImportSelfTest();
 // value in the log. Refuses to run without MONOLIST_DATA_DIR, since it
 // replaces the stored session and the account setting.
 int runYtmSessionSelfTest(Library *library);
+
+// --visitor-test: the one visitor id every InnerTube shares, against the same
+// stand-in: one sw.js_data fetch however many ask, a stored id used with no
+// fetch at all, the home page when sw.js_data fails, the 30-day limit, the
+// renewal after the first play, LOGIN_REQUIRED renewed and asked once more
+// (and only once), the jar shared, Clear history, the switch back, the
+// account's id kept apart, and no id or cookie value in the log. Its store
+// is in memory: no data folder is touched.
+int runVisitorSelfTest();

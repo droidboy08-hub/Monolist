@@ -86,7 +86,7 @@ Priority runs from 1 (first) to 9. Size: S under an hour, M a few hours, L a day
   Done when: Font.Bold becomes Theme.weightMedium or Theme.weightBlack (or a Bold face is bundled). The window sets the font and a palette from Theme, or a styled tooltip component is used, and the two TextFields match the other inputs.
 - [ ] **G05** Home's 'Open album' button shows a play icon *(P8, S)*
   Done when: The button shows an arrow, or actually plays the release, and its label follows the release type.
-- [ ] **G06** Six InnerTube instances each download youtube.com at startup for a visitor ID only one of them uses *(P8, S)*
+- [x] **G06** Six InnerTube instances each download youtube.com at startup for a visitor ID only one of them uses *(P8, S)*
   Done when: The visitor ID is fetched only by the instance that resolves streams, or shared, so it is downloaded once per session.
 - [ ] **G07** The self-tests can't fail, and there are no automated tests *(P8, M)*
   Done when: Each self-test exits non-zero when an expectation fails. A CTest target checks the golden match keys, a taste profile built from fixed events, and fixed search results when a catalogue path is given, and GitHub CI can run it.
@@ -300,7 +300,7 @@ Areas the audit did not cover, or covered thinly. Each needs a look before the l
 - Window size and position are not remembered: Main.qml:11-12 opens at a fixed 1512×945, and no window-geometry saving was found. Behaviour across multiple monitors and mixed display scaling was not checked.
 - Running the app twice: there is no single-instance guard (no QLockFile or QLocalServer), so a second launch opens another window on the same SQLite database and a second libmpv.
 - Localisation: no qsTr anywhere, so every string is hard-coded English. Date and number formats were not checked.
-- EU consent page: fetchVisitorData downloads www.youtube.com (innertube.cpp:371-405). In EU countries that can redirect to consent.youtube.com with no visitor ID, which would push most tracks off the fast tier. The iPhone app has a YouTubeConsentCookie for this, and nobody tested it here.
+- EU consent page: the visitor ID now comes from www.youtube.com/sw.js_data, with the home page as the fallback, and is stored for up to 30 days (innertube.cpp). A fetch that finds no ID (as a redirect to consent.youtube.com would) keeps the stored one and logs a warning, but a first launch in the EU could still start with none, which would push most tracks off the fast tier. The iPhone app has a YouTubeConsentCookie for this, and nobody tested it here.
 - Performance with large libraries and long queues: whether track lists render only visible rows, memory use, and the cost of the artwork cache were not examined.
 - Playback features a desktop user might expect were not assessed: gapless playback (designed in Lumen), crossfade, an equalizer and playback speed.
 - Drag and drop (songs onto sidebar playlists), selecting several songs at once, desktop notifications on track change, and a system tray or mini-player window were not examined.
