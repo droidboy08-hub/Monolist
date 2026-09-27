@@ -530,8 +530,10 @@ int main(int argc, char *argv[])
                 systemPip.start();
             });
             for (int tick = -2; after + tick < seconds; ++tick) {
-                QTimer::singleShot((after + tick) * 1000, &app, [&systemPip]() {
+                QTimer::singleShot((after + tick) * 1000, &app, [&systemPip, tick]() {
                     qWarning("selftest: pip %s", qPrintable(systemPip.diagnostics()));
+                    if (tick == 6)
+                        qWarning("selftest: windows\n%s", qPrintable(systemPip.windowTree()));
                 });
             }
         }

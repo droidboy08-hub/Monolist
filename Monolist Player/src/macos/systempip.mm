@@ -68,6 +68,30 @@ struct SystemPip::Private
 
     QTimer startPoll;
     int startTries = 0;
+    // While the system's window is up: the layer kept the size of what holds
+    // it, as that window is opened, dragged larger or smaller, and closed.
+    QTimer fitPoll;
+
+    // The system's window mirrors this layer at the layer's own size, so it
+    // is made as large as the picture it shows — and kept just outside the
+    // app's window, where it is never seen there. At two points square, the
+    // system's window showed a dot in its corner.
+    void fitLayer()
+    {
+        const int width = videoWidth.load();
+        const int height = videoHeight.load();
+        const double aspect = width > 0 && height > 0 ? double(width) / double(height) : 16.0 / 9.0;
+        const CGFloat w = kLongestSide;
+        const CGFloat h = std::round(kLongestSide / aspect);
+        const NSRect wanted = NSMakeRect(-(w + 64), 0, w, h);
+        if (NSEqualRects(host.frame, wanted) && CGRectEqualToRect(layer.frame, host.bounds))
+            return;
+        [CATransaction begin];
+        [CATransaction setDisableActions:YES];
+        host.frame = wanted;
+        layer.frame = host.bounds;
+        [CATransaction commit];
+    }
     // Frames drawn when start() was called: the window opens only after one
     // more has reached the layer. Asked to open on an empty layer, AVKit lays
     // its window out from a picture of no size, and shows nothing or crashes.
@@ -114,11 +138,14 @@ bool SystemPip::Private::ensureObjects()
 
         // The system opens its window from a layer that is on screen, and
         // animates out of it: two points in the window's corner, under the
-        // title bar, where nothing is seen of it. Shaped like a video, not a point:
-// the system lays its window out from it.
+        // title bar, where nothing is seen of it. Sized by fitLayer before the
+// system's window opens, since that window is laid out from it.
         layer = [AVSampleBufferDisplayLayer layer];
         layer.videoGravity = AVLayerVideoGravityResizeAspect;
-        host = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 16, 9)];
+        // The system moves this layer into its own window but leaves its
+        // size as it was here: it follows whatever holds it (fitLayer).
+        layer.autoresizingMask = kCALayerWidthSizable | kCALayerHeightSizable;
+        host = [[NSView alloc] initWithFrame:NSMakeRect(-1024, 0, 16, 9)];
         host.wantsLayer = YES;
         layer.frame = host.bounds;
         [host.layer addSublayer:layer];
@@ -259,6 +286,7 @@ void SystemPip::Private::drawFrame()
 void SystemPip::Private::finish()
 {
     startPoll.stop();
+    fitPoll.stop();
     if (!running.exchange(false))
         return;
     VideoSurface::detachExternal();
@@ -271,6 +299,8 @@ void SystemPip::Private::finish()
 {
     Q_UNUSED(controller)
     qInfo("pip: the system's window is open");
+    if (_owner)
+        _owner->fitLayer();
 }
 
 - (void)pictureInPictureController:(AVPictureInPictureController *)controller
@@ -330,7 +360,7 @@ void SystemPip::Private::finish()
          didTransitionToRenderSize:(CMVideoDimensions)newRenderSize
 {
     Q_UNUSED(controller)
-    Q_UNUSED(newRenderSize)
+    qInfo("pip: render size %dx%d", newRenderSize.width, newRenderSize.height);
 }
 
 - (void)pictureInPictureController:(AVPictureInPictureController *)controller
@@ -353,6 +383,8 @@ SystemPip::SystemPip(PlaybackController *player, MpvEngine *engine, QObject *par
     d->q = this;
     d->queue = dispatch_queue_create("monolist.pip.frames", DISPATCH_QUEUE_SERIAL);
     d->startPoll.setInterval(kStartPollMs);
+    d->fitPoll.setInterval(200);
+    connect(&d->fitPoll, &QTimer::timeout, this, [this]() { d->fitLayer(); });
 
     if (m_engine) {
         const QSize size = m_engine->videoSize();
@@ -417,6 +449,7 @@ void SystemPip::start()
     }
     Private *p = d.get();
     d->drawnAtStart = d->framesDrawn.load();
+    d->fitLayer();
     d->running.store(true);
     VideoSurface::attachExternal([p]() { p->frameReady(); });
     // A paused song sends no frames: draw the one there is.
@@ -424,6 +457,7 @@ void SystemPip::start()
     setActive(true);
     d->startTries = 0;
     d->startPoll.start();
+    d->fitPoll.start();
 }
 
 void SystemPip::stop()
@@ -439,6 +473,37 @@ void SystemPip::stop()
         return;
     }
     d->finish();
+}
+
+static void describeViews(NSView *view, int depth, QStringList &out)
+{
+    if (depth > 8 || out.size() > 40)
+        return;
+    const NSRect frame = view.frame;
+    QString line = QString(depth * 2, u' ')
+                   + QString::fromNSString(NSStringFromClass([view class]))
+                   + QStringLiteral(" %1,%2 %3x%4").arg(frame.origin.x).arg(frame.origin.y)
+                         .arg(frame.size.width).arg(frame.size.height);
+    for (CALayer *sub in view.layer.sublayers) {
+        line += QStringLiteral(" [%1 %2x%3]").arg(QString::fromNSString(NSStringFromClass([sub class])))
+                    .arg(sub.frame.size.width).arg(sub.frame.size.height);
+    }
+    out << line;
+    for (NSView *child in view.subviews)
+        describeViews(child, depth + 1, out);
+}
+
+QString SystemPip::windowTree() const
+{
+    QStringList out;
+    for (NSWindow *window in NSApp.windows) {
+        out << QStringLiteral("window %1 %2x%3 visible %4")
+                   .arg(QString::fromNSString(NSStringFromClass([window class])))
+                   .arg(window.frame.size.width).arg(window.frame.size.height).arg(window.isVisible);
+        if (![NSStringFromClass([window class]) hasPrefix:@"QNS"] && window.contentView)
+            describeViews(window.contentView, 1, out);
+    }
+    return out.join(u'\n');
 }
 
 QString SystemPip::diagnostics() const
@@ -461,6 +526,19 @@ QString SystemPip::diagnostics() const
         }
     }
     const int drawnCount = d->framesDrawn.load();
+    if (d->layer) {
+        const CGRect frame = d->layer.frame;
+        const CGRect held = d->layer.superlayer ? d->layer.superlayer.bounds : CGRectZero;
+        layerState += QStringLiteral(" frame %1x%2 in %3x%4")
+                          .arg(frame.size.width).arg(frame.size.height)
+                          .arg(held.size.width).arg(held.size.height);
+        NSView *above = d->host.superview;
+        layerState += QStringLiteral(" host %1x%2 in %3 %4x%5 window %6")
+                          .arg(d->host.frame.size.width).arg(d->host.frame.size.height)
+                          .arg(QString::fromNSString(NSStringFromClass([above class])))
+                          .arg(above.bounds.size.width).arg(above.bounds.size.height)
+                          .arg(QString::fromNSString(NSStringFromClass([d->host.window class])));
+    }
     return QStringLiteral("video %1x%2, frames asked %3 drawn %4 failed %5, brightness %6, %7, layer %8, "
                           "render %9 ms each")
         .arg(d->videoWidth.load()).arg(d->videoHeight.load())

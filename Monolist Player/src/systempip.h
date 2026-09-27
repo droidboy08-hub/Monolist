@@ -40,6 +40,7 @@ public:
     Q_INVOKABLE void stop();
     // What it has drawn and what the system says, for --pip-test.
     QString diagnostics() const;
+    QString windowTree() const;
 
     struct Private;
 

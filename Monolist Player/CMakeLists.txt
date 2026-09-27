@@ -318,7 +318,8 @@ if(APPLE)
     set_source_files_properties(macos/Monolist.icns
         PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
     target_link_libraries(monolist PRIVATE "-framework AppKit" "-framework MediaPlayer"
-        "-framework AVFoundation" "-framework AVKit" "-framework CoreMedia" "-framework CoreVideo")
+        "-framework AVFoundation" "-framework AVKit" "-framework CoreMedia" "-framework CoreVideo"
+        "-framework QuartzCore")
 
     # The build number the stamp above just worked out, for CFBundleVersion.
     file(STRINGS "${MONOLIST_BUILDINFO}" _monolist_build_line REGEX "MONOLIST_BUILD_NUMBER")

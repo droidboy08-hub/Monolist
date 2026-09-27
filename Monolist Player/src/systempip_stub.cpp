@@ -25,6 +25,11 @@ void SystemPip::start()
 
 void SystemPip::stop() {}
 
+QString SystemPip::windowTree() const
+{
+    return {};
+}
+
 QString SystemPip::diagnostics() const
 {
     return QStringLiteral("not supported");
