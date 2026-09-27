@@ -47,6 +47,10 @@ qt_add_executable(monolist
     src/artistlinks.h              src/artistlinks.cpp
     src/artistselftest.h           src/artistselftest.cpp
     src/lyrics.h                   src/lyrics.cpp
+    # What lyrics are asked for and which answer is the song, and the lyrics
+    # tests (--lyrics-query-test, --lyrics-flow-test).
+    src/lyricsquery.h              src/lyricsquery.cpp
+    src/lyricsselftest.h           src/lyricsselftest.cpp
     src/windowchrome.h             src/windowchrome.cpp
     src/appinfo.h                  src/appinfo.cpp
     # — the recommender core, ported from the iOS player —

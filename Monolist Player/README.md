@@ -129,17 +129,32 @@ which the pencil there changes.
 
 `Lyrics` looks up the song playing while the Now Playing view shows them:
 
-1. **LRCLIB** (lrclib.net), an open database of time-synced lyrics, searched by
-   title and lead artist, the entry closest in length winning. Only an entry
-   within 3 s of the recording's length is trusted for timing; one within 20 s
-   is kept as plain text in case nothing better turns up.
+1. **LRCLIB** (lrclib.net), an open database of time-synced lyrics. First its
+   exact lookup (`/api/get`: title, lead artist, album, length); on a 404, or
+   when that has not answered 250 ms after it was sent, its search (the exact
+   answer still wins if it comes within a second of being sent), the entry
+   closest in length winning among those that are this song
+   (`LyricsQuery::match`: "Anti-Hero" is not "Hero"). Only an entry within 3 s
+   of the recording's length is trusted for timing; one within 10 s is kept as
+   plain text in case nothing better turns up. LRCLIB gets 6 s in all.
 2. **YouTube Music's own lyrics**, plain text from its partners (Musixmatch,
    LyricFind), credited as such.
 
-What was found, or that nothing was, is stored per video id; "none" is asked
-again after three days. Synced lines follow the playing position (a line lights
-150 ms early, as it starts), and clicking one plays from there. LRCLIB can be
-self-hosted; the `lrclib_url` setting points elsewhere.
+The title is asked for as databases file it and the artists as the song's
+credits name them (`lyricsquery.*`): noise such as "(Official Video)" goes,
+version markers stay ("(Official Live Video)" is asked as "(Live)"), and an
+artist line is never cut at "&" or "," on a guess.
+
+What was found, or that nothing was, is stored per video id. An answer shown
+only because a better source failed (LRCLIB out of reach, so YouTube Music's
+plain text) is stored as provisional: shown at once the next time, and asked
+for again behind it until that source answers. "None" is stored only when
+every source answered that it has none, and is asked again after three days;
+found lyrics are checked again after 60 days. Synced lines follow the playing
+position (a line lights 150 ms early, as it starts), and clicking one plays
+from there. LRCLIB can be self-hosted; the `lrclib_url` setting points
+elsewhere, and `lyrics.lrclib=search` goes back to its search alone, taken by
+length, as before.
 
 The Now Playing view prints the cover on a field of its own dominant colour
 (`CoverPalette`, measured from the cached artwork), with ink or paper type,
@@ -183,6 +198,8 @@ whichever contrasts better.
                              answer that links one and kept in the database
       artistselftest.*       --artist-links-test
       lyrics.*               LRCLIB and YouTube Music lyrics, synced to playback
+      lyricsquery.*          what lyrics are asked for, and which answer is the song
+      lyricsselftest.*       --lyrics-query-test and --lyrics-flow-test
       ytdlp.*                QProcess wrapper around yt-dlp; finds FFmpeg and Deno
       streamresolver.*       the tiered source ladder and its link cache
       downloadmanager.*      offline library: queue, options, files, DB rows
@@ -388,6 +405,14 @@ mpv's own messages.
                                                     library, Remove from history, Copy link (the clipboard
                                                     put back after); needs MONOLIST_DATA_DIR
     monolist --lyrics "<query>"                     lyrics for the first three results, then one from the store
+    monolist --lyrics-query-test                    the lyrics query and match rules with no network: the
+                                                    18 fixed cases (C40), lines without credits never cut on
+                                                    a guess, and the scorer ("Anti-Hero" is not "Hero")
+    monolist --lyrics-flow-test                     how a lookup ends, against a stand-in LRCLIB and YouTube
+                                                    Music: exact lookup, then search, the slow-exact hedge,
+                                                    the 6 s deadline, provisional answers replaced once
+                                                    LRCLIB answers, no "none" kept after a failure, old rows
+                                                    read as final, the switch back; needs MONOLIST_DATA_DIR
     monolist --library-test "<query>" [--videos]    a playlist, likes and a saved album from a real search;
                                                     --videos searches music videos, and says how many rows
                                                     read back from the database still know they are videos

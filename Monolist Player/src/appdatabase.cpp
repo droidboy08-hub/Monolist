@@ -278,6 +278,11 @@ void AppDatabase::migrate()
     if (!hasColumn(QStringLiteral("albums"), QStringLiteral("saved_at")))
         q.exec(QStringLiteral("ALTER TABLE albums ADD COLUMN saved_at TEXT NOT NULL DEFAULT ''"));
 
+    // Lyrics kept only because a better source failed to answer (Lyrics):
+    // shown, and asked for again. Rows from before read as final answers.
+    if (!hasColumn(QStringLiteral("lyrics"), QStringLiteral("provisional")))
+        q.exec(QStringLiteral("ALTER TABLE lyrics ADD COLUMN provisional INTEGER NOT NULL DEFAULT 0"));
+
     // Whether a song is a music video, with a picture worth showing. Only
     // search and YouTube Music's own lists know it, so every copy of a song
     // kept here carries it too — otherwise a video liked, saved to a playlist,

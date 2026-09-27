@@ -32,6 +32,7 @@
 #include "library.h"
 #include "libraryeditselftest.h"
 #include "lyrics.h"
+#include "lyricsselftest.h"
 #include "mediaextractor.h"
 #include "mpvengine.h"
 #include "playbackcontroller.h"
@@ -97,6 +98,11 @@ int main(int argc, char *argv[])
                      "to the default sans and the design will not match.");
         }
     }
+
+    // --lyrics-query-test: what lyrics are asked for and which answer is the
+    // song, on fixed cases, with no network and no database (lyricsselftest.cpp).
+    if (app.arguments().contains(QStringLiteral("--lyrics-query-test")))
+        return runLyricsQuerySelfTest() == 0 ? 0 : 1;
 
     // --secret-test / --lastfm-test: the sign-in plumbing checked on its own,
     // with no network and no window (connectionselftest.cpp). The exit code
@@ -279,6 +285,17 @@ int main(int argc, char *argv[])
     // Lyrics for the song playing, looked up while the Now Playing view shows.
     Lyrics lyrics(&player);
     lyrics.setLrclibUrl(library.settingValue(QStringLiteral("lrclib_url")));
+    lyrics.setArtistLinks(&artistLinks);
+    // LRCLIB's exact lookup first, and its search's entries checked against
+    // the song; lyrics.lrclib=search is the switch back to its search alone.
+    if (library.settingValue(QStringLiteral("lyrics.lrclib")) == QLatin1String("search")) {
+        lyrics.setLrclibExact(false);
+        qInfo("lyrics: lyrics.lrclib=search: LRCLIB's search alone, taken by length, as before");
+    }
+    // --lyrics-flow-test: how a lookup ends, against a stand-in LRCLIB and
+    // YouTube Music (lyricsselftest.cpp); in MONOLIST_DATA_DIR only.
+    if (app.arguments().contains(QStringLiteral("--lyrics-flow-test")))
+        return runLyricsFlowSelfTest(&player) == 0 ? 0 : 1;
 
     // Home's content: YouTube Music's feed and new releases, fetched once at
     // start, and the songs played lately, refreshed whenever a play is
@@ -2021,6 +2038,14 @@ int main(int argc, char *argv[])
         QObject::connect(&lyrics, &Lyrics::stateChanged, &app, [&lyrics, next, clock]() {
             if (lyrics.state() == QLatin1String("loading"))
                 return;
+            // Kept lyrics shown while they are asked for again (provisional,
+            // or past their refresh age): what counts is what the check ends
+            // with. Worded so the timing line's pattern does not match it.
+            if (lyrics.checking()) {
+                qWarning("selftest:   kept %s shown after %lld ms, asked again", qPrintable(lyrics.state()),
+                         (long long)clock->elapsed());
+                return;
+            }
             const QList<LyricsModel::Line> &lines = lyrics.lines()->lines();
             qWarning("selftest:   %s in %lld ms, %lld lines, from %s%s", qPrintable(lyrics.state()),
                      (long long)clock->elapsed(), (long long)lines.size(),
