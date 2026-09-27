@@ -1,6 +1,7 @@
 #include "videosurface.h"
 #include "mpvengine.h"
 
+#include <QMutex>
 #include <QQuickWindow>
 #include <QSGSimpleTextureNode>
 #include <QSGTexture>
@@ -34,6 +35,59 @@ QList<VideoSurface *> g_surfaces;
 constexpr int kUnwatchedAfterMs = 400;
 QTimer *g_unwatched = nullptr;
 
+// Rendering from the one context, by a surface on Qt's render thread or by
+// the external holder on its own, one at a time.
+QMutex g_renderLock;
+// The external holder (attachExternal), read on mpv's thread as frames come.
+QMutex g_externalLock;
+std::function<void()> g_external;
+bool g_externalHeld = false;   // GUI thread's own copy, for handing over
+
+// Made once, on the first attach, and kept (see the class comment).
+bool ensureRender(void (*onFrame)(void *))
+{
+#ifdef MONOLIST_NO_MPV
+    Q_UNUSED(onFrame)
+    return false;
+#else
+    if (g_render)
+        return true;
+    if (!g_engine || !g_engine->isValid())
+        return false;
+    int advanced = 1;
+    mpv_render_param params[] = {
+        { MPV_RENDER_PARAM_API_TYPE, const_cast<char *>(MPV_RENDER_API_TYPE_SW) },
+        // Frames arrive as they are decoded rather than on a display clock,
+        // which is what a Qt Quick item wants: it draws when told.
+        { MPV_RENDER_PARAM_ADVANCED_CONTROL, &advanced },
+        { MPV_RENDER_PARAM_INVALID, nullptr }
+    };
+    if (mpv_render_context_create(&g_render, g_engine->handle(), params) < 0) {
+        g_render = nullptr;
+        return false;
+    }
+    mpv_render_context_set_update_callback(g_render, onFrame, nullptr);
+    return true;
+#endif
+}
+
+// Nobody showing the picture: after a moment, it stops being decoded.
+void startUnwatched()
+{
+    if (!g_engine)
+        return;
+    if (!g_unwatched) {
+        g_unwatched = new QTimer(g_engine);
+        g_unwatched->setSingleShot(true);
+        g_unwatched->setInterval(kUnwatchedAfterMs);
+        QObject::connect(g_unwatched, &QTimer::timeout, g_engine, []() {
+            if (!g_holder && !g_externalHeld && g_engine)
+                g_engine->setVideoWatched(false);
+        });
+    }
+    g_unwatched->start();
+}
+
 // QImage::Format_RGB32 is 0xffRRGGBB in a word, which on a little-endian
 // machine is B, G, R, unused in memory — mpv's "bgr0".
 const char *kFormat = "bgr0";
@@ -55,6 +109,7 @@ VideoSurface::~VideoSurface()
     // The last one gone: the context goes too, which must happen before the
     // player it renders for is destroyed.
     if (g_surfaces.isEmpty() && g_render) {
+        QMutexLocker locker(&g_renderLock);
 #ifndef MONOLIST_NO_MPV
         mpv_render_context_set_update_callback(g_render, nullptr, nullptr);
         mpv_render_context_free(g_render);
@@ -110,6 +165,13 @@ void VideoSurface::reconsider()
 // draws it is looked up on the GUI thread, where that changes.
 void VideoSurface::onFrame(void *)
 {
+    {
+        QMutexLocker locker(&g_externalLock);
+        if (g_external) {
+            g_external();
+            return;
+        }
+    }
     if (!g_engine)
         return;
     QMetaObject::invokeMethod(g_engine, []() {
@@ -120,27 +182,13 @@ void VideoSurface::onFrame(void *)
 
 void VideoSurface::attach()
 {
-    if (g_holder == this || !g_engine || !g_engine->isValid())
+    if (g_holder == this || g_externalHeld || !g_engine || !g_engine->isValid())
         return;
-
 #ifdef MONOLIST_NO_MPV
     return;
 #else
-    if (!g_render) {
-        int advanced = 1;
-        mpv_render_param params[] = {
-            { MPV_RENDER_PARAM_API_TYPE, const_cast<char *>(MPV_RENDER_API_TYPE_SW) },
-            // Frames arrive as they are decoded rather than on a display
-            // clock, which is what a Qt Quick item wants: it draws when told.
-            { MPV_RENDER_PARAM_ADVANCED_CONTROL, &advanced },
-            { MPV_RENDER_PARAM_INVALID, nullptr }
-        };
-        if (mpv_render_context_create(&g_render, g_engine->handle(), params) < 0) {
-            g_render = nullptr;
-            return;
-        }
-        mpv_render_context_set_update_callback(g_render, &VideoSurface::onFrame, nullptr);
-    }
+    if (!ensureRender(&VideoSurface::onFrame))
+        return;
 
     if (VideoSurface *previous = std::exchange(g_holder, this))
         previous->release();
@@ -170,18 +218,64 @@ void VideoSurface::detach()
         }
     }
 
-    if (!g_engine)
+    startUnwatched();
+}
+
+void VideoSurface::attachExternal(std::function<void()> onFrame)
+{
+    if (!ensureRender(&VideoSurface::onFrame))
         return;
-    if (!g_unwatched) {
-        g_unwatched = new QTimer(g_engine);
-        g_unwatched->setSingleShot(true);
-        g_unwatched->setInterval(kUnwatchedAfterMs);
-        QObject::connect(g_unwatched, &QTimer::timeout, g_engine, []() {
-            if (!g_holder && g_engine)
-                g_engine->setVideoWatched(false);
-        });
+    if (VideoSurface *previous = std::exchange(g_holder, nullptr))
+        previous->release();
+    {
+        QMutexLocker locker(&g_externalLock);
+        g_external = std::move(onFrame);
     }
-    g_unwatched->start();
+    g_externalHeld = true;
+    if (g_unwatched)
+        g_unwatched->stop();
+    if (g_engine)
+        g_engine->setVideoWatched(true);
+}
+
+void VideoSurface::detachExternal()
+{
+    if (!g_externalHeld)
+        return;
+    {
+        QMutexLocker locker(&g_externalLock);
+        g_external = nullptr;
+    }
+    g_externalHeld = false;
+    for (VideoSurface *surface : std::as_const(g_surfaces)) {
+        if (surface->canShow()) {
+            surface->attach();
+            return;
+        }
+    }
+    startUnwatched();
+}
+
+bool VideoSurface::renderExternal(void *pixels, const QSize &size, qsizetype stride)
+{
+    QMutexLocker locker(&g_renderLock);
+    if (!g_render || !pixels || size.isEmpty())
+        return false;
+#ifdef MONOLIST_NO_MPV
+    Q_UNUSED(stride)
+    return false;
+#else
+    int sizes[2] = { size.width(), size.height() };
+    size_t pitch = size_t(stride);
+    mpv_render_param params[] = {
+        { MPV_RENDER_PARAM_SW_SIZE, sizes },
+        { MPV_RENDER_PARAM_SW_FORMAT, const_cast<char *>(kFormat) },
+        { MPV_RENDER_PARAM_SW_STRIDE, &pitch },
+        { MPV_RENDER_PARAM_SW_POINTER, pixels },
+        { MPV_RENDER_PARAM_INVALID, nullptr }
+    };
+    return mpv_render_context_render(g_render, params) >= 0;
+#endif
 }
 
 void VideoSurface::release()
@@ -253,7 +347,10 @@ QSGNode *VideoSurface::updatePaintNode(QSGNode *old, UpdatePaintNodeData *)
         { MPV_RENDER_PARAM_SW_POINTER, m_frame.bits() },
         { MPV_RENDER_PARAM_INVALID, nullptr }
     };
-    mpv_render_context_render(g_render, params);
+    {
+        QMutexLocker locker(&g_renderLock);
+        mpv_render_context_render(g_render, params);
+    }
 #endif
 
     auto *node = static_cast<QSGSimpleTextureNode *>(old);

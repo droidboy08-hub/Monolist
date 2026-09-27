@@ -130,6 +130,15 @@ PlaybackController::PlaybackController(MpvEngine *engine,
                 m_videoUnproven = false;
         });
 
+        // An added picture that would not open: the sound never stopped.
+        connect(m_engine, &MpvEngine::videoAddFailed, this, [this](const QString &reason) {
+            if (!m_videoAdded)
+                return;
+            qWarning("video: the picture would not open: %s", qPrintable(reason));
+            dropAddedVideo();
+            Q_EMIT notice(QStringLiteral("This video would not play — back to audio"));
+        });
+
         connect(m_engine, &MpvEngine::loadFailed, this, [this](const QString &reason) {
             // The picture would not open: keep the song, drop the picture.
             if (abandonVideo(QStringLiteral("This video would not play — back to audio")))
@@ -950,6 +959,7 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
         m_resolver->cancelVideo(m_videoPendingId);
     m_videoPendingId.clear();
     m_videoUnproven = false;
+    m_videoAdded = false;
     if (m_videoWanted || m_videoPlaying) {
         m_videoWanted = false;
         m_videoPlaying = false;
@@ -1140,12 +1150,34 @@ void PlaybackController::backToSound(bool keepPlaying, const QString &resolvingT
     m_resolver->resolve(videoId);
 }
 
+// The added picture put aside (vid=no), the file and its sound left as they
+// are. The next song starts as sound anyway.
+void PlaybackController::dropAddedVideo()
+{
+    m_videoAdded = false;
+    m_videoUnproven = false;
+    const bool changed = m_videoWanted || m_videoPlaying;
+    m_videoWanted = false;
+    m_videoPlaying = false;
+    if (m_engine)
+        m_engine->setVideoEnabled(false);
+    setStatus(QStringLiteral("Streaming"), m_sourceLabel, false);
+    if (changed)
+        Q_EMIT videoChanged();
+}
+
 // True when a video that never proved itself has just been dropped, and the
 // sound of the same track is on its way back.
 bool PlaybackController::abandonVideo(const QString &reason)
 {
     if (!m_videoPlaying || !m_videoUnproven)
         return false;
+    // An added picture is not what ended or failed: that was the file
+    // playing, which the caller goes on to handle as it would without one.
+    if (m_videoAdded) {
+        dropAddedVideo();
+        return false;
+    }
 
     m_videoUnproven = false;
     m_videoWanted = false;
@@ -1384,6 +1416,11 @@ void PlaybackController::playWithVideo(bool video)
 
     m_resolver->cancelVideo(videoId);
     m_videoPendingId.clear();
+    // Added to the file playing: put aside, and the sound plays on untouched.
+    if (m_videoAdded) {
+        dropAddedVideo();
+        return;
+    }
     const bool wasShowing = m_videoPlaying;
     if (m_videoPlaying) {
         m_videoPlaying = false;
@@ -1407,10 +1444,19 @@ void PlaybackController::handleVideoResolved(const QString &videoId, const QStri
         return;
 
     m_engine->setVideoEnabled(true);
-    setStatus(QStringLiteral("Streaming"), QStringLiteral("yt-dlp · video"), false);
     // Unproven until a frame arrives: see abandonVideo.
     m_videoUnproven = true;
-    m_engine->load(videoUrl, m_playing || m_autoPlayAfterResolve, audioUrl, m_position, headers);
+    // The song already playing keeps playing: the picture joins it. Loading
+    // the two again from this second stopped the sound while both buffered.
+    if (m_engine->hasStartedFile() && m_pendingVideoId.isEmpty()) {
+        m_videoAdded = true;
+        setStatus(QStringLiteral("Streaming"), m_sourceLabel, false);
+        m_engine->addVideo(videoUrl, headers);
+    } else {
+        m_videoAdded = false;
+        setStatus(QStringLiteral("Streaming"), QStringLiteral("yt-dlp · video"), false);
+        m_engine->load(videoUrl, m_playing || m_autoPlayAfterResolve, audioUrl, m_position, headers);
+    }
     if (!m_videoPlaying) {
         m_videoPlaying = true;
         Q_EMIT videoChanged();

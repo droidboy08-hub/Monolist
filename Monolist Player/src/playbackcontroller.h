@@ -246,6 +246,7 @@ private:
     void playWithVideo(bool video);
     // A picture that will not play must not cost the song: back to the sound,
     // from the same second, with a word about it.
+    void dropAddedVideo();
     bool abandonVideo(const QString &reason);
     // The copy of `track` on disk: its download, or its own source where
     // that is a file. Empty when it has to be streamed.
@@ -348,6 +349,9 @@ private:
     // anything that ends the file in between is the video's fault, not the
     // song's, and must not move the queue on.
     bool m_videoUnproven = false;
+    // The picture was added to the file already playing (MpvEngine::addVideo)
+    // rather than loaded with it: dropping it leaves the sound as it is.
+    bool m_videoAdded = false;
     qint64 m_resumeAt = 0;         // where the next load should begin
     int m_videoHeight = 720;
     QString m_videoPendingId;      // a picture being resolved for this track

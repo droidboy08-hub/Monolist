@@ -5,6 +5,8 @@
 #include <QQuickItem>
 #include <QtQml/qqmlregistration.h>
 
+#include <functional>
+
 class MpvEngine;
 class QQuickWindow;
 
@@ -44,6 +46,18 @@ public:
 
     // The player whose picture the surfaces draw. Set once, at startup.
     static void setEngine(MpvEngine *engine);
+
+    // Something other than a surface taking the frames: the system's own
+    // picture in picture (SystemPip), which draws them outside the window, so
+    // the window is not redrawn for each one. While it holds them, no surface
+    // takes them. `onFrame` is called on mpv's own thread whenever a frame is
+    // ready, and should only hand the work to a thread of its own.
+    static void attachExternal(std::function<void()> onFrame);
+    static void detachExternal();
+    // The frame now, drawn into `pixels` (4 bytes a pixel, B G R then one
+    // unused) at `size`, by the external holder from any thread. False with
+    // nothing to draw from.
+    static bool renderExternal(void *pixels, const QSize &size, qsizetype stride);
 
     bool showing() const { return m_showing; }
     qreal aspectRatio() const { return m_aspect; }

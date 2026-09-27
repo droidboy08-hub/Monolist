@@ -6,6 +6,10 @@
 #include <mpv/client.h>
 
 namespace {
+
+// Set on the number a video-add is asked with, so its answer is never taken
+// for a loadfile's. The loads count up from 1 and never reach it.
+constexpr quint64 kAddVideoTag = quint64(1) << 62;
 // What yt-dlp presents itself as, and therefore what the links it hands back
 // must be fetched as.
 const char *kBrowserUserAgent =
@@ -287,6 +291,22 @@ void MpvEngine::drainEvents()
         }
 
         case MPV_EVENT_COMMAND_REPLY: {
+            // mpv's answer to a video-add: the picture joins the file playing,
+            // or it would not open and the sound plays on as it was.
+            if (event->reply_userdata & kAddVideoTag) {
+                if (event->reply_userdata != m_addVideoRequest)
+                    break;
+                m_addVideoRequest = 0;
+                if (event->error < 0) {
+                    Q_EMIT videoAddFailed(QString::fromUtf8(mpv_error_string(event->error)));
+                    break;
+                }
+                // Added while nothing showed it: selecting it decoded it, so
+                // put it aside until something does.
+                if (!m_watched || !m_video)
+                    mpv_set_property_string(m_mpv, "vid", "no");
+                break;
+            }
             // mpv's answer to a loadfile, naming the entry it made. Only the
             // latest load's answer counts: an earlier one was replaced, or
             // stopped, before it could matter. (stop() asks with 0, and no
@@ -340,14 +360,8 @@ void MpvEngine::drainEvents()
     }
 }
 
-void MpvEngine::load(const QString &urlOrPath, bool startPlaying, const QString &audioUrl,
-                     qint64 startAt, const QVariantMap &headers)
+void MpvEngine::applyHeaders(const QVariantMap &headers)
 {
-    if (!m_mpv)
-        return;
-
-    // Fetch the link the way it was obtained. Always set, so one file's
-    // headers are never sent for the next one's.
     const QString agent = headers.value(QStringLiteral("User-Agent")).toString();
     mpv_set_option_string(m_mpv, "user-agent",
                           agent.isEmpty() ? kBrowserUserAgent : agent.toUtf8().constData());
@@ -360,6 +374,32 @@ void MpvEngine::load(const QString &urlOrPath, bool startPlaying, const QString 
         const char *add[] = { "change-list", "http-header-fields", "append", field.constData(), nullptr };
         mpv_command(m_mpv, add);
     }
+}
+
+void MpvEngine::addVideo(const QString &url, const QVariantMap &headers)
+{
+    if (!m_mpv || url.isEmpty())
+        return;
+    applyHeaders(headers);
+    // Asynchronously: opening the link takes as long as the network does,
+    // and the window must not wait for it.
+    m_addVideoRequest = kAddVideoTag | ++m_addVideoCount;
+    const QByteArray target = url.toUtf8();
+    const char *args[] = { "video-add", target.constData(), "select", nullptr };
+    const int rc = mpv_command_async(m_mpv, m_addVideoRequest, args);
+    if (rc < 0)
+        Q_EMIT videoAddFailed(QString::fromUtf8(mpv_error_string(rc)));
+}
+
+void MpvEngine::load(const QString &urlOrPath, bool startPlaying, const QString &audioUrl,
+                     qint64 startAt, const QVariantMap &headers)
+{
+    if (!m_mpv)
+        return;
+
+    // Fetch the link the way it was obtained. Always set, so one file's
+    // headers are never sent for the next one's.
+    applyHeaders(headers);
 
     // Forget the previous file's duration. Change events are compared against
     // it, and reloading a file of the same length would otherwise never report

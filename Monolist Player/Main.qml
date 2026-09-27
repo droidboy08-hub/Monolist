@@ -41,18 +41,41 @@ ApplicationWindow {
 
     // — the picture —
     // Where the video goes while there is one: full screen when asked for,
-    // Now Playing while that is open, and the mini panel above the player bar
-    // only when its button in Now Playing was pressed. Otherwise nowhere: the
-    // song carries on as sound, and a picture nobody can see is not decoded.
-    // Keeping it out of the panel unless asked keeps a second picture from
+    // Now Playing while that is open, and picture in picture only when its
+    // button in Now Playing was pressed. Otherwise nowhere: the song carries
+    // on as sound, and a picture nobody can see is not decoded. Keeping it
+    // out of picture in picture unless asked keeps a second picture from
     // being drawn while Now Playing comes and goes.
+    //
+    // Picture in picture is the system's own window where there is one
+    // (macOS), which is drawn outside this window and so costs it nothing;
+    // the app's own panel (MiniVideo) otherwise, or if the system's would
+    // not open.
     property bool videoFullscreen: false
     property bool videoPip: false
+    property bool systemPipFailed: false
+    readonly property bool useSystemPip: SystemPip.supported && !systemPipFailed
     readonly property string videoPlace: !Player.videoWanted && !Player.videoPlaying ? ""
                                        : videoFullscreen ? "fullscreen"
                                        : nowPlayingOpen ? "nowplaying"
-                                       : videoPip ? "mini"
+                                       : videoPip ? (useSystemPip ? "system" : "mini")
                                        : ""
+    // The system's window opens once the picture is there to show, and closes
+    // as soon as the picture goes anywhere else.
+    readonly property bool systemPipWanted: videoPlace === "system" && Player.videoPlaying
+    onSystemPipWantedChanged: systemPipWanted ? SystemPip.start() : SystemPip.stop()
+
+    Connections {
+        target: SystemPip
+        // Its own close button: the picture off, the song on as sound.
+        function onStopped() { window.videoPip = false }
+        // Its button back to the app: Now Playing, which takes the picture.
+        function onRestoreRequested() { window.nowPlayingOpen = true }
+        function onFailed(reason) {
+            window.systemPipFailed = true
+            toast.show(reason + " — using the app's own")
+        }
+    }
 
     // Now Playing's picture to the small panel, and Now Playing away.
     function enterVideoPip() {

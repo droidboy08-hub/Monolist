@@ -39,6 +39,7 @@
 #include "streamresolver.h"
 #include "trackmodel.h"
 #include "videosurface.h"
+#include "systempip.h"
 #include "windowchrome.h"
 #include "ytmselftest.h"
 #include "ytmsession.h"
@@ -297,7 +298,11 @@ int main(int argc, char *argv[])
     MacMediaSession mediaSession(&player, artworkFetcher.network());
 #endif
 
+    // The system's own picture in picture, where there is one.
+    SystemPip systemPip(&player, &engine);
+
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Library",   &library);
+    qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "SystemPip", &systemPip);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Player",    &player);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Extractor", &extractor);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Downloads", &downloads);
