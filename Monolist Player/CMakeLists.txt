@@ -221,6 +221,7 @@ qt_add_qml_module(monolist
         components/ShelfCard.qml
         components/CardGrid.qml
         components/ActionButton.qml
+        components/DownloadAllButton.qml
         components/WindowButtons.qml
         components/WindowDragArea.qml
         components/CollectionCover.qml

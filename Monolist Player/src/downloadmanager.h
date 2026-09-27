@@ -105,6 +105,12 @@ public:
     Q_INVOKABLE qreal progressFor(const QString &videoId) const;
     Q_INVOKABLE bool isDownloaded(const QString &videoId) const;
     Q_INVOKABLE bool isPending(const QString &videoId) const;
+    // Where a list's songs, in enqueueAll's shape, stand: { songs, done,
+    // pending, failed }. What a page's "Download all" says. Songs with no
+    // source cannot be downloaded, so they are not counted at all.
+    Q_INVOKABLE QVariantMap downloadCounts(const QVariantList &tracks) const;
+    // Every song in the list whose download failed, queued again.
+    Q_INVOKABLE void retryFailed(const QVariantList &tracks);
     Q_INVOKABLE QString localPathFor(const QString &videoId) const;
 
     Q_INVOKABLE void openDownloadFolder() const;
