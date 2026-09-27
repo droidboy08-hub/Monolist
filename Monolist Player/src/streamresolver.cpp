@@ -672,7 +672,7 @@ void StreamResolver::resolveTrack(const Saavn::Target &track)
         return;
     }
 
-    const SaavnVerdict verdict = saavnVerdict(videoId);
+    const SaavnVerdict verdict = saavnVerdict(track);
     if (verdict.kind == SaavnVerdict::Match) {
         qInfo("jiosaavn: %s plays from the match found before (%s, %d kbps)", qPrintable(videoId),
               qPrintable(verdict.saavnId), verdict.kbps);
@@ -682,6 +682,9 @@ void StreamResolver::resolveTrack(const Saavn::Target &track)
         QMetaObject::invokeMethod(this, [this, videoId, url]() {
             Q_EMIT resolved(videoId, url, TierJioSaavn, /*fromCache=*/true);
         }, Qt::QueuedConnection);
+        // YouTube's link, fetched quietly beside it: should mpv refuse
+        // JioSaavn's, the way back starts warm rather than from nothing.
+        prefetch(videoId);
         return;
     }
     if (verdict.kind != SaavnVerdict::Unknown || resting) {
@@ -705,14 +708,11 @@ void StreamResolver::prefetchTrack(const Saavn::Target &track)
         return;
     const bool resting = m_saavnRestUntil.isValid() && m_saavnRestUntil > QDateTime::currentDateTimeUtc();
     if (m_saavnEnabled && !track.title.trimmed().isEmpty()) {
-        const SaavnVerdict verdict = saavnVerdict(track.videoId);
-        // JioSaavn's link is already known, so there will be no race to
-        // win: nothing to fetch ahead.
-        if (verdict.kind == SaavnVerdict::Match)
-            return;
-        if (verdict.kind == SaavnVerdict::Unknown && !resting)
+        if (saavnVerdict(track).kind == SaavnVerdict::Unknown && !resting)
             startSaavnLookup(track);
     }
+    // YouTube's link too, even where JioSaavn's is known: it is what the song
+    // falls back to at once should mpv refuse JioSaavn's.
     prefetch(track.videoId);
 }
 
@@ -770,12 +770,14 @@ void StreamResolver::startSaavnLookup(const Saavn::Target &track)
         return;   // already on its way; its answer serves this too
     m_saavnAsking.insert(track.videoId);
     const QString videoId = track.videoId;
-    m_saavn.lookup(track, [this, videoId](const JioSaavn::Result &result) {
-        saavnAnswered(videoId, result);
+    const QString signature = Saavn::signature(track);
+    m_saavn.lookup(track, [this, videoId, signature](const JioSaavn::Result &result) {
+        saavnAnswered(videoId, signature, result);
     });
 }
 
-void StreamResolver::saavnAnswered(const QString &videoId, const JioSaavn::Result &result)
+void StreamResolver::saavnAnswered(const QString &videoId, const QString &signature,
+                                   const JioSaavn::Result &result)
 {
     m_saavnAsking.remove(videoId);
     const QDateTime now = QDateTime::currentDateTimeUtc();
@@ -788,6 +790,7 @@ void StreamResolver::saavnAnswered(const QString &videoId, const JioSaavn::Resul
         verdict.url = result.url;
         verdict.kbps = result.kbps;
         verdict.saavnId = result.saavnId;
+        verdict.signature = signature;
         verdict.expires = now.addDays(kSaavnMatchDays);
         rememberSaavn(videoId, verdict);
         // The host and the bitrate: the link itself stays out of the log.
@@ -800,6 +803,7 @@ void StreamResolver::saavnAnswered(const QString &videoId, const JioSaavn::Resul
         m_saavnFailuresInARow = 0;
         SaavnVerdict verdict;
         verdict.kind = SaavnVerdict::NoMatch;
+        verdict.signature = signature;
         verdict.expires = now.addSecs(kSaavnNoMatchHours * 3600);
         rememberSaavn(videoId, verdict);
         qInfo("jiosaavn: %s not taken from JioSaavn: %s (%d rows, %lld ms)", qPrintable(videoId),
@@ -849,38 +853,66 @@ void StreamResolver::saavnAnswered(const QString &videoId, const JioSaavn::Resul
     m_races.erase(race);
 }
 
-StreamResolver::SaavnVerdict StreamResolver::saavnVerdict(const QString &videoId)
+StreamResolver::SaavnVerdict StreamResolver::saavnVerdict(const Saavn::Target &track)
 {
+    const QString &videoId = track.videoId;
+    const QString signature = Saavn::signature(track);
     const QDateTime now = QDateTime::currentDateTimeUtc();
     const auto known = m_saavnVerdicts.constFind(videoId);
     if (known != m_saavnVerdicts.constEnd()) {
-        if (known->expires > now)
-            return *known;
-        m_saavnVerdicts.remove(videoId);
-        return {};   // the table's copy expired with it
+        if (known->expires <= now) {
+            m_saavnVerdicts.remove(videoId);
+            return {};   // the table's copy expired with it
+        }
+        // Asked about under another name or length: that answer was for a
+        // different question.
+        if (known->kind != SaavnVerdict::Refused && known->signature != signature)
+            return {};
+        return *known;
     }
 
+    purgeExpiredSaavn();
     QSqlDatabase db = AppDatabase::connection();
     if (!db.isOpen())
         return {};
     QSqlQuery query(db);
     query.prepare(QStringLiteral(
-        "SELECT matched, saavn_id, url, kbps, expires_at FROM saavn_matches WHERE video_id = ?"));
+        "SELECT matched, saavn_id, url, kbps, expires_at, signature, matcher FROM saavn_matches"
+        " WHERE video_id = ?"));
     query.addBindValue(videoId);
     if (!query.exec() || !query.next())
         return {};
     SaavnVerdict verdict;
     verdict.expires = QDateTime::fromSecsSinceEpoch(query.value(4).toLongLong(), QTimeZone::UTC);
-    if (verdict.expires <= now)
+    verdict.signature = query.value(5).toString();
+    // Past its time, judged by an older matcher, or about the song under
+    // another name or length: asked afresh, and the new answer replaces it.
+    if (verdict.expires <= now || query.value(6).toInt() != Saavn::matcherVersion()
+        || verdict.signature != signature)
         return {};
     verdict.kind = query.value(0).toInt() == 1 ? SaavnVerdict::Match : SaavnVerdict::NoMatch;
     verdict.saavnId = query.value(1).toString();
     verdict.url = query.value(2).toString();
     verdict.kbps = query.value(3).toInt();
-    if (verdict.kind == SaavnVerdict::Match && verdict.url.isEmpty())
+    // The link goes to mpv as it is: JioSaavn's CDN over HTTPS, or nothing.
+    if (verdict.kind == SaavnVerdict::Match && !Saavn::isCdnLink(verdict.url))
         return {};
     m_saavnVerdicts.insert(videoId, verdict);
     return verdict;
+}
+
+void StreamResolver::purgeExpiredSaavn()
+{
+    if (m_saavnPurged)
+        return;
+    QSqlDatabase db = AppDatabase::connection();
+    if (!db.isOpen())
+        return;
+    m_saavnPurged = true;
+    QSqlQuery query(db);
+    query.prepare(QStringLiteral("DELETE FROM saavn_matches WHERE expires_at <= ?"));
+    query.addBindValue(QDateTime::currentSecsSinceEpoch());
+    query.exec();
 }
 
 void StreamResolver::rememberSaavn(const QString &videoId, const SaavnVerdict &verdict)
@@ -891,17 +923,20 @@ void StreamResolver::rememberSaavn(const QString &videoId, const SaavnVerdict &v
     QSqlDatabase db = AppDatabase::connection();
     if (!db.isOpen())
         return;
+    // When it was asked is not kept, only when the answer runs out, which is
+    // all anything reads; Clear history empties the table (Library).
     QSqlQuery query(db);
     query.prepare(QStringLiteral(
-        "INSERT OR REPLACE INTO saavn_matches (video_id, matched, saavn_id, url, kbps, checked_at, expires_at)"
-        " VALUES (?, ?, ?, ?, ?, ?, ?)"));
+        "INSERT OR REPLACE INTO saavn_matches (video_id, matched, saavn_id, url, kbps, expires_at, signature, matcher)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?, ?)"));
     query.addBindValue(videoId);
     query.addBindValue(verdict.kind == SaavnVerdict::Match ? 1 : 0);
     query.addBindValue(AppDatabase::text(verdict.saavnId));
     query.addBindValue(AppDatabase::text(verdict.url));
     query.addBindValue(verdict.kbps);
-    query.addBindValue(QDateTime::currentSecsSinceEpoch());
     query.addBindValue(verdict.expires.toSecsSinceEpoch());
+    query.addBindValue(AppDatabase::text(verdict.signature));
+    query.addBindValue(Saavn::matcherVersion());
     if (!query.exec())
         qWarning("jiosaavn: could not remember the answer for %s", qPrintable(videoId));
 }

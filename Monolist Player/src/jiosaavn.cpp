@@ -2,6 +2,7 @@
 #include "des.h"
 #include "rec/matchkey.h"
 
+#include <QCryptographicHash>
 #include <QElapsedTimer>
 #include <QHash>
 #include <QJsonArray>
@@ -46,6 +47,9 @@ constexpr int kMaxDetailsCalls = 2;
 // recording differ by a second or two; a radio edit, a live take or an intro
 // on a video differ by more.
 constexpr qint64 kSameRecordingMs = 3000;
+// Up by one whenever the rules below change what is taken: an answer that an
+// earlier matcher remembered is then asked about afresh (StreamResolver).
+constexpr int kMatcherVersion = 2;
 
 QString field(const QJsonObject &object, const QString &key)
 {
@@ -130,44 +134,91 @@ const QSet<QString> &joinWords()
     return joins;
 }
 
-void addKey(QSet<QString> &keys, const QString &key)
+bool usableKey(const QString &key)
 {
-    if (key.size() >= 2 && !weakKeys().contains(key))
-        keys.insert(key);
+    return key.size() >= 2 && !weakKeys().contains(key);
 }
 
-// Each name as its letters with the spaces taken out, so "A. R. Rahman" and
+// One credited name, as the keys it can be found by: the whole of it, and,
+// where it joins several ("Simon & Garfunkel", "A x B"), each part.
+struct NameKey {
+    QString label;           // as written, for the log
+    QString whole;           // empty when the name identifies nobody on its own
+    QStringList pieces;      // where it joins several; empty otherwise
+};
+
+// A name as its letters with the spaces taken out, so "A. R. Rahman" and
 // "A.R. Rahman" are one key; and a channel's "- Topic", "VEVO" or "Official"
 // taken off, since that is YouTube's way of writing the artist's own name.
+NameKey nameKey(const QString &name)
+{
+    NameKey key;
+    key.label = name.trimmed();
+    QStringList parts = words(name);
+    if (parts.size() > 1 && (parts.last() == QLatin1String("topic") || parts.last() == QLatin1String("official")))
+        parts.removeLast();
+    if (!parts.isEmpty() && parts.last().endsWith(QLatin1String("vevo"))) {
+        if (parts.last() == QLatin1String("vevo"))
+            parts.removeLast();
+        else
+            parts.last().chop(4);
+    }
+    if (parts.isEmpty())
+        return key;
+    if (const QString whole = parts.join(QString()); usableKey(whole))
+        key.whole = whole;
+
+    QStringList pieces;
+    QStringList piece;
+    for (qsizetype i = 0; i < parts.size(); ++i) {
+        if (joinWords().contains(parts.at(i)) && !piece.isEmpty() && i + 1 < parts.size()) {
+            pieces.append(piece.join(QString()));
+            piece.clear();
+            continue;
+        }
+        piece.append(parts.at(i));
+    }
+    pieces.append(piece.join(QString()));
+    if (pieces.size() > 1) {
+        for (const QString &part : std::as_const(pieces)) {
+            if (usableKey(part))
+                key.pieces.append(part);
+        }
+    }
+    return key;
+}
+
+bool identifies(const NameKey &key)
+{
+    return !key.whole.isEmpty() || !key.pieces.isEmpty();
+}
+
+// Every key of every name, for "is anyone credited on both sides".
 QSet<QString> artistKeys(const QStringList &names)
 {
     QSet<QString> keys;
     for (const QString &name : names) {
-        QStringList parts = words(name);
-        if (parts.size() > 1 && (parts.last() == QLatin1String("topic") || parts.last() == QLatin1String("official")))
-            parts.removeLast();
-        if (!parts.isEmpty() && parts.last().endsWith(QLatin1String("vevo"))) {
-            if (parts.last() == QLatin1String("vevo"))
-                parts.removeLast();
-            else
-                parts.last().chop(4);
-        }
-        if (parts.isEmpty())
-            continue;
-        addKey(keys, parts.join(QString()));
-
-        QStringList piece;
-        for (qsizetype i = 0; i < parts.size(); ++i) {
-            if (joinWords().contains(parts.at(i)) && !piece.isEmpty() && i + 1 < parts.size()) {
-                addKey(keys, piece.join(QString()));
-                piece.clear();
-                continue;
-            }
-            piece.append(parts.at(i));
-        }
-        addKey(keys, piece.join(QString()));
+        const NameKey key = nameKey(name);
+        if (!key.whole.isEmpty())
+            keys.insert(key.whole);
+        for (const QString &piece : key.pieces)
+            keys.insert(piece);
     }
     return keys;
+}
+
+// Whether a name is among the keys: whole, or every one of its parts.
+bool credits(const QSet<QString> &keys, const NameKey &name)
+{
+    if (!name.whole.isEmpty() && keys.contains(name.whole))
+        return true;
+    if (name.pieces.isEmpty())
+        return false;
+    for (const QString &piece : name.pieces) {
+        if (!keys.contains(piece))
+            return false;
+    }
+    return true;
 }
 
 bool intersects(const QSet<QString> &a, const QSet<QString> &b)
@@ -221,16 +272,32 @@ Pieces splitBrackets(const QString &title)
 
 // " - ", " | " and their kin: what follows is an aside too ("Yellow - Live in
 // Buenos Aires"), unless what comes before is the artist ("Coldplay -
-// Yellow"). A hyphen with no spaces round it is part of the title.
+// Yellow"). A hyphen with no spaces round it is part of the title, and so is
+// one inside quotes: 'Srivalli - From "Pushpa - The Rise"' has one aside.
 QStringList splitDashes(const QString &text)
 {
     static const QRegularExpression dash(QStringLiteral("\\s+[-\\x{2013}\\x{2014}|~]\\s+|\\s+//\\s+"));
+    const auto quoted = [&text](qsizetype end) {
+        qsizetype quotes = 0;
+        for (qsizetype i = 0; i < end; ++i) {
+            const char16_t c = text.at(i).unicode();
+            if (c == u'"' || c == 0x201C || c == 0x201D)
+                ++quotes;
+        }
+        return quotes % 2 == 1;
+    };
     QStringList out;
-    for (const QString &part : text.split(dash, Qt::SkipEmptyParts)) {
-        const QString trimmed = part.trimmed();
-        if (!trimmed.isEmpty())
-            out.append(trimmed);
+    qsizetype from = 0;
+    QRegularExpressionMatchIterator it = dash.globalMatch(text);
+    while (it.hasNext()) {
+        const QRegularExpressionMatch match = it.next();
+        if (quoted(match.capturedStart()))
+            continue;
+        out.append(text.mid(from, match.capturedStart() - from).trimmed());
+        from = match.capturedEnd();
     }
+    out.append(text.mid(from).trimmed());
+    out.removeAll(QString());
     return out;
 }
 
@@ -260,9 +327,13 @@ const QList<Phrase> &phrases()
             { "nightcore", "sped up" }, { "slowed", "slowed" }, { "slowed down", "slowed" },
             { "reverb", "reverb" }, { "reverbed", "reverb" }, { "lofi", "lofi" }, { "lo fi", "lofi" },
             { "8d", "8d" }, { "8d audio", "8d" }, { "bass boosted", "bass boosted" },
-            { "cover", "cover" }, { "demo", "demo" }, { "reprise", "reprise" },
+            { "cover", "cover" }, { "demo", "demo" }, { "reprise", "reprise" }, { "reprised", "reprise" },
             { "recreated", "recreated" }, { "rerecorded", "rerecorded" }, { "re recorded", "rerecorded" },
-            { "taylors version", "rerecorded" },
+            { "rerecording", "rerecorded" }, { "re recording", "rerecorded" }, { "re record", "rerecorded" },
+            { "rerecord", "rerecorded" }, { "new recording", "rerecorded" }, { "taylors version", "rerecorded" },
+            { "encore", "encore" }, { "revisited", "revisited" }, { "flip", "flip" }, { "slow", "slow" },
+            { "jhankar", "jhankar" }, { "jhankar beats", "jhankar" }, { "sufi", "sufi" },
+            { "synthwave", "synthwave" },
             { "female", "female" }, { "female version", "female" }, { "male", "male" },
             { "male version", "male" }, { "duet", "duet" }, { "sad", "sad" }, { "sad version", "sad" },
             { "session", "session" }, { "sessions", "session" },
@@ -279,11 +350,14 @@ const QList<Phrase> &phrases()
             { "jazz", "jazz" }, { "reggae", "reggae" }, { "rap", "rap" }, { "club", "club" },
             { "dance", "dance" }, { "rave", "rave" }, { "funk", "funk" },
             // A song sung again in another language is another recording:
-            // "Srivalli (Hindi)" is not the Telugu original.
+            // "Srivalli (Hindi)" is not the Telugu original. (The same names
+            // are in languages() below.)
             { "hindi", "hindi" }, { "tamil", "tamil" }, { "telugu", "telugu" }, { "kannada", "kannada" },
             { "malayalam", "malayalam" }, { "bengali", "bengali" }, { "marathi", "marathi" },
             { "punjabi", "punjabi" }, { "gujarati", "gujarati" }, { "english", "english" },
             { "spanish", "spanish" }, { "korean", "korean" }, { "japanese", "japanese" },
+            { "bhojpuri", "bhojpuri" }, { "urdu", "urdu" }, { "odia", "odia" }, { "assamese", "assamese" },
+            { "haryanvi", "haryanvi" }, { "rajasthani", "rajasthani" },
             // Release noise: the same recording under another label.
             { "radio edit", "" }, { "single edit", "" }, { "album edit", "" }, { "clean edit", "" },
             { "explicit edit", "" }, { "radio version", "" }, { "single version", "" },
@@ -293,9 +367,12 @@ const QList<Phrase> &phrases()
             { "stereo", "" }, { "explicit", "" }, { "clean", "" }, { "censored", "" }, { "uncensored", "" },
             { "bonus track", "" }, { "bonus", "" }, { "deluxe", "" }, { "edition", "" },
             { "expanded", "" }, { "anniversary", "" }, { "official", "" }, { "audio", "" }, { "video", "" },
-            { "music video", "" }, { "lyric", "" }, { "lyrics", "" }, { "lyrical", "" },
+            { "music video", "" }, { "lyric", "" }, { "lyrics", "" }, { "lyrical", "" }, { "letra", "" },
             { "visualizer", "" }, { "visualiser", "" }, { "hd", "" }, { "hq", "" }, { "4k", "" },
-            { "full song", "" }, { "full video", "" }, { "soundtrack", "" }, { "ost", "" },
+            { "1080p", "" }, { "720p", "" }, { "mv", "" }, { "full song", "" }, { "full video", "" },
+            { "full", "" }, { "song", "" }, { "songs", "" }, { "single", "" }, { "ep", "" },
+            { "original", "" }, { "studio version", "" }, { "dirty", "" },
+            { "soundtrack", "" }, { "ost", "" },
             { "original motion picture soundtrack", "" }, { "from the motion picture", "" },
         };
         QList<Phrase> out;
@@ -309,6 +386,22 @@ const QList<Phrase> &phrases()
         return out;
     }();
     return list;
+}
+
+// The version markers that are languages. Kept apart from the rest because a
+// language can also come from an album's name, and because JioSaavn says
+// which language each row is in.
+const QSet<QString> &languages()
+{
+    static const QSet<QString> set = {
+        QStringLiteral("hindi"), QStringLiteral("tamil"), QStringLiteral("telugu"), QStringLiteral("kannada"),
+        QStringLiteral("malayalam"), QStringLiteral("bengali"), QStringLiteral("marathi"),
+        QStringLiteral("punjabi"), QStringLiteral("gujarati"), QStringLiteral("english"),
+        QStringLiteral("spanish"), QStringLiteral("korean"), QStringLiteral("japanese"),
+        QStringLiteral("bhojpuri"), QStringLiteral("urdu"), QStringLiteral("odia"), QStringLiteral("assamese"),
+        QStringLiteral("haryanvi"), QStringLiteral("rajasthani"),
+    };
+    return set;
 }
 
 // Trailing words a video title carries and the song does not: "Kesariya Full
@@ -416,12 +509,15 @@ const QSet<QString> &stopWords()
     return set;
 }
 
+// Whatever an aside says, in the parts of `title` it belongs in. Leans
+// towards "this is another recording": words it cannot place are kept, to be
+// found on the other side, rather than dropped.
 void readAside(const QString &aside, Saavn::Title &title)
 {
     QStringList list = words(aside);
     if (list.isEmpty())
         return;
-    const QString &first = list.first();
+    const QString first = list.first();
     // A credit. "with" counts here, inside brackets or after a dash, and
     // nowhere else: bare, it is "Dancing with a Stranger".
     if (creditWords().contains(first) || first == QLatin1String("with")) {
@@ -431,10 +527,22 @@ void readAside(const QString &aside, Saavn::Title &title)
             title.credits.append(list.mid(1).join(QLatin1Char(' ')));
         return;
     }
-    // The film or the album it is from, and who produced it: neither says
-    // anything about which recording this is, and a film's name can be
-    // anything at all — including "Live".
-    if (first == QLatin1String("from") || first == QLatin1String("prod")
+    // The film or the album it is from: its name says nothing about which
+    // recording this is, and can be anything at all — including "Live". A
+    // language in brackets inside it does: that is how JioSaavn names a dub,
+    // 'Deva Deva (From "Brahmastra (Telugu)")', and a film's own name is
+    // never bracketed there.
+    if (first == QLatin1String("from")) {
+        for (const QString &inner : splitBrackets(aside).asides) {
+            for (const QString &word : words(inner)) {
+                if (languages().contains(word))
+                    title.versions.append(word);
+            }
+        }
+        return;
+    }
+    // Who produced it: says nothing either.
+    if (first == QLatin1String("prod")
         || startsWith(list, 0, { QStringLiteral("produced"), QStringLiteral("by") })
         || startsWith(list, 0, { QStringLiteral("music"), QStringLiteral("by") }))
         return;
@@ -450,8 +558,11 @@ void readAside(const QString &aside, Saavn::Title &title)
     }
 
     takeParts(list, title.versions);
+    const bool saysVersion = list.contains(QLatin1String("version"));
     bool marked = false;
+    bool noise = false;
     QStringList rest;
+    QStringList years;
     for (qsizetype i = 0; i < list.size();) {
         bool matched = false;
         for (const Phrase &phrase : phrases()) {
@@ -459,6 +570,8 @@ void readAside(const QString &aside, Saavn::Title &title)
                 if (!phrase.canonical.isEmpty()) {
                     title.versions.append(phrase.canonical);
                     marked = true;
+                } else {
+                    noise = true;
                 }
                 i += phrase.words.size();
                 matched = true;
@@ -467,40 +580,101 @@ void readAside(const QString &aside, Saavn::Title &title)
         }
         if (matched)
             continue;
-        if (!isYear(list.at(i)))
+        if (isYear(list.at(i)))
+            years.append(list.at(i));
+        else if (!stopWords().contains(list.at(i)))
             rest.append(list.at(i));
         ++i;
     }
+    // Beside a marker: whose remix, which concert.
     if (marked) {
-        for (const QString &word : std::as_const(rest)) {
-            if (!stopWords().contains(word))
-                title.versionContext.append(word);
-        }
+        title.versionContext.append(rest);
+        return;
     }
+    // Noise and a year ("Remastered 2011") is noise. A year on its own,
+    // "(2012)", dates a recording as much as a release, so it is kept.
+    if (rest.isEmpty()) {
+        if (!noise)
+            title.unknown.append(years);
+        return;
+    }
+    // "(Arijit Singh Version)", "(Film Version)", "(Version 2)": a version
+    // that names itself, which the other side must name the same way.
+    if (saysVersion) {
+        title.versions.append(rest.join(QLatin1Char(' ')) + QStringLiteral(" version"));
+        return;
+    }
+    title.unknown.append(rest);
 }
 
 // Everything the comparison needs about one side, worked out once.
 struct Side {
     Saavn::Title title;
+    QStringList versions;        // title.versions without the languages
+    QSet<QString> languages;     // named in the title, or in the album's
+    QString rowLanguage;         // JioSaavn's own field; rows only
+    QList<NameKey> names;        // who is credited: the artist line and the title's credits
     QSet<QString> keys;
+    QString album;               // albumKey
+    QSet<QString> vocabulary;    // every word of the title, the artists and the album
     qint64 durationMs = 0;
 };
 
-Side ourSide(const Saavn::Target &target)
+// An album's name as far as it tells one album from another: its core title
+// and whatever its asides say ("Part One", "- The Rise"), without release
+// noise or a language, which is compared on its own.
+QString albumKey(const Saavn::Title &album)
+{
+    QStringList parts{ album.core };
+    for (const QString &version : album.versions) {
+        if (!languages().contains(version))
+            parts.append(version);
+    }
+    parts.append(album.unknown);
+    parts.append(album.versionContext);
+    return parts.join(QLatin1Char(' ')).simplified();
+}
+
+Side makeSide(const QString &title, const QStringList &artists, const QString &album)
 {
     Side side;
-    const QStringList names = Saavn::splitArtists(target.artist);
-    side.title = Saavn::parseTitle(target.title, names);
-    side.keys = artistKeys(names + side.title.credits);
+    side.title = Saavn::parseTitle(title, artists);
+    for (const QString &version : std::as_const(side.title.versions)) {
+        if (languages().contains(version))
+            side.languages.insert(version);
+        else
+            side.versions.append(version);
+    }
+    const Saavn::Title albumTitle = Saavn::parseTitle(album);
+    for (const QString &version : albumTitle.versions) {
+        if (languages().contains(version))
+            side.languages.insert(version);
+    }
+    side.album = albumKey(albumTitle);
+    for (const QString &name : artists + side.title.credits) {
+        const NameKey key = nameKey(name);
+        if (identifies(key))
+            side.names.append(key);
+    }
+    side.keys = artistKeys(artists + side.title.credits);
+    for (const QString &text : QStringList{ title, artists.join(QLatin1Char(' ')), album }) {
+        for (const QString &word : words(text))
+            side.vocabulary.insert(word);
+    }
+    return side;
+}
+
+Side ourSide(const Saavn::Target &target)
+{
+    Side side = makeSide(target.title, Saavn::splitArtists(target.artist), target.album);
     side.durationMs = qMax<qint64>(0, target.durationMs);
     return side;
 }
 
 Side rowSide(const Saavn::Row &row)
 {
-    Side side;
-    side.title = Saavn::parseTitle(row.title, row.artists);
-    side.keys = artistKeys(row.artists + side.title.credits);
+    Side side = makeSide(row.title, row.artists, row.album);
+    side.rowLanguage = row.language;
     side.durationMs = qint64(qMax(0, row.durationSec)) * 1000;
     return side;
 }
@@ -510,37 +684,102 @@ QString describe(const QStringList &versions)
     return versions.isEmpty() ? QStringLiteral("the studio version") : versions.join(QStringLiteral(", "));
 }
 
+QString describe(const QSet<QString> &languages)
+{
+    QStringList list(languages.cbegin(), languages.cend());
+    list.sort();
+    return list.isEmpty() ? QStringLiteral("no language named") : list.join(QStringLiteral(", "));
+}
+
+// The words beside a version marker that could name someone or somewhere:
+// "DJ" names nobody.
+QStringList context(const Side &side)
+{
+    QStringList out;
+    for (const QString &word : side.title.versionContext) {
+        if (!weakKeys().contains(word))
+            out.append(word);
+    }
+    return out;
+}
+
 // Empty when `theirs` is this recording; otherwise why not.
 QString refusal(const Side &ours, const Side &theirs)
 {
     if (ours.title.core.isEmpty() || ours.title.core != theirs.title.core) {
         return QStringLiteral("title \"%1\" is not \"%2\"").arg(theirs.title.core, ours.title.core);
     }
-    if (ours.title.versions != theirs.title.versions) {
+    if (ours.versions != theirs.versions)
+        return QStringLiteral("%1, where this is %2").arg(describe(theirs.versions), describe(ours.versions));
+
+    // A language named on one side is a dub on the other unless it names the
+    // same. Where only ours names one, the row's own language field counts
+    // for the row: "Srivalli" in JioSaavn's Telugu is the Telugu Srivalli.
+    QSet<QString> theirLanguages = theirs.languages;
+    if (theirLanguages.isEmpty() && !ours.languages.isEmpty() && !theirs.rowLanguage.isEmpty())
+        theirLanguages.insert(theirs.rowLanguage);
+    if (ours.languages != theirLanguages) {
         return QStringLiteral("%1, where this is %2")
-            .arg(describe(theirs.title.versions), describe(ours.title.versions));
+            .arg(describe(theirLanguages), describe(ours.languages));
     }
+
+    // Words neither side can place ("(Synthwave)", "(Encore)", an alternate
+    // title) must be somewhere on the other side.
+    const auto missing = [](const Side &from, const Side &in) {
+        QStringList out;
+        for (const QString &word : from.title.unknown) {
+            if (!in.vocabulary.contains(word))
+                out.append(word);
+        }
+        return out;
+    };
+    if (const QStringList words = missing(theirs, ours); !words.isEmpty())
+        return QStringLiteral("\"%1\" in the title, which this does not say").arg(words.join(QLatin1Char(' ')));
+    if (const QStringList words = missing(ours, theirs); !words.isEmpty())
+        return QStringLiteral("does not say \"%1\", which this does").arg(words.join(QLatin1Char(' ')));
+
     if (!intersects(ours.keys, theirs.keys))
         return QStringLiteral("no artist in common");
-    if (ours.durationMs > 0 && theirs.durationMs > 0) {
+    if (ours.durationMs > 0) {
+        // Our length known and theirs not: nothing ties the row to it.
+        if (theirs.durationMs <= 0)
+            return QStringLiteral("JioSaavn gives no length to compare");
         const qint64 delta = theirs.durationMs - ours.durationMs;
         if (qAbs(delta) > kSameRecordingMs) {
             return QStringLiteral("%1 s %2").arg(qRound(qAbs(delta) / 1000.0))
                 .arg(delta > 0 ? QStringLiteral("longer") : QStringLiteral("shorter"));
         }
     }
+
     // Both a remix, or both live: whose remix, and where, must not disagree.
-    if (!ours.title.versions.isEmpty() && !ours.title.versionContext.isEmpty()
-        && !theirs.title.versionContext.isEmpty()) {
-        const QSet<QString> a(ours.title.versionContext.cbegin(), ours.title.versionContext.cend());
-        const QSet<QString> b(theirs.title.versionContext.cbegin(), theirs.title.versionContext.cend());
-        if (!intersects(a, b)) {
+    // Named on one side only, the name must be found on the other ("Yellow
+    // (Live)" from the album "Live in Buenos Aires" is the Buenos Aires take;
+    // from "Live 2003" it is not).
+    const QStringList a = context(ours);
+    const QStringList b = context(theirs);
+    const QString kind = describe(ours.title.versions);
+    if (!a.isEmpty() && !b.isEmpty()) {
+        if (!intersects(QSet<QString>(a.cbegin(), a.cend()), QSet<QString>(b.cbegin(), b.cend()))) {
             return QStringLiteral("a different %1 (%2, where this is %3)")
-                .arg(describe(ours.title.versions), theirs.title.versionContext.join(QLatin1Char(' ')),
-                     ours.title.versionContext.join(QLatin1Char(' ')));
+                .arg(kind, b.join(QLatin1Char(' ')), a.join(QLatin1Char(' ')));
+        }
+    } else if (!a.isEmpty() || !b.isEmpty()) {
+        const QStringList &named = a.isEmpty() ? b : a;
+        const Side &other = a.isEmpty() ? ours : theirs;
+        const bool found = std::any_of(named.cbegin(), named.cend(),
+                                       [&other](const QString &word) { return other.vocabulary.contains(word); });
+        if (!found) {
+            return a.isEmpty()
+                ? QStringLiteral("%1 \"%2\", where this names none").arg(kind, b.join(QLatin1Char(' ')))
+                : QStringLiteral("names no \"%2\", as this %1 does").arg(kind, a.join(QLatin1Char(' ')));
         }
     }
     return {};
+}
+
+QString rowLabel(const Saavn::Row &row)
+{
+    return QStringLiteral("%1 — %2").arg(row.title, row.artists.join(QStringLiteral(", ")));
 }
 
 } // namespace
@@ -601,15 +840,43 @@ QString decryptMediaUrl(const QString &encrypted)
     const QByteArray plain = Des::decryptEcb(kLinkKey, *decoded, &ok);
     if (!ok)
         return {};
-    const QString url = QString::fromUtf8(plain).trimmed();
-    if (!url.startsWith(QLatin1String("https://")) && !url.startsWith(QLatin1String("http://")))
-        return {};
-    return url;
+    const QString text = QString::fromUtf8(plain).trimmed();
+    // Some of JioSaavn's links have been plain HTTP. Their CDN answers the
+    // same path over HTTPS, and a stream fetched in the clear is one anyone
+    // on the way can read or replace.
+    QUrl url(text, QUrl::StrictMode);
+    if (url.scheme() == QLatin1String("http"))
+        url.setScheme(QStringLiteral("https"));
+    const QString link = url.toString(QUrl::FullyEncoded);
+    return isCdnLink(link) ? link : QString();
 }
 
 QString encryptMediaUrl(const QString &url)
 {
     return QString::fromLatin1(Des::encryptEcb(kLinkKey, url.toUtf8()).toBase64());
+}
+
+bool isCdnLink(const QString &link)
+{
+    const QUrl url(link, QUrl::StrictMode);
+    if (!url.isValid() || url.scheme() != QLatin1String("https") || !url.userInfo().isEmpty())
+        return false;
+    const QString host = url.host().toLower();
+    return host == QLatin1String("saavncdn.com") || host.endsWith(QLatin1String(".saavncdn.com"));
+}
+
+QString signature(const Target &target)
+{
+    const QString text = QStringList{ normalise(target.title), normalise(target.artist), normalise(target.album),
+                                      QString::number(qRound(qMax<qint64>(0, target.durationMs) / 1000.0)) }
+                             .join(QLatin1Char('\n'));
+    return QString::fromLatin1(
+        QCryptographicHash::hash(text.toUtf8(), QCryptographicHash::Sha256).toHex().left(32));
+}
+
+int matcherVersion()
+{
+    return kMatcherVersion;
 }
 
 Stream streamFor(const QString &decryptedUrl, bool has320)
@@ -666,6 +933,7 @@ Row rowFrom(const QJsonObject &song)
     if (row.title.isEmpty())
         row.title = decodeEntities(field(song, QStringLiteral("song"))).trimmed();
     row.album = decodeEntities(either(QStringLiteral("album"))).trimmed();
+    row.language = either(QStringLiteral("language")).trimmed().toLower();
     row.durationSec = either(QStringLiteral("duration")).toInt();
     row.explicitContent = either(QStringLiteral("explicit_content")) == QLatin1String("1");
     row.has320 = either(QStringLiteral("320kbps")) == QLatin1String("true");
@@ -702,6 +970,11 @@ Row rowFrom(const QJsonObject &song)
             add(name);
     }
     return row;
+}
+
+bool isSearchAnswer(const QJsonObject &root)
+{
+    return root.value(QStringLiteral("results")).isArray();
 }
 
 QList<Row> rowsFromSearch(const QJsonObject &root)
@@ -850,8 +1123,10 @@ Choice choose(const Target &target, const QList<Row> &rows)
         return choice;
     }
 
+    // Every row once, and its side worked out once.
+    QList<int> listed;
+    QList<Side> sides(rows.size());
     QList<int> plausible;
-    QHash<int, qint64> distance;   // |Δ| in ms, -1 when either length is unknown
     QSet<QString> seen;
     for (int i = 0; i < rows.size(); ++i) {
         const Row &row = rows.at(i);
@@ -860,59 +1135,133 @@ Choice choose(const Target &target, const QList<Row> &rows)
                 continue;
             seen.insert(row.id);
         }
-        const Side theirs = rowSide(row);
-        const QString why = refusal(ours, theirs);
+        listed.append(i);
+        sides[i] = rowSide(row);
+        const QString why = refusal(ours, sides.at(i));
         if (!why.isEmpty()) {
-            choice.refusals.append(QStringLiteral("%1 — %2: %3")
-                                       .arg(row.title, row.artists.join(QStringLiteral(", ")), why));
+            choice.refusals.append(rowLabel(row) + QStringLiteral(": ") + why);
             continue;
         }
         plausible.append(i);
-        distance.insert(i, ours.durationMs > 0 && theirs.durationMs > 0
-                               ? qAbs(theirs.durationMs - ours.durationMs) : -1);
     }
+
+    // A name of ours that this row does not credit and another listing of
+    // the same song does (the same title and version, in any language, at a
+    // length that fits): that listing is likelier ours, and this one may be
+    // the song sung by someone else. The Hindi "Deva Deva" credits every
+    // name the Telugu one does but its singer, and the Telugu one is refused
+    // for its language: neither is taken, which is right for a Telugu song.
+    const auto fits = [&ours](const Side &side) {
+        return ours.durationMs <= 0 || side.durationMs <= 0
+               || qAbs(side.durationMs - ours.durationMs) <= kSameRecordingMs;
+    };
+    for (auto it = plausible.begin(); it != plausible.end();) {
+        const Side &side = sides.at(*it);
+        QString lacking;
+        QString elsewhere;
+        for (const NameKey &name : ours.names) {
+            if (credits(side.keys, name))
+                continue;
+            for (const int j : std::as_const(listed)) {
+                const Side &other = sides.at(j);
+                if (j != *it && other.title.core == ours.title.core && other.versions == ours.versions
+                    && fits(other) && credits(other.keys, name)) {
+                    lacking = name.label;
+                    elsewhere = rowLabel(rows.at(j));
+                    break;
+                }
+            }
+            if (!lacking.isEmpty())
+                break;
+        }
+        if (lacking.isEmpty()) {
+            ++it;
+            continue;
+        }
+        choice.refusals.append(QStringLiteral("%1: does not credit %2, and %3 does")
+                                   .arg(rowLabel(rows.at(*it)), lacking, elsewhere));
+        it = plausible.erase(it);
+    }
+
     if (plausible.isEmpty()) {
         choice.reason = QStringLiteral("none of the %1 rows is this recording").arg(rows.size());
         return choice;
     }
+    const auto refuseAll = [&choice, &rows](const QList<int> &which, const QString &reason, const QString &each) {
+        choice.reason = reason;
+        for (const int i : which)
+            choice.refusals.append(rowLabel(rows.at(i)) + QStringLiteral(": ") + each);
+    };
     // Without the song's own length, two rows that both fit could be two
     // recordings, and nothing is left to tell them apart.
     if (ours.durationMs <= 0 && plausible.size() > 1) {
-        choice.reason = QStringLiteral("the song's length is unknown and %1 rows fit, so none is taken")
-                            .arg(plausible.size());
-        for (const int i : std::as_const(plausible)) {
-            choice.refusals.append(QStringLiteral("%1 — %2: one of several that fit, with no length to choose by")
-                                       .arg(rows.at(i).title, rows.at(i).artists.join(QStringLiteral(", "))));
-        }
+        refuseAll(plausible,
+                  QStringLiteral("the song's length is unknown and %1 rows fit, so none is taken").arg(plausible.size()),
+                  QStringLiteral("one of several that fit, with no length to choose by"));
         return choice;
     }
 
-    // Uncensored first, then the one offered at 320 kbps, then the closest in
-    // length; the album only breaks what is left, and JioSaavn's own order
-    // (most played first) what is left after that.
-    const QString album = normalise(target.album);
-    std::stable_sort(plausible.begin(), plausible.end(), [&](int a, int b) {
+    // Rows that fit and disagree about where they come from may be two
+    // recordings — the film's song and its dub, which share a backing track
+    // and so a length. Our album, where it names one of theirs, settles it,
+    // before anything about bitrates.
+    QList<int> pool = plausible;
+    if (!ours.album.isEmpty()) {
+        QList<int> same;
+        for (const int i : std::as_const(pool)) {
+            if (sides.at(i).album == ours.album)
+                same.append(i);
+        }
+        if (!same.isEmpty() && same.size() < pool.size()) {
+            for (const int i : std::as_const(pool)) {
+                if (!same.contains(i))
+                    choice.refusals.append(rowLabel(rows.at(i)) + QStringLiteral(": from another album than this"));
+            }
+            pool = same;
+        }
+    }
+    // Otherwise rows in two languages cannot be told apart at all. (Rows on
+    // two albums can: nearly every well-known song is on a dozen
+    // compilations, credited a little differently on each, and refusing
+    // them all, as the paper's rule in 3.3 would, refuses the song. What
+    // tells a dub from its original is the language, and a performer of
+    // ours missing — both checked.)
+    if (ours.languages.isEmpty()) {
+        QSet<QString> spoken;
+        for (const int i : std::as_const(pool)) {
+            if (!sides.at(i).rowLanguage.isEmpty())
+                spoken.insert(sides.at(i).rowLanguage);
+        }
+        if (spoken.size() > 1) {
+            refuseAll(pool,
+                      QStringLiteral("rows in %1 fit, and nothing says which language this is").arg(describe(spoken)),
+                      QStringLiteral("one of several languages that fit"));
+            return choice;
+        }
+    }
+    // Uncensored first, then the one offered at 320 kbps, then the closest
+    // in length; JioSaavn's own order (most played first) breaks what is
+    // left. Our album and our names have already done their part: every row
+    // left is from the album ours names, where one does, and credits the
+    // same of our names.
+    const auto distance = [&ours, &sides](int i) {
+        return ours.durationMs > 0 && sides.at(i).durationMs > 0 ? qAbs(sides.at(i).durationMs - ours.durationMs)
+                                                                : qint64(-1);
+    };
+    std::stable_sort(pool.begin(), pool.end(), [&](int a, int b) {
         const Row &x = rows.at(a);
         const Row &y = rows.at(b);
         if (x.explicitContent != y.explicitContent)
             return x.explicitContent;
         if (x.has320 != y.has320)
             return x.has320;
-        const qint64 dx = distance.value(a);
-        const qint64 dy = distance.value(b);
+        const qint64 dx = distance(a);
+        const qint64 dy = distance(b);
         if ((dx < 0) != (dy < 0))
             return dx >= 0;
-        if (dx != dy)
-            return dx < dy;
-        if (!album.isEmpty()) {
-            const bool ax = normalise(x.album) == album;
-            const bool ay = normalise(y.album) == album;
-            if (ax != ay)
-                return ax;
-        }
-        return false;
+        return dx < dy;
     });
-    choice.accepted = plausible;
+    choice.accepted = pool;
     return choice;
 }
 
@@ -928,6 +1277,7 @@ struct JioSaavn::Lookup {
     QList<int> order;          // rows accepted by the matcher, best first
     qsizetype next = 0;        // the next of them to try for a link
     int detailsCalls = 0;
+    QString detailsError;      // a song.getDetails that JioSaavn did not answer
     QStringList refusals;
     QString noMatchReason;
     bool finished = false;
@@ -975,6 +1325,15 @@ void JioSaavn::lookup(const Saavn::Target &target, Callback done)
             finish(state, result);
             return;
         }
+        // An error or a throttle, sent as HTTP 200: not heard from, rather
+        // than "not there", which would be remembered for a day.
+        if (!Saavn::isSearchAnswer(root)) {
+            Result result;
+            result.kind = Result::Failed;
+            result.reason = QStringLiteral("JioSaavn answered without any results list");
+            finish(state, result);
+            return;
+        }
         state->rows = Saavn::rowsFromSearch(root);
         const Saavn::Choice choice = Saavn::choose(state->target, state->rows);
         state->order = choice.accepted;
@@ -1017,6 +1376,8 @@ void JioSaavn::tryNext(const std::shared_ptr<Lookup> &state)
                 if (row.encryptedUrl.isEmpty()) {
                     state->refusals.append(label + (error.isEmpty() ? QStringLiteral(": no link in its details")
                                                                     : QStringLiteral(": ") + error));
+                    if (!error.isEmpty())
+                        state->detailsError = error;
                     ++state->next;
                 }
                 tryNext(state);
@@ -1056,10 +1417,16 @@ void JioSaavn::tryNext(const std::shared_ptr<Lookup> &state)
 
     Result result;
     result.kind = Result::NoMatch;
-    if (!state->order.isEmpty())
+    if (!state->detailsError.isEmpty()) {
+        // A row that fits, whose link JioSaavn did not give when asked: it
+        // may well have one, so nothing is remembered.
+        result.kind = Result::Failed;
+        result.reason = QStringLiteral("a row that fits could not be asked about (%1)").arg(state->detailsError);
+    } else if (!state->order.isEmpty()) {
         result.reason = QStringLiteral("no row that fits has a usable stream");
-    else
+    } else {
         result.reason = state->noMatchReason;
+    }
     finish(state, result);
 }
 
@@ -1088,10 +1455,24 @@ void JioSaavn::get(const QUrlQuery &query, Answer done)
         request.setRawHeader("X-Forwarded-For", kIndianAddress);
         request.setRawHeader("X-Real-IP", kIndianAddress);
     }
+    // Redirects are followed only to JioSaavn's own hosts, over HTTPS: Qt
+    // carries every header above into a redirected request, and the Indian
+    // address, the cookie and the query are for JioSaavn alone.
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
-                         QNetworkRequest::NoLessSafeRedirectPolicy);
+                         QNetworkRequest::UserVerifiedRedirectPolicy);
     request.setTransferTimeout(kRequestTimeoutMs);
     QNetworkReply *reply = m_network->get(request);
+    connect(reply, &QNetworkReply::redirected, reply, [reply](const QUrl &to) {
+        const QUrl target = reply->url().resolved(to);
+        const QString host = target.host().toLower();
+        if (target.scheme() == QLatin1String("https")
+            && (host == QLatin1String("jiosaavn.com") || host.endsWith(QLatin1String(".jiosaavn.com")))) {
+            Q_EMIT reply->redirectAllowed();
+            return;
+        }
+        reply->setProperty("monolistRedirectedAway", true);
+        reply->abort();
+    });
 
     // Qt has one timeout, for silence. The connection gets its own, shorter
     // one: a host that cannot even be reached is not worth the whole wait.
@@ -1120,6 +1501,10 @@ void JioSaavn::get(const QUrlQuery &query, Answer done)
         const QString timedOut = reply->property("monolistTimedOut").toString();
         if (!timedOut.isEmpty()) {
             done({}, QStringLiteral("JioSaavn timed out %1").arg(timedOut));
+            return;
+        }
+        if (reply->property("monolistRedirectedAway").toBool()) {
+            done({}, QStringLiteral("JioSaavn redirected away from its own hosts; not followed"));
             return;
         }
         if (reply->error() != QNetworkReply::NoError) {

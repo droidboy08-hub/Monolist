@@ -236,7 +236,10 @@ void AppDatabase::createSchema()
     // What JioSaavn answered for a song, so it is asked once a week rather
     // than at every play (StreamResolver): its link and bitrate where it has
     // the same recording (`matched` 1), or that it has not (`matched` 0),
-    // which is asked again sooner. Times are UTC seconds.
+    // which is asked again sooner. `signature` is a hash of the title,
+    // artist, album and length the answer was for, and `matcher` the version
+    // of the rules that gave it; either differing, the song is asked about
+    // afresh. Times are UTC seconds.
     q.exec(QStringLiteral(
         "CREATE TABLE IF NOT EXISTS saavn_matches ("
         " video_id TEXT PRIMARY KEY,"
@@ -244,8 +247,9 @@ void AppDatabase::createSchema()
         " saavn_id TEXT NOT NULL DEFAULT '',"
         " url TEXT NOT NULL DEFAULT '',"
         " kbps INTEGER NOT NULL DEFAULT 0,"
-        " checked_at INTEGER NOT NULL DEFAULT 0,"
-        " expires_at INTEGER NOT NULL DEFAULT 0)"));
+        " expires_at INTEGER NOT NULL DEFAULT 0,"
+        " signature TEXT NOT NULL DEFAULT '',"
+        " matcher INTEGER NOT NULL DEFAULT 0)"));
 }
 
 bool AppDatabase::hasColumn(const QString &table, const QString &column)
@@ -302,6 +306,13 @@ void AppDatabase::migrate()
         if (!hasColumn(table, QStringLiteral("is_video")))
             q.exec(QStringLiteral("ALTER TABLE %1 ADD COLUMN is_video INTEGER NOT NULL DEFAULT 0").arg(table));
     }
+
+    // JioSaavn's answers from before they were tied to the song they were
+    // for: the rows stay, unmatched by any signature, until they run out.
+    if (!hasColumn(QStringLiteral("saavn_matches"), QStringLiteral("signature")))
+        q.exec(QStringLiteral("ALTER TABLE saavn_matches ADD COLUMN signature TEXT NOT NULL DEFAULT ''"));
+    if (!hasColumn(QStringLiteral("saavn_matches"), QStringLiteral("matcher")))
+        q.exec(QStringLiteral("ALTER TABLE saavn_matches ADD COLUMN matcher INTEGER NOT NULL DEFAULT 0"));
 
     removeSampleData();
 

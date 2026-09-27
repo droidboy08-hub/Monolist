@@ -40,6 +40,7 @@ struct Row {
     QString title;           // entities decoded
     QString album;
     QStringList artists;     // primary and featured, entities decoded
+    QString language;        // JioSaavn's own "language", lower case; empty when not given
     int durationSec = 0;     // 0 when not given
     bool explicitContent = false;
     bool has320 = false;     // more_info["320kbps"] == "true"
@@ -50,19 +51,34 @@ struct Row {
 // only breaks ties.
 struct Title {
     QString core;            // normalised, without asides, credits or noise
-    QStringList versions;    // canonical version markers, sorted: "live", "remix", "part 1 5"
+    QStringList versions;    // canonical version markers, sorted: "live", "remix", "part 1 5", "telugu"
     QStringList credits;     // names credited in the title (feat., and "with" inside brackets)
     QStringList versionContext;  // other words beside a version marker: a remixer, a venue
+    // Words of an aside that is none of the above ("(Synthwave)", "(Encore)",
+    // "(Kehte Hain Khuda)", a bare "(2012)"): nothing says what they mean, so
+    // the other side must have them somewhere — its title, artists or album.
+    QStringList unknown;
 };
+
+// What a match was judged against, as a short hash: a remembered answer is
+// used again only for the song as it was when it was asked about, and only
+// by the matcher that gave it (matcherVersion goes up whenever the rules
+// change, so a wrong match an older build made is not replayed).
+QString signature(const Target &target);
+int matcherVersion();
 
 // &quot; &amp; &#039; and the rest, which JioSaavn leaves in its titles.
 QString decodeEntities(const QString &text);
 
 // more_info.encrypted_media_url: Base64, then DES-ECB under the key every
 // JioSaavn client uses, then PKCS#5 unpadding. Empty when it does not decrypt
-// to a link. encryptMediaUrl is the reverse, for the self-test's fixtures.
+// to a link on JioSaavn's own CDN (isCdnLink); a plain-HTTP link there is
+// moved to HTTPS. encryptMediaUrl is the reverse, for the self-test's fixtures.
 QString decryptMediaUrl(const QString &encrypted);
 QString encryptMediaUrl(const QString &url);
+// HTTPS, on saavncdn.com or a host under it: the only links handed to mpv,
+// and the only ones taken back from the saavn_matches table.
+bool isCdnLink(const QString &url);
 
 // The rendition a link names at the end of its path ("..._96.mp4"), moved up
 // to 320 kbps where the row says that exists.
@@ -77,6 +93,10 @@ Stream streamFor(const QString &decryptedUrl, bool has320);
 bool acceptable(const Stream &stream, QString *why = nullptr);
 
 Row rowFrom(const QJsonObject &song);
+// Whether a search answer is one at all: it has a "results" list, empty or
+// not. An object without one is an error or a throttle sent as HTTP 200, and
+// says nothing about whether JioSaavn has the song.
+bool isSearchAnswer(const QJsonObject &root);
 QList<Row> rowsFromSearch(const QJsonObject &root);
 // song.getDetails answers either {"songs": [...]} or {"<id>": {...}}.
 bool rowFromDetails(const QJsonObject &root, const QString &id, Row *row);

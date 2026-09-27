@@ -218,19 +218,26 @@ private:
     void youtubeWins(const QString &videoId);
 
     // What JioSaavn said about a song, remembered in memory and in the
-    // saavn_matches table.
+    // saavn_matches table. A Match or NoMatch holds only for the song as it
+    // was asked about (`signature`, Saavn::signature) and the matcher that
+    // judged it; a Refused holds for the video whatever its name.
     struct SaavnVerdict {
         enum Kind { Unknown, Match, NoMatch, Refused };
         Kind kind = Unknown;
         QString url;
         int kbps = 0;
         QString saavnId;
+        QString signature;
         QDateTime expires;
     };
-    SaavnVerdict saavnVerdict(const QString &videoId);
+    SaavnVerdict saavnVerdict(const Saavn::Target &track);
     void startSaavnLookup(const Saavn::Target &track);
-    void saavnAnswered(const QString &videoId, const JioSaavn::Result &result);
+    void saavnAnswered(const QString &videoId, const QString &signature, const JioSaavn::Result &result);
     void rememberSaavn(const QString &videoId, const SaavnVerdict &verdict);
+    // Once a session: answers past their time are deleted from the table,
+    // not only passed over.
+    void purgeExpiredSaavn();
+    bool m_saavnPurged = false;
 
     // The picture's links, kept apart from the sound's: the same track can be
     // remembered both ways.

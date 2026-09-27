@@ -423,7 +423,8 @@ int main(int argc, char *argv[])
         // mpv is refused it and the recovery — the same track's muxed stream,
         // then yt-dlp — runs on a real track, as it would for a link the CDN
         // turned down.
-        if (args.contains(QStringLiteral("--spoil")))
+        const bool spoil = args.contains(QStringLiteral("--spoil"));
+        if (spoil)
             resolver.spoilNextStream(videoId);
         // --spoil-saavn does the same to the track's JioSaavn link, so the
         // way back to YouTube, from the same second, can be watched.
@@ -432,8 +433,11 @@ int main(int argc, char *argv[])
         auto clock = std::make_shared<QElapsedTimer>();
         // A library song plays under its own name, so the lyrics can be found.
         QVariantMap known;
-        if (const int row = library.tracks()->indexOfSource(videoId); row >= 0)
+        bool named = false;
+        if (const int row = library.tracks()->indexOfSource(videoId); row >= 0) {
             known = library.tracks()->get(row);
+            named = true;
+        }
         // --as "<title>" "<artist>" [seconds]: plays it under that name and
         // length, which is what JioSaavn is asked about.
         if (const int asFlag = args.indexOf(QStringLiteral("--as")); asFlag >= 0 && asFlag + 2 < args.size()) {
@@ -441,7 +445,15 @@ int main(int argc, char *argv[])
             known.insert(QStringLiteral("artist"), args.at(asFlag + 2));
             if (asFlag + 3 < args.size() && args.at(asFlag + 3).toLongLong() > 0)
                 known.insert(QStringLiteral("durationMs"), args.at(asFlag + 3).toLongLong() * 1000);
+            named = true;
         }
+        // JioSaavn only for a song with a real name, or when --saavn-on asks:
+        // under the placeholder below it would only race YouTube, hold its
+        // answer back and put its own search into every --play timing. Never
+        // with --spoil, whose point is YouTube's own recovery, which a
+        // JioSaavn win would skip.
+        if (spoil || (!named && !args.contains(QStringLiteral("--saavn-on"))))
+            resolver.setSaavnEnabled(false);
         const QString title = known.value(QStringLiteral("title"), QStringLiteral("Selftest")).toString();
         const QString artist = known.value(QStringLiteral("artist"), QStringLiteral("Selftest")).toString();
         // --at <seconds> jumps there once the audio starts.

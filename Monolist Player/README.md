@@ -95,22 +95,38 @@ JioSaavn has much of the same music as AAC at up to 320 kbps. While it is on
 (Settings → Playback, on by default), `StreamResolver::resolveTrack` asks it
 and YouTube at the same moment: one search for "title lead-artist", whose
 rows already carry their links (DES-encrypted, decrypted by `des.*`). A row
-is taken only when it is the same recording: the same title once asides,
-credits and release noise are set aside; the same version (live, remix,
-acoustic, sped up, a cover, a part, a style or a language version… must agree
-both ways, a remaster may differ); an artist credited on both sides; and a length within 3 s — with no
-length known, only a lone candidate. Of those that pass, the uncensored one,
-then the one at 320 kbps, then the closest in length. A link at 96 kbps or
-less is refused, since YouTube does better.
+is taken only when it is the same recording, and the matcher leans towards
+refusing: the same title once asides, credits and release noise are set
+aside; the same version (live, remix, acoustic, sped up, a cover, a part, a
+style, "(Arijit Singh Version)"… must agree both ways, a remaster may
+differ); the same language, whether the title names it, bare or inside
+`(From "Film (Telugu)")`, or the album does; any aside words nothing
+recognises ("(Synthwave)", an alternate title, a bare year) found somewhere
+on the other side; whose remix or which concert agreeing where either side
+names one; an artist credited on both sides; and a length within 3 s (a row
+with no length is refused when ours is known; with ours unknown, only a lone
+candidate is taken). Then, among the rows that fit: one lacking a name of
+ours that another listing of the song credits is dropped (the Hindi song,
+for its Telugu dub's singer); where our album names theirs, only its rows
+are left; if those are in two languages by JioSaavn's own account, all are
+refused. Of those
+left, the uncensored one, then the one at 320 kbps, then the closest in
+length. A link at 96 kbps or less is refused, since YouTube does better, and
+so is any link that is not HTTPS on JioSaavn's CDN.
 
 If JioSaavn answers first, or within 1.2 s of when both were asked, its link
 plays; otherwise YouTube's does, and JioSaavn's answer is kept for the next
 play. Answers are remembered in the `saavn_matches` table: a match for a
-week, "not there" for a day. A JioSaavn link mpv refuses is forgotten and the
-song carries on from YouTube's ladder at the same second. Requests carry an
-Indian `X-Forwarded-For` while "Send Indian region headers" is on, because
-some songs are offered only in India. Now Playing says which source is
-playing ("SOUND: JIOSAAVN · 320 KBPS"). Downloads and lyrics do not use it.
+week, "not there" for a day, each only for the title, artist, album and
+length it was judged against and the matcher version that judged it; Clear
+history empties the table. A lookup JioSaavn did not properly answer (an
+error sent as HTTP 200, a details call that failed) is not remembered. A
+JioSaavn link mpv refuses is forgotten and the song carries on from
+YouTube's ladder at the same second, from a link fetched beside it. Requests
+carry an Indian `X-Forwarded-For` while "Send Indian region headers" is on,
+because some songs are offered only in India, and follow redirects only to
+JioSaavn's own hosts. Now Playing says which source is playing ("SOUND:
+JIOSAAVN · 320 KBPS"). Downloads and lyrics do not use it.
 
 ### Downloads
 
@@ -367,7 +383,7 @@ see the log there, and with `MONOLIST_MPV_LOG=warn` (or `info`, `v`) to add
 mpv's own messages.
 
     monolist --play <videoId> [seconds] [--again] [--at <s>] [--spoil] [--video [--switch-at <s>]]
-             [--as "<title>" "<artist>" [length s]] [--spoil-saavn]
+             [--as "<title>" "<artist>" [length s]] [--spoil-saavn] [--saavn-on]
                                                     resolve and play; --again replays from the cache,
                                                     --at jumps into the song; --spoil hands InnerTube's
                                                     link over spoiled, so mpv refuses it and the track is
@@ -376,11 +392,16 @@ mpv's own messages.
                                                     --switch-at asks for the picture after that long;
                                                     --as names the song, which JioSaavn is asked about;
                                                     --spoil-saavn hands its JioSaavn link over pointing at
-                                                    a missing file, so the way back to YouTube shows
+                                                    a missing file, so the way back to YouTube shows.
+                                                    JioSaavn is asked only about a named song (--as, or
+                                                    one in the library) or with --saavn-on, and never
+                                                    with --spoil, so plain --play timings stay YouTube's
     monolist --saavn-test                           JioSaavn with no network: DES known answers and a link
-                                                    made by another DES, 320 kbps and the 96 kbps floor,
-                                                    both details shapes, entities, and the matcher on 45
-                                                    invented pairs and its tie-breaks
+                                                    made by another DES, HTTPS on JioSaavn's CDN only,
+                                                    320 kbps and the 96 kbps floor, both details shapes,
+                                                    entities, signatures, and the matcher on 68 invented
+                                                    pairs (dubs, unknown asides, one-sided remixers) and
+                                                    its choices between rows
     monolist --saavn "<title>" "<artist>" [seconds] [--no-india-headers]
                                                     one real JioSaavn lookup: the row taken, its bitrate and
                                                     host (never the whole link), and every refusal's reason

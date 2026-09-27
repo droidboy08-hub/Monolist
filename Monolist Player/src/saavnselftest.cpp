@@ -67,6 +67,21 @@ Saavn::Row row(const QString &title, const QStringList &artists, int seconds,
     return r;
 }
 
+// The same row or song, on an album and, for a row, in the language
+// JioSaavn gives it.
+Saavn::Row onAlbum(Saavn::Row r, const QString &album, const QString &language = QString())
+{
+    r.album = album;
+    r.language = language;
+    return r;
+}
+
+Saavn::Target onAlbum(Saavn::Target target, const QString &album)
+{
+    target.album = album;
+    return target;
+}
+
 QJsonObject json(const char *text)
 {
     return QJsonDocument::fromJson(QByteArray(text)).object();
@@ -136,6 +151,19 @@ void testLinks(Checks &t)
             QStringLiteral("text that is not Base64 gives no link"));
     t.check(Saavn::decryptMediaUrl(Saavn::encryptMediaUrl(QStringLiteral("ftp://x/y_96.mp4"))).isEmpty(),
             QStringLiteral("something that decrypts but is not a web link gives no link"));
+    const QString plain = Saavn::decryptMediaUrl(
+        Saavn::encryptMediaUrl(QStringLiteral("http://aac.saavncdn.com/815/abc_96.mp4")));
+    t.check(plain == QStringLiteral("https://aac.saavncdn.com/815/abc_96.mp4"),
+            QStringLiteral("a plain-HTTP link on JioSaavn's CDN is moved to HTTPS"), plain);
+    t.check(Saavn::decryptMediaUrl(Saavn::encryptMediaUrl(QStringLiteral("https://example.invalid/abc_96.mp4"))).isEmpty(),
+            QStringLiteral("a link on any other host gives no link"));
+    t.check(Saavn::isCdnLink(QStringLiteral("https://aac.saavncdn.com/815/abc_320.mp4"))
+                && Saavn::isCdnLink(QStringLiteral("https://saavncdn.com/abc_320.mp4"))
+                && !Saavn::isCdnLink(QStringLiteral("http://aac.saavncdn.com/815/abc_320.mp4"))
+                && !Saavn::isCdnLink(QStringLiteral("https://saavncdn.com.example.invalid/abc_320.mp4"))
+                && !Saavn::isCdnLink(QStringLiteral("https://evilsaavncdn.com/abc_320.mp4"))
+                && !Saavn::isCdnLink(QStringLiteral("https://user@aac.saavncdn.com/abc_320.mp4")),
+            QStringLiteral("a remembered link is only taken back on JioSaavn's CDN, over HTTPS"));
 }
 
 void testBitrates(Checks &t)
@@ -193,6 +221,7 @@ void testParsing(Checks &t)
     // A search answer: songs kept, anything else skipped, fields read.
     const QList<Saavn::Row> rows = Saavn::rowsFromSearch(json(R"json({"total":2,"results":[
         {"id":"aRZbUYD7","title":"Tum Hi Ho (From &quot;Aashiqui 2&quot;)","type":"song","explicit_content":"1",
+         "language":"Hindi",
          "more_info":{"album":"Aashiqui 2","duration":"262","320kbps":"true","encrypted_media_url":"ENC",
            "artistMap":{"primary_artists":[{"name":"Mithoon"},{"name":"Arijit Singh"}],
                         "featured_artists":[{"name":"Guest &amp; Friend"}],
@@ -205,13 +234,28 @@ void testParsing(Checks &t)
         const Saavn::Row &r = rows.first();
         t.check(r.title == QStringLiteral("Tum Hi Ho (From \"Aashiqui 2\")") && r.durationSec == 262 && r.has320
                     && r.explicitContent && r.encryptedUrl == QStringLiteral("ENC")
-                    && r.album == QStringLiteral("Aashiqui 2"),
-                QStringLiteral("search row: title decoded, length, 320, explicit, link and album"));
+                    && r.album == QStringLiteral("Aashiqui 2") && r.language == QStringLiteral("hindi"),
+                QStringLiteral("search row: title decoded, length, 320, explicit, link, album and language"));
         t.check(r.artists == QStringList{ QStringLiteral("Mithoon"), QStringLiteral("Arijit Singh"),
                                           QStringLiteral("Guest & Friend") },
                 QStringLiteral("search row: primary and featured artists, not the lyricist"),
                 r.artists.join(QStringLiteral(" | ")));
     }
+
+    // An answer with no results list is not "nothing found".
+    t.check(Saavn::isSearchAnswer(json(R"json({"total":0,"start":1,"results":[]})json")),
+            QStringLiteral("search answer: an empty results list is an answer"));
+    t.check(!Saavn::isSearchAnswer(json(R"json({"error":{"code":"RATE_LIMIT","msg":"slow down"}})json")),
+            QStringLiteral("search answer: an error object sent as 200 is not"));
+
+    // What a remembered answer was for.
+    const Saavn::Target tum = song(QStringLiteral("Tum Hi Ho"), QStringLiteral("Arijit Singh"), 262);
+    const QString sig = Saavn::signature(tum);
+    t.check(sig.size() == 32 && sig == Saavn::signature(song(QStringLiteral("Tum  Hi Ho"), QStringLiteral("Arijit Singh"), 262))
+                && sig != Saavn::signature(song(QStringLiteral("Tum Hi Ho"), QStringLiteral("Arijit Singh"), 275))
+                && sig != Saavn::signature(song(QStringLiteral("Tum Hi Ho (Live)"), QStringLiteral("Arijit Singh"), 262))
+                && sig != Saavn::signature(onAlbum(tum, QStringLiteral("Aashiqui 2"))),
+            QStringLiteral("signature: the same song gives the same, another name, length or album another"), sig);
 
     // song.getDetails, both shapes.
     Saavn::Row details;
@@ -368,6 +412,84 @@ void testMatcher(Checks &t)
           song("Coldplay - Yellow (Official Video)", "ColdplayVEVO", 269), row("Yellow", { "Coldplay" }, 269), true },
         { "\"Official Video\" without brackets",
           song("Yellow Official Video", "Coldplay", 269), row("Yellow", { "Coldplay" }, 269), true },
+        { "\"(Full Video Song)\" in brackets is noise too",
+          song("Kesariya (Full Video Song)", "Arijit Singh", 268), row("Kesariya", { "Arijit Singh" }, 268), true },
+
+        // Dubs. JioSaavn credits the composer, the lyricist and the Hindi
+        // singer on every one, and they share the backing track, so neither
+        // the artists nor the length tell them apart.
+        { "a dub named inside the From aside refused for the original",
+          song("Deva Deva", "Pritam, Arijit Singh & Jonita Gandhi", 279),
+          row("Deva Deva (From &quot;Brahmastra (Telugu)&quot;)",
+              { "Pritam", "Sreerama Chandra", "Arijit Singh", "Jonita Gandhi" }, 276), false },
+        { "and the original refused for the dub named that way",
+          song("Deva Deva (From \"Brahmastra (Telugu)\")", "Pritam, Sreerama Chandra & Jonita Gandhi", 276),
+          row("Deva Deva", { "Pritam", "Arijit Singh", "Amitabh Bhattacharya", "Jonita Gandhi" }, 277), false },
+        { "the dub named inside From is the dub named bare",
+          song("Deva Deva (Telugu)", "Sreerama Chandra", 276),
+          row("Deva Deva (From &quot;Brahmastra (Telugu)&quot;)",
+              { "Pritam", "Sreerama Chandra", "Arijit Singh", "Jonita Gandhi" }, 276), true },
+        { "a language our album names refuses a row JioSaavn lists in another",
+          onAlbum(song("Deva Deva", "Pritam, Sreerama Chandra & Jonita Gandhi", 278),
+                  "Brahmastra (Telugu) (Original Motion Picture Soundtrack)"),
+          onAlbum(row("Deva Deva", { "Pritam", "Arijit Singh", "Amitabh Bhattacharya", "Jonita Gandhi" }, 279),
+                  "Brahmastra (Original Motion Picture Soundtrack)", "hindi"), false },
+        { "and takes one JioSaavn lists in that language",
+          onAlbum(song("Deva Deva", "Pritam, Sreerama Chandra & Jonita Gandhi", 278),
+                  "Brahmastra (Telugu) (Original Motion Picture Soundtrack)"),
+          onAlbum(row("Deva Deva", { "Pritam", "Sreerama Chandra", "Arijit Singh", "Jonita Gandhi" }, 276),
+                  "Brahmastra Part One Shiva", "telugu"), true },
+        { "a row whose album names a language refused for a song that names none",
+          song("Srivalli", "Sid Sriram", 224),
+          onAlbum(row("Srivalli", { "Sid Sriram" }, 224), "Pushpa - The Rise (Tamil)", "tamil"), false },
+
+        // Versions no marker knew.
+        { "\"(Arijit Singh Version)\" refused for the original",
+          song("Tum Hi Ho", "Arijit Singh", 262), row("Tum Hi Ho (Arijit Singh Version)", { "Arijit Singh" }, 262), false },
+        { "\"(Film Version)\" refused for the album's",
+          song("Deva Deva", "Pritam, Arijit Singh & Jonita Gandhi", 279),
+          row("Deva Deva (Film Version)", { "Pritam", "Arijit Singh", "Jonita Gandhi" }, 279), false },
+        { "\"(Version 2)\" refused",
+          song("Deva Deva", "Pritam, Arijit Singh & Jonita Gandhi", 279),
+          row("Deva Deva (Version 2)", { "Pritam", "Arijit Singh", "Jonita Gandhi" }, 279), false },
+        { "\"(Re-Recording)\" by the same artist refused",
+          song("Mr. Brightside", "The Killers", 222), row("Mr. Brightside (Re-Recording)", { "The Killers" }, 222), false },
+        { "\"- Jhankar Beats\" refused",
+          song("Pehla Nasha", "Udit Narayan & Sadhana Sargam", 291),
+          row("Pehla Nasha - Jhankar Beats", { "Sadhana Sargam", "Udit Narayan" }, 291), false },
+        { "\"(Synthwave)\" with the original artists credited refused",
+          song("Deva Deva", "Pritam, Arijit Singh & Jonita Gandhi", 279),
+          row("Deva Deva (Synthwave)", { "Amitabh Bhattacharya", "VDJ Fly", "Pritam", "Arijit Singh" }, 279), false },
+        { "an alternate title the row does not have refused",
+          song("Raabta (Kehte Hain Khuda)", "Pritam, Arijit Singh & Shreya Ghoshal", 243),
+          row("Raabta (From &quot;Agent Vinod&quot;)", { "Arijit Singh", "Pritam", "Amitabh Bhattacharya" }, 243), false },
+        { "a bare year the song does not have refused",
+          song("Ek Do Teen", "Alka Yagnik", 300), row("Ek Do Teen (2018)", { "Alka Yagnik" }, 300), false },
+        { "an aside the other side names elsewhere (its album) is fine",
+          song("Tum Hi Ho (Aashiqui 2)", "Arijit Singh", 262),
+          onAlbum(row("Tum Hi Ho", { "Mithoon", "Arijit Singh" }, 262), "Aashiqui 2"), true },
+        { "a dash tail that is the artist is fine",
+          song("Yellow - Coldplay", "Coldplay", 269), row("Yellow", { "Coldplay" }, 269), true },
+        { "a dash inside the From quotes is not a split",
+          song("Srivalli", "Sid Sriram", 224),
+          row("Srivalli - From &quot;Pushpa - The Rise&quot;", { "Sid Sriram" }, 224), true },
+
+        // Whose remix, which concert, named on one side only.
+        { "someone's remix refused for a remix that names nobody",
+          song("Pehla Nasha - Remix", "Udit Narayan & Sadhana Sargam", 250),
+          row("Pehla Nasha (DJ Chetas Remix)", { "Udit Narayan", "Sadhana Sargam" }, 250), false },
+        { "a concert refused for a live song from another album",
+          onAlbum(song("Yellow (Live)", "Coldplay", 280), "Live 2003"),
+          row("Yellow - Live in Buenos Aires", { "Coldplay" }, 280), false },
+        { "the same concert, where our album names it",
+          onAlbum(song("Yellow (Live)", "Coldplay", 280), "Live in Buenos Aires"),
+          row("Yellow - Live in Buenos Aires", { "Coldplay" }, 280), true },
+        { "a remixer credited among our artists is enough",
+          song("Blinding Lights (Remix)", "The Weeknd, Chromatics", 200),
+          row("Blinding Lights (Chromatics Remix)", { "The Weeknd" }, 200), true },
+
+        { "a row with no length refused when ours is known",
+          song("Tum Hi Ho", "Arijit Singh", 262), row("Tum Hi Ho", { "Arijit Singh" }, 0), false },
     };
     for (const Case &c : cases) {
         const Saavn::Judgement judgement = Saavn::judge(c.target, c.row);
@@ -409,6 +531,71 @@ void testMatcher(Checks &t)
     choice = Saavn::choose(tum, { row("Tum Hi Ho (Live)", { "Arijit Singh" }, 262), row("Tum Hi Ho", { "Arijit Singh" }, 262) });
     t.check(choice.accepted == QList<int>{ 1 } && choice.refusals.size() == 1,
             QStringLiteral("choose: the refused row is listed with its reason"), choice.refusals.join(QStringLiteral(" | ")));
+    choice = Saavn::choose(unknown, { row("Tum Hi Ho", { "Arijit Singh" }, 0) });
+    t.check(choice.accepted == QList<int>{ 0 },
+            QStringLiteral("choose: no length on either side and one row fits: it is taken"), choice.reason);
+
+    // The dub, as JioSaavn lists it: the Hindi row credits all but the
+    // Telugu singer, the Telugu row is refused for its language.
+    const QList<Saavn::Row> deva = {
+        onAlbum(row("Deva Deva", { "Pritam", "Arijit Singh", "Amitabh Bhattacharya", "Jonita Gandhi" }, 279),
+                "Brahmastra (Original Motion Picture Soundtrack)", "hindi"),
+        onAlbum(row("Deva Deva (From &quot;Brahmastra (Telugu)&quot;)",
+                    { "Pritam", "Sreerama Chandra", "Arijit Singh", "Jonita Gandhi" }, 276),
+                "Deva Deva (From &quot;Brahmastra (Telugu)&quot;)", "telugu"),
+    };
+    choice = Saavn::choose(song("Deva Deva", "Pritam, Sreerama Chandra & Jonita Gandhi", 278), deva);
+    t.check(choice.accepted.isEmpty(),
+            QStringLiteral("choose: a Telugu singer's \"Deva Deva\" takes neither the Hindi row nor the Telugu one"),
+            choice.refusals.join(QStringLiteral(" | ")));
+    choice = Saavn::choose(song("Deva Deva", "Pritam, Arijit Singh & Jonita Gandhi", 279), deva);
+    t.check(choice.accepted == QList<int>{ 0 },
+            QStringLiteral("choose: the Hindi singers' \"Deva Deva\" takes the Hindi row"),
+            choice.refusals.join(QStringLiteral(" | ")));
+    choice = Saavn::choose(song("Deva Deva (From \"Brahmastra (Telugu)\")", "Pritam, Sreerama Chandra & Jonita Gandhi", 276), deva);
+    t.check(choice.accepted == QList<int>{ 1 },
+            QStringLiteral("choose: the Telugu \"Deva Deva\" named as such takes the Telugu row"),
+            choice.refusals.join(QStringLiteral(" | ")));
+
+    // Two rows that fit, in two languages, neither named in its title.
+    const QList<Saavn::Row> twoLanguages = {
+        onAlbum(row("Deva Deva", { "Pritam", "Arijit Singh", "Jonita Gandhi" }, 279), "Brahmastra", "hindi"),
+        onAlbum(row("Deva Deva", { "Pritam", "Arijit Singh", "Jonita Gandhi" }, 277), "Brahmastra Part One", "telugu"),
+    };
+    choice = Saavn::choose(song("Deva Deva", "Pritam, Arijit Singh & Jonita Gandhi", 278), twoLanguages);
+    t.check(choice.accepted.isEmpty(), QStringLiteral("choose: rows in two languages that fit: neither is taken"),
+            choice.reason);
+    choice = Saavn::choose(onAlbum(song("Deva Deva", "Pritam, Arijit Singh & Jonita Gandhi", 278), "Brahmastra Part One"),
+                           twoLanguages);
+    t.check(choice.accepted == QList<int>{ 1 }, QStringLiteral("choose: unless our album names one of them"),
+            choice.reason);
+
+    // Two albums: the soundtrack and a compilation, credited a little
+    // differently, as nearly every well-known song is.
+    const Saavn::Target pehla = song("Pehla Nasha", "Udit Narayan & Sadhana Sargam", 291);
+    choice = Saavn::choose(pehla, { onAlbum(row("Pehla Nasha", { "Udit Narayan", "Sadhana Sargam" }, 291, false, false),
+                                            "Jo Jeeta Wohi Sikandar", "hindi"),
+                                    onAlbum(row("Pehla Nasha", { "Jatin-Lalit", "Udit Narayan", "Sadhana Sargam" }, 292,
+                                                false, true),
+                                            "90s Love Songs", "hindi") });
+    t.check(choice.accepted == QList<int>{ 1, 0 },
+            QStringLiteral("choose: a soundtrack and a compilation in one language, no album of ours: both, 320 first"),
+            choice.reason);
+    choice = Saavn::choose(onAlbum(pehla, "Jo Jeeta Wohi Sikandar (Original Motion Picture Soundtrack)"),
+                           { onAlbum(row("Pehla Nasha", { "Udit Narayan", "Sadhana Sargam" }, 291, false, false),
+                                     "Jo Jeeta Wohi Sikandar"),
+                             onAlbum(row("Pehla Nasha", { "Jatin-Lalit", "Udit Narayan", "Sadhana Sargam" }, 291, false, true),
+                                     "90s Love Songs") });
+    t.check(choice.accepted == QList<int>{ 0 },
+            QStringLiteral("choose: our album picks its own row, 320 kbps elsewhere or not"), choice.reason);
+
+    // Credits: a row lacking one of our names another listing credits.
+    choice = Saavn::choose(song("Tum Hi Ho", "Mithoon & Arijit Singh", 262),
+                           { row("Tum Hi Ho", { "Arijit Singh" }, 262, true, true),
+                             row("Tum Hi Ho", { "Mithoon", "Arijit Singh" }, 262, false, false) });
+    t.check(choice.accepted == QList<int>{ 1 },
+            QStringLiteral("choose: the row crediting all our names, over an explicit 320 kbps one that does not"),
+            choice.refusals.join(QStringLiteral(" | ")));
 }
 
 } // namespace

@@ -154,12 +154,27 @@ PlaybackController::PlaybackController(MpvEngine *engine,
             // is written down.
             if (m_streamTier >= 0) {
                 qWarning("playback: %s would not play from %s: %s", qPrintable(m_streamVideoId),
-                         qPrintable(tierLabel(m_streamTier)), qPrintable(reason));
+                         qPrintable(m_streamIsVideo ? QStringLiteral("yt-dlp · video") : tierLabel(m_streamTier)),
+                         qPrintable(reason));
+            }
+            // The song's sound is JioSaavn's, but what failed was the video
+            // laid over it, which is YouTube's: the match stands, and the
+            // sound comes back from it at the same second.
+            if (m_streamTier == StreamResolver::TierJioSaavn && m_streamIsVideo && m_resolver) {
+                m_streamTier = -1;
+                m_streamIsVideo = false;
+                m_resolver->invalidate(m_streamVideoId);
+                m_pendingVideoId = m_streamVideoId;
+                m_resumeAt = m_position;
+                setStatus(QStringLiteral("Refreshing the source…"), QString(), true);
+                m_resolver->resolveTrack(saavnTarget(m_currentTrack));
+                return;
             }
             // JioSaavn's link refused: the match is forgotten, and YouTube's
             // ladder takes the song from the top, from the second it had
-            // reached. The ladder most likely has its link already — its
-            // half of the race carried on into the cache.
+            // reached. The ladder most likely has its link already: its half
+            // of the race carried on into the cache, and a remembered match
+            // is played with YouTube's link fetched beside it.
             if (m_streamTier == StreamResolver::TierJioSaavn && m_resolver) {
                 m_streamTier = -1;
                 m_refusedTiers.insert(StreamResolver::TierJioSaavn);
@@ -1005,6 +1020,7 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
         m_resolver->cancel(m_pendingVideoId);
     m_pendingVideoId.clear();
     m_streamTier = -1;
+    m_streamIsVideo = false;
     m_refusedTiers.clear();
     m_resumeAt = 0;
 
@@ -1120,6 +1136,7 @@ void PlaybackController::handleResolved(const QString &videoId, const QString &u
     m_streamVideoId = videoId;
     m_streamTier = tier;
     m_streamFromCache = fromCache;
+    m_streamIsVideo = false;
     // Someone is waiting to hear it, and now it can be heard: a listen. (Once
     // only — a stream refreshed or re-resolved mid-song arrives here again.)
     if (m_autoPlayAfterResolve)
@@ -1201,6 +1218,7 @@ void PlaybackController::backToSound(bool keepPlaying, const QString &resolvingT
     const QString localPath = localCopyOf(m_currentTrack);
     if (!localPath.isEmpty()) {
         m_pendingVideoId.clear();
+        m_streamIsVideo = false;
         setStatus(QStringLiteral("Offline"), QStringLiteral("Local file"), false);
         if (m_engine)
             m_engine->load(localPath, keepPlaying, QString(), m_position);
@@ -1488,6 +1506,7 @@ void PlaybackController::handleVideoResolved(const QString &videoId, const QStri
     setStatus(QStringLiteral("Streaming"), QStringLiteral("yt-dlp · video"), false);
     // Unproven until a frame arrives: see abandonVideo.
     m_videoUnproven = true;
+    m_streamIsVideo = true;
     m_engine->load(videoUrl, m_playing || m_autoPlayAfterResolve, audioUrl, m_position, headers);
     if (!m_videoPlaying) {
         m_videoPlaying = true;

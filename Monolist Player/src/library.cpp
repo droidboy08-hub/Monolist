@@ -877,6 +877,9 @@ void Library::clearHistory()
     QSqlQuery q(AppDatabase::connection());
     q.exec(QStringLiteral("DELETE FROM recent"));
     q.exec(QStringLiteral("DELETE FROM history"));
+    // JioSaavn's remembered answers name every song played or queued next:
+    // a cache, but one that would outlive the history it mirrors.
+    q.exec(QStringLiteral("DELETE FROM saavn_matches"));
     reloadHistory();
     Q_EMIT historyChanged();
     Q_EMIT notice(QStringLiteral("History cleared"));
