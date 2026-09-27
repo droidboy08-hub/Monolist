@@ -25,6 +25,11 @@ void SystemPip::start()
 
 void SystemPip::stop() {}
 
+QString SystemPip::diagnostics() const
+{
+    return QStringLiteral("not supported");
+}
+
 void SystemPip::setActive(bool active)
 {
     if (active == m_active)

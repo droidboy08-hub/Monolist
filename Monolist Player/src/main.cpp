@@ -519,6 +519,22 @@ int main(int argc, char *argv[])
                 start();
             });
         }
+        // --pip-at <s> opens the system's picture in picture then, and reports
+        // what it draws each second after.
+        const int pipFlag = args.indexOf(QStringLiteral("--pip-at"));
+        if (pipFlag >= 0 && pipFlag + 1 < args.size()) {
+            const int after = qMax(1, args.at(pipFlag + 1).toInt());
+            QTimer::singleShot(after * 1000, &app, [&systemPip]() {
+                qWarning("selftest: opening picture in picture (supported: %s)",
+                         systemPip.supported() ? "yes" : "no");
+                systemPip.start();
+            });
+            for (int tick = -2; after + tick < seconds; ++tick) {
+                QTimer::singleShot((after + tick) * 1000, &app, [&systemPip]() {
+                    qWarning("selftest: pip %s", qPrintable(systemPip.diagnostics()));
+                });
+            }
+        }
         QTimer::singleShot(seconds * 1000, &app, [&player]() {
             // A position that moved is the proof audio was actually decoded.
             qWarning("selftest: position %s of %s, %s",

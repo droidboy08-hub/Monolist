@@ -38,6 +38,8 @@ public:
     Q_INVOKABLE void start();
     // Puts the system's window away; the picture goes back to the app.
     Q_INVOKABLE void stop();
+    // What it has drawn and what the system says, for --pip-test.
+    QString diagnostics() const;
 
     struct Private;
 

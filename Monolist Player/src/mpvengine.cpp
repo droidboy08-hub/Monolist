@@ -133,6 +133,13 @@ void MpvEngine::applyBaseOptions()
     // The picture is drawn by whoever holds the render context (VideoSurface),
     // never by mpv into a window of its own.
     setOption("vo", "libmpv");
+    // The picture is drawn by the CPU (VideoSurface, SystemPip), scaled from
+    // the video's size to the one shown. mpv's default scaler for that
+    // (lanczos, dithered) took 44 ms a frame for 1080p on an M-series Mac —
+    // more than a frame lasts, so the picture fell behind and the sound could
+    // run dry. Bilinear takes 1-2 ms and, at these sizes, looks the same.
+    setOption("zimg-scaler", "bilinear");
+    setOption("zimg-dither", "no");
 
     // Stream URLs are resolved by StreamResolver (yt-dlp / Piped / Invidious)
     // before they reach mpv, so mpv's own ytdl hook is redundant and would add

@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <cmath>
 
 #import <AppKit/AppKit.h>
@@ -23,9 +24,10 @@ namespace {
 // The system's window is small: a picture larger than this on its longer side
 // is drawn smaller, and the system scales it the rest of the way on the GPU.
 constexpr int kLongestSide = 960;
-// How long the system may take to say the window can open, polled this often.
+// How long the picture and the system may take to be ready for the window,
+// polled this often: the picture may still be on its way from the network.
 constexpr int kStartPollMs = 50;
-constexpr int kStartTries = 60;
+constexpr int kStartTries = 200;
 
 } // namespace
 
@@ -53,6 +55,12 @@ struct SystemPip::Private
     std::atomic<int> videoWidth { 0 };
     std::atomic<int> videoHeight { 0 };
     std::atomic<bool> playing { false };
+    // For --pip-test: what came in and what went out.
+    std::atomic<int> framesAsked { 0 };
+    std::atomic<int> framesDrawn { 0 };
+    std::atomic<int> rendersFailed { 0 };
+    std::atomic<int> lastBrightness { -1 };
+    std::atomic<qint64> renderMicros { 0 };
     // The drawing queue's own.
     CVPixelBufferPoolRef pool = nullptr;
     QSize poolSize;
@@ -60,6 +68,10 @@ struct SystemPip::Private
 
     QTimer startPoll;
     int startTries = 0;
+    // Frames drawn when start() was called: the window opens only after one
+    // more has reached the layer. Asked to open on an empty layer, AVKit lays
+    // its window out from a picture of no size, and shows nothing or crashes.
+    int drawnAtStart = 0;
 
     ~Private()
     {
@@ -102,10 +114,11 @@ bool SystemPip::Private::ensureObjects()
 
         // The system opens its window from a layer that is on screen, and
         // animates out of it: two points in the window's corner, under the
-        // title bar, where nothing is seen of it.
+        // title bar, where nothing is seen of it. Shaped like a video, not a point:
+// the system lays its window out from it.
         layer = [AVSampleBufferDisplayLayer layer];
         layer.videoGravity = AVLayerVideoGravityResizeAspect;
-        host = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 2, 2)];
+        host = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 16, 9)];
         host.wantsLayer = YES;
         layer.frame = host.bounds;
         [host.layer addSublayer:layer];
@@ -128,6 +141,7 @@ bool SystemPip::Private::ensureObjects()
 // On mpv's thread: a frame is ready. Drawn on the queue, at most one waiting.
 void SystemPip::Private::frameReady()
 {
+    ++framesAsked;
     if (!running.load() || framePending.exchange(true))
         return;
     dispatch_async(queue, ^{ drawFrame(); });
@@ -170,7 +184,10 @@ void SystemPip::Private::drawFrame()
     CVPixelBufferLockBaseAddress(buffer, 0);
     auto *base = static_cast<uint8_t *>(CVPixelBufferGetBaseAddress(buffer));
     const size_t stride = CVPixelBufferGetBytesPerRow(buffer);
+    const auto began = std::chrono::steady_clock::now();
     const bool drawn = VideoSurface::renderExternal(base, size, qsizetype(stride));
+    renderMicros += std::chrono::duration_cast<std::chrono::microseconds>(
+                        std::chrono::steady_clock::now() - began).count();
     if (drawn) {
         // mpv leaves the fourth byte of each pixel unset; the system reads it
         // as alpha, so it is made opaque.
@@ -179,6 +196,18 @@ void SystemPip::Private::drawFrame()
             for (int column = 0; column < size.width(); ++column)
                 pixel[column] |= 0xff000000u;
         }
+    }
+    if (drawn) {
+        // A rough brightness of the middle row, 0-255, so a black picture
+        // shows up in the test's numbers.
+        const auto *middle = reinterpret_cast<const uint8_t *>(base + (size.height() / 2) * stride);
+        long sum = 0;
+        for (int column = 0; column < size.width(); ++column)
+            sum += middle[column * 4 + 1];
+        lastBrightness.store(int(sum / std::max(1, size.width())));
+        ++framesDrawn;
+    } else {
+        ++rendersFailed;
     }
     CVPixelBufferUnlockBaseAddress(buffer, 0);
     if (!drawn) {
@@ -238,6 +267,12 @@ void SystemPip::Private::finish()
 
 @implementation MonolistPipDelegate
 
+- (void)pictureInPictureControllerDidStartPictureInPicture:(AVPictureInPictureController *)controller
+{
+    Q_UNUSED(controller)
+    qInfo("pip: the system's window is open");
+}
+
 - (void)pictureInPictureController:(AVPictureInPictureController *)controller
     restoreUserInterfaceForPictureInPictureStopWithCompletionHandler:(void (^)(BOOL))completionHandler
 {
@@ -262,6 +297,8 @@ void SystemPip::Private::finish()
     Q_UNUSED(controller)
     if (!_owner)
         return;
+    qWarning("pip: the system's window would not open: %s",
+             qPrintable(QString::fromNSString(error.localizedDescription)));
     _owner->finish();
     Q_EMIT _owner->q->failed(QString::fromNSString(error.localizedDescription));
 }
@@ -342,7 +379,8 @@ SystemPip::SystemPip(PlaybackController *player, MpvEngine *engine, QObject *par
     connect(&d->startPoll, &QTimer::timeout, this, [this]() {
         if (@available(macOS 12.0, *)) {
             auto *controller = (AVPictureInPictureController *)d->controller;
-            if (controller.isPictureInPicturePossible) {
+            const bool pictured = d->framesDrawn.load() > d->drawnAtStart;
+            if (pictured && controller.isPictureInPicturePossible) {
                 d->startPoll.stop();
                 [controller startPictureInPicture];
                 return;
@@ -378,6 +416,7 @@ void SystemPip::start()
         return;
     }
     Private *p = d.get();
+    d->drawnAtStart = d->framesDrawn.load();
     d->running.store(true);
     VideoSurface::attachExternal([p]() { p->frameReady(); });
     // A paused song sends no frames: draw the one there is.
@@ -400,6 +439,34 @@ void SystemPip::stop()
         return;
     }
     d->finish();
+}
+
+QString SystemPip::diagnostics() const
+{
+    QString state = QStringLiteral("none");
+    QString layerState = QStringLiteral("none");
+    if (@available(macOS 12.0, *)) {
+        if (auto *controller = (AVPictureInPictureController *)d->controller) {
+            state = QStringLiteral("possible=%1 active=%2")
+                        .arg(controller.isPictureInPicturePossible ? 1 : 0)
+                        .arg(controller.isPictureInPictureActive ? 1 : 0);
+        }
+    }
+    if (d->layer) {
+        if (@available(macOS 14.0, *)) {
+            AVSampleBufferVideoRenderer *renderer = d->layer.sampleBufferRenderer;
+            layerState = QStringLiteral("status=%1 error=%2")
+                             .arg(int(renderer.status))
+                             .arg(QString::fromNSString(renderer.error.localizedDescription ?: @"-"));
+        }
+    }
+    const int drawnCount = d->framesDrawn.load();
+    return QStringLiteral("video %1x%2, frames asked %3 drawn %4 failed %5, brightness %6, %7, layer %8, "
+                          "render %9 ms each")
+        .arg(d->videoWidth.load()).arg(d->videoHeight.load())
+        .arg(d->framesAsked.load()).arg(d->framesDrawn.load()).arg(d->rendersFailed.load())
+        .arg(d->lastBrightness.load()).arg(state, layerState)
+        .arg(drawnCount > 0 ? double(d->renderMicros.load()) / drawnCount / 1000.0 : 0.0, 0, 'f', 1);
 }
 
 void SystemPip::setActive(bool active)

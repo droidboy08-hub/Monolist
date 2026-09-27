@@ -121,6 +121,11 @@ VideoSurface::~VideoSurface()
 void VideoSurface::setEngine(MpvEngine *engine)
 {
     g_engine = engine;
+    // Made now rather than when a picture is first shown: mpv's video output
+    // needs it to open, and a picture asked for with nothing on screen yet —
+    // turned on from the player bar, or taken by picture in picture — would
+    // otherwise have its track dropped ("No render context set").
+    ensureRender(&VideoSurface::onFrame);
 }
 
 void VideoSurface::itemChange(ItemChange change, const ItemChangeData &value)
@@ -267,11 +272,13 @@ bool VideoSurface::renderExternal(void *pixels, const QSize &size, qsizetype str
 #else
     int sizes[2] = { size.width(), size.height() };
     size_t pitch = size_t(stride);
+    int block = 0;   // see updatePaintNode
     mpv_render_param params[] = {
         { MPV_RENDER_PARAM_SW_SIZE, sizes },
         { MPV_RENDER_PARAM_SW_FORMAT, const_cast<char *>(kFormat) },
         { MPV_RENDER_PARAM_SW_STRIDE, &pitch },
         { MPV_RENDER_PARAM_SW_POINTER, pixels },
+        { MPV_RENDER_PARAM_BLOCK_FOR_TARGET_TIME, &block },
         { MPV_RENDER_PARAM_INVALID, nullptr }
     };
     return mpv_render_context_render(g_render, params) >= 0;
@@ -340,11 +347,16 @@ QSGNode *VideoSurface::updatePaintNode(QSGNode *old, UpdatePaintNodeData *)
 #ifndef MONOLIST_NO_MPV
     int sizes[2] = { size.width(), size.height() };
     size_t stride = size_t(m_frame.bytesPerLine());
+    int block = 0;
     mpv_render_param params[] = {
         { MPV_RENDER_PARAM_SW_SIZE, sizes },
         { MPV_RENDER_PARAM_SW_FORMAT, const_cast<char *>(kFormat) },
         { MPV_RENDER_PARAM_SW_STRIDE, &stride },
         { MPV_RENDER_PARAM_SW_POINTER, m_frame.bits() },
+        // Drawn now, not held until the frame's moment comes: this runs while
+        // Qt's GUI thread waits for it, and mpv's default wait — up to a frame
+        // — froze the whole window for that long at every frame.
+        { MPV_RENDER_PARAM_BLOCK_FOR_TARGET_TIME, &block },
         { MPV_RENDER_PARAM_INVALID, nullptr }
     };
     {
