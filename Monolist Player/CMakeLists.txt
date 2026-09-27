@@ -74,6 +74,9 @@ qt_add_executable(monolist
     src/artworkcache.h             src/artworkcache.cpp
     # How scrolling behaves, measured (--scroll-test).
     src/scrollselftest.h           src/scrollselftest.cpp
+    # A skip while yt-dlp resolves, timed, and each /player client on real
+    # YouTube (--cancel-test, --player-canary).
+    src/resolveselftest.h          src/resolveselftest.cpp
 )
 
 # The build's own identity: version, build number, commit, date. Regenerated

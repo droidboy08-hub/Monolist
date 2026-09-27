@@ -11,6 +11,7 @@
 #include <QVariant>
 
 #include <functional>
+#include <memory>
 #include <utility>
 #include <vector>
 
@@ -198,7 +199,20 @@ public:
     // plain, directly playable stream URL to. WEB_REMIX is refused without a
     // PO token and WEB answers with SABR, so the existing two cannot be
     // reused for this no matter how convenient that would be.
-    enum class Client { Music, YouTube, Player };
+    //
+    // PlayerFallback is the same app under another version (0.1), asked only
+    // when Player's answer holds no plain stream (see player()).
+    enum class Client { Music, YouTube, Player, PlayerFallback };
+
+    // Which of the two /player asks as: Player, then PlayerFallback when
+    // Player gives no plain stream (Both, the default); Player alone, as
+    // before there were two (First); or PlayerFallback alone (Second), which
+    // the canary and the tests use to try it on its own. Read once a launch
+    // from the setting youtube.player_client ("first", "second"); setting it
+    // here instead overrides that until the next setVisitorStore.
+    enum class PlayerClients { Both, First, Second };
+    static void setPlayerClients(PlayerClients clients);
+    static PlayerClients playerClients();
 
     // Whether a call may carry the signed-in YouTube Music account.
     //
@@ -242,6 +256,8 @@ public:
     // time it was fetched: reads and writes of the settings table, set once
     // at start (main.cpp) before any InnerTube is made. Unset, the id lasts
     // the launch. Setting one starts the id afresh (the self-test does).
+    // /player's switches (youtube.visitor, youtube.player_client) are read
+    // through it too.
     struct VisitorStore {
         std::function<QString(const QString &key)> read;
         std::function<void(const QString &key, const QString &value)> write;
@@ -375,9 +391,14 @@ public:
     // in this process, where the alternative is starting yt-dlp.
     //
     // `url` is empty whenever anything at all went wrong and `error` says
-    // what; the caller is expected to fall through to yt-dlp rather than show
-    // it, because yt-dlp still resolves things this cannot — age-gated and
-    // made-for-kids tracks, and live streams.
+    // what, client by client; the caller is expected to fall through to
+    // yt-dlp rather than show it, because yt-dlp still resolves things this
+    // cannot — age-gated and made-for-kids tracks, and live streams.
+    //
+    // An answer without a plain stream, whatever its status, is asked once
+    // more as PlayerFallback before that (PlayerClients). A request that got
+    // no answer at all is not: the same server, asked again, would cost the
+    // same wait again, and yt-dlp is what is left.
     //
     // Deliberately not cancellable: unlike search or suggestions there is no
     // "newer one of the same kind", and giving it a slot would make a prefetch
@@ -435,11 +456,14 @@ private:
     // `then` runs at once when it is there, and otherwise once a fetch has
     // answered, whether or not it brought one.
     void withVisitorData(std::function<void()> then);
-    // One /player call; `retried` once it has been asked again with a new
-    // visitor id, which happens at most once.
-    void askPlayer(const QString &videoId,
-                   std::function<void(const QString &url, int itag, const QString &error)> done,
-                   bool retried);
+    // One player() call as it goes: the clients still to ask, the refusals
+    // so far, and whether it has been asked again with a new visitor id,
+    // which happens at most once (innertube.cpp).
+    struct PlayerAsk;
+    // One /player request as `client`.
+    void askPlayer(Client client, std::shared_ptr<PlayerAsk> ask);
+    // `client` gave no plain stream (`why`): the next client, or the end.
+    void playerRefused(Client client, const QString &why, std::shared_ptr<PlayerAsk> ask);
 
     QNetworkAccessManager *m_network;
     Slot m_search;

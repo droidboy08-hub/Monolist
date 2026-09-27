@@ -53,6 +53,7 @@
 #include "rec/shelves.h"
 #include "recdata.h"
 #include "recommender.h"
+#include "resolveselftest.h"
 #include "rec/taste.h"
 #include "rec/vectorsearch.h"
 #include "ytdlp.h"
@@ -147,6 +148,23 @@ int main(int argc, char *argv[])
         // stand-in, with its store in memory.
         if (arguments.contains(QStringLiteral("--visitor-test")))
             return runVisitorSelfTest() == 0 ? 0 : 1;
+        // /player's second client, against the same stand-in.
+        if (arguments.contains(QStringLiteral("--player-client-test")))
+            return runPlayerClientSelfTest() == 0 ? 0 : 1;
+        // A skip while yt-dlp resolves, timed on this thread; and each
+        // /player client alone on real YouTube (resolveselftest.cpp).
+        if (const int cancelFlag = arguments.indexOf(QStringLiteral("--cancel-test")); cancelFlag >= 0) {
+            const QString id = cancelFlag + 1 < arguments.size() && !arguments.at(cancelFlag + 1).startsWith(QLatin1String("--"))
+                                   ? arguments.at(cancelFlag + 1) : QString();
+            const int rounds = cancelFlag + 2 < arguments.size() ? arguments.at(cancelFlag + 2).toInt() : 0;
+            return runCancelSelfTest(id, rounds) == 0 ? 0 : 1;
+        }
+        if (const int canaryFlag = arguments.indexOf(QStringLiteral("--player-canary")); canaryFlag >= 0) {
+            QStringList ids;
+            for (int i = canaryFlag + 1; i < arguments.size() && !arguments.at(i).startsWith(QLatin1String("--")); ++i)
+                ids << arguments.at(i);
+            return runPlayerCanary(ids) == 0 ? 0 : 1;
+        }
         // What a failed or cancelled download may delete, on invented files,
         // and where downloads go under a scratch data folder
         // (downloadselftest.cpp); in MONOLIST_DATA_DIR only.
@@ -205,6 +223,9 @@ int main(int argc, char *argv[])
     struct VisitorStoreGuard {
         ~VisitorStoreGuard() { InnerTube::setVisitorStore({}); }
     } visitorStoreGuard;
+    // A cancelled yt-dlp lookup no longer waits for its processes to end
+    // (ytdlp.cpp); ytdlp.cancel=wait is the switch back.
+    YtDlp::setCancelWaits(library.settingValue(QStringLiteral("ytdlp.cancel")) == QLatin1String("wait"));
 
     // The YouTube Music account, if one was imported: restored from the
     // secret store and checked a few seconds in. Made here, before anything

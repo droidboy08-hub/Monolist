@@ -9,6 +9,7 @@
 
 #include <QDateTime>
 #include <QDir>
+#include <QElapsedTimer>
 #include <QEventLoop>
 #include <QFile>
 #include <QFileInfo>
@@ -575,6 +576,7 @@ public:
         QByteArray body = "{}";
         QList<QByteArray> extra;
         bool drop = false;   // close the connection without a word
+        bool hold = false;   // keep it open and never answer
     };
 
     std::function<Answer(const Request &)> respond;
@@ -628,6 +630,8 @@ private:
             socket->abort();
             return;
         }
+        if (answer.hold)
+            return;
         const QByteArray reason = answer.status == 200 ? "OK" : answer.status == 400 ? "Bad Request"
                                 : answer.status == 401 ? "Unauthorized" : answer.status == 403 ? "Forbidden"
                                                                                                 : "Error";
@@ -1310,6 +1314,9 @@ int runVisitorSelfTest()
     const QString atKey = QStringLiteral("youtube.visitor_data_at");
     const QString modeKey = QStringLiteral("youtube.visitor");
     QHash<QString, QString> settings;
+    // The first client alone: the orders below are its own, and the second
+    // client, with the renewal before it, is --player-client-test's.
+    settings.insert(QStringLiteral("youtube.player_client"), QStringLiteral("first"));
     const auto launch = [&settings]() {
         InnerTube::setVisitorStore({
             [&settings](const QString &key) { return settings.value(key); },
@@ -1446,7 +1453,7 @@ int runVisitorSelfTest()
         launch();
         const int onceFrom = int(standIn.requests.size());
         const Played again = playNow(resolver, QStringLiteral("vid-refused"));
-        t.check(again.url.isEmpty() && again.error.startsWith(QLatin1String("LOGIN_REQUIRED"))
+        t.check(again.url.isEmpty() && again.error.contains(QLatin1String("LOGIN_REQUIRED"))
                     && orderSince(onceFrom) == QLatin1String("player sw player"),
                 QStringLiteral("refused again with the new id: one retry only, then the tier below"),
                 orderSince(onceFrom) + QStringLiteral(" ") + again.error);
@@ -1594,6 +1601,275 @@ int runVisitorSelfTest()
         for (const QString &line : std::as_const(captured)) {
             if (line.contains(QLatin1String("TESTVISITOR")) || line.contains(QLatin1String("TESTCOOKIE"))
                 || line.contains(QLatin1String("TESTSESSION")) || line.contains(QLatin1String("TESTSAPISID")))
+                found << line.left(80);
+        }
+        t.check(found.isEmpty(), QStringLiteral("none of %1 lines logged holds a visitor id or a cookie value")
+                                     .arg(captured.size()), found.join(QStringLiteral(" | ")));
+    }
+
+    InnerTube::setVisitorStore({});
+    InnerTube::setTestServer(QString());
+    settle(50);
+    return t.finish();
+}
+
+// ---------------------------------------------------------------- the second /player client
+
+namespace {
+
+QJsonObject clientOf(const StandIn::Request &request)
+{
+    return request.json().value(QStringLiteral("context")).toObject().value(QStringLiteral("client")).toObject();
+}
+
+}
+
+int runPlayerClientSelfTest()
+{
+    Checks t("clients");
+    QStringList captured;
+    g_captured = &captured;
+    g_previousHandler = qInstallMessageHandler(captureMessage);
+
+    StandIn standIn;
+    if (!t.check(standIn.listen(), QStringLiteral("a stand-in server on this computer"))) {
+        qInstallMessageHandler(g_previousHandler);
+        g_captured = nullptr;
+        return t.finish();
+    }
+    InnerTube::setTestServer(standIn.base());
+    t.note(QStringLiteral("every request goes to ") + standIn.base() + QStringLiteral(", none to YouTube"));
+
+    // How each client version answers /player: "ok", "login", "unplayable",
+    // "cipher" (formats behind signatureCipher only), "drop" (the connection
+    // closed unanswered) or "hold" (never answered). An id in `refusedIds`
+    // is refused by every version, as a stored id YouTube dropped would be.
+    QHash<QString, QString> answerAs;
+    QSet<QString> refusedIds;
+    int minted = 0;
+    QElapsedTimer clock;
+    clock.start();
+    QList<qint64> arrivals;   // when each request came, parallel to standIn.requests
+    standIn.respond = [&](const StandIn::Request &request) {
+        arrivals.append(clock.elapsed());
+        StandIn::Answer answer;
+        if (request.path == "/sw.js_data") {
+            answer.body = swJsData(QStringLiteral("TESTVISITORclient%1").arg(++minted, 4, 10, QLatin1Char('0')));
+            answer.extra << "Set-Cookie: VISITOR_INFO1_LIVE=TESTCOOKIEclient; Path=/";
+            return answer;
+        }
+        if (!request.path.contains("/player"))
+            return answer;
+        const QString version = clientOf(request).value(QStringLiteral("clientVersion")).toString();
+        const QString how = refusedIds.contains(QString::fromLatin1(request.header("x-goog-visitor-id")))
+                                ? QStringLiteral("login") : answerAs.value(version, QStringLiteral("ok"));
+        if (how == QLatin1String("ok")) {
+            // The URL names the version that gave it, so a check can tell.
+            answer.body = R"({"playabilityStatus":{"status":"OK"},"streamingData":{"adaptiveFormats":[)"
+                          R"({"itag":251,"url":"http://127.0.0.1/audio-)" + version.toUtf8()
+                          + R"(","mimeType":"audio/webm; codecs=\"opus\"","bitrate":130000}]}})";
+        } else if (how == QLatin1String("login")) {
+            answer.body = R"({"playabilityStatus":{"status":"LOGIN_REQUIRED","reason":"Sign in to confirm you are not a bot"}})";
+        } else if (how == QLatin1String("unplayable")) {
+            answer.body = R"({"playabilityStatus":{"status":"UNPLAYABLE","reason":"This video is not available"}})";
+        } else if (how == QLatin1String("cipher")) {
+            answer.body = R"({"playabilityStatus":{"status":"OK"},"streamingData":{"adaptiveFormats":[)"
+                          R"({"itag":251,"signatureCipher":"s=TEST&sp=sig&url=http%3A%2F%2F127.0.0.1%2Fciphered",)"
+                          R"("mimeType":"audio/webm; codecs=\"opus\"","bitrate":130000}]}})";
+        } else if (how == QLatin1String("drop")) {
+            answer.drop = true;
+        } else {
+            answer.hold = true;
+        }
+        return answer;
+    };
+    // What was asked since `from`: "sw", or the /player client's version.
+    const auto orderSince = [&standIn](int from) {
+        QStringList order;
+        for (int i = from; i < standIn.requests.size(); ++i) {
+            const StandIn::Request &request = standIn.requests.at(i);
+            order << (request.path == "/sw.js_data" ? QStringLiteral("sw")
+                      : request.path.contains("/player")
+                          ? clientOf(request).value(QStringLiteral("clientVersion")).toString()
+                          : QStringLiteral("other"));
+        }
+        return order.join(QLatin1Char(' '));
+    };
+    const auto loggedSince = [&captured](int from, const QString &text) {
+        for (int i = from; i < captured.size(); ++i) {
+            if (captured.at(i).contains(text))
+                return true;
+        }
+        return false;
+    };
+
+    QHash<QString, QString> settings;
+    const auto launch = [&settings]() {
+        InnerTube::setVisitorStore({
+            [&settings](const QString &key) { return settings.value(key); },
+            [&settings](const QString &key, const QString &value) { settings.insert(key, value); } });
+    };
+    const QString clientKey = QStringLiteral("youtube.player_client");
+
+    // — 1. the first client answers: the second is never asked —
+    launch();
+    {
+        InnerTube tube;
+        const int from = int(standIn.requests.size());
+        const Played played = playNow(tube, QStringLiteral("vid-first-ok"));
+        t.check(played.url.endsWith(QLatin1String("audio-1.02")) && orderSince(from) == QLatin1String("sw 1.02"),
+                QStringLiteral("VISIONOS 1.02 answers: one /player, as 1.02, and nothing more"), orderSince(from));
+    }
+
+    // — 2. refused: the second client, at once, as the same app —
+    {
+        answerAs.insert(QStringLiteral("1.02"), QStringLiteral("login"));
+        InnerTube tube;
+        const int from = int(standIn.requests.size());
+        const int logFrom = int(captured.size());
+        QElapsedTimer took;
+        took.start();
+        const Played played = playNow(tube, QStringLiteral("vid-first-refused"));
+        const qint64 ms = took.elapsed();
+        t.check(played.url.endsWith(QLatin1String("audio-0.1")) && orderSince(from) == QLatin1String("1.02 0.1"),
+                QStringLiteral("1.02 refused (LOGIN_REQUIRED): asked once as 0.1, which answers"),
+                orderSince(from) + QStringLiteral(" ") + played.error);
+        const StandIn::Request first = standIn.requests.value(from);
+        const StandIn::Request second = standIn.requests.value(from + 1);
+        QJsonObject a = clientOf(first);
+        QJsonObject b = clientOf(second);
+        const bool sameApp = a.value(QStringLiteral("clientName")).toString() == QLatin1String("VISIONOS")
+                             && b.value(QStringLiteral("clientVersion")).toString() == QLatin1String("0.1");
+        a.remove(QStringLiteral("clientVersion"));
+        b.remove(QStringLiteral("clientVersion"));
+        t.check(sameApp && a == b && first.header("user-agent") == second.header("user-agent")
+                    && !second.header("x-goog-visitor-id").isEmpty()
+                    && first.header("x-goog-visitor-id") == second.header("x-goog-visitor-id"),
+                QStringLiteral("the second is the same visionOS app, only the version changed: same fields, "
+                               "User-Agent and visitor id"));
+        const qint64 gap = arrivals.value(from + 1) - arrivals.value(from);
+        t.check(gap < 1000, QStringLiteral("and it goes out as soon as the refusal is in (%1 ms later; "
+                                           "the whole resolve took %2 ms here)").arg(gap).arg(ms));
+        t.check(loggedSince(logFrom, QStringLiteral("gave no plain stream"))
+                    && loggedSince(logFrom, QStringLiteral("answered as VISIONOS 0.1")),
+                QStringLiteral("the log says why the second was asked, and that it answered"));
+    }
+
+    // — 3. an answer with ciphered formats only is no plain stream either —
+    {
+        answerAs.insert(QStringLiteral("1.02"), QStringLiteral("cipher"));
+        InnerTube tube;
+        const int from = int(standIn.requests.size());
+        const Played played = playNow(tube, QStringLiteral("vid-first-cipher"));
+        t.check(played.url.endsWith(QLatin1String("audio-0.1")) && orderSince(from) == QLatin1String("1.02 0.1"),
+                QStringLiteral("1.02 offers only signatureCipher: 0.1 is asked and answers"), orderSince(from));
+    }
+
+    // — 4. both refuse: one error naming both, and the time it took —
+    {
+        answerAs.insert(QStringLiteral("1.02"), QStringLiteral("unplayable"));
+        answerAs.insert(QStringLiteral("0.1"), QStringLiteral("unplayable"));
+        InnerTube tube;
+        const int from = int(standIn.requests.size());
+        const int logFrom = int(captured.size());
+        const Played played = playNow(tube, QStringLiteral("vid-both-refuse"));
+        t.check(played.url.isEmpty() && orderSince(from) == QLatin1String("1.02 0.1")
+                    && played.error.contains(QLatin1String("VISIONOS 1.02: UNPLAYABLE: This video is not available"))
+                    && played.error.contains(QLatin1String("VISIONOS 0.1: UNPLAYABLE")),
+                QStringLiteral("both refuse: two /player calls, then the tier below, told why by each"),
+                orderSince(from) + QStringLiteral(" / ") + played.error);
+        t.check(loggedSince(logFrom, QStringLiteral("vid-both-refuse not resolved in")),
+                QStringLiteral("and the log has why InnerTube failed and how long it took"));
+    }
+
+    // — 5. no answer at all: the second client is not asked —
+    {
+        answerAs.insert(QStringLiteral("1.02"), QStringLiteral("drop"));
+        answerAs.remove(QStringLiteral("0.1"));
+        InnerTube tube;
+        const int from = int(standIn.requests.size());
+        const Played played = playNow(tube, QStringLiteral("vid-first-dropped"));
+        t.check(played.url.isEmpty() && !orderSince(from).contains(QLatin1String("0.1"))
+                    && played.error.startsWith(QLatin1String("VISIONOS 1.02: ")),
+                QStringLiteral("1.02 unanswered (the connection closed): its own retry only, never 0.1"),
+                orderSince(from) + QStringLiteral(" / ") + played.error);
+    }
+
+    // — 6. a stored id refused: renewed and asked again first, then 0.1 —
+    {
+        const QString stale = QStringLiteral("TESTVISITORclientstale");
+        settings.insert(QStringLiteral("youtube.visitor_data"), stale);
+        settings.insert(QStringLiteral("youtube.visitor_data_at"),
+                        QDateTime::currentDateTimeUtc().addSecs(-3600).toString(Qt::ISODate));
+        refusedIds = { stale };
+        answerAs.insert(QStringLiteral("1.02"), QStringLiteral("login"));
+        launch();
+        InnerTube tube;
+        const int from = int(standIn.requests.size());
+        const Played played = playNow(tube, QStringLiteral("vid-stale-then-second"));
+        const StandIn::Request last = standIn.requests.last();
+        t.check(played.url.endsWith(QLatin1String("audio-0.1")) && orderSince(from) == QLatin1String("1.02 sw 1.02 0.1")
+                    && !last.header("x-goog-visitor-id").isEmpty() && last.header("x-goog-visitor-id") != stale.toUtf8(),
+                QStringLiteral("refused with the stored id: a new id, 1.02 once more, then 0.1 with the new id"),
+                orderSince(from));
+        refusedIds.clear();
+    }
+
+    // — 7. the second client gets no retry and a shorter wait —
+    {
+        answerAs.insert(QStringLiteral("0.1"), QStringLiteral("hold"));
+        InnerTube tube;
+        const int from = int(standIn.requests.size());
+        QElapsedTimer took;
+        took.start();
+        const Played played = playNow(tube, QStringLiteral("vid-second-silent"));
+        const qint64 ms = took.elapsed();
+        t.check(played.url.isEmpty() && orderSince(from) == QLatin1String("1.02 0.1") && ms >= 2500 && ms < 6000
+                    && played.error.contains(QLatin1String("VISIONOS 0.1: ")),
+                QStringLiteral("0.1 never answers: given up after %1 ms, not retried").arg(ms),
+                orderSince(from) + QStringLiteral(" / ") + played.error);
+        answerAs.remove(QStringLiteral("0.1"));
+    }
+
+    // — 8. the switch: the first client alone, as before —
+    {
+        settings.insert(clientKey, QStringLiteral("first"));
+        launch();
+        InnerTube tube;
+        const int from = int(standIn.requests.size());
+        const Played played = playNow(tube, QStringLiteral("vid-switch-first"));
+        t.check(played.url.isEmpty() && orderSince(from).endsWith(QLatin1String("1.02"))
+                    && !orderSince(from).contains(QLatin1String("0.1")),
+                QStringLiteral("youtube.player_client=first: 1.02 refused, and 0.1 never asked"), orderSince(from));
+    }
+
+    // — 9. and the second client alone, for the canary and the resolve test —
+    {
+        answerAs.remove(QStringLiteral("1.02"));
+        settings.insert(clientKey, QStringLiteral("second"));
+        launch();
+        InnerTube tube;
+        const int from = int(standIn.requests.size());
+        const Played played = playNow(tube, QStringLiteral("vid-switch-second"));
+        t.check(played.url.endsWith(QLatin1String("audio-0.1")) && orderSince(from).endsWith(QLatin1String("0.1"))
+                    && !orderSince(from).contains(QLatin1String("1.02")),
+                QStringLiteral("youtube.player_client=second: 0.1 alone, though 1.02 would have answered"),
+                orderSince(from));
+        InnerTube::setPlayerClients(InnerTube::PlayerClients::Both);
+        const int bothFrom = int(standIn.requests.size());
+        playNow(tube, QStringLiteral("vid-override"));
+        t.check(orderSince(bothFrom) == QLatin1String("1.02"),
+                QStringLiteral("setPlayerClients overrides the setting until the next launch"), orderSince(bothFrom));
+        settings.remove(clientKey);
+    }
+
+    // — 10. the log —
+    {
+        g_captured = nullptr;
+        qInstallMessageHandler(g_previousHandler);
+        QStringList found;
+        for (const QString &line : std::as_const(captured)) {
+            if (line.contains(QLatin1String("TESTVISITOR")) || line.contains(QLatin1String("TESTCOOKIE")))
                 found << line.left(80);
         }
         t.check(found.isEmpty(), QStringLiteral("none of %1 lines logged holds a visitor id or a cookie value")

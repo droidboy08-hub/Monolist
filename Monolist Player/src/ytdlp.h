@@ -59,7 +59,9 @@ private:
     void handleStderr();
     void handleLine(const QString &line);
     void handleFinished(int exitCode, QProcess::ExitStatus status);
-    // Ends yt-dlp and every process it started, and waits until they have gone.
+    // Ends yt-dlp and every process it started. A download waits until they
+    // have gone, since its files are deleted next; a lookup (JSON) holds no
+    // files, and returns at once while they end on their own.
     void stopProcess();
 
     QProcess *m_process = nullptr;
@@ -96,6 +98,11 @@ public:
     static bool isAvailable();
     static QString resolvedDescription();
     static void setExecutableOverride(const QString &path);
+    // The switch back for cancelling a lookup (a stream, a search): true
+    // waits, on the calling thread, until its processes have gone, as every
+    // cancel once did. Downloads always wait. Set once at start, from the
+    // setting ytdlp.cancel ("wait"); off by default.
+    static void setCancelWaits(bool wait);
 
     // Full paths, or empty when the tool is missing.
     static QString ffmpegPath();

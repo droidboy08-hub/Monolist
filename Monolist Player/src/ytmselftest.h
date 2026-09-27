@@ -34,3 +34,11 @@ int runYtmSessionSelfTest(Library *library);
 // account's id kept apart, and no id or cookie value in the log. Its store
 // is in memory: no data folder is touched.
 int runVisitorSelfTest();
+
+// --player-client-test: /player's second client (VISIONOS 0.1) against the
+// same stand-in: asked only when VISIONOS 1.02's answer holds no plain
+// stream (refused, or ciphered formats only), at once and as the same app;
+// never after no answer at all; after the stored id's renewal; no retry and
+// a 3 s limit of its own; both refusals in the error and the log; the switch
+// (youtube.player_client first|second); no id or cookie value in the log.
+int runPlayerClientSelfTest();

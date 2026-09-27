@@ -2,6 +2,7 @@
 
 #include <QCoreApplication>
 #include <QDir>
+#include <QElapsedTimer>
 #include <QFileInfo>
 #include <QJsonObject>
 #include <QJsonParseError>
@@ -10,6 +11,8 @@
 #include <QRegularExpression>
 #include <QStandardPaths>
 #include <QThread>
+
+#include <utility>
 
 #if defined(Q_OS_WIN)
 #include <windows.h>
@@ -21,6 +24,53 @@
 namespace {
 
 QString g_executableOverride;
+bool g_cancelWaits = false;
+
+// A cancelled lookup's processes, already told to end, and kept here until
+// they have. A skip cancels the lookup for the song it leaves, on the
+// interface's thread, and waiting there for yt-dlp, Python and Deno to go
+// held the window still for as long as that took: a few milliseconds when
+// measured on Windows, but the limits allowed 3 s, and a machine slow to end
+// them paid it. Nothing needs them gone at once: a lookup writes no files. So
+// the request forgets them and this waits instead, without blocking anything,
+// and on Windows closes their job afterwards, which ends anything still in
+// it. It belongs to the application, so none is left behind at exit.
+class Reaper : public QObject
+{
+public:
+    Reaper(QProcess *process, void *job)
+        : m_job(job)
+    {
+        QCoreApplication *app = QCoreApplication::instance();
+        if (app && app->thread() == thread())
+            setParent(app);
+        m_clock.start();
+        process->setParent(this);
+        connect(process, &QProcess::finished, this, [this]() {
+            long long left = 0;
+#if defined(Q_OS_WIN)
+            JOBOBJECT_BASIC_ACCOUNTING_INFORMATION accounting = {};
+            if (m_job && QueryInformationJobObject(HANDLE(m_job), JobObjectBasicAccountingInformation,
+                                                   &accounting, sizeof(accounting), nullptr))
+                left = accounting.ActiveProcesses;
+#endif
+            qInfo("yt-dlp: a cancelled lookup ended %lld ms after the cancel (%lld of its processes left)",
+                  (long long)m_clock.elapsed(), left);
+            deleteLater();
+        });
+    }
+    ~Reaper() override
+    {
+#if defined(Q_OS_WIN)
+        if (m_job)
+            CloseHandle(HANDLE(m_job));
+#endif
+    }
+
+private:
+    [[maybe_unused]] void *m_job;   // Windows only; null elsewhere
+    QElapsedTimer m_clock;
+};
 
 // Download output is requested in fixed, parse-friendly shapes rather than
 // scraped from yt-dlp's human-readable log, which changes between releases:
@@ -82,12 +132,14 @@ YtDlpRequest::~YtDlpRequest()
 // challenges, as processes of their own. Killing yt-dlp alone left those
 // running: a download cancelled while FFmpeg converted it went on being
 // written after the cleanup had run, and on Windows the files FFmpeg held open
-// could not be deleted by it at all. So the whole tree goes, and this returns
-// once it has gone, with every file it held let go.
+// could not be deleted by it at all. So the whole tree goes, and for a
+// download this returns once it has gone, with every file it held let go. A
+// lookup is told to end the same way, and then left to a Reaper (above).
 void YtDlpRequest::stopProcess()
 {
     if (!m_process || m_process->state() == QProcess::NotRunning)
         return;
+    const bool wait = !m_expectJson || g_cancelWaits;
 #if defined(Q_OS_WIN)
     if (m_job) {
         TerminateJobObject(HANDLE(m_job), 1);
@@ -95,8 +147,9 @@ void YtDlpRequest::stopProcess()
         // once each process has actually gone.
         const QDeadlineTimer deadline(2000);
         JOBOBJECT_BASIC_ACCOUNTING_INFORMATION accounting = {};
-        while (QueryInformationJobObject(HANDLE(m_job), JobObjectBasicAccountingInformation, &accounting,
-                                         sizeof(accounting), nullptr)
+        while (wait
+               && QueryInformationJobObject(HANDLE(m_job), JobObjectBasicAccountingInformation, &accounting,
+                                            sizeof(accounting), nullptr)
                && accounting.ActiveProcesses > 0 && !deadline.hasExpired())
             QThread::msleep(10);
     }
@@ -107,7 +160,14 @@ void YtDlpRequest::stopProcess()
         ::kill(-pid_t(pid), SIGKILL);
 #endif
     m_process->kill();
-    m_process->waitForFinished(1000);
+    if (wait) {
+        m_process->waitForFinished(1000);
+        return;
+    }
+    // Nothing it says from now on is for this request, which is about to
+    // report the cancel and go.
+    m_process->disconnect(this);
+    new Reaper(std::exchange(m_process, nullptr), std::exchange(m_job, nullptr));
 }
 
 bool YtDlpRequest::isRunning() const
@@ -322,6 +382,11 @@ void YtDlpRequest::cancel()
 void YtDlp::setExecutableOverride(const QString &path)
 {
     g_executableOverride = path;
+}
+
+void YtDlp::setCancelWaits(bool wait)
+{
+    g_cancelWaits = wait;
 }
 
 QStringList YtDlp::toolDirectories()

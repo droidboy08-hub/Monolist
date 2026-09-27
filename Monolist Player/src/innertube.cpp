@@ -66,6 +66,31 @@ const QByteArray kVisionUserAgent =
 // One /player call, generously: it is one request, and the tier below it
 // costs seconds.
 constexpr int kPlayerTimeoutMs = 8000;
+// The second client is a second chance, not a second wait: asked only once
+// the first has answered, it gets no retry and a shorter limit. /player
+// answered in 0.5 s at the 90th percentile when this was set.
+constexpr int kPlayerFallbackTimeoutMs = 3000;
+
+// The visionOS app's versions, as /player is asked. 1.02 answered every call
+// measured (96 of 96, September 2026). 0.1 answered the same twelve test
+// tracks with plain URLs that played whole, where every other client that
+// needs no cipher was refused (ANDROID_VR's older versions, TVHTML5_SIMPLY)
+// or served the first megabyte and then 403 (ANDROID_VR 1.65.10). It covers
+// one version being retired; YouTube refusing the app outright it does not.
+const QString kVisionVersion = QStringLiteral("1.02");
+const QString kVisionFallbackVersion = QStringLiteral("0.1");
+
+bool isPlayerClient(InnerTube::Client client)
+{
+    return client == InnerTube::Client::Player || client == InnerTube::Client::PlayerFallback;
+}
+
+// How the log and the error name a /player client.
+QString playerClientName(InnerTube::Client client)
+{
+    return QStringLiteral("VISIONOS ")
+           + (client == InnerTube::Client::PlayerFallback ? kVisionFallbackVersion : kVisionVersion);
+}
 
 // Walks object keys and "#n" array indices; a step that does not exist yields
 // an undefined value, so a changed layout reads as "nothing here" rather than
@@ -167,6 +192,15 @@ struct Visitor {
     QPointer<SharedJar> jar;
 };
 Visitor g_visitor;
+
+// youtube.player_client, read through the same store once a launch
+// (InnerTube::PlayerClients); a new store reads it afresh.
+const QString kPlayerClientKey = QStringLiteral("youtube.player_client");
+struct PlayerClientsSwitch {
+    bool loaded = false;
+    InnerTube::PlayerClients clients = InnerTube::PlayerClients::Both;
+};
+PlayerClientsSwitch g_playerClients;
 
 SharedJar *sharedJar()
 {
@@ -421,13 +455,16 @@ QJsonObject clientContext(InnerTube::Client client)
         client_.insert(QStringLiteral("clientVersion"), QStringLiteral("2.%1.00.00").arg(today));
         break;
     case InnerTube::Client::Player:
+    case InnerTube::Client::PlayerFallback:
         // The visionOS app, described exactly as it describes itself. The
         // whole reason this client is here is that /player answers it with
         // plain stream URLs — no signature to undo, no throttling parameter
         // to descramble in a JavaScript engine, no PO token. Change any of
-        // these strings and it stops being that client.
+        // these strings and it stops being that client. The fallback is the
+        // same app with only the version changed.
         client_.insert(QStringLiteral("clientName"), QStringLiteral("VISIONOS"));
-        client_.insert(QStringLiteral("clientVersion"), QStringLiteral("1.02"));
+        client_.insert(QStringLiteral("clientVersion"), client == InnerTube::Client::PlayerFallback
+                                                            ? kVisionFallbackVersion : kVisionVersion);
         client_.insert(QStringLiteral("deviceMake"), QStringLiteral("Apple"));
         client_.insert(QStringLiteral("deviceModel"), QStringLiteral("RealityDevice17,1"));
         client_.insert(QStringLiteral("osName"), QStringLiteral("visionOS"));
@@ -884,7 +921,70 @@ InnerTube::Watch watchOf(const QJsonValue &endpoint)
     return watch;
 }
 
+// The stream a /player answer offers for listening, and its itag: the best
+// audio-only one that carries a plain URL. A format offering only
+// `signatureCipher` needs the player JavaScript run to unpick it, which is
+// exactly the work these clients exist to avoid — so it is passed over, and
+// if that leaves nothing, the caller moves on. Empty when there is none.
+QString pickStream(const QJsonObject &root, int *itag)
+{
+    QString best;
+    int bestItag = 0;
+    int bestBitrate = -1;
+    const QJsonArray formats = dig(root, { "streamingData", "adaptiveFormats" }).toArray();
+    for (const QJsonValue &value : formats) {
+        const QJsonObject format = value.toObject();
+        const QString url = format.value(QStringLiteral("url")).toString();
+        if (url.isEmpty())
+            continue;
+        if (!format.value(QStringLiteral("mimeType")).toString().startsWith(QLatin1String("audio")))
+            continue;
+        const int bitrate = format.value(QStringLiteral("bitrate")).toInt();
+        if (bitrate > bestBitrate) {
+            bestBitrate = bitrate;
+            bestItag = format.value(QStringLiteral("itag")).toInt();
+            best = url;
+        }
+    }
+    // Nothing audio-only: fall back to the progressive list, where itag 18
+    // lives — one file with the sound and a small picture muxed together. It
+    // is the wrong choice for a music player in general, because the video
+    // bytes are downloaded and then thrown away (mpv is loaded with vid=no),
+    // which is why it is not preferred above. But some tracks publish nothing
+    // else, and half a megabyte of wasted picture on those few beats sending
+    // the track down to yt-dlp and waiting three seconds.
+    if (best.isEmpty()) {
+        const QJsonArray progressive = dig(root, { "streamingData", "formats" }).toArray();
+        for (const QJsonValue &value : progressive) {
+            const QJsonObject format = value.toObject();
+            const QString url = format.value(QStringLiteral("url")).toString();
+            if (url.isEmpty())
+                continue;
+            // Muxed formats carry no `bitrate` worth comparing across codecs;
+            // take the highest itag that answers, which orders 18 ahead of
+            // the smaller ones.
+            const int formatItag = format.value(QStringLiteral("itag")).toInt();
+            if (formatItag > bestItag) {
+                bestItag = formatItag;
+                best = url;
+            }
+        }
+    }
+    *itag = best.isEmpty() ? 0 : bestItag;
+    return best;
+}
+
 } // namespace
+
+// One player() call as it goes (innertube.h).
+struct InnerTube::PlayerAsk {
+    QString videoId;
+    std::function<void(const QString &url, int itag, const QString &error)> done;
+    QElapsedTimer clock;
+    bool fallbackLeft = false;   // PlayerFallback still to be asked
+    bool renewed = false;        // asked again with a new visitor id
+    QStringList refusals;        // "VISIONOS 1.02: LOGIN_REQUIRED: …", in order
+};
 
 void InnerTube::setRegion(const QString &code)
 {
@@ -994,6 +1094,7 @@ void InnerTube::setVisitorStore(VisitorStore store)
     v.pending = false;
     if (v.jar)
         v.jar->clear();
+    g_playerClients = {};
     // Nobody is left waiting on a fetch whose answer will now be dropped.
     const auto waiters = std::exchange(v.waiters, {});
     for (const auto &waiter : waiters)
@@ -1016,6 +1117,29 @@ void InnerTube::forgetVisitorData()
 void InnerTube::setSessionVisitorData(const QString &visitorData)
 {
     g_visitor.session = visitorData;
+}
+
+void InnerTube::setPlayerClients(PlayerClients clients)
+{
+    g_playerClients.loaded = true;
+    g_playerClients.clients = clients;
+}
+
+InnerTube::PlayerClients InnerTube::playerClients()
+{
+    PlayerClientsSwitch &s = g_playerClients;
+    if (s.loaded)
+        return s.clients;
+    s.loaded = true;
+    const QString value = g_visitor.store.read ? g_visitor.store.read(kPlayerClientKey) : QString();
+    s.clients = value == QLatin1String("first")  ? PlayerClients::First
+              : value == QLatin1String("second") ? PlayerClients::Second
+                                                 : PlayerClients::Both;
+    if (s.clients != PlayerClients::Both)
+        qInfo("innertube: youtube.player_client=%s: /player is asked as %s alone", qPrintable(value),
+              qPrintable(playerClientName(s.clients == PlayerClients::First ? Client::Player
+                                                                            : Client::PlayerFallback)));
+    return s.clients;
 }
 
 InnerTube::InnerTube(QObject *parent, bool warmUp)
@@ -1059,7 +1183,7 @@ QNetworkReply *InnerTube::post(Client client, const QString &endpoint, QJsonObje
     QByteArray agent = kUserAgent;
     if (client == Client::Music) {
         host = QStringLiteral("https://music.youtube.com");
-    } else if (client == Client::Player) {
+    } else if (isPlayerClient(client)) {
         agent = kVisionUserAgent;
     }
     if (!g_testServer.isEmpty())
@@ -1067,7 +1191,7 @@ QNetworkReply *InnerTube::post(Client client, const QString &endpoint, QJsonObje
 
     // /player names the anonymous visitor (withVisitorData). The account
     // only ever goes on Music calls, so the two never meet.
-    const QString visitor = client == Client::Player ? g_visitor.anonymous : QString();
+    const QString visitor = isPlayerClient(client) ? g_visitor.anonymous : QString();
     const auto nameVisitor = [](QJsonObject &context, const QString &id) {
         QJsonObject inner = context.value(QStringLiteral("client")).toObject();
         inner.insert(QStringLiteral("visitorData"), id);
@@ -1258,34 +1382,50 @@ void InnerTube::player(const QString &videoId,
         done({}, 0, QStringLiteral("no video id"));
         return;
     }
-    askPlayer(videoId, std::move(done), /*retried=*/false);
+    auto ask = std::make_shared<PlayerAsk>();
+    ask->videoId = videoId;
+    ask->done = std::move(done);
+    ask->clock.start();
+    const PlayerClients clients = playerClients();
+    ask->fallbackLeft = clients == PlayerClients::Both;
+    askPlayer(clients == PlayerClients::Second ? Client::PlayerFallback : Client::Player, ask);
 }
 
-void InnerTube::askPlayer(const QString &videoId,
-                          std::function<void(const QString &url, int itag, const QString &error)> done,
-                          bool retried)
+void InnerTube::askPlayer(Client client, std::shared_ptr<PlayerAsk> ask)
 {
-    withVisitorData([this, videoId, retried, done = std::move(done)]() mutable {
+    withVisitorData([this, client, ask]() {
         // The id post() puts on this call: afterwards it tells whether the
         // call went with the stored id, and whether a newer one has come.
         const QString visitor = g_visitor.anonymous;
         const QJsonObject body{
-            { QStringLiteral("videoId"), videoId },
+            { QStringLiteral("videoId"), ask->videoId },
             // Both are what the app itself sends; without them anything
             // flagged is refused rather than played.
             { QStringLiteral("contentCheckOk"), true },
             { QStringLiteral("racyCheckOk"), true }
         };
-        send(Client::Player, QStringLiteral("player"), body, kPlayerTimeoutMs, /*slot=*/nullptr,
-             [this, videoId, retried, visitor, done](const QJsonObject &root, const QString &error) {
+        // The client asked after another has answered is a second chance:
+        // a shorter limit, and no retry.
+        const bool second = !ask->refusals.isEmpty();
+        send(client, QStringLiteral("player"), body, second ? kPlayerFallbackTimeoutMs : kPlayerTimeoutMs,
+             /*slot=*/nullptr,
+             [this, client, visitor, ask](const QJsonObject &root, const QString &error) {
+                 const QString &videoId = ask->videoId;
                  if (!error.isEmpty()) {
-                     done({}, 0, error);
+                     // No answer at all: not asked of the other client, which
+                     // would only wait on the same server again.
+                     ask->refusals << playerClientName(client) + QStringLiteral(": ") + error;
+                     const QString why = ask->refusals.join(QStringLiteral("; "));
+                     qInfo("innertube: %s not resolved in %lld ms: %s", qPrintable(videoId),
+                           (long long)ask->clock.elapsed(), qPrintable(why));
+                     ask->done({}, 0, why);
                      return;
                  }
                  const QString status = dig(root, { "playabilityStatus", "status" }).toString();
                  if (status != QLatin1String("OK")) {
                      // LOGIN_REQUIRED, UNPLAYABLE, AGE_VERIFICATION_REQUIRED:
-                     // all of them mean the tier below should try.
+                     // all of them mean the next client, or the tier below,
+                     // should try.
                      const QString reason = dig(root, { "playabilityStatus", "reason" }).toString();
                      const QString refused = reason.isEmpty() ? status : status + QStringLiteral(": ") + reason;
                      // Except once. A stored id YouTube no longer honours is
@@ -1294,94 +1434,75 @@ void InnerTube::askPlayer(const QString &videoId,
                      // where yt-dlp costs seconds. Only for the id this launch
                      // found stored: with one fetched this launch,
                      // LOGIN_REQUIRED is the track's own answer.
-                     if (status == QLatin1String("LOGIN_REQUIRED") && !retried && !visitor.isEmpty()
-                         && visitor == g_visitor.fromSettings) {
+                     if (status == QLatin1String("LOGIN_REQUIRED") && !ask->renewed && ask->refusals.isEmpty()
+                         && !visitor.isEmpty() && visitor == g_visitor.fromSettings) {
+                         ask->renewed = true;
                          qInfo("innertube: %s refused with the stored visitor id (LOGIN_REQUIRED); "
                                "fetching a new id and asking once more", qPrintable(videoId));
-                         renewVisitor(visitor, [self = QPointer<InnerTube>(this), videoId, visitor, refused, done]() {
+                         renewVisitor(visitor, [self = QPointer<InnerTube>(this), client, visitor, refused, ask]() {
                              if (!self)
                                  return;
                              if (g_visitor.anonymous.isEmpty() || g_visitor.anonymous == visitor) {
-                                 qInfo("innertube: %s: no new visitor id to ask with", qPrintable(videoId));
-                                 done({}, 0, refused);
+                                 qInfo("innertube: %s: no new visitor id to ask with", qPrintable(ask->videoId));
+                                 self->playerRefused(client, refused, ask);
                                  return;
                              }
-                             self->askPlayer(videoId, done, /*retried=*/true);
+                             self->askPlayer(client, ask);
                          });
                          return;
                      }
-                     if (retried)
+                     if (ask->renewed && ask->refusals.isEmpty())
                          qInfo("innertube: %s refused again with a new visitor id: %s", qPrintable(videoId),
                                qPrintable(status));
-                     done({}, 0, refused);
+                     playerRefused(client, refused, ask);
                      return;
                  }
-                 if (retried)
+                 if (ask->renewed && ask->refusals.isEmpty())
                      qInfo("innertube: %s answered with the new visitor id", qPrintable(videoId));
                  // The first play has its answer: a stored id over a day old
                  // is replaced now, in the background.
                  if (g_visitor.refreshDue)
                      renewVisitorSoon();
 
-                 // The best audio-only stream that carries a plain URL. A
-                 // format offering only `signatureCipher` needs the player
-                 // JavaScript run to unpick it, which is exactly the work this
-                 // client exists to avoid — so it is passed over, and if that
-                 // leaves nothing, yt-dlp takes the track.
-                 QString best;
-                 int bestItag = 0;
-                 int bestBitrate = -1;
-                 const QJsonArray formats =
-                     dig(root, { "streamingData", "adaptiveFormats" }).toArray();
-                 for (const QJsonValue &value : formats) {
-                     const QJsonObject format = value.toObject();
-                     const QString url = format.value(QStringLiteral("url")).toString();
-                     if (url.isEmpty())
-                         continue;
-                     if (!format.value(QStringLiteral("mimeType")).toString()
-                              .startsWith(QLatin1String("audio")))
-                         continue;
-                     const int bitrate = format.value(QStringLiteral("bitrate")).toInt();
-                     if (bitrate > bestBitrate) {
-                         bestBitrate = bitrate;
-                         bestItag = format.value(QStringLiteral("itag")).toInt();
-                         best = url;
-                     }
-                 }
-                 // Nothing audio-only: fall back to the progressive list, where
-                 // itag 18 lives — one file with the sound and a small picture
-                 // muxed together. It is the wrong choice for a music player
-                 // in general, because the video bytes are downloaded and then
-                 // thrown away (mpv is loaded with vid=no), which is why it is
-                 // not preferred above. But some tracks publish nothing else,
-                 // and half a megabyte of wasted picture on those few beats
-                 // sending the track down to yt-dlp and waiting three seconds.
-                 if (best.isEmpty()) {
-                     const QJsonArray progressive =
-                         dig(root, { "streamingData", "formats" }).toArray();
-                     for (const QJsonValue &value : progressive) {
-                         const QJsonObject format = value.toObject();
-                         const QString url = format.value(QStringLiteral("url")).toString();
-                         if (url.isEmpty())
-                             continue;
-                         // Muxed formats carry no `bitrate` worth comparing
-                         // across codecs; take the highest itag that answers,
-                         // which orders 18 ahead of the smaller ones.
-                         const int itag = format.value(QStringLiteral("itag")).toInt();
-                         if (itag > bestItag) {
-                             bestItag = itag;
-                             best = url;
-                         }
-                     }
-                 }
-
-                 if (best.isEmpty()) {
-                     done({}, 0, QStringLiteral("no plain audio stream offered"));
+                 int itag = 0;
+                 const QString url = pickStream(root, &itag);
+                 if (url.isEmpty()) {
+                     playerRefused(client, QStringLiteral("no plain audio stream offered"), ask);
                      return;
                  }
-                 done(best, bestItag, QString());
-             });
+                 // Which client answered is in the log only when it was not
+                 // the usual one, which is exactly when it matters.
+                 if (client != Client::Player) {
+                     const QString after = ask->refusals.isEmpty()
+                         ? QString() : QStringLiteral(", after ") + ask->refusals.join(QStringLiteral("; "));
+                     qInfo("innertube: %s answered as %s in %lld ms%s", qPrintable(videoId),
+                           qPrintable(playerClientName(client)), (long long)ask->clock.elapsed(), qPrintable(after));
+                 }
+                 ask->done(url, itag, QString());
+             },
+             /*retries=*/second ? 0 : 1);
     });
+}
+
+void InnerTube::playerRefused(Client client, const QString &why, std::shared_ptr<PlayerAsk> ask)
+{
+    ask->refusals << playerClientName(client) + QStringLiteral(": ") + why;
+    // The one other client, once, and only after an answer: never a walk
+    // through several, each with its own wait.
+    if (client == Client::Player && ask->fallbackLeft) {
+        ask->fallbackLeft = false;
+        qInfo("innertube: %s: %s gave no plain stream in %lld ms (%s); asking as %s", qPrintable(ask->videoId),
+              qPrintable(playerClientName(client)), (long long)ask->clock.elapsed(), qPrintable(why),
+              qPrintable(playerClientName(Client::PlayerFallback)));
+        askPlayer(Client::PlayerFallback, ask);
+        return;
+    }
+    // Why, and how long it took: the tier below is seconds, and this line is
+    // the only record of what sent the track there.
+    const QString all = ask->refusals.join(QStringLiteral("; "));
+    qInfo("innertube: %s not resolved in %lld ms: %s", qPrintable(ask->videoId), (long long)ask->clock.elapsed(),
+          qPrintable(all));
+    ask->done({}, 0, all);
 }
 
 void InnerTube::search(const QString &query, Filter filter)

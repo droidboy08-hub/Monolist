@@ -425,6 +425,17 @@ mpv's own messages.
                                                     same stand-in: one fetch, a stored id used at once, the
                                                     30-day limit, LOGIN_REQUIRED renewed and asked once
                                                     more, the shared jar, Clear history, the switch back
+    monolist --player-client-test                   /player's second client (VISIONOS 0.1) against the same
+                                                    stand-in: asked only when 1.02's answer has no plain
+                                                    stream, at once and as the same app, never after no
+                                                    answer at all; no retry and 3 s of its own; the switch
+    monolist --player-canary [videoId...]           each /player client alone on real YouTube: its answer,
+                                                    itag and time, n= or pot= in the link, and whether the
+                                                    link serves its first and second MiB (never the link
+                                                    itself); fails when a client does not
+    monolist --cancel-test [videoId] [rounds]       a skip while yt-dlp resolves: the cancel timed and this
+                                                    thread watched every 5 ms, in turn as it is and with
+                                                    ytdlp.cancel=wait, and each cancel's processes seen to end
     monolist --audio-devices [<videoId>]            the output menu: every device mpv lists, what the menu
                                                     offers (Auto, then the WASAPI or CoreAudio devices, then
                                                     a chosen one that is not connected), the kept choice and
@@ -458,7 +469,10 @@ be, for a look at a state:
                                                     +file adds the offer to delete an imported file
     monolist --set <key> <value>                    write a setting first (lrclib_url, piped_instances,
                                                     invidious_instances; youtube.visitor launch|home
-                                                    keeps the visitor id for one launch, as before)
+                                                    keeps the visitor id for one launch, as before;
+                                                    youtube.player_client first|second asks /player as
+                                                    VISIONOS 1.02 or 0.1 alone; ytdlp.cancel wait has a
+                                                    cancelled lookup wait for its processes, as before)
 
 `MONOLIST_DATA_DIR` keeps the database somewhere else, so a test never touches
 the real library; the scrobbling tests, `--ytm-session-test`,
