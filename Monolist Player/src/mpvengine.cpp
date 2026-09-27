@@ -372,16 +372,21 @@ void MpvEngine::load(const QString &urlOrPath, bool startPlaying, const QString 
     }
 
     // A stream whose sound comes separately (YouTube's larger sizes). Always
-    // set, so the last video's sound is never carried into the next file —
-    // and cleared as a list, because setting it to "" would leave one entry
-    // that is the empty file name, which mpv then tries to open.
-    if (audioUrl.isEmpty()) {
-        const char *clear[] = { "change-list", "audio-files", "clr", "", nullptr };
-        mpv_command(m_mpv, clear);
-    } else {
+    // cleared first, so the last video's sound is never carried into the next
+    // file — as a list, because setting it to "" would leave one entry that is
+    // the empty file name, which mpv then tries to open.
+    //
+    // Then APPENDED, never "set": audio-files is a path list, and "set" splits
+    // its value on the platform's path separator. That is ';' on Windows, which
+    // a googlevideo link never contains, but ':' on macOS and Linux, where it
+    // cut "https://…" into "https" and "//…" — the picture played, the sound
+    // never opened. "append" adds exactly one item, unsplit.
+    const char *clear[] = { "change-list", "audio-files", "clr", "", nullptr };
+    mpv_command(m_mpv, clear);
+    if (!audioUrl.isEmpty()) {
         const QByteArray audio = audioUrl.toUtf8();
-        const char *set[] = { "change-list", "audio-files", "set", audio.constData(), nullptr };
-        mpv_command(m_mpv, set);
+        const char *add[] = { "change-list", "audio-files", "append", audio.constData(), nullptr };
+        mpv_command(m_mpv, add);
     }
     // Likewise always set: the next file starts where it is told, or at 0.
     mpv_set_option_string(m_mpv, "start",
