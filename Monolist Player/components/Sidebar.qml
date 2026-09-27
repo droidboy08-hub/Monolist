@@ -48,8 +48,10 @@ Rectangle {
 
         Row {
             anchors.left: brandButtons.visible ? brandButtons.right : parent.left
-            // macOS keeps its traffic lights here.
-            anchors.leftMargin: (brandButtons.visible ? Theme.space2 : Theme.space6) + Chrome.nativeButtonsInset
+            // macOS keeps its traffic lights in the corner above the name, so
+            // the name keeps its place: set in beside them, it ran into the
+            // version at the sidebar's other end.
+            anchors.leftMargin: brandButtons.visible ? Theme.space2 : Theme.space6
             anchors.verticalCenter: parent.verticalCenter
             spacing: Theme.space2
 
