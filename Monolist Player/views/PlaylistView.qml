@@ -84,6 +84,11 @@ ScrollPage {
         Downloads.enqueueAll(trackList())
     }
 
+    // Asked again whenever a download starts, ends or fails, and whenever
+    // the playlist changes.
+    readonly property var downloadCounts: Downloads.revision >= 0 && Library.revision >= 0 && root.songCount >= 0
+                                          ? Downloads.downloadCounts(trackList()) : ({})
+
     function songsLabel(n) { return n + (n === 1 ? " song" : " songs") }
 
     // The playlist's own menu, as on its card and in the sidebar; here the
@@ -242,12 +247,12 @@ ScrollPage {
                             Player.playModel(root.songs, Math.floor(Math.random() * root.songCount), "playlist")
                         }
                     }
-                    ActionButton {
+                    DownloadAllButton {
                         visible: Downloads.available
-                        iconName: "download"
-                        text: "Download all"
+                        counts: root.downloadCounts
                         enabled: root.songCount > 0
-                        onClicked: root.downloadAll()
+                        onDownloadAllRequested: root.downloadAll()
+                        onRetryRequested: Downloads.retryFailed(root.trackList())
                     }
                     ActionButton {
                         id: moreButton
