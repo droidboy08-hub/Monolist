@@ -13,11 +13,20 @@
 #include <QRandomGenerator>
 #include <QRegularExpression>
 #include <QStandardPaths>
+#include <QStorageInfo>
 #include <QTimeZone>
 
 #include <algorithm>
 #include <limits>
 #include <memory>
+#include <string>
+
+#ifdef Q_OS_WIN
+#ifndef NOMINMAX
+#define NOMINMAX   // std::numeric_limits<int>::max() below
+#endif
+#include <windows.h>
+#endif
 
 namespace {
 
@@ -949,6 +958,40 @@ QString YtmSession::cookieFolder()
     return base.isEmpty() ? QString() : QDir(base).filePath(kCookieFolderName);
 }
 
+bool YtmSession::onNetworkDrive(const QString &path)
+{
+    if (path.isEmpty())
+        return false;
+    const QString absolute = QFileInfo(path).absoluteFilePath();
+#ifdef Q_OS_WIN
+    const QString native = QDir::toNativeSeparators(absolute);
+    if (native.startsWith(QLatin1String("\\\\")))
+        return true;   // \\server\share, the Parallels share (\\psf) among them
+    if (native.size() < 2 || native.at(1) != QLatin1Char(':'))
+        return false;
+    const std::wstring root = native.left(2).toStdWString() + L"\\";
+    return GetDriveTypeW(root.c_str()) == DRIVE_REMOTE;   // a drive letter mapped to a share
+#else
+    // The volume the folder, or the nearest part of it that exists, is on.
+    QString existing = absolute;
+    while (!existing.isEmpty() && !QFileInfo::exists(existing)) {
+        const QString up = QFileInfo(existing).absolutePath();
+        if (up == existing)
+            break;
+        existing = up;
+    }
+    const QStorageInfo volume(existing);
+    if (!volume.isValid())
+        return false;
+    static const QStringList remote{ QStringLiteral("nfs"),   QStringLiteral("nfs4"),     QStringLiteral("smbfs"),
+                                     QStringLiteral("cifs"),  QStringLiteral("smb3"),     QStringLiteral("afpfs"),
+                                     QStringLiteral("webdav"), QStringLiteral("davfs"),   QStringLiteral("fuse.sshfs"),
+                                     QStringLiteral("9p"),    QStringLiteral("afs"),      QStringLiteral("ceph"),
+                                     QStringLiteral("glusterfs") };
+    return remote.contains(QString::fromLatin1(volume.fileSystemType()).toLower());
+#endif
+}
+
 int YtmSession::sweepCookieFiles(int sparedSecs)
 {
     const QString folder = cookieFolder();
@@ -991,6 +1034,15 @@ quint64 YtmSession::openCookieFile(QString *path, QString *error)
         return 0;
     }
     const QString folder = cookieFolder();
+    // Never onto a share: the file is the whole session in plain text, where
+    // the copy SecretStore keeps beside it is encrypted.
+    if (onNetworkDrive(folder)) {
+        *error = QStringLiteral("the data folder is on a network drive, where the session's cookies are not written "
+                                "in plain text");
+        qWarning("ytmusic: not lending yt-dlp the session: %s is on a network drive",
+                 qPrintable(QDir::toNativeSeparators(folder)));
+        return 0;
+    }
     if (folder.isEmpty() || !QDir().mkpath(folder)) {
         *error = QStringLiteral("there is nowhere to write the cookies for yt-dlp");
         return 0;

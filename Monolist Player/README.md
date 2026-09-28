@@ -92,16 +92,31 @@ the same second:
 
 * **A link mpv refuses** (googlevideo's 403, now and then): a stale cached
   link is fetched fresh. A fresh InnerTube link is asked for once more
-  (~0.2 s, and Opus again) before the song's muxed stream (itag 18, ~3 s),
-  then yt-dlp and the public instances. InnerTube is asked again at most once
-  a track. A link found below the song's own rung this way is a *rescue link*:
-  it serves the rest of that play, and the song's next play starts from
-  InnerTube again rather than replaying 96 kbps AAC for hours.
+  (~0.2 s) before the song's muxed stream (itag 18, ~3 s), then yt-dlp and
+  the public instances. InnerTube is asked again at most once a track. That
+  second link rescues a link spoiled by `--spoil`, but it has not yet
+  rescued a real refusal: in 468 fresh benchmark launches since B8,
+  googlevideo refused 24 songs' first InnerTube link and refused the fresh
+  one every time too; the muxed stream rescued them all, about 3.1-3.6 s
+  after the first refusal, as 96-128 kbps AAC, and the fresh link cost
+  ~0.3 s on the way (ROADMAP F45). A link found below the song's own rung
+  this way is a *rescue link*: it serves the rest of that play. If a single
+  refusal was rescued, the song's next play starts from InnerTube again. If
+  both InnerTube links were refused, the refusal is the song's, not the
+  link's (a replay 15 s later was refused again every time), so for an hour
+  the song's next plays start from the rescue link at once (a median 276 ms
+  to sound, where both refusals again took 3.3 s), and a further refusal
+  goes straight to the muxed stream. `playback.refused=muxed` skips the
+  second InnerTube link.
 * **A stream that ends early**, more than 5 s (or 3%) before the length mpv
   read from it (a connection that gave out, or a reconnect googlevideo
   refused), is taken as its link failing: a fresh link from the same rung,
   and the song carries on from where it stopped, once a track. Streams only:
-  a file's own length can be an estimate.
+  a file's own length can be an estimate. A row's own http link is loaded
+  again from where it stopped only when its container carries its length
+  (MP4, WebM and Matroska, Ogg, FLAC, WAV): an MP3 with no index, or ADTS
+  AAC, has a length guessed from its first frames and is sought by the same
+  guess, so a reload would play part of it again.
 * **A downloaded or local file mpv will not open** is streamed instead, or,
   with no source id to stream it from, passed over.
 * Three songs in a row that will not play stop the queue. The count starts
@@ -646,20 +661,24 @@ first failure`.
 
     monolist --play <videoId> [seconds] [--again] [--at <s>] [--spoil [n]] [--video [--switch-at <s>]]
              [--as "<title>" "<artist>" [length s]] [--spoil-saavn] [--saavn-on] [--saavn-late <ms>]
+             [--saavn-off-at <s>]
                                                     resolve and play; --again replays from the cache,
                                                     --at jumps into the song; --spoil hands InnerTube's
                                                     first n links (1 by default) over spoiled, so mpv
-                                                    refuses them: with one, InnerTube is asked afresh;
-                                                    with two, the track is rescued by its muxed stream
-                                                    (itag 18), which the log names, and --again then
-                                                    shows the next play back on InnerTube; --video
+                                                    refuses them: with one, InnerTube is asked afresh,
+                                                    and --again then plays InnerTube's link; with two,
+                                                    the track is rescued by its muxed stream (itag 18),
+                                                    which the log names, and --again then starts from
+                                                    that kept link, InnerTube having refused both; --video
                                                     plays it as a music video and
                                                     --switch-at asks for the picture after that long;
                                                     --as names the song, which JioSaavn is asked about;
                                                     --spoil-saavn hands its JioSaavn link over pointing at
                                                     a missing file, so the way back to YouTube shows;
                                                     --saavn-late holds JioSaavn's answer back, so YouTube
-                                                    starts and the song moves to JioSaavn mid-song.
+                                                    starts and the song moves to JioSaavn mid-song;
+                                                    --saavn-off-at picks Standard sound quality that many
+                                                    seconds in, which stops a move under way.
                                                     JioSaavn is asked only about a named song (--as, or
                                                     one in the library) or with --saavn-on, and never
                                                     with --spoil, so plain --play timings stay YouTube's
@@ -684,7 +703,9 @@ first failure`.
     monolist --recovery-test                        how a song is kept playing, on the real mpv against a
                                                     stand-in server on this computer, with no network: a
                                                     refused link asked for afresh, a rescue link for one
-                                                    play only, a stream cut short at 60% (its reconnect
+                                                    play only, or kept an hour for a song InnerTube
+                                                    refused twice (then no fresh InnerTube link for it),
+                                                    a stream cut short at 60% (its reconnect
                                                     refused) picked up where it stopped, a row's own link
                                                     loaded again, a junk download streamed, a junk file
                                                     passed over, the three-in-a-row stop, and each switch
@@ -779,8 +800,10 @@ first failure`.
                                                     cURL in bash and cmd quoting, duplicates across domains,
                                                     a missing LOGIN_INFO; the Cookie header for music, www
                                                     and s.youtube.com byte for byte; x-goog-authuser and the
-                                                    visitor id from a copied request; the stored JSON (v1,
-                                                    v2); the cookies.txt written for yt-dlp (never
+                                                    visitor id from a copied request; the stored JSON
+                                                    (always version 1, its session part one an older
+                                                    build passes over; SI1's version 2 still read); the
+                                                    cookies.txt written for yt-dlp (never
                                                     google.com), and read back as yt-dlp writes it (an
                                                     empty expiry for a session cookie); and the
                                                     SAPISIDHASH known answers

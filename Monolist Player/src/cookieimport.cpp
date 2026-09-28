@@ -881,6 +881,10 @@ QByteArray CookieImport::toJson(const QList<Cookie> &cookies, const SessionInfo 
             { QStringLiteral("secure"), cookie.secure },
             { QStringLiteral("httpOnly"), cookie.httpOnly } });
     }
+    // Version 1 whatever else is known: a Monolist from before there was a
+    // "session" part reads version 1 alone, and deletes a stored session it
+    // cannot read, so a jar written as version 2 signed out for good anyone
+    // who went back to such a build. It ignores the part it does not know.
     QJsonObject jar{ { QStringLiteral("version"), 1 }, { QStringLiteral("cookies"), list } };
     if (!info.isEmpty()) {
         QJsonObject session;
@@ -890,7 +894,6 @@ QByteArray CookieImport::toJson(const QList<Cookie> &cookies, const SessionInfo 
             session.insert(QStringLiteral("visitorData"), info.visitorData);
         if (!info.dataSyncId.isEmpty())
             session.insert(QStringLiteral("dataSyncId"), info.dataSyncId);
-        jar.insert(QStringLiteral("version"), 2);
         jar.insert(QStringLiteral("session"), session);
     }
     return QJsonDocument(jar).toJson(QJsonDocument::Compact);
@@ -912,9 +915,10 @@ bool CookieImport::fromJson(const QByteArray &json, QList<Cookie> *cookies, Sess
     if (!document.isObject() || (version != 1 && version != 2) || !jar.value(QStringLiteral("cookies")).isArray())
         return false;
     // Checked as an answer's would be; a part that does not pass is simply
-    // not known, and the calls do without it.
+    // not known, and the calls do without it. In either version: 2 is how
+    // engine step SI1 wrote a jar with a session part.
     SessionInfo known;
-    if (version == 2) {
+    if (jar.value(QStringLiteral("session")).isObject()) {
         const QJsonObject session = jar.value(QStringLiteral("session")).toObject();
         const QJsonValue authUser = session.value(QStringLiteral("authUser"));
         if (authUser.isDouble())

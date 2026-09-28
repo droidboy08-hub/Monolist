@@ -476,6 +476,10 @@ int runRecoverySelfTest(Library *library)
         t.check(logged(fromLog, QStringLiteral("asking InnerTube once more for selftestR01")) >= 0 && rescued >= 0,
                 QStringLiteral("the log says InnerTube was asked once more, and what rescued the song"),
                 rescued >= 0 ? log.at(rescued) : QStringLiteral("no rescue line"));
+        // One refusal, rescued by the fresh link, is that link's alone: not
+        // remembered against the song.
+        t.check(!resolver.innerTubeRefusedLately(id) && logged(fromLog, QStringLiteral("googlevideo refused its")) < 0,
+                QStringLiteral("a refusal the fresh link rescued is not held against the song"));
     }
 
     // — 1b: the switch back, playback.refused=muxed —
@@ -526,8 +530,30 @@ int runRecoverySelfTest(Library *library)
                     && answers.last().fromCache && tiersOf(id, fromTier).isEmpty(),
                 QStringLiteral("the same play goes back to its rescue link at once, asking no one"));
 
-        // The next play of the song starts from InnerTube: the rescue link
-        // was for the play it rescued.
+        const auto answeredFrom = [&](int from) {
+            return QStringLiteral("answered from %1%2; source \"%3\"; rungs asked %4")
+                .arg(answers.size() > from ? tierNames({ answers.at(from).tier }) : QStringLiteral("nothing"))
+                .arg(answers.size() > from && answers.at(from).fromCache ? QStringLiteral(", remembered") : QString())
+                .arg(player.sourceLabel(), tierNames(tiersOf(id, fromTier)));
+        };
+
+        // Played again within the hour: both its InnerTube links were
+        // refused, which is the song's refusal and not one link's, so it
+        // starts from the link that rescued it, at once, asking no one.
+        fromAnswer = answers.size();
+        fromTier = tiers.size();
+        starts = audioStarts;
+        player.playSource(id, name, QStringLiteral("Selftest"), QString(), 30000);
+        played = waitUntil([&]() { return playing(name, starts); }, 20000);
+        t.check(played && answers.size() > fromAnswer && answers.at(fromAnswer).tier == StreamResolver::TierMuxed
+                    && answers.at(fromAnswer).fromCache && tiersOf(id, fromTier).isEmpty()
+                    && player.sourceLabel() == QStringLiteral("yt-dlp · muxed"),
+                QStringLiteral("played again within the hour, it starts from the link that rescued it, asking no one "
+                               "(InnerTube refused both its links)"),
+                answeredFrom(fromAnswer));
+
+        // Once the hour is over: from InnerTube again, Opus again.
+        resolver.forgetInnerTubeRefusals();
         fromAnswer = answers.size();
         fromTier = tiers.size();
         starts = audioStarts;
@@ -535,12 +561,32 @@ int runRecoverySelfTest(Library *library)
         played = waitUntil([&]() { return playing(name, starts); }, 20000);
         const bool fromTop = answers.size() > fromAnswer && answers.at(fromAnswer).tier == StreamResolver::TierInnerTube;
         t.check(played && fromTop && player.sourceLabel() == QLatin1String("InnerTube"),
-                QStringLiteral("played again, it is InnerTube's link again, not the rescue link"),
-                QStringLiteral("answered from %1%2; source \"%3\"")
-                    .arg(answers.size() > fromAnswer ? tierNames({ answers.at(fromAnswer).tier }) : QStringLiteral("nothing"))
-                    .arg(answers.size() > fromAnswer && answers.at(fromAnswer).fromCache ? QStringLiteral(", remembered")
-                                                                                          : QString())
-                    .arg(player.sourceLabel()));
+                QStringLiteral("after the hour, played again, it is InnerTube's link again, not the rescue link"),
+                answeredFrom(fromAnswer));
+    }
+
+    // — 2c: a song whose InnerTube links were refused lately, refused again
+    // (its kept link gone): straight to the muxed stream, InnerTube not
+    // asked a second time —
+    {
+        const QString id = QStringLiteral("selftestR2c");
+        const QString name = QStringLiteral("Refused lately");
+        answer(id, StreamResolver::TierInnerTube, QStringLiteral("/r2c.wav"), standIn);
+        answer(id, StreamResolver::TierMuxed, QStringLiteral("/r2c-muxed.wav"), standIn);
+        resolver.noteInnerTubeRefused(id);
+        resolver.spoilNextStream(id, 1);
+        const int fromTier = tiers.size();
+        const int fromLog = log.size();
+        const int starts = audioStarts;
+        player.playSource(id, name, QStringLiteral("Selftest"), QString(), 30000);
+        const bool played = waitUntil([&]() { return playing(name, starts); }, 20000);
+        const QList<int> walked = tiersOf(id, fromTier);
+        t.check(played && walked == QList<int>{ StreamResolver::TierInnerTube, StreamResolver::TierMuxed }
+                    && logged(fromLog, QStringLiteral("selftestR2c's InnerTube links were refused lately")) >= 0,
+                QStringLiteral("refused lately, and its InnerTube link refused again: the muxed stream next, "
+                               "no fresh InnerTube link"),
+                QStringLiteral("rungs %1; source \"%2\"").arg(tierNames(walked), player.sourceLabel()));
+        resolver.forgetInnerTubeRefusals();
     }
 
     // — 2b: the switch back, playback.rescue_link=keep —

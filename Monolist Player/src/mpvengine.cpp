@@ -647,6 +647,7 @@ void MpvEngine::drainEvents()
                 break;
             m_fileLoaded = true;
             m_loadingFile = false;
+            m_fileFormat = stringProperty(m_mpv, "file-format");
             Q_EMIT fileLoaded();
             break;
         }
@@ -753,6 +754,7 @@ bool MpvEngine::load(const QString &urlOrPath, bool startPlaying, const QString 
     // it, and reloading a file of the same length would otherwise never report
     // one, leaving the controller, which resets its own copy, stuck at 0:00.
     m_duration = 0;
+    m_fileFormat.clear();
     // And its picture: nothing is showing until this file reports one.
     if (!m_videoSize.isEmpty()) {
         m_videoSize = QSize();
@@ -813,6 +815,7 @@ void MpvEngine::stop()
     ++m_loadRequest;
     m_currentEntry = 0;
     m_duration = 0;
+    m_fileFormat.clear();
     m_fileLoaded = false;
     m_loadingFile = false;
     m_audioStarted = false;
@@ -1185,7 +1188,8 @@ void MpvEngine::judgeUpgrade()
         return;
     if (upgrade->duration > 0.0 && qAbs(qint64(upgrade->duration * 1000.0) - m_duration) > kUpgradeDriftMs) {
         endUpgrade(false, QStringLiteral("the new file is %1 s long and the song %2 s: not the same cut")
-                              .arg(upgrade->duration, 0, 'f', 1).arg(m_duration / 1000.0, 0, 'f', 1));
+                              .arg(upgrade->duration, 0, 'f', 1).arg(m_duration / 1000.0, 0, 'f', 1),
+                   /*otherLength=*/true);
         return;
     }
     // Its own length is needed, for the check above and the one below.
@@ -1418,6 +1422,7 @@ void MpvEngine::promoteUpgrade()
     mpv_set_property_string(mpv, "audio-pitch-correction", "yes");
     m_mpv = mpv;
     retire(previous);
+    m_fileFormat = stringProperty(m_mpv, "file-format");
 
     // Its file is the current one, open, sounding and unpaused.
     m_currentEntry = m_startedEntry = upgrade->entry > 0 ? upgrade->entry : -1;
@@ -1465,11 +1470,12 @@ void MpvEngine::promoteUpgrade()
     QMetaObject::invokeMethod(this, &MpvEngine::drainEvents, Qt::QueuedConnection);
 }
 
-void MpvEngine::endUpgrade(bool swapped, const QString &detail)
+void MpvEngine::endUpgrade(bool swapped, const QString &detail, bool otherLength)
 {
     Upgrade *upgrade = std::exchange(m_upgrade, nullptr);
     if (!upgrade)
         return;
+    const int fileKbps = upgrade->kbps;
     if (upgrade->mpv) {
         // Not taken over: it goes, and the song is as it was, at its own
         // volume should the crossfade have begun.
@@ -1481,7 +1487,7 @@ void MpvEngine::endUpgrade(bool swapped, const QString &detail)
         retire(upgrade->mpv);
     }
     delete upgrade;
-    Q_EMIT upgradeFinished(swapped, detail);
+    Q_EMIT upgradeFinished(swapped, detail, fileKbps, otherLength);
 }
 
 void MpvEngine::retire(mpv_handle *mpv)

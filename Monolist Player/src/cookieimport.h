@@ -142,13 +142,14 @@ public:
     // The names, for the log.
     static QStringList names(const QList<Cookie> &cookies);
 
-    // The jar as SecretStore keeps it: {"version":2,"cookies":[{name, value,
+    // The jar as SecretStore keeps it: {"version":1,"cookies":[{name, value,
     // domain, hostOnly, path, expires, secure, httpOnly}],"session":{authUser,
-    // visitorData, dataSyncId}}. A jar with nothing known beside its cookies
-    // is written as version 1, without "session", as it was before there was
-    // one, so an older Monolist still opens it. fromJson reads either version,
-    // and is false for anything else, leaving `cookies` empty and `info`
-    // unknown.
+    // visitorData, dataSyncId}}, "session" only where something beside the
+    // cookies is known. Always version 1, so a Monolist from before there
+    // was a "session" part still opens it (it passes over what it does not
+    // know) rather than deleting it. fromJson reads version 1, and version 2,
+    // which is how engine step SI1 wrote a jar with a session part, and is
+    // false for anything else, leaving `cookies` empty and `info` unknown.
     static QByteArray toJson(const QList<Cookie> &cookies, const SessionInfo &info);
     static QByteArray toJson(const QList<Cookie> &cookies);
     static bool fromJson(const QByteArray &json, QList<Cookie> *cookies, SessionInfo *info = nullptr);

@@ -803,6 +803,16 @@ int main(int argc, char *argv[])
                 });
             }
         }
+        // --saavn-off-at <s>: Standard sound quality picked that many seconds
+        // in, as Settings picks it, so a move to JioSaavn under way (with
+        // --saavn-late) can be seen to stop, and the song to stay on YouTube.
+        if (const int offFlag = args.indexOf(QStringLiteral("--saavn-off-at")); offFlag >= 0 && offFlag + 1 < args.size()) {
+            const int ms = qMax(0, int(args.at(offFlag + 1).toDouble() * 1000.0));
+            QTimer::singleShot(ms, &app, [&player]() {
+                qWarning("selftest: Standard sound quality picked (JioSaavn off)");
+                player.setSaavnEnabled(false);
+            });
+        }
         QTimer::singleShot(seconds * 1000, &app, [&player]() {
             // A position that moved is the proof audio was actually decoded.
             qWarning("selftest: position %s of %s, %s",

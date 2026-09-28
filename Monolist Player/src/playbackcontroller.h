@@ -297,7 +297,9 @@ private:
     // The two copies compared (AudioAlign): the move starts, lined up by
     // how far apart the music is in the two files, or does not.
     void saavnAligned(bool ok, double offsetMs, double peak, const QString &detail);
-    void upgradeFinished(bool swapped, const QString &detail);
+    // Not moved because of JioSaavn's file itself (MpvEngine::upgradeFinished):
+    // the match is passed over for the song's next starts too.
+    void upgradeFinished(bool swapped, const QString &detail, int fileKbps, bool otherLength);
     void playWithVideo(bool video);
     // A picture that will not play must not cost the song: back to the sound,
     // from the same second, with a word about it.
@@ -388,12 +390,14 @@ private:
     bool m_freshLinkFirst = true;
     bool m_earlyEndCheck = true;
     // The mid-song move to JioSaavn (saavnUpgrade): the switch; whether this
-    // play has had its one attempt; the song and bitrate of one under way;
-    // and how many have been made this session, for the log.
+    // play has had its one attempt; the song, bitrate and listed length (0:
+    // not listed) of one under way; and how many have been made this
+    // session, for the log.
     bool m_saavnUpgrade = true;
     bool m_upgradeTried = false;
     QString m_upgradeVideoId;
     int m_upgradeKbps = 0;
+    int m_upgradeListedSec = 0;
     int m_upgradesDone = 0;
     // A late match that came before the song's sound had started: offered
     // again once it has (MpvEngine::audioStarted).

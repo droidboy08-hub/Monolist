@@ -67,6 +67,11 @@ public:
     bool isLoadingFile() const { return m_loadingFile; }
     // audioStarted has been sent for the latest load.
     bool hasAudioStarted() const { return m_audioStarted; }
+    // mpv's name for the container of the file most recently loaded, once it
+    // has opened ("mp3", "matroska,webm", "mov,mp4,m4a,3gp,3g2,mj2"); empty
+    // before. Kept past its end, as duration() is: whether that length is
+    // the file's own or only a guess (an MP3 with no index) depends on it.
+    QString fileFormat() const { return m_fileFormat; }
     void setPaused(bool paused);
     void seekAbsolute(qint64 ms);
     void setVolume(qreal volume);        // 0.0 – 1.0
@@ -187,8 +192,11 @@ Q_SIGNALS:
     void streamInfoChanged();
     // How an upgrade ended: `swapped`, the song now plays from the new link
     // (and the gap, the alignment and the timings are in `detail`, for the
-    // log), or not, and why.
-    void upgradeFinished(bool swapped, const QString &detail);
+    // log), or not, and why. `fileKbps` is what the new file averages, its
+    // size over its length, 0 where that was never measured; `otherLength`,
+    // that it ended because the new file is not the song's length. Both are
+    // about the file itself, which is no better at the song's next start.
+    void upgradeFinished(bool swapped, const QString &detail, int fileKbps, bool otherLength);
     // The player mpv renders from is about to be replaced by the upgrade's,
     // and has been: whatever holds a render context on handle() frees it on
     // the first, before the old player goes, and makes it again on the second.
@@ -217,7 +225,8 @@ private:
     void alignTick();             // the new one's clock onto the old's
     void fadeTick();              // one step of the crossfade
     void promoteUpgrade();        // the new player becomes this one
-    void endUpgrade(bool swapped, const QString &detail);
+    // `otherLength`: see upgradeFinished.
+    void endUpgrade(bool swapped, const QString &detail, bool otherLength = false);
     // Destroys a player on a thread of its own: shutting one down waits for
     // its sound output and its network reads to stop, which the window must
     // not. All of them are waited for when the engine goes.
@@ -254,6 +263,7 @@ private:
     bool m_audioStarted = false;   // audioStarted sent for the latest load
     QSize m_videoSize;
     qint64 m_duration = 0;
+    QString m_fileFormat;          // see fileFormat()
     qreal m_volume = 1.0;          // as last set, 0.0 – 1.0
     QVariantList m_audioDevices;
     StreamInfo m_streamInfo;

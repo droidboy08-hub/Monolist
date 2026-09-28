@@ -41,6 +41,12 @@ constexpr int kSaavnRefusedMinutes = 10;
 // is left alone for five minutes.
 constexpr int kSaavnFailuresBeforeRest = 3;
 constexpr int kSaavnRestMinutes = 5;
+// How long a song whose InnerTube links googlevideo refused is played from
+// the link that rescued it (noteInnerTubeRefused). The refusals measured
+// lasted at least as long as a replay 15 s later; an hour is a first guess
+// between paying ~3 s again at every replay and hearing 96-128 kbps AAC for
+// the five hours a link lasts, which is what B8 set out to end.
+constexpr int kInnerTubeRefusedMinutes = 60;
 
 constexpr int kPipedTimeoutMs = 8000;
 constexpr int kInvidiousTimeoutMs = 6000;
@@ -155,6 +161,20 @@ void StreamResolver::resolve(const QString &videoId, int firstTier)
     }
 
     if (firstTier <= TierInnerTube) {
+        // A song googlevideo refuses InnerTube's links for lately: the link
+        // that rescued it, while it lasts, rather than both refusals again.
+        if (innerTubeRefusedLately(videoId)) {
+            const auto rescue = m_rescueLinks.constFind(videoId);
+            if (rescue != m_rescueLinks.constEnd() && rescue->expires > QDateTime::currentDateTimeUtc()) {
+                const CacheEntry entry = *rescue;
+                qInfo("resolver: %s: its InnerTube links were refused lately; it plays from the link that "
+                      "rescued it (%s)", qPrintable(videoId), tierName(entry.tier));
+                QMetaObject::invokeMethod(this, [this, videoId, entry]() {
+                    report(videoId, entry.url, entry.tier, /*fromCache=*/true);
+                }, Qt::QueuedConnection);
+                return;
+            }
+        }
         // Still-valid link from earlier or from a prefetch: answer at once,
         // but queued, so the caller sees the same order of events as always.
         const auto cached = m_cache.constFind(videoId);
@@ -336,9 +356,17 @@ void StreamResolver::prefetch(const QString &videoId)
 {
     if (videoId.isEmpty() || m_jobs.contains(videoId))
         return;
+    const QDateTime now = QDateTime::currentDateTimeUtc();
     const auto cached = m_cache.constFind(videoId);
-    if (cached != m_cache.constEnd() && cached->expires > QDateTime::currentDateTimeUtc())
+    if (cached != m_cache.constEnd() && cached->expires > now)
         return;
+    // Its next play is the link that rescued it (resolve()): an InnerTube
+    // link fetched now would be refused, and would come first.
+    if (innerTubeRefusedLately(videoId)) {
+        const auto rescue = m_rescueLinks.constFind(videoId);
+        if (rescue != m_rescueLinks.constEnd() && rescue->expires > now)
+            return;
+    }
 
     auto *job = new Job;
     job->videoId = videoId;
@@ -353,6 +381,32 @@ void StreamResolver::invalidate(const QString &videoId)
     m_cache.remove(videoId);
     m_rescueLinks.remove(videoId);
     m_videoCache.remove(videoId);
+}
+
+void StreamResolver::dropRescueLinks()
+{
+    for (auto it = m_rescueLinks.begin(); it != m_rescueLinks.end();) {
+        if (innerTubeRefusedLately(it.key()))
+            ++it;
+        else
+            it = m_rescueLinks.erase(it);
+    }
+}
+
+void StreamResolver::noteInnerTubeRefused(const QString &videoId)
+{
+    if (videoId.isEmpty())
+        return;
+    m_innerTubeRefused.insert(videoId, QDateTime::currentDateTimeUtc().addSecs(kInnerTubeRefusedMinutes * 60));
+    qInfo("resolver: %s: googlevideo refused its InnerTube links; for %d minutes its next plays start from the "
+          "link that rescues it, and InnerTube is not asked twice again", qPrintable(videoId),
+          kInnerTubeRefusedMinutes);
+}
+
+bool StreamResolver::innerTubeRefusedLately(const QString &videoId) const
+{
+    const auto until = m_innerTubeRefused.constFind(videoId);
+    return until != m_innerTubeRefused.constEnd() && *until > QDateTime::currentDateTimeUtc();
 }
 
 // googlevideo links carry their own expiry ("expire=<unix time>"). Trust it
@@ -815,6 +869,17 @@ void StreamResolver::startSignedIn(Job *job)
 
 void StreamResolver::launchSignedIn(Job *job)
 {
+    // Never ahead of time, here as well as where the rung is reached
+    // (startSignedIn): a song someone was waiting for can become a prefetch
+    // while it waits on this rung or runs on it (JioSaavn won its race), and
+    // one stopped for a song someone waits for (preemptYtDlp) comes back
+    // here on its turn. Its lookup would spend one of the hour's songs, and
+    // write the cookies out once more, for a song nobody is waiting for.
+    if (job->prefetch) {
+        qInfo("resolver: %s: not asked with the account: never ahead of time", qPrintable(job->videoId));
+        tierExhausted(job, QStringLiteral("signed in: never ahead of time"));
+        return;
+    }
     // Only with ytdlp.resolves=parallel is another lookup running now; with
     // one yt-dlp at a time the account's turn is always free here.
     if (m_accountHolder && m_accountHolder != job) {
@@ -1102,11 +1167,16 @@ void StreamResolver::succeed(Job *job, const QString &url, const QVariantMap &he
     const int tier = job->tier;
     const bool silent = job->prefetch;
     // A rescue link serves the play it rescued, and no replay: see
-    // resolveVia. InnerTube's own links are never one.
-    const bool rescue = job->homeTier >= 0 && tier != job->homeTier && tier != TierInnerTube;
+    // resolveVia. InnerTube's own links are never one. For a song whose
+    // InnerTube links are refused lately every other link is one, however
+    // it was found, and is kept apart while that lasts (dropRescueLinks).
+    const bool rescue = tier != TierInnerTube
+                        && ((job->homeTier >= 0 && tier != job->homeTier) || innerTubeRefusedLately(videoId));
     if (rescue && !m_keepRescueLinks) {
         m_rescueLinks.insert(videoId, { url, tier, expiryOf(url), headers });
-        qInfo("resolver: %s rescued by %s, for this play only", qPrintable(videoId), tierName(tier));
+        qInfo("resolver: %s rescued by %s, %s", qPrintable(videoId), tierName(tier),
+              innerTubeRefusedLately(videoId) ? "kept for its next plays while its InnerTube links are refused"
+                                              : "for this play only");
     } else {
         m_cache.insert(videoId, { url, tier, expiryOf(url), headers });
     }
@@ -1324,10 +1394,18 @@ void StreamResolver::findSaavn(const Saavn::Target &track, QObject *context, Saa
     const QPointer<QObject> guard(context);
     const auto answer = [this, guard, done](const SaavnCopy &copy) {
         // Always later, so the caller hears back the same way whatever the
-        // answer, and never while it is still asking.
-        QMetaObject::invokeMethod(this, [guard, done, copy]() {
-            if (guard)
-                done(copy);
+        // answer, and never while it is still asking. A copy only while
+        // JioSaavn is still on by then.
+        QMetaObject::invokeMethod(this, [this, guard, done, copy]() {
+            if (!guard)
+                return;
+            if (!copy.url.isEmpty() && !m_saavnEnabled) {
+                SaavnCopy off;
+                off.reason = QStringLiteral("JioSaavn is off (Standard sound quality)");
+                done(off);
+                return;
+            }
+            done(copy);
         }, Qt::QueuedConnection);
     };
     SaavnCopy none;
@@ -1426,10 +1504,20 @@ void StreamResolver::saavnAnswered(const QString &videoId, const QString &signat
         break;
     }
 
+    // Standard sound quality was picked while JioSaavn was being asked: what
+    // it said is kept, above, for when High is picked again, and used for
+    // nothing now. Not a download's copy, not the song playing, not a race.
+    const bool usable = m_saavnEnabled;
+    if (!usable)
+        qInfo("jiosaavn: %s: answered after JioSaavn was turned off (Standard sound quality); not used",
+              qPrintable(videoId));
+
     // Downloads that were waiting on this lookup (findSaavn).
     if (const QList<SaavnCopyCallback> waiters = m_saavnWaiters.take(videoId); !waiters.isEmpty()) {
         SaavnCopy copy;
-        if (result.kind == JioSaavn::Result::Match) {
+        if (!usable) {
+            copy.reason = QStringLiteral("JioSaavn is off (Standard sound quality)");
+        } else if (result.kind == JioSaavn::Result::Match) {
             copy.url = result.url;
             copy.kbps = result.kbps;
             copy.saavnId = result.saavnId;
@@ -1446,7 +1534,7 @@ void StreamResolver::saavnAnswered(const QString &videoId, const QString &signat
 
     // The answer to a race YouTube has already won: the song playing may
     // move over to it (QT7), which is the player's to decide.
-    if (m_saavnLate.remove(videoId) && result.kind == JioSaavn::Result::Match) {
+    if (m_saavnLate.remove(videoId) && usable && result.kind == JioSaavn::Result::Match) {
         qInfo("jiosaavn: %s: the match came after YouTube had begun (%lld ms after it was asked); "
               "the song may move over to it", qPrintable(videoId), static_cast<long long>(result.elapsedMs));
         Q_EMIT saavnLateMatch(videoId, handOverSaavn(videoId, result.url), result.kbps, result.durationSec);
@@ -1455,14 +1543,11 @@ void StreamResolver::saavnAnswered(const QString &videoId, const QString &signat
     const auto race = m_races.find(videoId);
     if (race == m_races.end())
         return;   // a prefetch, or a song the race already gave to YouTube
-    if (result.kind == JioSaavn::Result::Match) {
+    if (usable && result.kind == JioSaavn::Result::Match) {
         m_races.erase(race);
         // YouTube's leg carries on unheard, into the cache: should mpv refuse
         // JioSaavn's link, the way back is already there.
-        if (Job *job = m_jobs.value(videoId)) {
-            job->prefetch = true;
-            foregroundChanged();
-        }
+        carryOnUnheard(videoId);
         emitResolved(videoId, handOverSaavn(videoId, result.url), TierJioSaavn, /*fromCache=*/false);
         return;
     }
@@ -1478,6 +1563,14 @@ void StreamResolver::saavnAnswered(const QString &videoId, const QString &signat
     }
     // YouTube is still on its way, and is now simply the answer.
     m_races.erase(race);
+}
+
+void StreamResolver::carryOnUnheard(const QString &videoId)
+{
+    if (Job *job = m_jobs.value(videoId)) {
+        job->prefetch = true;
+        foregroundChanged();
+    }
 }
 
 StreamResolver::SaavnVerdict StreamResolver::saavnVerdict(const Saavn::Target &track)
@@ -1581,6 +1674,21 @@ void StreamResolver::refuseSaavn(const QString &videoId)
         query.addBindValue(videoId);
         query.exec();
     }
+}
+
+void StreamResolver::passOverSaavn(const QString &videoId, const QString &why)
+{
+    const auto known = m_saavnVerdicts.constFind(videoId);
+    if (known == m_saavnVerdicts.constEnd() || known->kind != SaavnVerdict::Match)
+        return;
+    const QString saavnId = known->saavnId;
+    SaavnVerdict verdict;
+    verdict.kind = SaavnVerdict::NoMatch;
+    verdict.signature = known->signature;
+    verdict.expires = QDateTime::currentDateTimeUtc().addDays(kSaavnMatchDays);
+    rememberSaavn(videoId, verdict);
+    qInfo("jiosaavn: %s: its match (%s) is passed over for %d days, by the race and by downloads: %s",
+          qPrintable(videoId), qPrintable(saavnId), kSaavnMatchDays, qUtf8Printable(why));
 }
 
 QString StreamResolver::handOverSaavn(const QString &videoId, const QString &url)

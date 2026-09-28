@@ -562,9 +562,25 @@ int runCookieImportSelfTest()
         const QByteArray v2 = CookieImport::toJson(lf.cookies, info);
         QList<Cookie> back2;
         Info info2;
-        t.check(v2.contains("\"version\":2") && CookieImport::fromJson(v2, &back2, &info2) && sameJar(back2, lf.cookies)
-                    && info2 == info,
-                QStringLiteral("with the session's index, visitor id and DATASYNC_ID: version 2, and they round-trip"));
+        t.check(v2.contains("\"version\":1") && v2.contains("\"session\"") && CookieImport::fromJson(v2, &back2, &info2)
+                    && sameJar(back2, lf.cookies) && info2 == info,
+                QStringLiteral("with the session's index, visitor id and DATASYNC_ID: still version 1, with a session "
+                               "part, and they round-trip"));
+        // What a build from before the session part reads: version 1 and
+        // the cookies, the rest passed over. Such a build deletes a jar it
+        // cannot read.
+        {
+            const QJsonObject old = QJsonDocument::fromJson(v2).object();
+            t.check(old.value(QStringLiteral("version")).toInt() == 1 && old.value(QStringLiteral("cookies")).isArray()
+                        && old.value(QStringLiteral("cookies")).toArray().size() == lf.cookies.size(),
+                    QStringLiteral("so a Monolist from before engine step SI1 still opens it, rather than deleting it"));
+        }
+        // A jar SI1 wrote, as version 2, is still read whole.
+        QList<Cookie> backSi1;
+        Info infoSi1;
+        t.check(CookieImport::fromJson(QByteArray(v2).replace("\"version\":1", "\"version\":2"), &backSi1, &infoSi1)
+                    && sameJar(backSi1, lf.cookies) && infoSi1 == info,
+                QStringLiteral("a jar written as version 2 (engine step SI1) is read, its session part too"));
         // A stored part that does not pass is not known; the cookies stay.
         const QByteArray odd = QByteArray(v2).replace(kSignedInVisitor.toLatin1(), "bad id\\r\\nX-Evil: 1")
                                    .replace("\"authUser\":2", "\"authUser\":300");
@@ -1288,8 +1304,8 @@ int runYtmSessionSelfTest(Library *library)
             CookieImport::SessionInfo info;
             SecretStore::read(secretName, &stored);
             t.check(CookieImport::fromJson(stored, &jar, &info) && info == session->info() && sameJar(jar, session->jar())
-                        && stored.contains("\"version\":2"),
-                    QStringLiteral("what was learned is saved with the jar (version 2 of its JSON)"));
+                        && stored.contains("\"version\":1") && stored.contains("\"session\""),
+                    QStringLiteral("what was learned is saved with the jar (its session part, still version 1)"));
         }
         t.check(settingsLeaks().isEmpty(), QStringLiteral("and none of it is in the settings table"),
                 settingsLeaks().join(QStringLiteral(", ")));
@@ -3449,6 +3465,16 @@ int runAccountPlaySelfTest(Library *library)
         t.check(QDir::cleanPath(folder).startsWith(QDir::cleanPath(data)),
                 QStringLiteral("the cookies folder is under MONOLIST_DATA_DIR in a test (the app's local data otherwise)"),
                 QDir::toNativeSeparators(folder));
+        // Never on a share (openCookieFile refuses one). The scratch folder
+        // is on this computer's own disk; a UNC path is not.
+        bool shareSeen = true;
+#ifdef Q_OS_WIN
+        shareSeen = YtmSession::onNetworkDrive(QStringLiteral("\\\\fileserver\\share\\monolist\\yt-dlp-cookies"))
+                    && YtmSession::onNetworkDrive(QStringLiteral("//fileserver/share/monolist"));
+#endif
+        t.check(!YtmSession::onNetworkDrive(folder) && shareSeen,
+                QStringLiteral("the cookies folder is on a local disk, and a network share is told apart from one"),
+                QDir::toNativeSeparators(folder));
         QDir().mkpath(folder);
         const QString old = QDir(folder).filePath(QStringLiteral("cookies-00000000000000aa.txt"));
         const QString fresh = QDir(folder).filePath(QStringLiteral("cookies-00000000000000bb.txt"));
@@ -3685,6 +3711,41 @@ int runAccountPlaySelfTest(Library *library)
         t.check(listed.ok && listed.tier == StreamResolver::TierSignedIn && modesSince(fake, from) == QLatin1String("signed"),
                 QStringLiteral("where the walk lists it (a stale link, a stream cut short), the account is asked again"),
                 modesSince(fake, from) + QStringLiteral("; ") + describe(listed));
+    }
+
+    // — 9b. a lookup with the account for a song nobody waits for any more
+    // (JioSaavn won its race), stopped for a song somebody does: on its turn
+    // it is not asked with the account again —
+    {
+        const int from = calls();
+        const int logFrom = int(captured.size());
+        const auto runsOf = [&fake, from](const QString &id) {
+            QStringList modes;
+            const QList<FakeCall> all = fakeCalls(fake);
+            for (int i = from; i < all.size(); ++i) {
+                if (all.at(i).id == id)
+                    modes << all.at(i).mode;
+            }
+            return modes;
+        };
+        outcomes.remove(kSlow);
+        resolver.resolve(kSlow);
+        waitUntil([&]() { return runsOf(kSlow) == QStringList{ QStringLiteral("signed") }; }, 20000);
+        settle(300);
+        const bool started = runsOf(kSlow) == QStringList{ QStringLiteral("signed") };
+        // What JioSaavn winning the song's race does to it.
+        resolver.carryOnUnheard(kSlow);
+        // A song somebody waits for, which needs yt-dlp: the lookup above is
+        // stopped for it, and waits its turn.
+        const Outcome gone = resolveNow(kGone);
+        waitUntil([&]() { return runsOf(kSlow).contains(QStringLiteral("muxed")); }, 20000);
+        settle(500);
+        t.check(started && !gone.ok && runsOf(kSlow).count(QStringLiteral("signed")) == 1
+                    && loggedSince(captured, logFrom,
+                                   kSlow + QStringLiteral(": not asked with the account: never ahead of time")),
+                QStringLiteral("a lookup with the account for a song nobody waits for any more, stopped for one "
+                               "somebody does: on its turn it goes on signed out, the account not asked again"),
+                runsOf(kSlow).join(QLatin1Char(' ')) + QStringLiteral("; ") + describe(gone));
     }
 
     // — 10. signing out —

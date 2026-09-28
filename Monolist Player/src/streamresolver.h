@@ -109,6 +109,12 @@ public:
     // forgotten and JioSaavn left out for this song for a while; the next
     // look after that asks again, in case the link had only moved.
     void refuseSaavn(const QString &videoId);
+    // The match found for this song turned out, once its file was open (the
+    // mid-song move, QT7), not to be worth playing: thinner than YouTube's
+    // own stream, or not the length JioSaavn lists it at. Kept as "not
+    // taken" for as long as the match would have been, so that neither the
+    // race nor a download picks the same file at the song's next start.
+    void passOverSaavn(const QString &videoId, const QString &why);
 
     // JioSaavn's copy of a song being downloaded (DownloadManager): the
     // match already known where it still holds, otherwise asked for now, as
@@ -134,6 +140,10 @@ public:
     // does not say or there is none.
     int saavnKbps(const QString &videoId) const;
 
+    // Off (Standard sound quality): JioSaavn is not asked again, and what a
+    // lookup already on its way answers after that goes to nothing that
+    // plays or downloads (a race, a waiting download, a late match): it is
+    // only remembered, for when High is picked again.
     void setSaavnEnabled(bool on) { m_saavnEnabled = on; }
     bool saavnEnabled() const { return m_saavnEnabled; }
     // Changing it forgets every "JioSaavn does not have it", which may have
@@ -168,8 +178,26 @@ public:
     QVariantMap headersFor(const QString &videoId, const QString &url) const;
     // The rescue links are for the play they rescued: every one is forgotten
     // as a song begins, the same song again included, so its next play starts
-    // from the top of the ladder and is Opus again.
-    void dropRescueLinks() { m_rescueLinks.clear(); }
+    // from the top of the ladder and is Opus again. Except a song whose
+    // InnerTube links are refused lately (noteInnerTubeRefused), whose link
+    // is kept for its next plays.
+    void dropRescueLinks();
+    // googlevideo refused this song's InnerTube link on its first request,
+    // and the fresh one asked for after it too, or a second was not asked for
+    // (PlaybackController::retryRefused). Such refusals are the song's, not
+    // one link's: in the engine step's measurements every real one repeated,
+    // for the fresh link and for the same song played again 15 s later, and
+    // the fresh link rescued none of 28. So for the next hour the link that
+    // rescues it (its muxed stream's, yt-dlp's) is kept past its play and is
+    // what resolve() answers with, at once, where the song's next play went
+    // through both refusals again, about 3.3 s where the kept link takes 0.2;
+    // a prefetch leaves it be; and the player does not ask InnerTube twice
+    // again for it (innerTubeRefusedLately). After the hour, InnerTube first
+    // again.
+    void noteInnerTubeRefused(const QString &videoId);
+    bool innerTubeRefusedLately(const QString &videoId) const;
+    // For --recovery-test: the hour over at once, for every song.
+    void forgetInnerTubeRefusals() { m_innerTubeRefused.clear(); }
     // playback.rescue_link=keep, the switch back: a rescue link is the
     // song's link until it expires, as before.
     void setKeepRescueLinks(bool keep) { m_keepRescueLinks = keep; }
@@ -178,6 +206,11 @@ public:
     // current one starts without waiting. A resolve() for the same id while it
     // runs takes it over.
     void prefetch(const QString &videoId);
+    // The song's walk down the ladder carries on as a prefetch would, into
+    // the cache, with nobody waiting for its answer: what JioSaavn winning
+    // the song's race does to YouTube's leg of it. Public for
+    // --account-play-test, which does it without JioSaavn.
+    void carryOnUnheard(const QString &videoId);
     // The same track with its picture, for the video view. yt-dlp only: the
     // fallback instances answer with sound. Two URLs when YouTube keeps the
     // picture and the sound apart, one when it does not.
@@ -449,6 +482,9 @@ private:
     // the songs' own links above.
     QHash<QString, CacheEntry> m_rescueLinks;
     bool m_keepRescueLinks = false;
+    // Songs whose InnerTube links googlevideo refuses lately, and until when
+    // (noteInnerTubeRefused).
+    QHash<QString, QDateTime> m_innerTubeRefused;
     QHash<QString, VideoLinks> m_videoCache;
     QHash<QString, QPointer<YtDlpRequest>> m_videoJobs;
     QStringList m_piped;

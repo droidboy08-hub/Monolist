@@ -115,6 +115,22 @@ QString codecName(const QString &mpvName)
     return names.value(mpvName, mpvName);
 }
 
+// Whether a file of this kind, as mpv names its container (fileFormat), says
+// its own length, rather than having it guessed from its size and the bitrate
+// of its first frames as FFmpeg does for an MP3 with no index or for ADTS AAC:
+// MP4 and M4A, Matroska and WebM, Ogg, FLAC and WAV.
+bool lengthIsExact(const QString &fileFormat)
+{
+    const QStringList names = fileFormat.split(QLatin1Char(','), Qt::SkipEmptyParts);
+    for (const QString &name : names) {
+        if (name == QLatin1String("mp4") || name == QLatin1String("m4a") || name == QLatin1String("mov")
+            || name == QLatin1String("matroska") || name == QLatin1String("webm") || name == QLatin1String("ogg")
+            || name == QLatin1String("flac") || name == QLatin1String("wav"))
+            return true;
+    }
+    return false;
+}
+
 // 48000 as "48", 44100 as "44.1".
 QString kiloHertz(int hertz)
 {
@@ -583,12 +599,26 @@ bool PlaybackController::saavnEnabled() const
     return m_resolver && m_resolver->saavnEnabled();
 }
 
-// From the next song on: the one playing keeps the sound it has.
+// From the next song on: the one playing keeps the sound it has. So a move to
+// JioSaavn under way for it stops, whatever stage it has reached (the two
+// copies being compared, the new link opening, or the crossfade), and the
+// song stays on YouTube: on Standard nothing more is fetched from JioSaavn.
 void PlaybackController::setSaavnEnabled(bool on)
 {
     if (!m_resolver || on == m_resolver->saavnEnabled())
         return;
     m_resolver->setSaavnEnabled(on);
+    if (!on) {
+        if (m_align)
+            m_align->cancel();
+        if (!m_upgradeProbe.videoId.isEmpty() || !m_upgradeOffer.videoId.isEmpty())
+            qInfo("upgrade: %s stays on YouTube: JioSaavn was turned off (Standard sound quality)",
+                  qPrintable(!m_upgradeProbe.videoId.isEmpty() ? m_upgradeProbe.videoId : m_upgradeOffer.videoId));
+        m_upgradeProbe = {};
+        m_upgradeOffer = {};
+        if (!m_upgradeVideoId.isEmpty() && m_engine)
+            m_engine->cancelUpgrade(QStringLiteral("JioSaavn was turned off (Standard sound quality)"));
+    }
     saveSetting(kSaavnKey, on ? QStringLiteral("1") : QStringLiteral("0"));
     Q_EMIT saavnChanged();
 }
@@ -1294,7 +1324,9 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
     m_localRefused = false;
     m_resumeAt = 0;
     // Whatever rescued the last play, this one starts from the top: a song
-    // played again is Opus again, not the last play's itag 18.
+    // played again is Opus again, not the last play's itag 18. Unless
+    // googlevideo refused its InnerTube links lately, which the resolver
+    // remembers: then the rescue link is kept, and is what it plays.
     if (m_resolver)
         m_resolver->dropRescueLinks();
 
@@ -1573,10 +1605,16 @@ void PlaybackController::saavnAligned(bool ok, double offsetMs, double peak, con
     const auto stay = [&offer](const QString &why) {
         qInfo("upgrade: %s stays on YouTube: %s", qPrintable(offer.videoId), qUtf8Printable(why));
     };
+    // JioSaavn, and the move, still wanted: the listener may have picked
+    // Standard, or turned the move off, while the two were compared.
+    if (!m_resolver || !m_resolver->saavnEnabled() || !m_saavnUpgrade) {
+        stay(QStringLiteral("JioSaavn, or moving to it mid-song, was turned off while the two copies were compared"));
+        return;
+    }
     // Still the same song, from the same stream, with nothing else begun.
     if (offer.videoId != currentSourceId() || m_streamUrl != m_upgradeProbeStream || !m_pendingVideoId.isEmpty()
         || m_streamTier < 0 || m_streamTier == StreamResolver::TierJioSaavn || m_videoPlaying || m_videoWanted
-        || m_streamIsVideo || !m_saavnUpgrade) {
+        || m_streamIsVideo) {
         stay(QStringLiteral("the song changed while the two copies were compared"));
         return;
     }
@@ -1597,17 +1635,36 @@ void PlaybackController::saavnAligned(bool ok, double offsetMs, double peak, con
     }
     m_upgradeVideoId = offer.videoId;
     m_upgradeKbps = offer.kbps;
+    m_upgradeListedSec = offer.durationSec;
     qInfo("upgrade: %s: the music is %+.1f ms later in JioSaavn's file (%.3f alike there); getting it ready",
           qPrintable(offer.videoId), offsetMs, peak);
 }
 
-void PlaybackController::upgradeFinished(bool swapped, const QString &detail)
+void PlaybackController::upgradeFinished(bool swapped, const QString &detail, int fileKbps, bool otherLength)
 {
     const QString videoId = std::exchange(m_upgradeVideoId, QString());
     if (videoId.isEmpty())
         return;
     if (!swapped) {
         qInfo("upgrade: %s not moved to JioSaavn: %s", qPrintable(videoId), qUtf8Printable(detail));
+        // What was found out about JioSaavn's file, where it is the file's
+        // own fault, holds for the song's next start too: the race would
+        // play the same file from 0 s, labelled with the bitrate its link
+        // claims. Thinner than the YouTube stream it was to replace (a
+        // "_320" link has been seen to average 98 kbps), or another length
+        // than JioSaavn lists it at, which offerSaavnUpgrade found to match
+        // the stream playing. Not for a file merely short of the move's
+        // margin, which is still better than YouTube's, and not for the two
+        // copies failing to line up, where the stream playing (a music
+        // video's longer cut, say) may be the odd one.
+        const int playing = m_engine ? m_engine->streamInfo().kbps : 0;
+        const bool thin = fileKbps > 0 && playing > 0 && fileKbps < playing;
+        const bool misListed = otherLength && m_upgradeListedSec > 0;
+        if ((thin || misListed) && m_resolver) {
+            m_resolver->passOverSaavn(videoId, thin ? QStringLiteral("its file averages %1 kbps, less than the %2 "
+                                                                     "kbps YouTube stream").arg(fileKbps).arg(playing)
+                                                    : QStringLiteral("its file is not the length JioSaavn lists"));
+        }
         return;
     }
     const QString from = tierLabel(m_streamTier);
@@ -1764,10 +1821,16 @@ bool PlaybackController::abandonVideo(const QString &reason)
 // A URL can resolve and still be refused when mpv opens it: a link the CDN
 // rejects now and then, or an instance serving an error page. A remembered
 // link that no longer opens is simply stale, so a fresh one from the same tier
-// comes first. So does a fresh InnerTube link, once a track: the CDN refuses
-// one link now and then for reasons of its own, and /player's next answer
-// comes in a fifth of a second and is Opus, where the muxed stream below it
-// takes three and is 96 kbps AAC. After that, the tiers this track has not
+// comes first. So does a fresh InnerTube link, once a track (the order the
+// owner chose, U01): /player's next answer comes in a fifth of a second and
+// is Opus, where the muxed stream below it takes three and is 96-128 kbps
+// AAC. Measured on real refusals, though, the fresh link was refused too
+// every time (0 rescued of 28): googlevideo refuses the song, not the link.
+// So once both are refused the song is remembered as refused for an hour
+// (StreamResolver::noteInnerTubeRefused): its next plays start from the link
+// that rescued it, and InnerTube is not asked twice again. With
+// playback.refused=muxed the fresh link is not asked for at all, and one
+// refusal is remembered the same way. After that, the tiers this track has not
 // yet had refused, in the order the resolver gives for a refusal: after
 // InnerTube's sound-only stream that is the track's muxed stream — itag 18,
 // or the best other stream with the sound and a small picture in one file —
@@ -1779,12 +1842,22 @@ bool PlaybackController::retryRefused()
         return false;
     const int refused = std::exchange(m_streamTier, -1);
     bool again = m_streamFromCache;
+    bool refusedLately = false;
     if (refused == StreamResolver::TierInnerTube) {
         // Once, whichever the reason, so a session YouTube doubts cannot go
-        // round in circles; not at all with the switch back, unless stale.
-        again = (m_streamFromCache || m_freshLinkFirst) && !m_innerTubeAskedAgain;
-        if (again)
+        // round in circles; not at all with the switch back, unless stale;
+        // and not for a song whose InnerTube links were refused lately,
+        // stale or not.
+        refusedLately = m_resolver->innerTubeRefusedLately(m_streamVideoId);
+        again = (m_streamFromCache || m_freshLinkFirst) && !m_innerTubeAskedAgain && !refusedLately;
+        if (again) {
             m_innerTubeAskedAgain = true;
+        } else if (!m_streamFromCache && !refusedLately) {
+            // A fresh link refused, and InnerTube not asked again: the
+            // refusal is the song's, and its next plays go straight to what
+            // rescues it now (StreamResolver::noteInnerTubeRefused).
+            m_resolver->noteInnerTubeRefused(m_streamVideoId);
+        }
     }
     QList<int> tiers;
     if (again)
@@ -1805,6 +1878,9 @@ bool PlaybackController::retryRefused()
     if (again && refused == StreamResolver::TierInnerTube && !m_streamFromCache) {
         qInfo("playback: asking InnerTube once more for %s, for a fresh link, before its muxed stream",
               qPrintable(m_pendingVideoId));
+    } else if (refusedLately) {
+        qInfo("playback: %s's InnerTube links were refused lately, so InnerTube is not asked again; %s next",
+              qPrintable(m_pendingVideoId), qUtf8Printable(tierLabel(tiers.first())));
     } else if (tiers.first() == StreamResolver::TierMuxed) {
         qInfo("playback: trying %s again as its muxed stream (itag 18), for this track alone",
               qPrintable(m_pendingVideoId));
@@ -1827,7 +1903,12 @@ bool PlaybackController::retryRefused()
 //
 // Streams only. A file on disk says its own length, which for some (a VBR MP3
 // with no index) is only an estimate; and with the picture on, the sound's
-// file and the picture's are more than this puts back together.
+// file and the picture's are more than this puts back together. A row's own
+// link is such a file on someone else's server, so it is picked up only
+// where its container carries its length (lengthIsExact): an MP3 with no
+// index is given the length its first frames' bitrate suggests and is sought
+// by the same guess, so its real end would be taken for an early one, and
+// the reload would land well before it and play a stretch again.
 bool PlaybackController::resumeEarlyEnd()
 {
     if (!m_earlyEndCheck || !m_engine || m_videoPlaying)
@@ -1842,6 +1923,14 @@ bool PlaybackController::resumeEarlyEnd()
         return false;
     const QString name = currentSourceId().isEmpty() ? m_currentTrack.value(QStringLiteral("title")).toString()
                                                      : currentSourceId();
+    if (!m_directUrl.isEmpty() && !lengthIsExact(m_engine->fileFormat())) {
+        qInfo("playback: %s ended at %s of %s, but its link is %s, whose length may be only a guess; taken as "
+              "its end", qUtf8Printable(name), qPrintable(TrackModel::formatDuration(m_position)),
+              qPrintable(TrackModel::formatDuration(length)),
+              qPrintable(m_engine->fileFormat().isEmpty() ? QStringLiteral("a file of unknown kind")
+                                                           : QStringLiteral("\"%1\"").arg(m_engine->fileFormat())));
+        return false;
+    }
     if (m_earlyEndResumed) {
         qWarning("playback: %s ended early again, at %s of %s; taken as its end", qUtf8Printable(name),
                  qPrintable(TrackModel::formatDuration(m_position)), qPrintable(TrackModel::formatDuration(length)));

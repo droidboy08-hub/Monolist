@@ -42,13 +42,22 @@ Column {
         }
     }
 
+    // What each format holds. With High sound quality a song can come from
+    // either source, so the line names both rather than YouTube's alone.
     Text {
         width: parent.width
         text: Downloads.format === "m4a"
-              ? "AAC in an .m4a file, about 128 kbps. Plays on Apple devices and older players."
+              ? (Player.saavnEnabled
+                 ? "AAC in an .m4a file: JioSaavn's own at 320 kbps, or YouTube's at about 128 kbps. Plays on "
+                   + "Apple devices and older players."
+                 : "AAC in an .m4a file, about 128 kbps. Plays on Apple devices and older players.")
               : Downloads.format === "mp3"
                 ? "Re-encoded to MP3 at the highest VBR setting. Plays anywhere, at a small cost in quality."
-                : "The stream exactly as YouTube publishes it, usually Opus at 130–160 kbps. Nothing is re-encoded."
+                : (Player.saavnEnabled
+                   ? "The file exactly as its source publishes it: JioSaavn's 320 kbps AAC, or YouTube's stream, "
+                     + "usually Opus at 130–160 kbps. Nothing is re-encoded."
+                   : "The stream exactly as YouTube publishes it, usually Opus at 130–160 kbps. Nothing is "
+                     + "re-encoded.")
         wrapMode: Text.WordWrap
         font.family: Theme.fontFamily
         font.pixelSize: 12
@@ -59,8 +68,8 @@ Column {
     Text {
         width: parent.width
         text: Player.saavnEnabled
-              ? "Downloads come from JioSaavn, as 320 kbps AAC in an .m4a file (or MP3, if chosen), when it has "
-                + "exactly the same recording, and from YouTube through yt-dlp otherwise, or if that fails."
+              ? "Downloads come from JioSaavn when it has exactly the same recording, and from YouTube through "
+                + "yt-dlp otherwise, or if that fails."
               : "Downloads come from YouTube, through yt-dlp. With High sound quality, songs JioSaavn has come "
                 + "from there instead."
         wrapMode: Text.WordWrap

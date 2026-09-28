@@ -176,8 +176,15 @@ public:
     void doubt(const QString &why);
     // Where those files are written: "yt-dlp-cookies" under the app's local
     // (never roaming) data folder, or under MONOLIST_DATA_DIR when that is
-    // set, so a self-test never touches the real one.
+    // set, so a self-test never touches the real one. A folder on a network
+    // drive is refused (openCookieFile says so): the file is the session in
+    // plain text, and a share keeps neither this user's permissions on it
+    // nor it on this computer.
     static QString cookieFolder();
+    // Whether `path` is on a network drive: a UNC path or a drive Windows
+    // maps to a share, or a volume of a network file system (NFS, SMB, AFP,
+    // WebDAV, sshfs) elsewhere.
+    static bool onNetworkDrive(const QString &path);
     // Deletes what an earlier run left there (a crash, a kill mid-lookup):
     // every file but those written in the last `sparedSecs` seconds, which
     // may be another running copy's. Returns how many went. Done by start().
