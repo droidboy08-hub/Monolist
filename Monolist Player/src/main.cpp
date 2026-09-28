@@ -40,6 +40,7 @@
 #include "streamresolver.h"
 #include "trackmodel.h"
 #include "videosurface.h"
+#include "systempip.h"
 #include "windowchrome.h"
 #include "ytmselftest.h"
 #include "ytmsession.h"
@@ -58,19 +59,40 @@
 #include "rec/taste.h"
 #include "rec/vectorsearch.h"
 #include "ytdlp.h"
+#ifdef Q_OS_MACOS
+#include "macos/mediasession.h"
+#include "macos/toolstore.h"
+#endif
 
+#include <clocale>
 #include <functional>
 #include <memory>
 
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
+    // Qt sets the process locale from the environment on macOS and Linux, and
+    // libmpv refuses to start under any numeric locale but "C" — mpv_create()
+    // returns nothing, and the app runs without sound. A Mac set to German, or
+    // any launch from a Terminal with LANG set, hit this; Windows never does.
+    // Only number formatting in C functions changes: QLocale is unaffected.
+    std::setlocale(LC_NUMERIC, "C");
+    // Before anything looks for yt-dlp, FFmpeg or Deno.
+    YtDlp::extendSearchPath();
+
     app.setOrganizationName(QStringLiteral("Monolist"));
     app.setApplicationName(QStringLiteral("Monolist"));
     app.setApplicationDisplayName(QStringLiteral("Monolist"));
     // One source for the version, generated from the repository at build time
     // rather than typed in two places that drift apart.
     app.setApplicationVersion(AppInfo().version());
+
+#ifdef Q_OS_MACOS
+    // yt-dlp and Deno travel inside Monolist.app and run from Application
+    // Support, where they can be updated. Unpacked before anything looks for
+    // them: on the first launch of a new version, a second or two, once.
+    ToolStore::installBundled();
+#endif
 
     // Neutral control style: the design is drawn entirely by the QML components,
     // platform styles would override paddings and colors.
@@ -350,15 +372,24 @@ int main(int argc, char *argv[])
 
     if (!YtDlp::isAvailable()) {
         qWarning("Monolist: yt-dlp not found — search and downloads are disabled, "
-                 "and streaming falls back to public instances. Install with "
-                 "`pip install yt-dlp`.");
+                 "and streaming falls back to public instances. %s",
+                 qPrintable(YtDlp::installHint()));
     }
 
     // — QML —
     ArtworkFetcher artworkFetcher;
     PaletteTool palette(&artworkFetcher);
 
+#ifdef Q_OS_MACOS
+    // The media keys, Control Center and the lock screen.
+    MacMediaSession mediaSession(&player, artworkFetcher.network());
+#endif
+
+    // The system's own picture in picture, where there is one.
+    SystemPip systemPip(&player, &engine, artworkFetcher.network());
+
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Library",   &library);
+    qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "SystemPip", &systemPip);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Player",    &player);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Extractor", &extractor);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Downloads", &downloads);
@@ -469,6 +500,22 @@ int main(int argc, char *argv[])
     if (auto *window = qobject_cast<QWindow *>(qmlEngine.rootObjects().value(0))) {
         chrome.attach(window);
         window->show();
+#ifdef Q_OS_MACOS
+        // A Mac app outlives its window: closing it (the red button, ⌘W)
+        // leaves the music playing, and clicking the Dock icon brings it back.
+        // Qt reports that click as the app becoming active, even when it
+        // already was. ⌘Q quits.
+        app.setQuitOnLastWindowClosed(false);
+        QObject::connect(&app, &QGuiApplication::applicationStateChanged, window,
+                         [window](Qt::ApplicationState state) {
+                             if (state == Qt::ApplicationActive && !window->isVisible())
+                                 window->show();
+                         });
+        // Once the app has settled: a stale yt-dlp is the usual reason a
+        // track will not play, so it is kept current without asking.
+        QTimer::singleShot(10000, &appInfo, [&appInfo]() { appInfo.startToolChecks(); });
+#endif
+
         // --scroll-test: the page --view opened, scrolled the ways a person
         // does, with the frame times (scrollselftest.cpp).
         if (app.arguments().contains(QStringLiteral("--scroll-test")))
@@ -558,6 +605,50 @@ int main(int argc, char *argv[])
                 clock->start();
                 start();
             });
+        }
+        // --pip-at <s> opens the system's picture in picture then, and reports
+        // what it draws each second after.
+        const int pipFlag = args.indexOf(QStringLiteral("--pip-at"));
+        if (pipFlag >= 0 && pipFlag + 1 < args.size()) {
+            const int after = qMax(1, args.at(pipFlag + 1).toInt());
+            QTimer::singleShot(after * 1000, &app, [&systemPip]() {
+                qWarning("selftest: opening picture in picture (supported: %s)",
+                         systemPip.supported() ? "yes" : "no");
+                systemPip.start();
+            });
+            for (int tick = -2; after + tick < seconds; ++tick) {
+                QTimer::singleShot((after + tick) * 1000, &app, [&systemPip, tick]() {
+                    qWarning("selftest: pip %s", qPrintable(systemPip.diagnostics()));
+                    if (tick == 6)
+                        qWarning("selftest: windows\n%s", qPrintable(systemPip.windowTree()));
+                });
+            }
+        }
+        // --next-at <s> moves on to the next song then, as Next would, and
+        // reports the video's state each second after. With --next-plain
+        // <videoId>, that song is played instead, as one with no video.
+        const int nextFlag = args.indexOf(QStringLiteral("--next-at"));
+        const int plainFlag = args.indexOf(QStringLiteral("--next-plain"));
+        const QString plainId = plainFlag >= 0 && plainFlag + 1 < args.size() ? args.at(plainFlag + 1) : QString();
+        if (nextFlag >= 0 && nextFlag + 1 < args.size()) {
+            const int after = qMax(1, args.at(nextFlag + 1).toInt());
+            QTimer::singleShot(after * 1000, &app, [&player, plainId]() {
+                qWarning("selftest: next song (video preferred: %s)",
+                         player.videoPreferred() ? "yes" : "no");
+                if (plainId.isEmpty())
+                    player.next();
+                else
+                    player.playSource(plainId, QStringLiteral("No video song"), QStringLiteral("Selftest"),
+                                      QString(), 0, QString(), /*isVideo=*/false);
+            });
+            for (int tick = 1; after + tick < seconds; ++tick) {
+                QTimer::singleShot((after + tick) * 1000, &app, [&player]() {
+                    qWarning("selftest: now \"%s\" has video %s, wanted %s, playing %s, preferred %s",
+                             qPrintable(player.currentTrack().value(QStringLiteral("title")).toString()),
+                             player.videoAvailable() ? "yes" : "no", player.videoWanted() ? "yes" : "no",
+                             player.videoPlaying() ? "yes" : "no", player.videoPreferred() ? "yes" : "no");
+                });
+            }
         }
         QTimer::singleShot(seconds * 1000, &app, [&player]() {
             // A position that moved is the proof audio was actually decoded.

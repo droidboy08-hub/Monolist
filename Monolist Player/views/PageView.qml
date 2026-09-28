@@ -84,6 +84,11 @@ ScrollPage {
         Downloads.enqueueAll(Catalog.pageTrackList())
     }
 
+    // Asked again whenever a download starts, ends or fails, and as more of
+    // the page arrives.
+    readonly property var downloadCounts: Downloads.revision >= 0 && Catalog.pageTracks.count >= 0
+                                          ? Downloads.downloadCounts(Catalog.pageTrackList()) : ({})
+
     readonly property bool saved: Library.revision >= 0 && Library.isSaved(page.browseId !== undefined ? page.browseId : "")
 
     MonoMenu {
@@ -218,12 +223,14 @@ ScrollPage {
                         enabled: root.page.title !== undefined && root.page.error === undefined
                         onClicked: Library.setSaved(root.page, !root.saved)
                     }
-                    ActionButton {
+                    DownloadAllButton {
                         visible: Downloads.available
-                        iconName: root.waiting === "download" ? "dots" : "download"
-                        text: "Download all"
+                        counts: root.downloadCounts
+                        complete: !Catalog.pageHasMore && !Catalog.pageFetching
+                        waiting: root.waiting === "download"
                         enabled: Catalog.pageTracks.count > 0
-                        onClicked: root.withWholePage("download", root.downloadAll)
+                        onDownloadAllRequested: root.withWholePage("download", root.downloadAll)
+                        onRetryRequested: Downloads.retryFailed(Catalog.pageTrackList())
                     }
                     ActionButton {
                         id: moreButton

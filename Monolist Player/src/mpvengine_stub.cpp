@@ -48,6 +48,18 @@ void MpvEngine::setVideoWatched(bool watched)
 
 void MpvEngine::stop() {}
 
+void MpvEngine::addVideo(const QString &url, const QVariantMap &headers)
+{
+    Q_UNUSED(url)
+    Q_UNUSED(headers)
+    Q_EMIT videoAddFailed(m_lastError);
+}
+
+void MpvEngine::applyHeaders(const QVariantMap &headers)
+{
+    Q_UNUSED(headers)
+}
+
 void MpvEngine::setPaused(bool paused)
 {
     Q_UNUSED(paused)

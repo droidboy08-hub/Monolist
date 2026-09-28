@@ -351,8 +351,8 @@ Rectangle {
         anchors.verticalCenter: parent.verticalCenter
         spacing: Theme.space2
 
-        // The picture, from anywhere: in Now Playing while that is open, and
-        // otherwise in the mini panel above this bar. Red while it is on, three
+        // The picture, from anywhere: it plays in Now Playing, which opens
+        // for it if it is closed. Red while it is on, three
         // dots while it loads, greyed for a song that has none, so it is
         // there to be found before it is needed. Never folded away: nothing
         // else turns the picture on while Now Playing is closed.
@@ -364,13 +364,21 @@ Rectangle {
             iconColor: Player.videoWanted ? Theme.accent : Theme.neutral700
             iconSize: 15
             anchors.verticalCenter: parent.verticalCenter
-            onClicked: Player.videoWanted = !Player.videoWanted
+            onClicked: {
+                Player.videoWanted = !Player.videoWanted
+                // The picture lives in Now Playing: turned on from here, it
+                // opens there rather than playing for nobody.
+                if (Player.videoWanted && !root.nowPlayingOpen)
+                    root.nowPlayingToggled()
+            }
             ToolTip.visible: hovered
             ToolTip.delay: 600
             ToolTip.text: Player.videoWanted ? "Stop the video" : "Play the video"
         }
         IconButton {
-            iconName: "maximize-2"
+            // Open, it is the way back down: the same chevron as the close
+            // button beside the window buttons.
+            iconName: root.nowPlayingOpen ? "chevron-down" : "maximize-2"
             iconColor: root.nowPlayingOpen ? Theme.accent : Theme.neutral700
             iconSize: 15
             anchors.verticalCenter: parent.verticalCenter

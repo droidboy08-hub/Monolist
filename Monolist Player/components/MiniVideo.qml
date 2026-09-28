@@ -2,15 +2,13 @@ import QtQuick
 import Monolist
 import Monolist.Backend
 
-// The video while Now Playing is closed: a small picture at the bottom right,
-// standing on the page above the player bar, so the song can be watched while
-// the rest of the app is used. It is framed by a 2px ink rule, as anything
-// that stands on the page is. A click opens Now Playing, where the picture is
-// large; a double-click, or its corner button, goes full screen; its other
-// corner button stops the picture, and the song carries on as sound.
-//
-// It exists so that the picture always has somewhere to be seen. Closing Now
-// Playing moves the picture here rather than leaving it playing for nobody.
+// Picture in picture: a small picture at the bottom right, standing on the
+// page above the player bar, so the song can be watched while the rest of the
+// app is used. Only when asked for, from its button in Now Playing. It is
+// framed by a 2px ink rule, as anything that stands on the page is. A click
+// opens Now Playing, where the picture is large; a double-click, or its corner
+// button, goes full screen; its other corner button puts it away, and the song
+// carries on as sound.
 Rectangle {
     id: root
 
@@ -18,6 +16,7 @@ Rectangle {
     property bool active: false
     signal openRequested()
     signal fullscreenRequested()
+    signal closeRequested()
 
     readonly property bool videoShowing: Player.videoPlaying && surface.showing
     readonly property string artwork: Player.currentTrack.artwork !== undefined
@@ -91,8 +90,8 @@ Rectangle {
         }
         PlateButton {
             iconName: "x"
-            tip: "Stop the video"
-            onClicked: Player.videoWanted = false
+            tip: "Close picture in picture"
+            onClicked: root.closeRequested()
         }
     }
 }

@@ -3,6 +3,7 @@
 #include <QAbstractNativeEventFilter>
 #include <QObject>
 #include <QPointer>
+#include <QStringList>
 
 class QWindow;
 
@@ -18,6 +19,10 @@ class QWindow;
 //            other corner in the design is.
 //   macOS    The content extends under the title bar and the traffic lights
 //            stay, so no buttons are drawn and the brand leaves them room.
+//            The title's text is hidden (it would sit over the search field);
+//            a double click does what System Settings says; the full screen
+//            button and tiling work as in any other window. Needs Qt 6.9;
+//            with an older Qt the system title bar simply stays.
 //   Linux    The frame goes entirely; the window moves and resizes through
 //            the compositor (startSystemMove / startSystemResize), so snapping
 //            works there too, and QML draws the resize edges.
@@ -33,6 +38,16 @@ class WindowChrome : public QObject, public QAbstractNativeEventFilter
     Q_PROPERTY(bool nativeButtons READ nativeButtons CONSTANT)
     // Room the native buttons need at the left of the title bar.
     Q_PROPERTY(int nativeButtonsInset READ nativeButtonsInset CONSTANT)
+    // Which corner the window buttons belong in, and which buttons, in the
+    // order they are drawn from left to right ("minimize", "maximize",
+    // "close"). Windows: the right, all three. Linux: wherever the desktop's
+    // own button layout puts close (GNOME's button-layout, KDE's kwinrc), and
+    // only the buttons it lists there. macOS: the system's, so on the left.
+    Q_PROPERTY(bool buttonsOnLeft READ buttonsOnLeft CONSTANT)
+    Q_PROPERTY(QStringList windowButtons READ windowButtons CONSTANT)
+    // Round buttons, centred in the bar, as GTK and Breeze draw them; square
+    // caption buttons the full height of the bar, as Windows draws them.
+    Q_PROPERTY(bool roundButtons READ roundButtons CONSTANT)
 public:
     explicit WindowChrome(QObject *parent = nullptr);
     ~WindowChrome() override;
@@ -43,10 +58,18 @@ public:
     bool drawsResizeEdges() const;
     bool nativeButtons() const;
     int nativeButtonsInset() const;
+    bool buttonsOnLeft() const;
+    QStringList windowButtons() const;
+    bool roundButtons() const;
 
     // The window menu (restore, move, size, minimise, maximise, close) at the
     // pointer, as a right click on a system title bar shows it. Windows only.
     Q_INVOKABLE void showSystemMenu();
+
+    // A double click on the title bar. True when the platform decided what it
+    // does (macOS: zoom, minimise or nothing, as the user has set it); false
+    // leaves it to QML, which maximises or restores.
+    Q_INVOKABLE bool titleBarDoubleClicked();
 
     // The pointer's shape over the window now (a Qt::CursorShape), as Qt Quick
     // last set it from what is under it: a page moving under the wheel keeps
@@ -55,6 +78,16 @@ public:
 
     bool nativeEventFilter(const QByteArray &eventType, void *message, qintptr *result) override;
 
+protected:
+    bool eventFilter(QObject *watched, QEvent *event) override;
+
 private:
+    // Read once, the first time it is asked for: the desktop's layout is not
+    // followed live, as it is changed about as often as the desktop itself.
+    void readButtonLayout() const;
+
     QPointer<QWindow> m_window;
+    mutable bool m_layoutRead = false;
+    mutable bool m_buttonsOnLeft = false;
+    mutable QStringList m_windowButtons;
 };

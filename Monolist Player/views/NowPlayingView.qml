@@ -14,11 +14,13 @@ Rectangle {
     // "lyrics" or "queue"
     property string pane: "lyrics"
     // Whether the video's place is here. Main gives the picture one place at
-    // a time: full screen takes it from here, and closing this view sends it
-    // to the mini panel above the player bar.
+    // a time: full screen takes it from here, and the picture-in-picture
+    // button sends it to the small panel above the player bar. Main also
+    // holds it back while this view slides in or out.
     property bool videoHere: true
     signal closeRequested()
     signal fullscreenRequested()
+    signal pipRequested()
 
     readonly property var track: Player.currentTrack
     readonly property bool hasTrack: track.title !== undefined
@@ -77,6 +79,174 @@ Rectangle {
         ColorAnimation { duration: Theme.slow; easing.type: Theme.enterCurve }
     }
 
+    // Closing sits with the window buttons, on whichever side the system
+    // keeps them: the hand is already there to deal with the window, and it
+    // should not have to cross the screen to put the player away. A plate
+    // with a word on it, not a bare glyph, so it is not read as one of the
+    // window's own buttons.
+    component CloseButton: Button {
+        id: closeButton
+
+        // The ink it is printed in: the palette's on paper, the poster's own
+        // over the colour field.
+        property color ink: Theme.text
+        property bool overField: false
+        // The full height of the bar, like Windows' caption buttons beside it.
+        property bool tall: false
+
+        height: tall ? parent.height : 36
+        leftPadding: Theme.space3 + 2
+        rightPadding: Theme.space4
+        hoverEnabled: true
+        focusPolicy: Qt.NoFocus
+        Accessible.name: "Close Now Playing"
+
+        background: Rectangle {
+            color: closeButton.overField
+                   ? Qt.rgba(closeButton.ink.r, closeButton.ink.g, closeButton.ink.b,
+                             closeButton.down ? 0.34 : closeButton.hovered ? 0.26 : 0.16)
+                   : (closeButton.down ? Theme.neutral500 : closeButton.hovered ? Theme.neutral300 : Theme.surface)
+        }
+
+        contentItem: Row {
+            spacing: Theme.space2 + 2
+
+            Icon {
+                anchors.verticalCenter: parent.verticalCenter
+                width: 18
+                height: 18
+                thickness: 2.4
+                name: "chevron-down"
+                color: closeButton.ink
+            }
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: "CLOSE"
+                font.family: Theme.fontFamily
+                font.pixelSize: 12
+                font.weight: Font.Bold
+                font.letterSpacing: Theme.tracking(12, 0.14)
+                color: closeButton.ink
+            }
+            // The key that does the same, printed on the button rather than
+            // hidden in a tooltip.
+            Rectangle {
+                anchors.verticalCenter: parent.verticalCenter
+                width: escLabel.implicitWidth + 10
+                height: escLabel.implicitHeight + 4
+                color: "transparent"
+                border.width: 1.5
+                border.color: Qt.rgba(closeButton.ink.r, closeButton.ink.g, closeButton.ink.b, 0.7)
+
+                Text {
+                    id: escLabel
+                    anchors.centerIn: parent
+                    text: "ESC"
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 10
+                    font.weight: Font.Bold
+                    font.letterSpacing: Theme.tracking(10, 0.08)
+                    color: Qt.rgba(closeButton.ink.r, closeButton.ink.g, closeButton.ink.b, 0.8)
+                }
+            }
+        }
+
+        HoverHandler { cursorShape: Qt.PointingHandCursor }
+
+        ToolTip.visible: hovered
+        ToolTip.delay: 600
+        ToolTip.text: "Close Now Playing (Esc)"
+    }
+
+    // What sets the close button apart from the window's own: a 2px rule the
+    // height of the bar beside square buttons, a short tinted one beside
+    // round ones.
+    component ClusterRule: Item {
+        property color ink: Theme.text
+
+        width: Theme.ruleWidth
+        height: parent.height
+
+        Rectangle {
+            anchors.centerIn: parent
+            width: parent.width
+            height: Chrome.roundButtons ? 20 : parent.height
+            color: Chrome.roundButtons ? Qt.rgba(parent.ink.r, parent.ink.g, parent.ink.b, 0.25)
+                                       : Theme.divider
+        }
+    }
+
+    // One side of the cover / video switch: ChoiceChip's switch, printed in
+    // the poster's ink and with a glyph, over the colour field.
+    component PictureChoice: Rectangle {
+        id: choice
+
+        property string label: ""
+        property string iconName: ""
+        property bool selected: false
+        property bool available: true
+        property string hint: ""
+        property color ink: Theme.text
+        property color field: Theme.accent
+        signal picked()
+
+        implicitWidth: choiceRow.implicitWidth + Theme.space3 * 2
+        implicitHeight: 32
+        opacity: available ? 1 : 0.45
+        color: selected ? ink : (choiceHover.hovered && available ? Qt.rgba(ink.r, ink.g, ink.b, 0.14)
+                                                                  : "transparent")
+        border.width: Theme.ruleWidth
+        border.color: ink
+
+        Accessible.role: Accessible.RadioButton
+        Accessible.name: label
+        Accessible.checked: selected
+
+        Behavior on color {
+            enabled: !choice.selected && !choiceHover.hovered
+            ColorAnimation { duration: Theme.quick }
+        }
+
+        Row {
+            id: choiceRow
+            anchors.centerIn: parent
+            spacing: Theme.space2
+
+            Icon {
+                anchors.verticalCenter: parent.verticalCenter
+                width: 14
+                height: 14
+                thickness: 2.2
+                name: choice.iconName
+                color: choice.selected ? choice.field : choice.ink
+            }
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: choice.label
+                font.family: Theme.fontFamily
+                font.pixelSize: 12
+                font.weight: Font.Bold
+                font.letterSpacing: Theme.tracking(12, 0.14)
+                color: choice.selected ? choice.field : choice.ink
+            }
+        }
+
+        // Still under the pointer when there is nothing to switch to, so the
+        // tooltip can say why.
+        HoverHandler {
+            id: choiceHover
+            cursorShape: choice.available && !choice.selected ? Qt.PointingHandCursor : Qt.ArrowCursor
+        }
+        TapHandler {
+            enabled: choice.available && !choice.selected
+            onTapped: choice.picked()
+        }
+
+        ToolTip.visible: choiceHover.hovered && hint.length > 0
+        ToolTip.delay: 400
+        ToolTip.text: hint
+    }
+
     // Swallows clicks, so nothing underneath takes them.
     MouseArea {
         anchors.fill: parent
@@ -101,16 +271,21 @@ Rectangle {
             spacing: Theme.space6
 
             // The cover, or the same song moving. A video is 16:9 where a
-            // cover is square, so the plate keeps its width and loses height
-            // rather than showing the picture in black bars.
+            // cover is square, so it takes the poster's full width where the
+            // height allows, rather than the cover's plate with black bars.
             Item {
                 id: stage
 
-                readonly property int edge: Math.max(120, Math.min(posterContent.width,
-                    poster.height - Theme.titleBarHeight - info.implicitHeight - Theme.space8 * 2 - Theme.space6))
+                // Room above the song's name, below the strip.
+                readonly property int room: poster.height - Theme.titleBarHeight - info.implicitHeight
+                                            - Theme.space8 * 2 - Theme.space6
+                readonly property int edge: Math.max(120, Math.min(posterContent.width, room))
+                readonly property real aspect: videoSurface.aspectRatio > 0 ? videoSurface.aspectRatio : 16 / 9
+                readonly property int videoWidth: Math.max(120, Math.min(posterContent.width,
+                                                                         Math.round(room * aspect)))
 
-                width: edge
-                height: root.videoShowing ? Math.round(edge / videoSurface.aspectRatio) : edge
+                width: root.videoShowing ? videoWidth : edge
+                height: root.videoShowing ? Math.round(videoWidth / aspect) : edge
 
                 // Under the cover, so the still stays up until the first
                 // frame arrives and the picture never appears as a black box.
@@ -134,27 +309,25 @@ Rectangle {
                     onDoubleTapped: if (root.videoShowing) root.fullscreenRequested()
                 }
 
-                // The switches sit on the thing they change: the one between
-                // the still and the moving picture, and, once the picture
-                // plays, full screen beside it.
+                // Picture in picture and full screen sit on the picture, once
+                // it plays.
+                // The cover / video switch is in the strip above.
                 Row {
+                    visible: root.videoShowing
                     anchors.right: parent.right
                     anchors.bottom: parent.bottom
                     anchors.margins: Theme.space3
                     spacing: Theme.space1
 
                     PlateButton {
-                        visible: root.videoShowing
+                        iconName: "pip"
+                        tip: "Picture in picture"
+                        onClicked: root.pipRequested()
+                    }
+                    PlateButton {
                         iconName: "fullscreen"
                         tip: "Full screen (F)"
                         onClicked: root.fullscreenRequested()
-                    }
-                    PlateButton {
-                        id: videoToggle
-                        available: Player.videoAvailable
-                        iconName: root.videoWaiting ? "dots" : (root.videoShowing ? "image" : "video")
-                        tip: root.switchTip
-                        onClicked: Player.videoWanted = !Player.videoWanted
                     }
                 }
             }
@@ -207,46 +380,21 @@ Rectangle {
     // — the strip along the top: the window's title bar here too —
     Item {
         id: strip
+
+        // macOS keeps its traffic lights at the left, and some Linux
+        // desktops their buttons: closing goes there with them.
+        readonly property bool closeAtLeft: Chrome.nativeButtons || Chrome.buttonsOnLeft
+        // Over the poster things are drawn in the poster's own ink: grey and
+        // ink from the palette would be arbitrary there, because what is
+        // behind them is whatever colour the cover is.
+        readonly property color leftInk: root.wide ? root.posterInk : Theme.text
+
         anchors.left: parent.left
         anchors.right: parent.right
         height: Theme.titleBarHeight
 
         WindowDragArea {
             anchors.fill: parent
-        }
-
-        Row {
-            anchors.left: parent.left
-            anchors.leftMargin: Theme.space6 + Chrome.nativeButtonsInset
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: Theme.space3
-
-            IconButton {
-                anchors.verticalCenter: parent.verticalCenter
-                iconName: "chevron-down"
-                iconSize: 20
-                // Over the poster the ladder is drawn in the poster's own ink:
-                // quiet until the pointer is on it, then full strength. Grey
-                // and ink from the palette would be arbitrary here, because
-                // what is behind them is whatever colour the cover is.
-                iconColor: root.wide ? Qt.rgba(root.posterInk.r, root.posterInk.g,
-                                               root.posterInk.b, 0.65)
-                                     : Theme.neutral700
-                hoverColor: root.wide ? root.posterInk : Theme.text
-                onClicked: root.closeRequested()
-                ToolTip.visible: hovered
-                ToolTip.delay: 600
-                ToolTip.text: "Close (Esc)"
-            }
-            Text {
-                anchors.verticalCenter: parent.verticalCenter
-                text: "NOW PLAYING"
-                font.family: Theme.fontFamily
-                font.pixelSize: 12
-                font.weight: Font.Bold
-                font.letterSpacing: Theme.tracking(12, 0.18)
-                color: root.wide ? root.posterInk : Theme.text
-            }
         }
 
         // Under the paper side only; the poster runs to the top.
@@ -258,11 +406,104 @@ Rectangle {
             color: Theme.divider
         }
 
-        WindowButtons {
-            visible: !Chrome.nativeButtons
+        // — at the left: the window buttons and close, where the system
+        // keeps its buttons there, and the page's name —
+        Row {
+            id: leftCluster
+            anchors.left: parent.left
+            anchors.leftMargin: Chrome.nativeButtons ? Chrome.nativeButtonsInset
+                              : Chrome.buttonsOnLeft ? 0 : Theme.space6
+            anchors.top: parent.top
+            height: parent.height - Theme.ruleWidth
+            spacing: Theme.space3
+
+            WindowButtons {
+                visible: Chrome.buttonsOnLeft && !Chrome.nativeButtons
+                height: parent.height
+                rightPadding: 0
+                ink: strip.leftInk
+            }
+            ClusterRule {
+                visible: Chrome.buttonsOnLeft && !Chrome.nativeButtons
+                ink: strip.leftInk
+            }
+            CloseButton {
+                visible: strip.closeAtLeft
+                anchors.verticalCenter: parent.verticalCenter
+                ink: strip.leftInk
+                overField: root.wide
+                onClicked: root.closeRequested()
+            }
+        }
+
+        // Given up before it would run into the picture switch.
+        Text {
+            anchors.left: leftCluster.right
+            anchors.leftMargin: strip.closeAtLeft ? Theme.space3 : 0
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.verticalCenterOffset: -Theme.ruleWidth / 2
+            visible: !root.wide || x + implicitWidth <= pictureSwitch.x - Theme.space4
+            text: "NOW PLAYING"
+            font.family: Theme.fontFamily
+            font.pixelSize: 12
+            font.weight: Font.Bold
+            font.letterSpacing: Theme.tracking(12, 0.18)
+            color: strip.leftInk
+        }
+
+        // — the switch between the still and the moving picture —
+        // In the strip at the poster's right edge, directly above the picture
+        // it changes, and always there with both sides, so it never moves:
+        // a song without a video dims its VIDEO side and says so.
+        Row {
+            id: pictureSwitch
+
+            visible: root.wide
+            x: poster.width - Theme.space8 - width
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: -Theme.ruleWidth
+
+            PictureChoice {
+                label: "COVER"
+                iconName: "image"
+                ink: root.posterInk
+                field: root.field
+                selected: !Player.videoWanted || !Player.videoAvailable
+                hint: selected ? "" : "Show the cover (V)"
+                onPicked: Player.videoWanted = false
+            }
+            PictureChoice {
+                label: "VIDEO"
+                iconName: root.videoWaiting ? "dots" : "video"
+                ink: root.posterInk
+                field: root.field
+                available: Player.videoAvailable
+                selected: Player.videoWanted && Player.videoAvailable
+                hint: !Player.videoAvailable ? "This song has no video"
+                    : root.videoWaiting ? "Loading the video"
+                    : selected ? "" : "Play the video (V)"
+                onPicked: Player.videoWanted = true
+            }
+        }
+
+        // — at the right: close, then the window buttons —
+        Row {
+            visible: !strip.closeAtLeft
             anchors.top: parent.top
             anchors.right: parent.right
             height: parent.height - Theme.ruleWidth
+            spacing: Chrome.roundButtons ? Theme.space3 : 0
+
+            CloseButton {
+                anchors.verticalCenter: parent.verticalCenter
+                tall: !Chrome.roundButtons
+                onClicked: root.closeRequested()
+            }
+            ClusterRule {}
+            WindowButtons {
+                height: parent.height
+                leftPadding: 0
+            }
         }
     }
 
@@ -372,14 +613,23 @@ Rectangle {
                 onDoubleTapped: if (root.videoShowing) root.fullscreenRequested()
             }
 
-            PlateButton {
+            Row {
                 visible: root.videoShowing
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 anchors.margins: Theme.space3
-                iconName: "fullscreen"
-                tip: "Full screen (F)"
-                onClicked: root.fullscreenRequested()
+                spacing: Theme.space1
+
+                PlateButton {
+                    iconName: "pip"
+                    tip: "Picture in picture"
+                    onClicked: root.pipRequested()
+                }
+                PlateButton {
+                    iconName: "fullscreen"
+                    tip: "Full screen (F)"
+                    onClicked: root.fullscreenRequested()
+                }
             }
         }
 

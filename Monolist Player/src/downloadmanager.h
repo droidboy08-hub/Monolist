@@ -44,6 +44,8 @@ class DownloadManager : public QObject
     // while the app runs, and downloads should work the moment they are.
     Q_PROPERTY(bool available READ available NOTIFY toolsChanged)
     Q_PROPERTY(bool canConvert READ canConvert NOTIFY toolsChanged)
+    // What to do about a missing yt-dlp, in this platform's terms.
+    Q_PROPERTY(QString installHint READ installHint CONSTANT)
     Q_PROPERTY(int revision READ revision NOTIFY revisionChanged)
     Q_PROPERTY(int progressRevision READ progressRevision NOTIFY progressRevisionChanged)
 public:
@@ -65,6 +67,7 @@ public:
 
     bool available() const { return m_available; }     // yt-dlp was found
     bool canConvert() const { return m_canConvert; }   // FFmpeg too: tags, cover art, trimming
+    QString installHint() const { return YtDlp::installHint(); }
     int revision() const { return m_revision; }
     int progressRevision() const { return m_progressRevision; }
 
@@ -102,6 +105,12 @@ public:
     Q_INVOKABLE qreal progressFor(const QString &videoId) const;
     Q_INVOKABLE bool isDownloaded(const QString &videoId) const;
     Q_INVOKABLE bool isPending(const QString &videoId) const;
+    // Where a list's songs, in enqueueAll's shape, stand: { songs, done,
+    // pending, failed }. What a page's "Download all" says. Songs with no
+    // source cannot be downloaded, so they are not counted at all.
+    Q_INVOKABLE QVariantMap downloadCounts(const QVariantList &tracks) const;
+    // Every song in the list whose download failed, queued again.
+    Q_INVOKABLE void retryFailed(const QVariantList &tracks);
     Q_INVOKABLE QString localPathFor(const QString &videoId) const;
 
     Q_INVOKABLE void openDownloadFolder() const;

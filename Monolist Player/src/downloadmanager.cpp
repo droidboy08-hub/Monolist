@@ -517,6 +517,50 @@ bool DownloadManager::isDownloaded(const QString &videoId) const
     return m_stored.contains(videoId);
 }
 
+QVariantMap DownloadManager::downloadCounts(const QVariantList &tracks) const
+{
+    int songs = 0, done = 0, pending = 0, failed = 0;
+    for (const QVariant &value : tracks) {
+        const QString videoId = value.toMap().value(QStringLiteral("sourceId")).toString();
+        if (videoId.isEmpty())
+            continue;
+        ++songs;
+        if (m_stored.contains(videoId)) {
+            ++done;
+        } else if (isPending(videoId)) {
+            ++pending;
+        } else if (const DownloadQueueModel::Item *item = m_queue.find(videoId);
+                   item && item->state == DownloadQueueModel::State::Failed) {
+            ++failed;
+        }
+    }
+    return { { QStringLiteral("songs"), songs }, { QStringLiteral("done"), done },
+             { QStringLiteral("pending"), pending }, { QStringLiteral("failed"), failed } };
+}
+
+// As retry(), but the rows are told once at the end, as in enqueueAll.
+void DownloadManager::retryFailed(const QVariantList &tracks)
+{
+    bool queued = false;
+    for (const QVariant &value : tracks) {
+        const QString videoId = value.toMap().value(QStringLiteral("sourceId")).toString();
+        const DownloadQueueModel::Item *current = m_queue.find(videoId);
+        if (!current || current->state != DownloadQueueModel::State::Failed || isPending(videoId))
+            continue;
+        DownloadQueueModel::Item item = *current;
+        item.state = DownloadQueueModel::State::Queued;
+        item.error.clear();
+        item.progress = 0.0;
+        m_queue.upsert(item);
+        m_pending.append(videoId);
+        queued = true;
+    }
+    if (!queued)
+        return;
+    touch();
+    pump();
+}
+
 bool DownloadManager::isPending(const QString &videoId) const
 {
     return m_requests.contains(videoId) || m_pending.contains(videoId);
