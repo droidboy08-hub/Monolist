@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QObject>
+#include <QPointer>
 #include <QSet>
 #include <QVariantList>
 #include <QVariantMap>
@@ -8,9 +9,15 @@
 #include "innertube.h"
 #include "mediaextractor.h"
 
+class YtmSession;
+
 // What there is to listen to: YouTube Music's home feed and new releases for
 // Home, the songs played lately, and album and playlist pages. Exposed to QML
 // as the "Catalog" singleton.
+//
+// The home feed is the signed-in account's own while there is one and
+// Settings lets Home use it (followAccount); new releases, and every page,
+// are asked anonymously as they always were.
 //
 // Song lists are SearchResultModels, so TrackTable renders them and
 // Player.playModel queues them like any other list. Card shelves are plain
@@ -67,6 +74,17 @@ class Catalog : public QObject
     Q_PROPERTY(QString artistMixLoading READ artistMixLoading NOTIFY artistMixLoadingChanged)
 public:
     explicit Catalog(QObject *parent = nullptr);
+
+    // The YouTube Music session Home's feed may be asked as. Its
+    // sessionChanged and useForHomeChanged ask for the feed again whenever
+    // they change whose feed it would be; the account's feed leaves Home at
+    // once when it stops being wanted. Unset (or null), Home is signed out.
+    void followAccount(YtmSession *account);
+    // Whether the feed Home shows, or the one on its way, was asked as the
+    // account; and `logged_in` from the last feed that came (InnerTube::
+    // parseLoggedIn: "1", "0", or empty). For the self-tests and the log.
+    bool feedAsAccount() const { return m_feedAsAccount; }
+    QString feedLoggedIn() const { return m_feedLoggedIn; }
 
     bool loading() const { return m_pendingHome > 0; }
     QString error() const { return m_error; }
@@ -153,11 +171,17 @@ Q_SIGNALS:
     void notice(const QString &text);
 
 private:
-    // The two requests Home is made of. refresh() resets the retry count and
-    // calls this (or queues itself behind a load already out); a failed load
-    // calls it again by itself, twice.
-    void load();
+    // The two requests Home is made of, as flags: the feed, which may be the
+    // account's, and new releases, which never are.
+    enum HomePart { Feed = 1, Releases = 2 };
+    // Asks for those parts now, or once a load already out has ended.
+    // refresh() asks for both; a change of account asks for the feed alone.
+    void ask(int parts);
+    // Sends them. ask() resets the retry count first; a load that brought
+    // nothing at all calls this again by itself, twice, for both.
+    void load(int parts);
     void finishHome();
+    void accountChanged();
     static QVariantMap shelfToMap(const InnerTube::Shelf &shelf);
     static QVariantMap moreToMap(const InnerTube::Link &more);
     static QList<SearchResultModel::Item> toItems(const QList<InnerTube::Track> &tracks);
@@ -178,10 +202,14 @@ private:
 
     int m_pendingHome = 0;
     int m_retries = 0;
-    // A refresh asked for while Home was loading — a country picked in
-    // Settings before the first load answered, say. It runs when that load
-    // ends, and the load's own answers, now stale, are not shown.
-    bool m_refreshQueued = false;
+    // The parts asked for while Home was loading — a country picked in
+    // Settings before the first load answered, say, or the account confirmed.
+    // They are asked again when that load ends, and the load's own answers
+    // for them, now stale, are not shown.
+    int m_queuedParts = 0;
+    QPointer<YtmSession> m_account;
+    bool m_feedAsAccount = false;
+    QString m_feedLoggedIn;
     QString m_error;
     QString m_quickPicksTitle;
     QVariantList m_homeShelves;       // from the home feed

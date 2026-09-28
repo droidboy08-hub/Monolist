@@ -37,6 +37,17 @@ int runCookieImportSelfTest();
 // stored session and the account setting.
 int runYtmSessionSelfTest(Library *library);
 
+// --home-account-test: Home's feed as the account (Catalog::followAccount),
+// against the same stand-in: signed out, the feed and new releases byte for
+// byte the anonymous calls Home made before; once a session is confirmed the
+// feed alone asked again with the account (logged_in=1) and new releases
+// never; "Use my account for Home" off and on again, kept in settings; a
+// sign-out, and a 403, with the account's feed on its way, leaving nothing of
+// it on screen; a launch with a stored session (signed out first, then the
+// account's); no cookie value in the log. Refuses to run without
+// MONOLIST_DATA_DIR, as --ytm-session-test does.
+int runHomeAccountSelfTest(Library *library);
+
 // --visitor-test: the one visitor id every InnerTube shares, against the same
 // stand-in: one sw.js_data fetch however many ask, a stored id used with no
 // fetch at all, the home page when sw.js_data fails, the 30-day limit, the

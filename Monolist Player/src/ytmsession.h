@@ -52,8 +52,10 @@ class QNetworkCookie;
 // account's name stays, to say whose session ended.
 //
 // Only a few calls ever carry the account: InnerTube's Auth::IfSignedIn,
-// while the session is Active, on the Music client. Playback, search,
-// lyrics, radio and yt-dlp never do. The cookies go through a static hook
+// while the session is Active, on the Music client. Today that is Home's
+// feed (Catalog), while "Use my account for Home" is on; its new releases
+// stay anonymous. Playback, search, lyrics, radio and yt-dlp never do.
+// The cookies go through a static hook
 // (InnerTube::setAccountHook), since there are several InnerTube objects and
 // all of them must agree; Set-Cookie on their answers rotates the jar, which
 // is saved again 30 seconds after the last change.
@@ -75,6 +77,10 @@ class YtmSession : public QObject
     // Whether a sign-in outlives Monolist here: false where there is no
     // secret store yet, and the jar is kept in memory only.
     Q_PROPERTY(bool remembered READ remembered CONSTANT)
+    // Settings' "Use my account for Home": whether Home asks for its feed as
+    // the account. On unless turned off (the setting ytmusic.use_for_home,
+    // "0" for off); it says nothing while there is no session.
+    Q_PROPERTY(bool useForHome READ useForHome WRITE setUseForHome NOTIFY useForHomeChanged)
 
 public:
     enum class State { SignedOut, Checking, Active, Unreachable, Rejected };
@@ -107,6 +113,12 @@ public:
     QString importError() const { return m_importError; }
     QString importedFileName() const;
     bool remembered() const;
+    bool useForHome() const { return m_useForHome; }
+    void setUseForHome(bool use);
+    // Whether a call Home makes with Auth::IfSignedIn goes as the account
+    // now: the setting on, and a session YouTube Music has confirmed.
+    // Changes only with sessionChanged or useForHomeChanged.
+    bool accountForHome() const;
 
     // A cookies.txt file (the URL a file dialog gives, or a plain path), or
     // pasted text: a Cookie header or a request copied as cURL. False, with
@@ -163,8 +175,10 @@ Q_SIGNALS:
     // A short confirmation, for the toast.
     void notice(const QString &text);
     // What the account-carrying calls send changed: signed in, out, or
-    // refused. Home will listen, once it asks as the account.
+    // refused. Home listens (Catalog::followAccount), and asks for its feed
+    // again when that changes whose feed it is.
     void sessionChanged();
+    void useForHomeChanged();
     // A check came to a verdict: "active", "again", "unreachable" or "rejected".
     void checked(const QString &outcome);
 
@@ -199,6 +213,7 @@ private:
     // call made for an earlier session cannot refuse or rotate this one.
     quint64 m_generation = 1;
     bool m_memoryOnly = false;
+    bool m_useForHome = true;
     QString m_name;
     QString m_statusLine;
     QString m_importError;

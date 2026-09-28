@@ -1,6 +1,7 @@
 #include "ytmselftest.h"
 
 #include "appdatabase.h"
+#include "catalog.h"
 #include "cookieimport.h"
 #include "innertube.h"
 #include "library.h"
@@ -1543,6 +1544,369 @@ int runYtmSessionSelfTest(Library *library)
     SecretStore::remove(secretName);
     library->setSetting(nameKey, QString());
     InnerTube::setRegionRejectedHandler({});
+    InnerTube::setTestServer(QString());
+    settle(50);
+    return t.finish();
+}
+
+// ---------------------------------------------------------------- Home as the account
+
+namespace {
+
+// Pieces of a browse answer, as parseShelves reads them: a carousel with its
+// title, a song row, and a card that opens a page.
+QByteArray carouselJson(const QByteArray &title, const QByteArray &items)
+{
+    return R"({"musicCarouselShelfRenderer":{"header":{"musicCarouselShelfBasicHeaderRenderer":{"title":{"runs":[{"text":")"
+           + title + R"("}]}}},"contents":[)" + items + "]}}";
+}
+
+QByteArray songJson(const QByteArray &videoId, const QByteArray &title)
+{
+    return R"({"musicResponsiveListItemRenderer":{"playlistItemData":{"videoId":")" + videoId
+           + R"("},"flexColumns":[{"musicResponsiveListItemFlexColumnRenderer":{"text":{"runs":[{"text":")" + title
+           + R"("}]}}},{"musicResponsiveListItemFlexColumnRenderer":{"text":{"runs":[{"text":"Test Artist"}]}}}]}})";
+}
+
+QByteArray cardJson(const QByteArray &title, const QByteArray &browseId, const QByteArray &pageType)
+{
+    return R"({"musicTwoRowItemRenderer":{"title":{"runs":[{"text":")" + title
+           + R"("}]},"subtitle":{"runs":[{"text":"Test"}]},"navigationEndpoint":{"browseEndpoint":{"browseId":")" + browseId
+           + R"(","browseEndpointContextSupportedConfigs":{"browseEndpointContextMusicConfig":{"pageType":")" + pageType
+           + R"("}}}}}})";
+}
+
+// A browse answer: logged_in as given, then its carousels.
+QByteArray browseJson(const QByteArray &loggedIn, const QByteArray &carousels)
+{
+    return R"({"responseContext":{"serviceTrackingParams":[{"service":"GFEEDBACK","params":[{"key":"logged_in","value":")"
+           + loggedIn + R"("}]}]},"contents":{"singleColumnBrowseResultsRenderer":{"tabs":[{"tabRenderer":{"content":)"
+           R"({"sectionListRenderer":{"contents":[)" + carousels + "]}}}}]}}}";
+}
+
+}
+
+int runHomeAccountSelfTest(Library *library)
+{
+    Checks t("home");
+    if (qEnvironmentVariableIsEmpty("MONOLIST_DATA_DIR")) {
+        t.check(false, QStringLiteral("MONOLIST_DATA_DIR is set"),
+                QStringLiteral("refusing to run: this test replaces the stored YouTube Music session"));
+        return t.finish();
+    }
+    const QString secretName = QStringLiteral("ytmusic.cookies");
+    const QString nameKey = QStringLiteral("ytmusic.account_name");
+    const QString homeKey = QStringLiteral("ytmusic.use_for_home");
+    const bool storeHere = SecretStore::available();
+
+    QStringList captured;
+    g_captured = &captured;
+    g_previousHandler = qInstallMessageHandler(captureMessage);
+
+    StandIn standIn;
+    if (!t.check(standIn.listen(), QStringLiteral("a stand-in server on this computer"))) {
+        qInstallMessageHandler(g_previousHandler);
+        g_captured = nullptr;
+        return t.finish();
+    }
+    InnerTube::setTestServer(standIn.base());
+    InnerTube::setRegion(QString());
+    t.note(QStringLiteral("every request goes to ") + standIn.base() + QStringLiteral(", none to YouTube"));
+
+    // The feed as YouTube Music gives it signed out, and as the account's:
+    // each with its own Quick picks and shelf, so whose Home is shown can be
+    // read off it. New releases are the same either way.
+    const QByteArray anonymousFeed = browseJson("0",
+        carouselJson("Quick picks", songJson("TESTANON01", "Anonymous song")) + ','
+        + carouselJson("Trending", cardJson("Trending mix", "VLTESTTRENDING", "MUSIC_PAGE_TYPE_PLAYLIST")));
+    const QByteArray accountFeed = browseJson("1",
+        carouselJson("Listen again", songJson("TESTMINE01", "Account song")) + ','
+        + carouselJson("Mixed for you", cardJson("Account supermix", "VLTESTMINE", "MUSIC_PAGE_TYPE_PLAYLIST")));
+    const auto releases = [](const QByteArray &loggedIn) {
+        return browseJson(loggedIn, carouselJson("New albums & singles",
+                                                 cardJson("Test Album", "MPRETEST01", "MUSIC_PAGE_TYPE_ALBUM")));
+    };
+    int authedStatus = 200;
+    standIn.respond = [&](const StandIn::Request &request) {
+        StandIn::Answer answer;
+        const bool authed = request.authed();
+        if (authed && authedStatus != 200) {
+            answer.status = authedStatus;
+            answer.body = R"({"error":{"code":)" + QByteArray::number(authedStatus) + R"(,"status":"REFUSED"}})";
+            return answer;
+        }
+        if (!authed)
+            answer.extra << "Set-Cookie: ANONTEST=anon; Path=/";
+        const QString browseId = request.json().value(QStringLiteral("browseId")).toString();
+        if (request.path.contains("account/account_menu"))
+            answer.body = authed ? menuAnswer(QStringLiteral("Monolist Test")) : kSignedOutMenu;
+        else if (browseId == QLatin1String("FEmusic_home"))
+            answer.body = authed ? accountFeed : anonymousFeed;
+        else if (browseId == QLatin1String("FEmusic_new_releases"))
+            answer.body = releases(authed ? "1" : "0");
+        else
+            answer.body = trackingAnswer(authed ? "1" : "0");
+        return answer;
+    };
+
+    // A clean slate, and the anonymous jar holding its cookie, so that any
+    // two anonymous calls from here on can be compared byte for byte.
+    SecretStore::remove(secretName);
+    library->setSetting(nameKey, QString());
+    library->setSetting(homeKey, QString());
+    InnerTube bare;   // asks as Home did before there were accounts
+    browseNow(bare, QStringLiteral("FEtest_anon"), InnerTube::Auth::Anonymous);
+    const QByteArray fixture = QByteArray(netscapeFixture()).replace("\n", "\r\n");
+    const Result expected = CookieImport::parse(fixture);
+    const QByteArray expectedCookie =
+        CookieImport::header(expected.cookies, CookieImport::kMusicHost, CookieImport::kApiPath + QStringLiteral("browse"));
+
+    const auto browseIdOf = [](const StandIn::Request &request) {
+        return request.json().value(QStringLiteral("browseId")).toString();
+    };
+    // Which requests since `from` browsed `id`.
+    const auto asked = [&standIn, browseIdOf](const QString &id, int from) {
+        QList<StandIn::Request> found;
+        for (int i = from; i < standIn.requests.size(); ++i) {
+            if (browseIdOf(standIn.requests.at(i)) == id)
+                found << standIn.requests.at(i);
+        }
+        return found;
+    };
+    const QString feedId = QStringLiteral("FEmusic_home");
+    const QString releasesId = QStringLiteral("FEmusic_new_releases");
+
+    std::unique_ptr<YtmSession> session;
+    std::unique_ptr<Catalog> catalog;
+    YtmSession::Timing timing;
+    timing.launchCheckMs = 100;
+    timing.recheckMs = 300;
+    timing.retryMinMs = 10 * 60 * 1000;   // never within the test
+    timing.saveDelayMs = 300;
+    QStringList outcomes;
+    const auto newSession = [&]() {
+        session = std::make_unique<YtmSession>(library);
+        session->setTiming(timing);
+        QObject::connect(session.get(), &YtmSession::checked, session.get(),
+                         [&outcomes](const QString &outcome) { outcomes << outcome; });
+        session->start();
+    };
+    const auto waitVerdict = [&outcomes](int before) {
+        return waitUntil([&outcomes, before]() { return outcomes.size() > before; }, 15000);
+    };
+    const auto settled = [&catalog]() {
+        return waitUntil([&catalog]() { return !catalog->loading(); }, 15000);
+    };
+    // What Home shows: the Quick picks' title and first song, then the
+    // shelves in order.
+    const auto shown = [&catalog]() {
+        const SearchResultModel *picks = catalog->quickPicks();
+        QStringList shelves;
+        for (const QVariant &shelf : catalog->shelves())
+            shelves << shelf.toMap().value(QStringLiteral("title")).toString();
+        return catalog->quickPicksTitle() + QStringLiteral(": ")
+               + (picks->rowCount() > 0 ? picks->get(0).value(QStringLiteral("title")).toString() : QStringLiteral("(none)"))
+               + QStringLiteral(" / ") + shelves.join(QStringLiteral(" | "));
+    };
+    const QString anonymousHome = QStringLiteral("Quick picks: Anonymous song / New releases | Trending");
+    const QString accountHome = QStringLiteral("Listen again: Account song / New releases | Mixed for you");
+    const auto noAccountShown = [&catalog]() {
+        const SearchResultModel *picks = catalog->quickPicks();
+        for (int row = 0; row < picks->rowCount(); ++row) {
+            if (picks->get(row).value(QStringLiteral("title")).toString() == QLatin1String("Account song"))
+                return false;
+        }
+        for (const QVariant &shelf : catalog->shelves()) {
+            if (shelf.toMap().value(QStringLiteral("title")).toString() == QLatin1String("Mixed for you"))
+                return false;
+        }
+        return catalog->quickPicksTitle() != QLatin1String("Listen again");
+    };
+
+    // — 1. signed out: Home as it always was —
+    newSession();
+    t.check(session->state() == QLatin1String("signedOut") && session->useForHome() && !session->accountForHome(),
+            QStringLiteral("nothing stored: signed out, and \"Use my account for Home\" on by default"), session->state());
+    int from = int(standIn.requests.size());
+    catalog = std::make_unique<Catalog>();
+    catalog->followAccount(session.get());
+    catalog->refresh();
+    settled();
+    t.check(shown() == anonymousHome && !catalog->feedAsAccount() && catalog->feedLoggedIn() == QLatin1String("0")
+                && catalog->featured().value(QStringLiteral("title")).toString() == QLatin1String("Test Album"),
+            QStringLiteral("signed out, Home is the signed-out feed and new releases"), shown());
+    const QList<StandIn::Request> firstFeed = asked(feedId, from);
+    const QList<StandIn::Request> firstReleases = asked(releasesId, from);
+    t.check(firstFeed.size() == 1 && firstReleases.size() == 1 && !firstFeed.first().authed()
+                && !firstReleases.first().authed(),
+            QStringLiteral("one feed and one new releases, neither with an account"),
+            QStringLiteral("%1 and %2").arg(firstFeed.size()).arg(firstReleases.size()));
+    browseNow(bare, feedId, InnerTube::Auth::Anonymous);
+    const StandIn::Request anonymousFeedRequest = standIn.requests.last();
+    browseNow(bare, releasesId, InnerTube::Auth::Anonymous);
+    const StandIn::Request anonymousReleasesRequest = standIn.requests.last();
+    const auto sameAs = [](const StandIn::Request &a, const StandIn::Request &b) {
+        return a.head == b.head && a.body == b.body;
+    };
+    t.check(!firstFeed.isEmpty() && sameAs(firstFeed.first(), anonymousFeedRequest)
+                && !firstReleases.isEmpty() && sameAs(firstReleases.first(), anonymousReleasesRequest),
+            QStringLiteral("with the setting on and nobody signed in, both are byte for byte the anonymous calls "
+                           "Home made before"));
+
+    // — 2. signed in: the feed becomes the account's once it is confirmed —
+    from = int(standIn.requests.size());
+    int before = int(outcomes.size());
+    t.check(session->importText(QString::fromUtf8(fixture)) && session->state() == QLatin1String("checking"),
+            QStringLiteral("a session imports, and is being checked"), session->importError());
+    t.check(!catalog->loading() && shown() == anonymousHome,
+            QStringLiteral("while it is checked, Home is left as it is (nothing would go as the account yet)"));
+    waitVerdict(before);
+    settled();
+    {
+        const QList<StandIn::Request> feeds = asked(feedId, from);
+        bool allAuthed = !feeds.isEmpty();
+        for (const StandIn::Request &request : feeds)
+            allAuthed = allAuthed && request.authed() && request.header("cookie") == expectedCookie;
+        t.check(session->state() == QLatin1String("active") && feeds.size() == 2 && allAuthed
+                    && asked(releasesId, from).isEmpty(),
+                QStringLiteral("once confirmed, the feed alone is asked again, as the account (the check's feed, "
+                               "then Home's), and new releases are not asked again"),
+                QStringLiteral("%1, %2 feeds, %3 new releases").arg(session->state()).arg(feeds.size())
+                    .arg(asked(releasesId, from).size()));
+    }
+    t.check(shown() == accountHome && catalog->feedAsAccount() && catalog->feedLoggedIn() == QLatin1String("1")
+                && catalog->featured().value(QStringLiteral("title")).toString() == QLatin1String("Test Album"),
+            QStringLiteral("signed in, Home is the account's feed (logged_in=1), under the same new releases"), shown());
+
+    // — 3. asked again signed in (as a new country does): new releases stay anonymous —
+    from = int(standIn.requests.size());
+    catalog->refresh();
+    settled();
+    {
+        const QList<StandIn::Request> feeds = asked(feedId, from);
+        const QList<StandIn::Request> news = asked(releasesId, from);
+        t.check(feeds.size() == 1 && feeds.first().authed() && news.size() == 1 && sameAs(news.first(), anonymousReleasesRequest)
+                    && shown() == accountHome,
+                QStringLiteral("a refresh asks the feed as the account, and new releases byte for byte as signed out"),
+                shown());
+    }
+
+    // — 4. the setting —
+    from = int(standIn.requests.size());
+    session->setUseForHome(false);
+    t.check(noAccountShown() && !catalog->feedAsAccount(),
+            QStringLiteral("turned off: the account's feed leaves Home at once"), shown());
+    settled();
+    {
+        const QList<StandIn::Request> feeds = asked(feedId, from);
+        t.check(feeds.size() == 1 && sameAs(feeds.first(), anonymousFeedRequest) && asked(releasesId, from).isEmpty()
+                    && shown() == anonymousHome && catalog->feedLoggedIn() == QLatin1String("0"),
+                QStringLiteral("and the feed is asked again byte for byte as signed out; new releases are kept"), shown());
+    }
+    t.check(library->settingValue(homeKey) == QLatin1String("0") && session->statusLine().contains(QLatin1String("Nothing uses it")),
+            QStringLiteral("kept as ytmusic.use_for_home=0, and the status line says nothing uses the sign-in"),
+            session->statusLine());
+    {
+        YtmSession probe(library);   // never started: reads the setting, sends nothing
+        t.check(!probe.useForHome(), QStringLiteral("a new session reads it back off"));
+    }
+    from = int(standIn.requests.size());
+    session->setUseForHome(true);
+    settled();
+    t.check(asked(feedId, from).size() == 1 && asked(feedId, from).first().authed() && shown() == accountHome
+                && library->settingValue(homeKey) == QLatin1String("1")
+                && session->statusLine().contains(QLatin1String("Home shows your own feed")),
+            QStringLiteral("turned on again: the account's feed again, and the status line says Home uses it"), shown());
+
+    // — 5. signed out while the account's feed is on its way —
+    from = int(standIn.requests.size());
+    catalog->refresh();
+    session->signOut();
+    t.check(noAccountShown() && !catalog->feedAsAccount(),
+            QStringLiteral("sign-out with the account's feed on its way: what was shown of the account goes at once"),
+            shown());
+    settled();
+    {
+        const QList<StandIn::Request> feeds = asked(feedId, from);
+        t.check(feeds.size() == 2 && feeds.at(0).authed() && sameAs(feeds.at(1), anonymousFeedRequest)
+                    && asked(releasesId, from).size() == 1 && shown() == anonymousHome,
+                QStringLiteral("its answer is dropped, the feed asked again signed out, and new releases taken as they came"),
+                QStringLiteral("%1 feeds; %2").arg(feeds.size()).arg(shown()));
+    }
+
+    // — 6. refused while Home asks: signed-out Home, nothing of the account left —
+    before = int(outcomes.size());
+    session->importText(QString::fromUtf8(fixture));
+    waitVerdict(before);
+    settled();
+    t.check(shown() == accountHome, QStringLiteral("imported again: the account's Home"), shown());
+    authedStatus = 403;
+    from = int(standIn.requests.size());
+    catalog->refresh();
+    settled();
+    authedStatus = 200;
+    t.check(session->state() == QLatin1String("rejected") && shown() == anonymousHome && !catalog->feedAsAccount()
+                && !asked(feedId, from).isEmpty() && !asked(feedId, from).last().authed(),
+            QStringLiteral("a 403 on Home's feed: the session is refused, and Home is the signed-out feed"),
+            session->state() + QStringLiteral("; ") + shown());
+
+    // — 7. a launch with a stored session: signed out first, the account's once confirmed —
+    if (storeHere) {
+        before = int(outcomes.size());
+        session->importText(QString::fromUtf8(fixture));
+        waitVerdict(before);
+        settled();
+        catalog.reset();
+        session.reset();
+        from = int(standIn.requests.size());
+        before = int(outcomes.size());
+        newSession();
+        catalog = std::make_unique<Catalog>();
+        catalog->followAccount(session.get());
+        catalog->refresh();
+        const bool checking = session->state() == QLatin1String("checking");
+        waitVerdict(before);
+        settled();
+        const QList<StandIn::Request> feeds = asked(feedId, from);
+        // The first feed is Home's own, asked at once; the check's and Home's
+        // second follow, in either order.
+        const bool firstAnonymous = !feeds.isEmpty() && sameAs(feeds.first(), anonymousFeedRequest);
+        int authed = 0;
+        for (const StandIn::Request &request : feeds)
+            authed += request.authed() ? 1 : 0;
+        t.check(checking && firstAnonymous && feeds.size() == 3 && authed == 2 && asked(releasesId, from).size() == 1
+                    && shown() == accountHome && catalog->feedLoggedIn() == QLatin1String("1"),
+                QStringLiteral("at launch Home asks signed out while the stored session is checked, then asks the feed "
+                               "alone again as the account"),
+                QStringLiteral("%1 feeds (%2 with the account), %3 new releases; %4").arg(feeds.size()).arg(authed)
+                    .arg(asked(releasesId, from).size()).arg(shown()));
+        session->signOut();
+        settled();
+    } else {
+        t.note(QStringLiteral("no secret store here (") + SecretStore::unavailableReason()
+               + QStringLiteral("): the launch with a stored session is skipped"));
+    }
+
+    // — 8. the log —
+    {
+        g_captured = nullptr;
+        qInstallMessageHandler(g_previousHandler);
+        QStringList found;
+        bool reported = false;
+        for (const QString &line : std::as_const(captured)) {
+            found << leaks(line);
+            reported = reported || line.contains(QLatin1String("asked as the account, answered logged_in=1"));
+        }
+        t.check(found.isEmpty(), QStringLiteral("none of %1 lines logged during the test holds a cookie value or a hash")
+                                     .arg(captured.size()), found.join(QStringLiteral(", ")));
+        t.check(reported, QStringLiteral("the log says Home's feed was answered as the account (logged_in=1)"));
+    }
+
+    catalog.reset();
+    session.reset();
+    SecretStore::remove(secretName);
+    library->setSetting(nameKey, QString());
+    library->setSetting(homeKey, QString());
     InnerTube::setTestServer(QString());
     settle(50);
     return t.finish();

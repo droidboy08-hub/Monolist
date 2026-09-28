@@ -1,6 +1,7 @@
 #include "catalog.h"
 #include "appdatabase.h"
 #include "artistlinks.h"
+#include "ytmsession.h"
 
 #include <QSqlQuery>
 #include <QTimer>
@@ -117,60 +118,131 @@ QVariantList Catalog::toMaps(const QList<InnerTube::Track> &tracks)
     return list;
 }
 
+void Catalog::followAccount(YtmSession *account)
+{
+    if (m_account)
+        m_account->disconnect(this);
+    m_account = account;
+    if (!account)
+        return;
+    connect(account, &YtmSession::sessionChanged, this, &Catalog::accountChanged);
+    connect(account, &YtmSession::useForHomeChanged, this, &Catalog::accountChanged);
+}
+
+// Signed in, out, refused, or the setting turned: the feed is asked for again
+// only when that changes whose it would be. An import is sessionChanged twice,
+// once taken and once confirmed, and only the second makes it the account's.
+void Catalog::accountChanged()
+{
+    const bool asAccount = m_account && m_account->accountForHome();
+    if (asAccount == m_feedAsAccount)
+        return;
+    // The account's feed leaves Home at once, rather than staying until the
+    // signed-out one has come (which may not come): after a sign-out nothing
+    // of the account is left on screen. The other way round, the signed-out
+    // feed stays until the account's replaces it.
+    if (m_feedAsAccount) {
+        m_quickPicks.clear();
+        m_quickPicksTitle.clear();
+        m_homeShelves.clear();
+        m_feedLoggedIn.clear();
+        m_shelves = m_releaseShelves;
+        m_feedAsAccount = false;
+        Q_EMIT homeChanged();
+    }
+    qInfo("catalog: Home's feed is asked for again, %s", asAccount ? "as the account" : "signed out");
+    ask(Feed);
+}
+
 // Home is two requests, the home feed and new releases, run side by side;
 // the view updates once both have answered.
 void Catalog::refresh()
 {
-    // A load is already out, asked from whatever country was set when it
-    // started. Refusing this one would leave Home on that country after a
-    // new one was picked mid-load, so it waits and runs when the load ends.
+    ask(Feed | Releases);
+}
+
+void Catalog::ask(int parts)
+{
+    // A load is already out, asked from whatever country, and as whichever
+    // account, was set when it started. Refusing this one would leave Home on
+    // that country after a new one was picked mid-load, so it waits and runs
+    // when the load ends.
     if (m_pendingHome > 0) {
-        m_refreshQueued = true;
+        m_queuedParts |= parts;
         return;
     }
     m_retries = 0;   // asked for, so start counting again
-    load();
+    load(parts);
 }
 
-void Catalog::load()
+void Catalog::load(int parts)
 {
-    if (m_pendingHome > 0)
+    if (m_pendingHome > 0 || parts == 0)
         return;
-    m_pendingHome = 2;
+    m_pendingHome = ((parts & Feed) ? 1 : 0) + ((parts & Releases) ? 1 : 0);
     m_error.clear();
     Q_EMIT homeChanged();
 
-    m_innerTube.browse(QStringLiteral("FEmusic_home"), [this](const QJsonObject &root, const QString &error) {
-        // Superseded while it was out: the queued refresh asks again, and
-        // this answer is for what was asked before.
-        if (m_refreshQueued) {
-            finishHome();
-            return;
-        }
-        if (error.isEmpty()) {
-            m_homeShelves.clear();
-            bool songsTaken = false;
-            for (const InnerTube::Shelf &shelf : InnerTube::parseShelves(root)) {
-                // The first run of songs is Home's own list; later ones are rare
-                // and would repeat its look, so they are left out.
-                if (!shelf.songs.isEmpty()) {
-                    if (!songsTaken) {
-                        m_quickPicks.replace(toItems(shelf.songs));
-                        m_quickPicksTitle = shelf.title;
-                        songsTaken = true;
-                    }
-                    continue;
-                }
-                m_homeShelves.append(shelfToMap(shelf));
+    if (parts & Feed) {
+        // As the account while one is confirmed and Settings lets Home use
+        // it. IfSignedIn is the anonymous call byte for byte otherwise, so
+        // with the setting on and nobody signed in nothing changes.
+        const bool useAccount = m_account && m_account->useForHome();
+        const bool asAccount = m_account && m_account->accountForHome();
+        m_feedAsAccount = asAccount;
+        m_innerTube.browse(QStringLiteral("FEmusic_home"), [this, asAccount](const QJsonObject &root,
+                                                                             const QString &error) {
+            // Superseded while it was out: the queued load asks again, and
+            // this answer is for what was asked before.
+            if (m_queuedParts & Feed) {
+                finishHome();
+                return;
             }
-        } else {
-            m_error = error;
-        }
-        finishHome();
-    });
+            if (error.isEmpty()) {
+                m_homeShelves.clear();
+                bool songsTaken = false;
+                for (const InnerTube::Shelf &shelf : InnerTube::parseShelves(root)) {
+                    // The first run of songs is Home's own list; later ones are rare
+                    // and would repeat its look, so they are left out.
+                    if (!shelf.songs.isEmpty()) {
+                        if (!songsTaken) {
+                            m_quickPicks.replace(toItems(shelf.songs));
+                            m_quickPicksTitle = shelf.title;
+                            songsTaken = true;
+                        }
+                        continue;
+                    }
+                    m_homeShelves.append(shelfToMap(shelf));
+                }
+                // A feed with no songs has no Quick picks: the last feed's,
+                // perhaps another account's, do not stay under it.
+                if (!songsTaken) {
+                    m_quickPicks.clear();
+                    m_quickPicksTitle.clear();
+                }
+                // The one sure sign the feed is the account's: YouTube Music
+                // answers a session it does not accept with the signed-out
+                // feed, 200 OK. YtmSession's own checks decide on the
+                // session; this only says what Home got.
+                m_feedLoggedIn = InnerTube::parseLoggedIn(root);
+                if (asAccount) {
+                    qInfo("catalog: Home's feed, asked as the account, answered logged_in=%s (%d songs, %d shelves)",
+                          m_feedLoggedIn.isEmpty() ? "(not said)" : qPrintable(m_feedLoggedIn),
+                          m_quickPicks.rowCount(), int(m_homeShelves.size()));
+                }
+            } else {
+                m_error = error;
+            }
+            finishHome();
+        }, useAccount ? InnerTube::Auth::IfSignedIn : InnerTube::Auth::Anonymous);
+    }
 
+    if (!(parts & Releases))
+        return;
+    // Never the account's: what came out this week is the same for everyone
+    // in a country, and asking it signed out keeps it so.
     m_innerTube.browse(QStringLiteral("FEmusic_new_releases"), [this](const QJsonObject &root, const QString &error) {
-        if (m_refreshQueued) {
+        if (m_queuedParts & Releases) {
             finishHome();
             return;
         }
@@ -203,11 +275,11 @@ void Catalog::finishHome()
     if (--m_pendingHome > 0)
         return;
     // Asked again while this load was out — another country picked in
-    // Settings. Load again rather than settle on, or retry, the old one; Home
-    // stays "loading" throughout, since the next load starts before anything
-    // is announced.
-    if (std::exchange(m_refreshQueued, false)) {
-        refresh();
+    // Settings, the account confirmed. Load again rather than settle on, or
+    // retry, the old one; Home stays "loading" throughout, since the next
+    // load starts before anything is announced.
+    if (const int queued = std::exchange(m_queuedParts, 0)) {
+        ask(queued);
         return;
     }
     m_shelves = m_releaseShelves + m_homeShelves;
@@ -219,7 +291,7 @@ void Catalog::finishHome()
         // Nothing at all: a request that dropped, most likely. Ask again by
         // itself rather than leaving Home empty until someone presses RETRY.
         ++m_retries;
-        QTimer::singleShot(m_retries * 4000, this, &Catalog::load);
+        QTimer::singleShot(m_retries * 4000, this, [this]() { load(Feed | Releases); });
     }
     Q_EMIT homeChanged();
 }

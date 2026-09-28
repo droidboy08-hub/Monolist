@@ -796,6 +796,20 @@ ScrollPage {
             }
         }
 
+        // Only while a session is held, as with scrobbling above. On by
+        // default: Home is the first thing an account changes. New releases
+        // are the same for everyone, so they never go as the account.
+        ToggleRow {
+            visible: Account.state === "active" || Account.state === "checking" || Account.state === "unreachable"
+            width: parent.width
+            label: "Use my account for Home"
+            hint: "Quick picks and the shelves under them come from your YouTube Music account, once YouTube Music "
+                  + "has confirmed the sign-in. New releases stay the same for everyone. Off, Home is the one "
+                  + "anyone would see."
+            checked: Account.useForHome
+            onToggled: Account.useForHome = !Account.useForHome
+        }
+
         HRule { width: parent.width }
 
         // — updates —
@@ -980,8 +994,11 @@ ScrollPage {
                       + (Player.saavnEnabled ? ", and the sound from JioSaavn where it has the same song. " : ". ")
                       + (Scrobbler.state === "connected" || Account.state === "active"
                          || Account.state === "checking" || Account.state === "unreachable"
-                         ? "They are fetched without an account; what a connected account is told is set out "
-                           + "under Connections."
+                         ? (Account.state === "active" && Account.useForHome
+                            ? "They are fetched without an account, but for Home's own feed, which is your YouTube "
+                              + "Music account's; what a connected account is told is set out under Connections."
+                            : "They are fetched without an account; what a connected account is told is set out "
+                              + "under Connections.")
                          : "Nothing is signed in: no account, and nothing about you leaves this computer.")
             }
             DataCredit {

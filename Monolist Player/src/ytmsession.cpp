@@ -16,10 +16,11 @@
 
 namespace {
 
-// The jar's name in SecretStore, and the one setting: the account's name.
-// Nothing secret is ever written to settings.
+// The jar's name in SecretStore, and the settings: the account's name, and
+// whether Home uses the account. Nothing secret is ever written to settings.
 const QString kSecretName = QStringLiteral("ytmusic.cookies");
 const QString kNameKey = QStringLiteral("ytmusic.account_name");
+const QString kHomeKey = QStringLiteral("ytmusic.use_for_home");
 
 // Far above any cookies.txt worth reading; a file this size is something else.
 constexpr qint64 kMaxFileBytes = 16 * 1024 * 1024;
@@ -89,7 +90,29 @@ YtmSession::YtmSession(Library *library, QObject *parent)
     connect(&m_checkTimer, &QTimer::timeout, this, &YtmSession::check);
     m_saveTimer.setSingleShot(true);
     connect(&m_saveTimer, &QTimer::timeout, this, &YtmSession::save);
+    // On until the user turns it off: someone who signs in has asked for
+    // what the account knows, and Home is the first of it.
+    m_useForHome = !m_library || m_library->settingValue(kHomeKey) != QLatin1String("0");
     updateStatus();
+}
+
+void YtmSession::setUseForHome(bool use)
+{
+    if (use == m_useForHome)
+        return;
+    m_useForHome = use;
+    if (m_library)
+        m_library->setSetting(kHomeKey, use ? QStringLiteral("1") : QStringLiteral("0"));
+    qInfo("ytmusic: Home %s", use ? "asks as the account while one is signed in" : "stays signed out");
+    updateStatus();
+    Q_EMIT useForHomeChanged();
+}
+
+bool YtmSession::accountForHome() const
+{
+    // What the hook asks of an IfSignedIn call (authHeaders), so what Home
+    // believes it asked as is what it did.
+    return m_useForHome && m_state == State::Active && !m_jar.isEmpty();
 }
 
 YtmSession::~YtmSession()
@@ -251,8 +274,12 @@ void YtmSession::updateStatus()
         line = QStringLiteral("Checking the sign-in%1 with YouTube Music…").arg(who);
         break;
     case State::Active:
-        line = QStringLiteral("YouTube Music confirms the sign-in. Nothing uses it yet: your own Home and "
-                              "library come next, and playback, search, lyrics and radio always stay signed out.");
+        line = m_useForHome
+            ? QStringLiteral("YouTube Music confirms the sign-in. Home shows your own feed; your library comes "
+                             "next. Playback, search, lyrics and radio always stay signed out.")
+            : QStringLiteral("YouTube Music confirms the sign-in. Nothing uses it while Home is set to stay "
+                             "signed out; your library comes next. Playback, search, lyrics and radio always "
+                             "stay signed out.");
         if (m_memoryOnly) {
             line += QStringLiteral(" It is forgotten when Monolist closes: %1")
                         .arg(SecretStore::unavailableReason().toHtmlEscaped());
@@ -843,5 +870,7 @@ void YtmSession::showDemo(const QString &demo)
         m_name.clear();
         setState(State::SignedOut);
     }
+    // Any session held before is gone, so nothing goes as the account now.
+    Q_EMIT sessionChanged();
     qInfo("ytmusic: showing a demonstration: %s (no cookies held, nothing sent)", qPrintable(state()));
 }

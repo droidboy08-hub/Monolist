@@ -178,6 +178,9 @@ int main(int argc, char *argv[])
         // stand-in server on this computer; in MONOLIST_DATA_DIR only.
         if (arguments.contains(QStringLiteral("--ytm-session-test")))
             return runYtmSessionSelfTest(&library) == 0 ? 0 : 1;
+        // Home's feed as that account, against the same stand-in.
+        if (arguments.contains(QStringLiteral("--home-account-test")))
+            return runHomeAccountSelfTest(&library) == 0 ? 0 : 1;
         // The one visitor id every InnerTube shares, against the same
         // stand-in, with its store in memory.
         if (arguments.contains(QStringLiteral("--visitor-test")))
@@ -430,7 +433,13 @@ int main(int argc, char *argv[])
     // start, and the songs played lately, refreshed whenever a play is
     // recorded — which for a song only loaded is when Play is pressed, not
     // when it became the current track.
+    //
+    // The feed is the YouTube Music account's once the session is confirmed
+    // (a few seconds in, for one restored at launch) and while Settings lets
+    // Home use it; until then, and without an account, it is exactly the
+    // signed-out feed it always was. New releases always are.
     Catalog catalog;
+    catalog.followAccount(&ytmSession);
     catalog.refresh();
     catalog.reloadRecent();
     QObject::connect(&player, &PlaybackController::playRecorded, &catalog, &Catalog::reloadRecent);

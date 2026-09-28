@@ -755,6 +755,12 @@ first failure`.
                                                     visitor id and a brand channel (onBehalfOfUser), the
                                                     check, rotation, 400/401/403, restart, sign-out, the
                                                     offer to delete the imported file, no value in the log
+    monolist --home-account-test                    Home's feed as that account, against the same stand-in:
+                                                    signed out byte for byte as before; the feed alone asked
+                                                    again as the account once it is confirmed (logged_in=1),
+                                                    new releases never; "Use my account for Home" off and on;
+                                                    a sign-out and a 403 with the feed on its way; a launch
+                                                    with a stored session; no value in the log
     monolist --visitor-test                         the one visitor id every InnerTube shares, against the
                                                     same stand-in: one fetch, a stored id used at once, the
                                                     30-day limit, LOGIN_REQUIRED renewed and asked once
@@ -829,7 +835,7 @@ be, for a look at a state:
 
 `MONOLIST_DATA_DIR` keeps the database somewhere else, so a test never touches
 the real library; the scrobbling tests, `--ytm-session-test`,
-`--download-cleanup-test` and `--library-edit-test` refuse to run without it,
+`--home-account-test`, `--download-cleanup-test` and `--library-edit-test` refuse to run without it,
 since they empty the scrobble queue, replace the stored session, open the
 downloads on that database or write playlists and likes into it. It moves downloads too, to `downloads` inside it, so a test never
 writes to the real Music folder. `MONOLIST_DOWNLOAD_DIR` names the download
