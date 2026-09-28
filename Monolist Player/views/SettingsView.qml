@@ -275,6 +275,53 @@ ScrollPage {
             onToggled: Player.autoplay = !Player.autoplay
         }
 
+        // Sound quality, chosen like the video size below. High is the one
+        // that brings in a second company's service, so it is never on until
+        // the listener picks it: on Standard, JioSaavn is not asked anything.
+        Text {
+            text: "SOUND"
+            font.family: Theme.fontFamily
+            font.pixelSize: 11
+            font.weight: Font.Bold
+            font.letterSpacing: Theme.tracking(11, 0.08)
+            color: Theme.neutral700
+        }
+
+        Row {
+            spacing: -Theme.ruleWidth
+
+            ChoiceChip {
+                label: "Standard"
+                selected: !Player.saavnEnabled
+                onPicked: Player.saavnEnabled = false
+            }
+            ChoiceChip {
+                label: "High · 320 kbps"
+                selected: Player.saavnEnabled
+                onPicked: Player.saavnEnabled = true
+            }
+        }
+
+        Note {
+            text: Player.saavnEnabled
+                  ? "Each song is also looked for on JioSaavn, an Indian music service, by title and artist, and plays "
+                    + "from there at up to 320 kbps only when it is exactly the same recording. Otherwise YouTube "
+                    + "plays, as on Standard."
+                  : "YouTube's own stream (Opus, about 160 kbps). Nothing is asked of any other service."
+        }
+
+        // What JioSaavn is told, said plainly: the requests claim to come
+        // from somewhere they do not.
+        ToggleRow {
+            visible: Player.saavnEnabled
+            width: parent.width
+            label: "Send Indian region headers to JioSaavn"
+            hint: "Many songs are offered only in India, so each request claims to come from an Indian address, "
+                  + "which it does not. Off, far fewer songs are found there."
+            checked: Player.saavnIndiaHeaders
+            onToggled: Player.saavnIndiaHeaders = !Player.saavnIndiaHeaders
+        }
+
         Text {
             text: "VIDEO"
             font.family: Theme.fontFamily
@@ -916,7 +963,8 @@ ScrollPage {
                 // Once an account is connected, "nothing is signed in" would
                 // no longer be true; nor while a YouTube Music session is
                 // held and being checked, which sends its cookies.
-                text: "Songs, search, lyrics and artwork come from YouTube Music, LRCLIB, yt-dlp and FFmpeg. "
+                text: "Songs, search, lyrics and artwork come from YouTube Music, LRCLIB, yt-dlp and FFmpeg"
+                      + (Player.saavnEnabled ? ", and the sound from JioSaavn where it has the same song. " : ". ")
                       + (Scrobbler.state === "connected" || Account.state === "active"
                          || Account.state === "checking" || Account.state === "unreachable"
                          ? "They are fetched without an account; what a connected account is told is set out "

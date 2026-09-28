@@ -93,6 +93,12 @@ qt_add_executable(monolist
     ${MONOLIST_MPV_SOURCES}
     src/ytdlp.h                    src/ytdlp.cpp
     src/streamresolver.h           src/streamresolver.cpp
+    # JioSaavn: the same song at up to 320 kbps where it has it, raced
+    # against the ladder above; DES because its links come encrypted with it,
+    # and Qt has none. Its tests are --saavn-test and --saavn.
+    src/jiosaavn.h                 src/jiosaavn.cpp
+    src/des.h                      src/des.cpp
+    src/saavnselftest.h            src/saavnselftest.cpp
     src/downloadmanager.h          src/downloadmanager.cpp
     src/downloadmodels.h           src/downloadmodels.cpp
     src/downloadselftest.h         src/downloadselftest.cpp

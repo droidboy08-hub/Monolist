@@ -880,6 +880,9 @@ void Library::clearHistory()
     // And the stored visitor id, by which YouTube could still link what is
     // played next to what was just cleared.
     InnerTube::forgetVisitorData();
+    // JioSaavn's remembered answers name every song played or queued next:
+    // a cache, but one that would outlive the history it mirrors.
+    q.exec(QStringLiteral("DELETE FROM saavn_matches"));
     reloadHistory();
     Q_EMIT historyChanged();
     Q_EMIT notice(QStringLiteral("History cleared"));
