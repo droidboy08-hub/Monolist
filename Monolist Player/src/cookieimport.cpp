@@ -76,6 +76,9 @@ struct Collector {
     Result &result;
     qint64 now;
     QSet<QString> kept;   // identity()
+    // Which of the account's cookies were past their date, so a refusal can
+    // tell an old export from one made signed out.
+    QSet<QByteArray> expiredNames;
 
     void add(const Cookie &cookie)
     {
@@ -90,6 +93,7 @@ struct Collector {
         }
         if (cookie.expires > 0 && cookie.expires <= now) {
             ++result.expired;
+            expiredNames.insert(cookie.name);
             return;
         }
         // The same cookie twice (a header naming it twice): the first stays,
@@ -299,8 +303,9 @@ void readHeader(const QByteArray &text, Collector &collector)
     }
     if (otherHeaders) {
         collector.result.error = QStringLiteral(
-            "These request headers have no Cookie header among them. Copy them from a request to "
-            "music.youtube.com made while signed in.");
+            "These request headers have no Cookie header among them, so they hold no sign-in. In the private "
+            "window where you signed in, pick a browse request to music.youtube.com and copy its request "
+            "headers again, or copy it as cURL.");
         return;
     }
     // The value alone, as the developer tools copy it; a line break is as
@@ -353,10 +358,12 @@ void readCurl(const QString &command, Collector &collector)
         return;
     }
     collector.result.error = fromFile
-        ? QStringLiteral("That cURL command reads its cookies from a file (-b with a file name), so they are "
-                         "not in it. Copy the request from the browser's developer tools instead.")
-        : QStringLiteral("That cURL command carries no cookies. Copy a request to music.youtube.com made "
-                         "while signed in, such as a browse request.");
+        ? QStringLiteral("That cURL command reads its cookies from a file (-b and a file name), so the "
+                         "cookies are not in the command itself. Copy the request again from the browser's "
+                         "developer tools: right-click it, then Copy as cURL.")
+        : QStringLiteral("That cURL command carries no cookies: it is a request that sends none. In the "
+                         "private window where you signed in, copy a browse request to music.youtube.com "
+                         "instead.");
 }
 
 bool startsWithWord(const QByteArray &text, const char *word)
@@ -786,28 +793,33 @@ CookieImport::Result CookieImport::parse(const QByteArray &input, qint64 now)
         text.remove(0, 3);
     const QByteArray trimmed = text.trimmed();
 
+    // Each refusal says what was read, in the user's terms, and what to do
+    // instead. None ever quotes the text: it may be the session itself.
     if (trimmed.isEmpty()) {
-        result.error = QStringLiteral("There is nothing to import: it is empty.");
+        result.error = QStringLiteral("There is nothing to import: it is empty. Paste the Cookie header or the "
+                                      "request copied as cURL, or choose the file the extension saved.");
         return result;
     }
     if (text.contains('\0')) {
-        result.error = QStringLiteral("That is not a text file. Choose the cookies.txt file the browser "
-                                      "extension saved.");
+        result.error = QStringLiteral("That is not a text file, so it cannot be a cookies.txt file. Choose the "
+                                      ".txt file the browser extension saved.");
         return result;
     }
 
-    Collector collector{ result, now, {} };
+    Collector collector{ result, now, {}, {} };
     if (startsWithWord(trimmed, "curl") || startsWithWord(trimmed, "curl.exe")) {
         result.format = Format::Curl;
         readCurl(QString::fromUtf8(trimmed), collector);
     } else if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
-        result.error = QStringLiteral("That looks like a JSON cookie export. Monolist reads the cookies.txt "
-                                      "(Netscape) format: export again in that format, or paste the Cookie "
-                                      "header instead.");
+        // Some cookie extensions export JSON, and so does Firefox's Copy All
+        // of a request's headers.
+        result.error = QStringLiteral("That is JSON: a cookie extension's JSON export, or headers copied with "
+                                      "Copy All. Monolist reads the cookies.txt (Netscape) format: export again "
+                                      "in that format, or copy the request as cURL instead.");
         return result;
     } else if (trimmed.contains("Invoke-WebRequest") || trimmed.contains("System.Net.Cookie")) {
-        result.error = QStringLiteral("That is a PowerShell command. Copy the request as cURL (bash) instead, "
-                                      "or paste just its Cookie header.");
+        result.error = QStringLiteral("That is the request copied as PowerShell. Copy it as cURL instead (bash "
+                                      "or cmd, either works), or paste just its Cookie header.");
         return result;
     } else if (looksNetscape(text)) {
         result.format = Format::Netscape;
@@ -829,34 +841,50 @@ CookieImport::Result CookieImport::parse(const QByteArray &input, qint64 now)
                 ? QStringLiteral("The file's columns are separated by spaces, not tabs, so it cannot be read. "
                                  "Export it again with the browser extension rather than copying it through "
                                  "an editor.")
-                : QStringLiteral("The file has no cookies in it.");
+                : QStringLiteral("The file is a cookies.txt file, but has no cookies in it. Export again "
+                                 "with music.youtube.com open in the private window.");
             break;
         default:
-            result.error = QStringLiteral("Nothing here looks like a Cookie header: that is name=value pairs "
-                                          "separated by semicolons.");
+            result.error = QStringLiteral("Monolist cannot read this: it is not a Cookie header (name=value pairs "
+                                          "separated by semicolons), a request copied as cURL, or a cookies.txt "
+                                          "file. Copy the Cookie header's value, or the whole request as cURL.");
             break;
         }
     } else if (result.cookies.isEmpty()) {
         if (result.otherSites + result.elsewhere == 0 && result.expired > 0) {
-            result.error = QStringLiteral("Every YouTube cookie here has expired. Sign in again in the private "
-                                          "window and export afresh.");
+            result.error = QStringLiteral("Every YouTube cookie in it has expired, so this is an old export. Sign "
+                                          "in again in a new private window and export afresh.");
         } else {
-            result.error = QStringLiteral("None of these cookies is for YouTube Music (%1 for other sites). "
-                                          "Export them from a youtube.com tab, or copy a request to "
-                                          "music.youtube.com.").arg(result.otherSites + result.elsewhere);
+            const int others = result.otherSites + result.elsewhere;
+            result.error = QStringLiteral("None of these cookies is for YouTube Music: %1. Export them while "
+                                          "music.youtube.com is the open tab, or copy a request to "
+                                          "music.youtube.com.")
+                               .arg(others == 1 ? QStringLiteral("the only one is for another site")
+                                                : QStringLiteral("all %1 are for other sites, such as google.com")
+                                                      .arg(others));
         }
     } else {
         result.missing = missingRequired(result.cookies);
         const QString expiredNote = result.expired > 0
             ? QStringLiteral(" (%1 had already expired.)").arg(result.expired) : QString();
-        if (result.missing.contains(QStringLiteral("LOGIN_INFO"))) {
-            result.error = QStringLiteral("There is no LOGIN_INFO cookie, so this is not a signed-in session. "
-                                          "Sign in at music.youtube.com in the private window first, then "
-                                          "export or copy again.") + expiredNote;
+        if (result.missing.contains(QStringLiteral("LOGIN_INFO")) && collector.expiredNames.contains("LOGIN_INFO")) {
+            result.error = QStringLiteral("This sign-in has expired: its LOGIN_INFO cookie is past its date, so "
+                                          "this is an old export. Sign in again in a new private window and "
+                                          "export afresh.");
+        } else if (result.missing.contains(QStringLiteral("LOGIN_INFO"))) {
+            // The usual reasons: copied before signing in, or an extension
+            // not allowed in private windows, used in a normal one instead.
+            result.error = QStringLiteral("This was copied while signed out: there is no LOGIN_INFO cookie, "
+                                          "which YouTube sets only once you sign in. Sign in at "
+                                          "music.youtube.com in the private window (your picture shows at the "
+                                          "top right), then export or copy again. An extension must be allowed "
+                                          "in private windows, or it cannot see that window's cookies.")
+                           + expiredNote;
         } else if (!result.missing.isEmpty()) {
-            result.error = QStringLiteral("There is no SAPISID or __Secure-3PAPISID cookie, which YouTube needs "
-                                          "to accept a signed-in request. Export again from the same private "
-                                          "window, after signing in.") + expiredNote;
+            result.error = QStringLiteral("The sign-in is incomplete: the SAPISID cookie (or __Secure-3PAPISID) "
+                                          "is missing, and YouTube needs it to accept a signed-in request. In the "
+                                          "private window where you signed in, export with music.youtube.com as "
+                                          "the open tab, or copy a request to music.youtube.com.") + expiredNote;
         }
     }
     if (!result.error.isEmpty()) {

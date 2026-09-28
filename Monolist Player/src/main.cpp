@@ -323,8 +323,9 @@ int main(int argc, char *argv[])
     // exactly as signed out as it always was.
     YtmSession ytmSession(&library);
     ytmSession.start();
-    // --ytm-demo <state>[+file]: the Settings row in that state, with an
-    // invented account and no cookies, for a look or a screenshot.
+    // --ytm-demo <state>[+file]: the Settings row in that state (active,
+    // checking, unreachable, rejected, notsignedin, unreadable, signedout),
+    // with an invented account and no cookies, for a look or a screenshot.
     if (const int demoFlag = app.arguments().indexOf(QStringLiteral("--ytm-demo"));
         demoFlag >= 0 && demoFlag + 1 < app.arguments().size())
         ytmSession.showDemo(app.arguments().at(demoFlag + 1));

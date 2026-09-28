@@ -14,7 +14,8 @@ import Monolist
 // do next: connect, cancel, disconnect or reconnect. What the button does is
 // the page's business; the row only asks, through its signals. An account
 // that needs reconnecting can also be let go of, with a second button beside
-// the first. One built but unable to work here (no key in this build) has no
+// the first, and one that could not be reached can be asked again at once.
+// One built but unable to work here (no key in this build) has no
 // dead CONNECT: the status line says why, and the button opens the steps, as
 // a row not built yet does.
 Item {
@@ -37,11 +38,17 @@ Item {
     property string serviceState: "off"
     // Who is connected, shown while connected.
     property string accountName: ""
+    // Where things stand in a few words, in bold under the detail: "Connected
+    // as <name>" while connected, unless the row has words of its own for
+    // its states ("Checking…", "Session expired"). Plain text; none when
+    // empty.
+    property string headline: connected && accountName.length > 0 ? "Connected as " + accountName : ""
     // One line on where things stand: "12 scrobbles waiting", "This build has
     // no Last.fm key". Red when it is something to act on. Styled text: it
     // may carry a link (where to revoke access, a page to open by hand).
     property string statusLine: ""
-    // A small line of credit the service asks for, styled text with links.
+    // A small line of fine print, styled text with links: a credit the
+    // service asks for, or what the button leaves undone.
     property string credit: ""
     // While waiting on the browser: a second button, for the person who has
     // done what the browser asked ("I'VE APPROVED IT"). None when empty.
@@ -58,6 +65,10 @@ Item {
     // instead of reconnecting it ("DISCONNECT", "SIGN OUT"). It asks through
     // disconnectRequested. None when empty.
     property string forgetText: ""
+    // While connected, a second button to ask the service again now rather
+    // than wait ("CHECK NOW", when it could not be reached). It asks through
+    // retryRequested. None when empty.
+    property string retryText: ""
     // Whatever else the open panel needs, after the steps: YouTube Music's
     // file and paste boxes. Children of the row go here.
     default property alias panelContent: extra.data
@@ -72,6 +83,7 @@ Item {
     signal disconnectRequested()
     signal cancelRequested()
     signal confirmRequested()
+    signal retryRequested()
 
     // The steps, opened by hand from a row not built yet, or not able to work
     // here; a working one shows them on its own while it waits on the
@@ -112,9 +124,11 @@ Item {
                     color: Theme.neutral700
                 }
                 Text {
-                    visible: root.connected && root.accountName.length > 0
+                    id: headlineText
+                    visible: root.headline.length > 0
                     width: parent.width
-                    text: "Connected as " + root.accountName
+                    text: root.headline
+                    textFormat: Text.PlainText   // an account's name is not markup
                     elide: Text.ElideRight
                     font.family: Theme.fontFamily
                     font.pixelSize: 13
@@ -135,7 +149,7 @@ Item {
                     // about this build is not an alarm.
                     color: root.needsAttention ? Theme.accent : Theme.neutral700
                     linkColor: Theme.text
-                    topPadding: root.connected && root.accountName.length > 0 ? 0 : Theme.space1
+                    topPadding: headlineText.visible ? 0 : Theme.space1
                     onLinkActivated: function(link) { Qt.openUrlExternally(link) }
 
                     HoverHandler {
@@ -168,6 +182,14 @@ Item {
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: -Theme.ruleWidth
+
+                // First: when the service could not be reached, asking again
+                // is a likelier wish than letting the account go.
+                ActionButton {
+                    visible: root.built && root.connected && root.retryText.length > 0
+                    text: root.retryText
+                    onClicked: root.retryRequested()
+                }
 
                 ActionButton {
                     id: open

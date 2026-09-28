@@ -2239,6 +2239,19 @@ QString InnerTube::parseAccountName(const QJsonObject &root)
     return name;
 }
 
+QString InnerTube::parseAccountHandle(const QJsonObject &root)
+{
+    const QJsonValue header = dig(root, { "actions", "#0", "openPopupAction", "popup", "multiPageMenuRenderer",
+                                          "header", "activeAccountHeaderRenderer" });
+    QString handle = joinRuns(dig(header, { "channelHandle", "runs" }).toArray()).trimmed();
+    if (handle.isEmpty())
+        handle = dig(header, { "channelHandle", "simpleText" }).toString().trimmed();
+    // A handle is "@" and a word of letters, digits, '.', '_' or '-' (in any
+    // script); whatever else the menu might put there is not shown as one.
+    static const QRegularExpression shape(QStringLiteral(R"(^@[\p{L}\p{N}._\-]{1,100}$)"));
+    return shape.match(handle).hasMatch() ? handle : QString();
+}
+
 QString InnerTube::parseLoggedIn(const QJsonObject &root)
 {
     const QJsonArray services = dig(root, { "responseContext", "serviceTrackingParams" }).toArray();

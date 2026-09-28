@@ -8,6 +8,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QLocale>
 #include <QNetworkCookie>
 #include <QNetworkInformation>
 #include <QRandomGenerator>
@@ -30,10 +31,15 @@
 
 namespace {
 
-// The jar's name in SecretStore, and the settings: the account's name, and
-// what the account is used for. Nothing secret is ever written to settings.
+// The jar's name in SecretStore, and the settings: the account's name and
+// public handle, and what the account is used for. Nothing secret is ever
+// written to settings.
 const QString kSecretName = QStringLiteral("ytmusic.cookies");
 const QString kNameKey = QStringLiteral("ytmusic.account_name");
+const QString kHandleKey = QStringLiteral("ytmusic.account_handle");
+// Where a session is signed out at Google: Google Account → Security → Your
+// devices.
+const QString kDevicesUrl = QStringLiteral("https://myaccount.google.com/device-activity");
 const QString kHomeKey = QStringLiteral("ytmusic.use_for_home");
 const QString kPlayKey = QStringLiteral("ytmusic.play_when_needed");
 const QString kReportKey = QStringLiteral("ytmusic.report_listens");
@@ -100,6 +106,7 @@ struct YtmSession::CheckAnswers {
     quint64 run = 0;
     int answered = 0;
     QString name;
+    QString handle;
     QString loggedIn;
     QString menuError;
     QString homeError;
@@ -247,6 +254,7 @@ void YtmSession::start()
     // first, whatever the state of the session now.
     sweepCookieFiles();
     const QString remembered = m_library ? m_library->settingValue(kNameKey) : QString();
+    const QString handle = m_library ? m_library->settingValue(kHandleKey) : QString();
     QByteArray json;
     QString error;
     switch (SecretStore::read(kSecretName, &json, &error)) {
@@ -254,10 +262,11 @@ void YtmSession::start()
         QList<Cookie> jar;
         CookieImport::SessionInfo info;
         m_name = remembered;
+        m_handle = handle;
         if (!CookieImport::fromJson(json, &jar, &info) || !CookieImport::missingRequired(jar).isEmpty()) {
             qWarning("ytmusic: the stored session is not one Monolist can use; it is deleted");
             SecretStore::remove(kSecretName);
-            m_rejectReason = QStringLiteral("the stored copy could not be read");
+            m_ended = Ended::Unreadable;
             setState(State::Rejected);
             break;
         }
@@ -274,6 +283,8 @@ void YtmSession::start()
         // A name with no session: it was refused, and the row says so until
         // the user imports again or signs out.
         m_name = remembered;
+        m_handle = remembered.isEmpty() ? QString() : handle;
+        m_ended = Ended::Unknown;
         setState(remembered.isEmpty() ? State::SignedOut : State::Rejected);
         break;
     case SecretStore::Status::Corrupt:
@@ -281,13 +292,18 @@ void YtmSession::start()
         qWarning("ytmusic: the stored session does not open (%s); it is deleted", qPrintable(error));
         SecretStore::remove(kSecretName);
         m_name = remembered;
-        m_rejectReason = QStringLiteral("the stored copy does not open on this computer");
+        m_handle = handle;
+        m_ended = Ended::WontOpen;
         setState(State::Rejected);
         break;
     case SecretStore::Status::Unavailable:
         // Nothing was ever kept, so no name either.
-        if (!remembered.isEmpty() && m_library)
-            m_library->setSetting(kNameKey, QString());
+        if (m_library) {
+            if (!remembered.isEmpty())
+                m_library->setSetting(kNameKey, QString());
+            if (!handle.isEmpty())
+                m_library->setSetting(kHandleKey, QString());
+        }
         setState(State::SignedOut);
         break;
     case SecretStore::Status::Failed:
@@ -332,20 +348,49 @@ void YtmSession::setState(State state)
     updateStatus();
 }
 
-// Styled text: what came from outside (the account's name, an error) is
-// escaped where it is put in.
+QString YtmSession::signedOutNotice()
+{
+    return QStringLiteral("Signed out: Monolist's encrypted copy of the session is deleted. At Google the session "
+                          "itself lasts until it expires. To end it now, open your Google Account → Security → "
+                          "<a href=\"%1\">Your devices</a>, choose the browser you signed in with, and sign it "
+                          "out there.").arg(kDevicesUrl);
+}
+
+// The status line is styled text: what came from outside (the account's
+// name, an error) is escaped where it is put in. The headline is plain.
+//
+// Each says what happened in the user's terms and what to do next; the
+// reasons behind them are in the log.
 void YtmSession::updateStatus()
 {
     const QString who = m_name.isEmpty() ? QString() : QStringLiteral(" for %1").arg(m_name.toHtmlEscaped());
     QString line;
+    QString headline;
     switch (m_state) {
     case State::SignedOut:
         line = m_notice;
         break;
     case State::Checking:
-        line = QStringLiteral("Checking the sign-in%1 with YouTube Music…").arg(who);
+        headline = QStringLiteral("Checking…");
+        if (m_zeroes > 0) {
+            line = QStringLiteral("YouTube Music answered the sign-in%1 as if signed out. Monolist asks once more "
+                                  "before believing it.").arg(who);
+        } else if (m_fresh) {
+            line = QStringLiteral("Asking YouTube Music whether this sign-in works. Nothing uses it until YouTube "
+                                  "Music says so.");
+        } else {
+            line = QStringLiteral("Asking YouTube Music whether the sign-in%1 still works. Nothing uses it until "
+                                  "YouTube Music says so.").arg(who);
+        }
         break;
     case State::Active: {
+        headline = m_name.isEmpty() ? QStringLiteral("Signed in") : QStringLiteral("Signed in as ") + m_name;
+        if (!m_handle.isEmpty())
+            headline += QStringLiteral(" · ") + m_handle;
+        // Whose feed and history these are: a brand channel's, not the
+        // account's own.
+        if (!m_info.delegatedId().isEmpty())
+            headline += QStringLiteral(" · a brand channel");
         // What the switches under the row let it be used for, and nothing
         // it is not.
         QStringList uses;
@@ -373,17 +418,66 @@ void YtmSession::updateStatus()
         }
         break;
     }
-    case State::Unreachable:
-        line = QStringLiteral("YouTube Music could not be reached to check the sign-in%1, so it is not used "
-                              "yet. Monolist asks again later, and plays signed out meanwhile.").arg(who);
-        break;
-    case State::Rejected:
-        line = QStringLiteral("Your YouTube Music session%1 has ended%2. Import it again to sign back in; "
-                              "Monolist plays on signed out.")
-                   .arg(who, m_rejectReason.isEmpty() ? QString()
-                                                      : QStringLiteral(": ") + m_rejectReason.toHtmlEscaped());
+    case State::Unreachable: {
+        headline = QStringLiteral("Could not reach YouTube Music");
+        // A time of day rather than "in five minutes", which would go stale
+        // on the screen.
+        const QString when = m_retryAt.isValid()
+            ? QStringLiteral("at %1").arg(QLocale::system().toString(m_retryAt.time(), QLocale::ShortFormat))
+            : QStringLiteral("later");
+        line = QStringLiteral("The sign-in%1 is kept, but not used until YouTube Music has confirmed it. Monolist "
+                              "tries again %2, or as soon as the network is back; until then it plays signed out.")
+                   .arg(who, when);
         break;
     }
+    case State::Rejected: {
+        const QString status = m_endedStatus > 0 ? QStringLiteral(" (HTTP %1)").arg(m_endedStatus) : QString();
+        switch (m_ended) {
+        case Ended::Refused:
+        case Ended::SignedOut:
+            if (m_fresh) {
+                // Imported, and answered as signed out from the first: the
+                // copy was never a working sign-in.
+                headline = QStringLiteral("Not signed in");
+                line = m_ended == Ended::Refused
+                    ? QStringLiteral("YouTube Music refused this sign-in%1: the session had already ended, or "
+                                     "was signed out in the browser after it was copied. ").arg(status)
+                    : QStringLiteral("YouTube Music answered this sign-in as signed out: it was copied before "
+                                     "signing in, or from a window that was signed out afterwards. ");
+                line += QStringLiteral("In a new private window, sign in at music.youtube.com (your picture shows "
+                                       "at the top right), then export or copy it again.");
+            } else {
+                headline = QStringLiteral("Session expired");
+                line = m_ended == Ended::Refused
+                    ? QStringLiteral("YouTube Music no longer accepts the sign-in%1%2: the session has ended. ")
+                          .arg(who, status)
+                    : QStringLiteral("YouTube Music now answers the sign-in%1 as signed out: the session has "
+                                     "ended. ").arg(who);
+                line += QStringLiteral("Sessions last days to weeks, and end at once when they are signed out, in "
+                                       "the browser or from your Google Account. Import a new one to sign back "
+                                       "in; until then Monolist plays signed out.");
+            }
+            break;
+        case Ended::Unreadable:
+        case Ended::WontOpen:
+            headline = QStringLiteral("Sign-in not restored");
+            line = m_ended == Ended::WontOpen
+                ? QStringLiteral("Monolist's stored copy of the sign-in%1 does not open here: it is encrypted for "
+                                 "one user on one computer. ").arg(who)
+                : QStringLiteral("Monolist's stored copy of the sign-in%1 could not be read. ").arg(who);
+            line += QStringLiteral("It has been deleted. Import the session again to sign back in; until then "
+                                   "Monolist plays signed out.");
+            break;
+        case Ended::Unknown:
+            headline = QStringLiteral("Session expired");
+            line = QStringLiteral("The YouTube Music session%1 has ended. Import a new one to sign back in; until "
+                                  "then Monolist plays signed out.").arg(who);
+            break;
+        }
+        break;
+    }
+    }
+    m_headline = headline;
     m_statusLine = line;
     Q_EMIT changed();
 }
@@ -402,7 +496,8 @@ bool YtmSession::importFile(const QUrl &file)
         return false;
     }
     if (input.size() > kMaxFileBytes) {
-        m_importError = QStringLiteral("%1 is far too large to be a cookies file.").arg(name);
+        m_importError = QStringLiteral("%1 is far too large to be a cookies.txt file, which holds a few kilobytes. "
+                                       "Choose the file the extension saved.").arg(name);
         Q_EMIT changed();
         return false;
     }
@@ -467,7 +562,10 @@ bool YtmSession::importResult(const CookieImport::Result &result, const QString 
     m_memoryOnly = stored == SecretStore::Status::Unavailable;
     m_importError.clear();
     m_notice.clear();
-    m_rejectReason.clear();
+    m_ended = Ended::Unknown;
+    m_endedStatus = 0;
+    m_retryAt = QDateTime();
+    m_fresh = true;
     m_zeroes = 0;
     m_failures = 0;
     m_confirmed = false;
@@ -476,8 +574,11 @@ bool YtmSession::importResult(const CookieImport::Result &result, const QString 
     // Whose session this is, YouTube Music says; a name kept from before
     // may be another account's.
     m_name.clear();
-    if (m_library)
+    m_handle.clear();
+    if (m_library) {
         m_library->setSetting(kNameKey, QString());
+        m_library->setSetting(kHandleKey, QString());
+    }
     qInfo("ytmusic: imported %s%s, from %s: %s; %s, %d bytes", qPrintable(result.summary()),
           qPrintable(describe(m_info)), qPrintable(source), qPrintable(joinedNames(m_jar)),
           m_memoryOnly ? "held in memory only (no secret store here)"
@@ -543,10 +644,17 @@ void YtmSession::signOut()
     publishVisitor();
     QString error;
     const SecretStore::Status removed = SecretStore::remove(kSecretName, &error);
+    const bool named = !m_name.isEmpty();
     m_name.clear();
-    if (m_library)
+    m_handle.clear();
+    if (m_library) {
         m_library->setSetting(kNameKey, QString());
-    m_rejectReason.clear();
+        m_library->setSetting(kHandleKey, QString());
+    }
+    m_ended = Ended::Unknown;
+    m_endedStatus = 0;
+    m_retryAt = QDateTime();
+    m_fresh = false;
     m_importError.clear();
     m_zeroes = 0;
     m_failures = 0;
@@ -554,10 +662,12 @@ void YtmSession::signOut()
     m_memoryOnly = false;
     if (removed == SecretStore::Status::Ok || removed == SecretStore::Status::Unavailable) {
         qInfo("ytmusic: signed out; Monolist's copy of the session is deleted (%d cookies)", held);
-        m_notice = QStringLiteral("Signed out, and Monolist's encrypted copy is deleted. The session itself "
-                                  "lasts at Google until it expires; to end it now, sign it out under "
-                                  "<a href=\"https://myaccount.google.com/device-activity\">your Google "
-                                  "Account's devices</a>.");
+        // A session that had already ended has nothing left at Google to
+        // sign out: only its name is forgotten. One that never signed
+        // anyone in (an import answered as signed out) leaves nothing to say.
+        m_notice = held > 0 ? signedOutNotice()
+                 : named    ? QStringLiteral("Signed out. Monolist holds no sign-in now.")
+                            : QString();
     } else {
         qWarning("ytmusic: signed out, but the stored session could not be deleted: %s", qPrintable(error));
         m_notice = QStringLiteral("Signed out, but Monolist could not delete its encrypted copy: %1")
@@ -607,6 +717,7 @@ void YtmSession::check()
     tube->accountMenu(InnerTube::Auth::Checking, [answers, finish](const QJsonObject &root, const QString &error) {
         answers->menuError = error;
         answers->name = InnerTube::parseAccountName(root);
+        answers->handle = InnerTube::parseAccountHandle(root);
         if (answers->visitorData.isEmpty())
             answers->visitorData = InnerTube::parseVisitorData(root);
         if (answers->dataSyncId.isEmpty())
@@ -673,13 +784,22 @@ void YtmSession::checkFinished(const CheckAnswers &answers)
     if (answers.loggedIn == QLatin1String("1") || (answers.loggedIn.isEmpty() && named)) {
         m_zeroes = 0;
         m_failures = 0;
+        m_retryAt = QDateTime();
         if (!answers.name.isEmpty() && answers.name != m_name) {
             m_name = answers.name;
             if (m_library)
                 m_library->setSetting(kNameKey, m_name);
         }
+        // The handle goes with the name it came with: a menu that named the
+        // account but gave no handle leaves none shown.
+        if (!answers.name.isEmpty() && answers.handle != m_handle) {
+            m_handle = answers.handle;
+            if (m_library)
+                m_library->setSetting(kHandleKey, m_handle);
+        }
         const bool news = m_state != State::Active;
         m_confirmed = true;
+        m_fresh = false;
         qInfo("ytmusic: YouTube Music confirms the session (%s)%s",
               answers.loggedIn == QLatin1String("1") ? "logged_in=1" : "the account menu names it",
               m_name.isEmpty() ? "" : qPrintable(QStringLiteral(" as ") + m_name));
@@ -696,12 +816,13 @@ void YtmSession::checkFinished(const CheckAnswers &answers)
         // Once could be a hiccup on their side; twice in a row is an answer.
         if (++m_zeroes >= 2) {
             qWarning("ytmusic: YouTube Music answered logged_in=0 twice: the session is over");
-            reject(QStringLiteral("YouTube Music answered as if signed out"));
+            reject(Ended::SignedOut);
             Q_EMIT checked(QStringLiteral("rejected"));
             return;
         }
         qInfo("ytmusic: YouTube Music answered logged_in=0; asking once more in %d s before believing it",
               m_timing.recheckMs / 1000);
+        updateStatus();   // still Checking, and now it says why it asks again
         scheduleCheck(m_timing.recheckMs);
         Q_EMIT checked(QStringLiteral("again"));
         return;
@@ -717,6 +838,8 @@ void YtmSession::checkFinished(const CheckAnswers &answers)
                                                      : QStringLiteral("the answers did not say");
     qInfo("ytmusic: could not check the session (%s); asking again in %lld s", qPrintable(why),
           (long long)(wait / 1000));
+    // Said on the row, so it is set before the state is.
+    m_retryAt = QDateTime::currentDateTime().addMSecs(wait);
     // One confirmed earlier in this run stays in use through a blip.
     if (!m_confirmed || m_state != State::Active)
         setState(State::Unreachable);
@@ -725,7 +848,7 @@ void YtmSession::checkFinished(const CheckAnswers &answers)
     Q_EMIT checked(QStringLiteral("unreachable"));
 }
 
-void YtmSession::reject(const QString &reason)
+void YtmSession::reject(Ended why, int httpStatus)
 {
     ++m_generation;
     ++m_checkRun;
@@ -740,7 +863,11 @@ void YtmSession::reject(const QString &reason)
     const SecretStore::Status removed = SecretStore::remove(kSecretName, &error);
     if (removed != SecretStore::Status::Ok && removed != SecretStore::Status::Unavailable)
         qWarning("ytmusic: could not delete the refused session: %s", qPrintable(error));
-    m_rejectReason = reason;
+    // m_fresh is left as it was: whether this session had ever been
+    // confirmed is what the row's words depend on.
+    m_ended = why;
+    m_endedStatus = httpStatus;
+    m_retryAt = QDateTime();
     m_zeroes = 0;
     m_failures = 0;
     m_confirmed = false;
@@ -830,7 +957,7 @@ void YtmSession::reportRejected(quint64 session, int httpStatus)
         return;
     const bool wasChecking = m_checking;
     qWarning("ytmusic: YouTube Music refused the session (HTTP %d); its cookies are no longer sent", httpStatus);
-    reject(QStringLiteral("YouTube Music refused it (HTTP %1)").arg(httpStatus));
+    reject(Ended::Refused, httpStatus);
     if (wasChecking)
         Q_EMIT checked(QStringLiteral("rejected"));
 }
@@ -1248,18 +1375,39 @@ void YtmSession::showDemo(const QString &demo)
         m_importedFile = QStringLiteral("demo:cookies-music.youtube.com.txt");
     }
     m_name = QStringLiteral("Demo Listener");
+    m_handle = QStringLiteral("@demolistener");
     m_confirmed = which == QLatin1String("active");
+    m_fresh = false;
+    m_ended = Ended::Unknown;
+    m_endedStatus = 0;
+    m_retryAt = QDateTime();
+    m_notice.clear();
     if (which == QLatin1String("active")) {
         setState(State::Active);
     } else if (which == QLatin1String("checking")) {
         setState(State::Checking);
     } else if (which == QLatin1String("unreachable")) {
+        m_retryAt = QDateTime::currentDateTime().addMSecs(m_timing.retryMinMs);
         setState(State::Unreachable);
     } else if (which == QLatin1String("rejected")) {
-        m_rejectReason = QStringLiteral("YouTube Music refused it (HTTP 403)");
+        m_ended = Ended::Refused;
+        m_endedStatus = 403;
+        setState(State::Rejected);
+    } else if (which == QLatin1String("notsignedin")) {
+        // Straight after an import: YouTube Music has not named anyone.
+        m_name.clear();
+        m_handle.clear();
+        m_fresh = true;
+        m_ended = Ended::SignedOut;
+        setState(State::Rejected);
+    } else if (which == QLatin1String("unreadable")) {
+        m_ended = Ended::WontOpen;
         setState(State::Rejected);
     } else {
         m_name.clear();
+        m_handle.clear();
+        if (which == QLatin1String("signedout"))
+            m_notice = signedOutNotice();
         setState(State::SignedOut);
     }
     // Any session held before is gone, so nothing goes as the account now.

@@ -82,6 +82,24 @@ ScrollPage {
         color: Theme.neutral700
     }
 
+    // The small tracked capitals that name a part of the page ("COUNTRY").
+    // Not called Label: QtQuick.Controls has one.
+    component SmallCaps: Text {
+        font.family: Theme.fontFamily
+        font.pixelSize: 11
+        font.weight: Font.Bold
+        font.letterSpacing: Theme.tracking(11, 0.08)
+        color: Theme.neutral700
+    }
+
+    // A line of the YouTube Music guide: an instruction to follow, so ink.
+    component GuideText: Text {
+        wrapMode: Text.WordWrap
+        font.family: Theme.fontFamily
+        font.pixelSize: 13
+        color: Theme.text
+    }
+
     Column {
         id: column
         x: Theme.space8
@@ -640,9 +658,17 @@ ScrollPage {
 
         // YouTube Music: a session imported from the user's own browser, since
         // Google allows no sign-in from inside an app like this one. The row
-        // says Connected only once YouTube Music has confirmed the session
+        // says Signed in only once YouTube Music has confirmed the session
         // (Account checks it online); while that is under way, or YouTube
-        // Music cannot be reached, it offers SIGN OUT and names no one.
+        // Music cannot be reached, it says so, offers SIGN OUT, and uses the
+        // session for nothing.
+        //
+        // Opened, the row is a guide someone can follow alone: the steps,
+        // then the two ways to copy a sign-in out of a browser (a cookies.txt
+        // file from an extension, or the Cookie header from the developer
+        // tools), each with its own control, then what differs in each
+        // browser. Nothing here signs in to anything or reads a browser's
+        // own cookie store: the user copies the session, and hands it over.
         ServiceRow {
             id: ytmRow
 
@@ -651,6 +677,46 @@ ScrollPage {
             // that was read.
             property bool importing: false
             readonly property string account: Account.state
+            // Room for the two ways side by side, and the browsers as a table.
+            readonly property bool wideGuide: width >= 900
+
+            // What differs from browser to browser, for the table under the
+            // two ways. The extensions are examples, named because people
+            // ask; Monolist has nothing to do with them.
+            readonly property var browsers: [
+                {
+                    name: "Chrome",
+                    window: "The three-dot menu → New Incognito window, or Ctrl+Shift+N (Cmd+Shift+N on a Mac).",
+                    extension: "For example “Get cookies.txt LOCALLY”, from the Chrome Web Store. In chrome://extensions, "
+                               + "open its Details and turn on Allow in Incognito.",
+                    tools: "F12 (Cmd+Option+I on a Mac), then Network. Right-click the request → Copy → Copy as "
+                           + "cURL; bash or cmd, either works."
+                },
+                {
+                    name: "Edge",
+                    window: "The three-dot menu → New InPrivate window, or Ctrl+Shift+N (Cmd+Shift+N on a Mac).",
+                    extension: "Edge takes Chrome's extensions: turn on Allow extensions from other stores in "
+                               + "edge://extensions, add one such as “Get cookies.txt LOCALLY” from the Chrome Web "
+                               + "Store, then turn on Allow in InPrivate in its Details.",
+                    tools: "F12 (Cmd+Option+I on a Mac), then Network. Right-click the request → Copy → Copy as "
+                           + "cURL; bash or cmd, either works."
+                },
+                {
+                    name: "Firefox",
+                    window: "The menu button → New private window, or Ctrl+Shift+P (Cmd+Shift+P on a Mac).",
+                    extension: "For example “cookies.txt”, from addons.mozilla.org. In about:addons, open it and set "
+                               + "Run in Private Windows to Allow.",
+                    tools: "F12 (Cmd+Option+I on a Mac), then Network. Right-click the request → Copy Value → Copy "
+                           + "as cURL; or, in its Headers, turn on Raw beside Request Headers and copy the Cookie line."
+                },
+                {
+                    name: "Safari",
+                    window: "File → New Private Window, or Cmd+Shift+N.",
+                    extension: "No common cookies.txt extension: use B.",
+                    tools: "First turn on Settings → Advanced → Show features for web developers. Then Develop → "
+                           + "Show Web Inspector (Cmd+Option+I) → Network; right-click the request → Copy as cURL."
+                }
+            ]
 
             width: parent.width
             name: "YouTube Music"
@@ -665,20 +731,40 @@ ScrollPage {
                           : account === "rejected" ? "expired"
                           : "off"
             accountName: account === "active" ? Account.accountName : ""
+            // "Signed in as …", "Checking…", "Could not reach YouTube Music",
+            // "Session expired", "Not signed in": Account's words, since it
+            // knows why.
+            headline: importing ? "" : Account.headline
             statusLine: importing ? "" : Account.statusLine
+            // What SIGN OUT leaves undone, while there is a session for it to
+            // sign out.
+            credit: serviceState === "connected"
+                    ? "Signing out deletes Monolist's copy only. To end the session at Google too: Google Account → "
+                      + "Security → <a href=\"https://myaccount.google.com/device-activity\">Your devices</a>."
+                    : ""
             actionText: serviceState === "connected" ? "SIGN OUT"
                         : serviceState === "expired" ? "IMPORT AGAIN"
+                        : serviceState === "off" ? "IMPORT SIGN-IN"
                         : ""
             // A session that ended can be forgotten, name and all, instead
-            // of imported again.
-            forgetText: "SIGN OUT"
+            // of imported again; one that never signed anyone in is only
+            // put away.
+            forgetText: Account.accountName.length > 0 ? "SIGN OUT" : "DISMISS"
+            // The check could not be made: kept, and asked again later, or
+            // now.
+            retryText: account === "unreachable" ? "CHECK NOW" : ""
             steps: [
-                "In your own browser, open a private window and sign in at music.youtube.com, on Google's own page. Firefox is the safest choice.",
-                "Export that tab's youtube.com cookies to a file with a cookies.txt extension. Or open the developer tools, pick any browse request to music.youtube.com, and copy its cookie header, or the whole request as cURL.",
-                "Choose the file, or paste into the box below. It is read once, encrypted with your Windows sign-in (the Keychain on a Mac), and never written to the music database or to any log.",
-                "Monolist then asks YouTube Music, over the internet, whether the sign-in works: that is the only way to know. It says Connected only once YouTube Music does.",
-                "Close the private window without using it again. Monolist offers to delete the exported file as soon as it has read it, and never deletes it by itself.",
-                "A session lasts days to weeks; when it ends Monolist says so and keeps playing signed out. Songs play without it, except one YouTube will not play signed out; search, lyrics and radio always stay signed out. The switches below say what it is used for."
+                "In your own browser, open a private window (how, in each browser, is below) and sign in at music.youtube.com, "
+                + "on Google's own page. You are signed in once your picture shows at the top right. Firefox is the one "
+                + "to prefer: Chrome on Windows can tie a session to itself, which may end a copied one sooner.",
+                "Copy the sign-in out of that window, in one of the two ways below: A, with an extension that saves "
+                + "a cookies.txt file; or B, with the developer tools, copying the Cookie header to paste.",
+                "Close the private window, but do not sign out first. Signing out ends the session at Google, and the "
+                + "copy Monolist holds would stop working at once; closing the window only throws away the browser's "
+                + "own copy.",
+                "Monolist reads the sign-in once and keeps it encrypted with your Windows sign-in (the Keychain on a Mac), "
+                + "never in the music database or any log. It then asks YouTube Music whether it works, and says Signed "
+                + "in only once YouTube Music does."
             ]
             // The last refusal's reason belongs to the last try: a panel
             // opened or closed starts clean.
@@ -692,6 +778,7 @@ ScrollPage {
                 Account.clearImportError()
             }
             onDisconnectRequested: Account.signOut()
+            onRetryRequested: Account.checkNow()
 
             // — the import, in the open panel —
             Note {
@@ -701,65 +788,241 @@ ScrollPage {
                       + "only until it closes."
             }
 
-            ActionButton {
-                text: "CHOOSE FILE…"
-                onClicked: cookieFileDialog.open()
-            }
-
-            // Masked, like a password: what is pasted is the session itself.
-            Item {
+            // The two ways, side by side where there is room: each is whole
+            // on its own, with its own control, and the user takes one.
+            Grid {
+                id: ways
                 width: parent.width
-                height: Math.max(pasteField.implicitHeight, importButton.implicitHeight)
+                columns: ytmRow.wideGuide ? 2 : 1
+                columnSpacing: Theme.space8
+                rowSpacing: Theme.space6
+                readonly property real cell: ytmRow.wideGuide ? (width - columnSpacing) / 2 : width
+                // Side by side, both explanations take the longer one's
+                // height, so the two controls sit on one line.
+                readonly property real textHeight: Math.max(wayA.implicitHeight, wayB.implicitHeight)
 
-                TextField {
-                    id: pasteField
-                    anchors.left: parent.left
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: parent.width - importButton.width - Theme.space4
-                    implicitHeight: 40
-                    echoMode: TextInput.Password
-                    inputMethodHints: Qt.ImhSensitiveData | Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase
-                    // A copied cURL command runs to several thousand characters.
-                    maximumLength: 1048576
-                    placeholderText: "…or paste the cookie header, or the request copied as cURL"
-                    font.family: Theme.fontFamily
-                    font.pixelSize: 13
-                    color: Theme.text
-                    placeholderTextColor: Theme.neutral500
-                    selectionColor: Theme.accent
-                    selectedTextColor: Theme.accentForeground
-                    background: Rectangle {
-                        color: "transparent"
-                        border.width: Theme.ruleWidth
-                        border.color: pasteField.activeFocus ? Theme.accent : Theme.neutral300
+                Column {
+                    width: ways.cell
+                    spacing: Theme.space3
+
+                    SmallCaps { text: "A · WITH AN EXTENSION" }
+                    GuideText {
+                        id: wayA
+                        width: parent.width
+                        height: ytmRow.wideGuide ? ways.textHeight : implicitHeight
+                        text: "Install a cookies.txt extension from your browser's own store (the table below names "
+                              + "some) and allow it in private windows, where extensions are off until you "
+                              + "do. In the private window, with music.youtube.com open, have it export the site's "
+                              + "cookies to a file, then choose that file here. Such an extension can read every "
+                              + "site's cookies: pick a well-known one, and remove it when you are done."
                     }
-                    onAccepted: if (importButton.enabled) importButton.clicked()
+                    ActionButton {
+                        text: "CHOOSE FILE…"
+                        onClicked: cookieFileDialog.open()
+                    }
                 }
 
-                ActionButton {
-                    id: importButton
-                    anchors.right: parent.right
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: "IMPORT"
-                    enabled: pasteField.text.length > 0
-                    onClicked: {
-                        if (Account.importText(pasteField.text)) {
-                            pasteField.clear()
-                            ytmRow.importing = false
+                Column {
+                    width: ways.cell
+                    spacing: Theme.space3
+
+                    SmallCaps { text: "B · WITH THE DEVELOPER TOOLS" }
+                    GuideText {
+                        id: wayB
+                        width: parent.width
+                        height: ytmRow.wideGuide ? ways.textHeight : implicitHeight
+                        text: "No extension needed. In the private window, on music.youtube.com, open the developer "
+                              + "tools, choose Network, and reload the page. Type browse into the filter and click a "
+                              + "request to music.youtube.com. Copy its Cookie request header, or right-click it and "
+                              + "copy it as cURL, and paste it here. What you paste stays hidden, as a password does."
+                    }
+
+                    // Masked, like a password: what is pasted is the session itself.
+                    Item {
+                        width: parent.width
+                        height: Math.max(pasteField.implicitHeight, importButton.implicitHeight)
+
+                        TextField {
+                            id: pasteField
+                            anchors.left: parent.left
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: parent.width - importButton.width - Theme.space4
+                            implicitHeight: 40
+                            echoMode: TextInput.Password
+                            inputMethodHints: Qt.ImhSensitiveData | Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase
+                            // A copied cURL command runs to several thousand characters.
+                            maximumLength: 1048576
+                            placeholderText: "Paste the Cookie header, or the request copied as cURL"
+                            font.family: Theme.fontFamily
+                            font.pixelSize: 13
+                            color: Theme.text
+                            placeholderTextColor: Theme.neutral500
+                            selectionColor: Theme.accent
+                            selectedTextColor: Theme.accentForeground
+                            background: Rectangle {
+                                color: "transparent"
+                                border.width: Theme.ruleWidth
+                                border.color: pasteField.activeFocus ? Theme.accent : Theme.neutral300
+                            }
+                            onAccepted: if (importButton.enabled) importButton.clicked()
+                        }
+
+                        ActionButton {
+                            id: importButton
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: "IMPORT"
+                            enabled: pasteField.text.length > 0
+                            onClicked: {
+                                if (Account.importText(pasteField.text)) {
+                                    pasteField.clear()
+                                    ytmRow.importing = false
+                                }
+                            }
                         }
                     }
                 }
             }
 
-            Text {
+            // Why the last file or paste was not taken, and what to do
+            // instead (CookieImport's words). Under both ways, since either
+            // could have been the one tried.
+            Column {
                 visible: Account.importError.length > 0
                 width: parent.width
-                text: Account.importError
-                textFormat: Text.PlainText
-                wrapMode: Text.WordWrap
-                font.family: Theme.fontFamily
-                font.pixelSize: 13
-                color: Theme.accent
+                spacing: Theme.space1
+
+                SmallCaps {
+                    text: "NOT IMPORTED"
+                    color: Theme.accent
+                }
+                GuideText {
+                    width: parent.width
+                    text: Account.importError
+                    textFormat: Text.PlainText   // never markup, whatever was pasted
+                }
+            }
+
+            Note {
+                width: parent.width
+                text: "A session lasts days to weeks. When it ends, Monolist says so, plays on signed out, and you "
+                      + "import a new one the same way. Songs play without it, except one YouTube will not play "
+                      + "signed out; search, lyrics and radio always stay signed out. Once you are signed in, the "
+                      + "switches under this row say what else it is used for."
+            }
+
+            // — each browser —
+            //
+            // A table where there is room (browser, then the private window,
+            // A and B in columns under their names); stacked, each part
+            // named, where there is not.
+            Column {
+                id: browserTable
+                width: parent.width
+                topPadding: Theme.space2
+
+                readonly property int nameWidth: 88
+                readonly property real partWidth: ytmRow.wideGuide
+                                                  ? (width - nameWidth - Theme.space4 * 2) / 3
+                                                  : width - nameWidth
+
+                SmallCaps {
+                    text: "IN YOUR BROWSER"
+                    bottomPadding: Theme.space2
+                }
+
+                Item {
+                    visible: ytmRow.wideGuide
+                    width: parent.width
+                    height: visible ? headings.implicitHeight + Theme.space2 : 0
+
+                    Row {
+                        id: headings
+                        x: browserTable.nameWidth
+                        spacing: Theme.space4
+
+                        Repeater {
+                            model: ["PRIVATE WINDOW", "A · EXTENSION", "B · DEVELOPER TOOLS"]
+
+                            SmallCaps {
+                                required property string modelData
+                                width: browserTable.partWidth
+                                text: modelData
+                            }
+                        }
+                    }
+                    Rectangle {
+                        anchors.bottom: parent.bottom
+                        width: parent.width
+                        height: Theme.ruleWidth
+                        color: Theme.text
+                    }
+                }
+
+                Repeater {
+                    model: ytmRow.browsers
+
+                    Item {
+                        id: browserRow
+                        required property var modelData
+
+                        width: browserTable.width
+                        height: Math.max(browserName.implicitHeight, parts.implicitHeight) + Theme.space3 * 2
+
+                        GuideText {
+                            id: browserName
+                            y: Theme.space3
+                            width: browserTable.nameWidth - Theme.space3
+                            text: browserRow.modelData.name
+                            font.weight: Theme.weightBlack
+                        }
+
+                        Grid {
+                            id: parts
+                            x: browserTable.nameWidth
+                            y: Theme.space3
+                            columns: ytmRow.wideGuide ? 3 : 1
+                            columnSpacing: Theme.space4
+                            rowSpacing: Theme.space2
+
+                            Repeater {
+                                model: [
+                                    { label: "PRIVATE WINDOW", text: browserRow.modelData.window },
+                                    { label: "A · EXTENSION", text: browserRow.modelData.extension },
+                                    { label: "B · DEVELOPER TOOLS", text: browserRow.modelData.tools }
+                                ]
+
+                                Column {
+                                    id: part
+                                    required property var modelData
+                                    width: browserTable.partWidth
+                                    spacing: 2
+
+                                    // Stacked, each part says which it is;
+                                    // in the table the headings do.
+                                    SmallCaps {
+                                        visible: !ytmRow.wideGuide
+                                        text: part.modelData.label
+                                    }
+                                    GuideText {
+                                        width: part.width
+                                        text: part.modelData.text
+                                        textFormat: Text.PlainText
+                                    }
+                                }
+                            }
+                        }
+
+                        // One browser, then the next: a hairline, as between
+                        // the rows of any list.
+                        Rectangle {
+                            anchors.bottom: parent.bottom
+                            width: parent.width
+                            height: 1
+                            color: Theme.hairline
+                        }
+                    }
+                }
             }
         }
 

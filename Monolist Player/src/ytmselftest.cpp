@@ -387,6 +387,14 @@ int runCookieImportSelfTest()
         t.check(!expired.ok() && expired.error.contains(QLatin1String("LOGIN_INFO"))
                     && expired.error.contains(QLatin1String("expired")),
                 QStringLiteral("the same file read after it expired: refused, saying so"), expired.error);
+        // Two different mistakes, with two different remedies.
+        t.check(expired.error.contains(QLatin1String("old export"))
+                    && !expired.error.contains(QLatin1String("copied while signed out"))
+                    && noLogin.error.contains(QLatin1String("copied while signed out"))
+                    && noLogin.error.contains(QLatin1String("allowed in private windows")),
+                QStringLiteral("an expired LOGIN_INFO is called an old export; a missing one, a copy made signed "
+                               "out (and an extension not allowed in private windows is named)"),
+                expired.error + QStringLiteral(" / ") + noLogin.error);
         const Result nothing = keep(CookieImport::parse("# Netscape HTTP Cookie File\n\n", kNow));
         t.check(!nothing.ok() && nothing.error.contains(QLatin1String("no cookies")),
                 QStringLiteral("a cookies.txt file with no cookies: refused"), nothing.error);
@@ -527,6 +535,14 @@ int runCookieImportSelfTest()
             "[{\"domain\":\".youtube.com\",\"name\":\"SAPISID\",\"value\":\"TESTSAPISID123\"}]", kNow));
         t.check(!json.ok() && json.error.contains(QLatin1String("JSON")), QStringLiteral("a JSON export: refused, naming the format"),
                 json.error);
+        // Firefox's Copy All of a request's headers is JSON too, and is told
+        // the way that works instead.
+        const Result copyAll = keep(CookieImport::parse(
+            "{\"Request Headers (1.2 kB)\":{\"headers\":[{\"name\":\"Cookie\",\"value\":\"SAPISID=TESTSAPISID123\"}]}}",
+            kNow));
+        t.check(!copyAll.ok() && copyAll.error.contains(QLatin1String("Copy All"))
+                    && copyAll.error.contains(QLatin1String("cURL")),
+                QStringLiteral("headers copied with Copy All (JSON): refused, pointing to Copy as cURL"), copyAll.error);
         const Result ps = keep(CookieImport::parse(
             "$session = New-Object Microsoft.PowerShell.Commands.WebRequestSession\n"
             "$session.Cookies.Add((New-Object System.Net.Cookie(\"SAPISID\", \"TESTSAPISID123\", \"/\", \".youtube.com\")))\n"
@@ -979,6 +995,7 @@ int runYtmSessionSelfTest(Library *library)
     }
     const QString secretName = QStringLiteral("ytmusic.cookies");
     const QString nameKey = QStringLiteral("ytmusic.account_name");
+    const QString handleKey = QStringLiteral("ytmusic.account_handle");
     const bool storeHere = SecretStore::available();
     t.note(storeHere ? QStringLiteral("secret store: ") + SecretStore::backendName()
                      : QStringLiteral("no secret store here (") + SecretStore::unavailableReason()
@@ -1057,6 +1074,7 @@ int runYtmSessionSelfTest(Library *library)
     // A clean slate.
     SecretStore::remove(secretName);
     library->setSetting(nameKey, QString());
+    library->setSetting(handleKey, QString());
     const QByteArray fixture = QByteArray(netscapeFixture()).replace("\n", "\r\n");
     const Result expected = CookieImport::parse(fixture);
     t.check(expected.ok(), QStringLiteral("the fixture is a session"), expected.error);
@@ -1143,12 +1161,21 @@ int runYtmSessionSelfTest(Library *library)
     int outcomesBefore = int(outcomes.size());
     t.check(session->importText(QString::fromUtf8(fixture)) && session->state() == QLatin1String("checking"),
             QStringLiteral("a pasted cookies.txt imports, and is being checked"), session->importError());
+    t.check(session->headline() == QStringLiteral("Checking…")
+                && session->statusLine().contains(QLatin1String("whether this sign-in works")),
+            QStringLiteral("the row says Checking…, and that nothing uses it yet"),
+            session->headline() + QStringLiteral(" / ") + session->statusLine());
     waitVerdict(outcomesBefore);
     t.check(session->state() == QLatin1String("active") && session->accountName() == QLatin1String("Monolist Test"),
             QStringLiteral("logged_in=1 and the account menu's name: active, as Monolist Test"),
             session->state() + QStringLiteral(" / ") + session->accountName());
-    t.check(library->settingValue(nameKey) == QLatin1String("Monolist Test"),
-            QStringLiteral("the name, and only the name, is in settings"));
+    t.check(session->accountHandle() == QLatin1String("@monolisttest")
+                && session->headline() == QStringLiteral("Signed in as Monolist Test · @monolisttest"),
+            QStringLiteral("the menu's channel handle is read too: \"Signed in as Monolist Test · @monolisttest\""),
+            session->headline());
+    t.check(library->settingValue(nameKey) == QLatin1String("Monolist Test")
+                && library->settingValue(handleKey) == QLatin1String("@monolisttest"),
+            QStringLiteral("the name and the handle, and nothing else of the account, are in settings"));
     {
         int menu = 0;
         int home = 0;
@@ -1376,6 +1403,11 @@ int runYtmSessionSelfTest(Library *library)
     t.check(session->state() == QLatin1String("rejected") && session->jar().isEmpty()
                 && session->statusLine().contains(QLatin1String("ended")),
             QStringLiteral("and the session is refused: rejected, the cookies dropped"), session->state());
+    t.check(session->headline() == QLatin1String("Session expired")
+                && session->statusLine().contains(QLatin1String("no longer accepts the sign-in for Monolist Test (HTTP 403)"))
+                && session->statusLine().contains(QLatin1String("Import a new one")),
+            QStringLiteral("the row says Session expired, whose, why, and to import a new one"),
+            session->headline() + QStringLiteral(" / ") + session->statusLine());
     if (storeHere) {
         QByteArray gone;
         t.check(SecretStore::read(secretName, &gone) == SecretStore::Status::NotFound,
@@ -1402,6 +1434,8 @@ int runYtmSessionSelfTest(Library *library)
     waitVerdict(outcomesBefore);
     t.check(outcomes.value(outcomesBefore) == QLatin1String("again") && session->state() == QLatin1String("checking"),
             QStringLiteral("a first logged_in=0: asked once more, still checking"), outcomes.value(outcomesBefore));
+    t.check(session->headline() == QStringLiteral("Checking…") && session->statusLine().contains(QLatin1String("asks once more")),
+            QStringLiteral("and the row says it asks once more before believing it"), session->statusLine());
     waitVerdict(outcomesBefore + 1);
     {
         int homes = 0;
@@ -1411,6 +1445,13 @@ int runYtmSessionSelfTest(Library *library)
                     && homes == 2,
                 QStringLiteral("a second logged_in=0: rejected, after two checks"),
                 QStringLiteral("%1, %2 checks").arg(outcomes.value(outcomesBefore + 1)).arg(homes));
+        // Never confirmed since it was imported: the copy was not signed in,
+        // which is not the same as a session that ended.
+        t.check(session->headline() == QLatin1String("Not signed in")
+                    && session->statusLine().contains(QLatin1String("copied before signing in"))
+                    && session->statusLine().contains(QLatin1String("sign in at music.youtube.com")),
+                QStringLiteral("an import answered as signed out: Not signed in, and how to copy one that is"),
+                session->headline() + QStringLiteral(" / ") + session->statusLine());
     }
     homeLoggedIn = "1";
 
@@ -1434,6 +1475,12 @@ int runYtmSessionSelfTest(Library *library)
                     && !session->jar().isEmpty() && !ifSignedIn && checking,
                 QStringLiteral("no answer: unreachable, the session kept but not used; only a check may carry it"),
                 session->state());
+        t.check(session->headline() == QLatin1String("Could not reach YouTube Music")
+                    && session->statusLine().contains(QLatin1String("is kept"))
+                    && session->statusLine().contains(QLatin1String("tries again at ")),
+                QStringLiteral("the row says it could not reach YouTube Music, that the sign-in is kept, and when "
+                               "it tries again"),
+                session->headline() + QStringLiteral(" / ") + session->statusLine());
         QByteArray stored;
         if (storeHere)
             t.check(SecretStore::read(secretName, &stored) == SecretStore::Status::Ok, QStringLiteral("and still stored"));
@@ -1458,8 +1505,12 @@ int runYtmSessionSelfTest(Library *library)
         outcomesBefore = int(outcomes.size());
         session->start();
         t.check(session->state() == QLatin1String("checking") && sameJar(session->jar(), before)
-                    && session->accountName() == QLatin1String("Monolist Test"),
-                QStringLiteral("a restart restores the session, and checks it before using it"), session->state());
+                    && session->accountName() == QLatin1String("Monolist Test")
+                    && session->accountHandle() == QLatin1String("@monolisttest"),
+                QStringLiteral("a restart restores the session, name and handle, and checks it before using it"),
+                session->state());
+        t.check(session->statusLine().contains(QLatin1String("whether the sign-in for Monolist Test still works")),
+                QStringLiteral("while it checks, the row says whose sign-in it is asking about"), session->statusLine());
         t.check(!infoBefore.isEmpty() && session->info() == infoBefore,
                 QStringLiteral("with what was known of it: its visitor id and DATASYNC_ID"));
         const int requestsBeforeCheck = int(standIn.requests.size());
@@ -1476,9 +1527,15 @@ int runYtmSessionSelfTest(Library *library)
     {
         QByteArray gone;
         t.check(session->state() == QLatin1String("signedOut") && session->jar().isEmpty()
-                    && library->settingValue(nameKey).isEmpty()
+                    && library->settingValue(nameKey).isEmpty() && library->settingValue(handleKey).isEmpty()
+                    && session->accountHandle().isEmpty()
                     && (!storeHere || SecretStore::read(secretName, &gone) == SecretStore::Status::NotFound),
-                QStringLiteral("sign out: the stored copy deleted, the name forgotten"), session->state());
+                QStringLiteral("sign out: the stored copy deleted, the name and handle forgotten"), session->state());
+        t.check(session->headline().isEmpty() && session->statusLine().contains(QStringLiteral("Security →"))
+                    && session->statusLine().contains(QLatin1String("Your devices"))
+                    && session->statusLine().contains(QLatin1String("https://myaccount.google.com/device-activity")),
+                QStringLiteral("and the row says where the session lives on: Google Account → Security → Your devices"),
+                session->statusLine());
     }
     browseNow(consumer, QStringLiteral("FEtest_anon"), InnerTube::Auth::IfSignedIn);
     t.check(sameAsBaseline(standIn.requests.last()),
@@ -1574,6 +1631,7 @@ int runYtmSessionSelfTest(Library *library)
     session.reset();
     SecretStore::remove(secretName);
     library->setSetting(nameKey, QString());
+    library->setSetting(handleKey, QString());
     InnerTube::setRegionRejectedHandler({});
     InnerTube::setTestServer(QString());
     settle(50);

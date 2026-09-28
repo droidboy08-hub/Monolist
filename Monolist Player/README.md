@@ -811,8 +811,11 @@ first failure`.
                                                     this computer: signed-out requests byte for byte, each
                                                     host's own cookies, X-Goog-AuthUser, the account's
                                                     visitor id and a brand channel (onBehalfOfUser), the
-                                                    check, rotation, 400/401/403, restart, sign-out, the
-                                                    offer to delete the imported file, no value in the log
+                                                    check, rotation, 400/401/403, restart, sign-out, what
+                                                    the row says in each state (Checking…, Signed in as the
+                                                    name and handle, Could not reach, Session expired, Not
+                                                    signed in, where to end it at Google), the offer to
+                                                    delete the imported file, no value in the log
     monolist --home-account-test                    Home's feed as that account, against the same stand-in:
                                                     signed out byte for byte as before; the feed alone asked
                                                     again as the account once it is confirmed (logged_in=1),
@@ -885,9 +888,12 @@ be, for a look at a state:
                                                     playlist:<id>, playlist:liked
     monolist --query "<text>"                       search, with the text typed in
     monolist --open-queue  /  --now-playing         with the queue, or Now Playing, open
-    monolist --ytm-demo <state>[+file]              the YouTube Music row as active, checking, unreachable
-                                                    or rejected, with an invented account and no cookies;
-                                                    +file adds the offer to delete an imported file
+    monolist --ytm-demo <state>[+file]              the YouTube Music row as active, checking, unreachable,
+                                                    rejected (a session that ended), notsignedin (an import
+                                                    answered as signed out), unreadable (a stored copy that
+                                                    would not open) or signedout (just signed out), with an
+                                                    invented account and no cookies; +file adds the offer
+                                                    to delete an imported file
     monolist --set <key> <value>                    write a setting first (lrclib_url, piped_instances,
                                                     invidious_instances; youtube.visitor launch|home
                                                     keeps the visitor id for one launch, as before;

@@ -391,6 +391,9 @@ public:
     void accountMenu(Auth auth, std::function<void(const QJsonObject &root, const QString &error)> done);
     // The signed-in account's name in account_menu's answer, or empty.
     static QString parseAccountName(const QJsonObject &root);
+    // Its channel handle below the name ("@someone"), or empty: none there,
+    // or not the shape of a handle.
+    static QString parseAccountHandle(const QJsonObject &root);
     // `logged_in` from any answer's responseContext.serviceTrackingParams:
     // "1", "0", or empty when the answer does not say. The one reliable sign
     // that a call was answered as the account: bad cookies are usually

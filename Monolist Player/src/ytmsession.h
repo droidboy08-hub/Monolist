@@ -4,6 +4,7 @@
 #include "innertube.h"
 
 #include <QByteArray>
+#include <QDateTime>
 #include <QElapsedTimer>
 #include <QList>
 #include <QObject>
@@ -86,7 +87,15 @@ class YtmSession : public QObject
     // signedOut | checking | active | unreachable | rejected
     Q_PROPERTY(QString state READ state NOTIFY changed)
     Q_PROPERTY(QString accountName READ accountName NOTIFY changed)
-    // Where things stand, in a sentence; styled text, may hold a link.
+    // The account's channel handle ("@someone"), where the account menu
+    // gave one; kept beside the name.
+    Q_PROPERTY(QString accountHandle READ accountHandle NOTIFY changed)
+    // The state in a few words, for the row's bold line: "Signed in as …",
+    // "Checking…", "Could not reach YouTube Music", "Session expired", "Not
+    // signed in". Plain text; empty when signed out.
+    Q_PROPERTY(QString headline READ headline NOTIFY changed)
+    // Where things stand, and what to do about it, in a sentence or three;
+    // styled text, may hold a link.
     Q_PROPERTY(QString statusLine READ statusLine NOTIFY changed)
     // Why the last import was refused, in a sentence; empty after one that worked.
     Q_PROPERTY(QString importError READ importError NOTIFY changed)
@@ -135,6 +144,8 @@ public:
     QString state() const;
     State stateValue() const { return m_state; }
     QString accountName() const { return m_name; }
+    QString accountHandle() const { return m_handle; }
+    QString headline() const { return m_headline; }
     QString statusLine() const { return m_statusLine; }
     QString importError() const { return m_importError; }
     QString importedFileName() const;
@@ -246,8 +257,11 @@ public:
     const CookieImport::SessionInfo &info() const { return m_info; }
     bool savePending() const { return m_dirty; }
     // An invented account in a state, in memory only: no cookies, so
-    // nothing is ever sent with it. "active", "checking", "unreachable" or
-    // "rejected", with "+file" for the offer to delete an exported file.
+    // nothing is ever sent with it. "active", "checking", "unreachable",
+    // "rejected" (a session that ended), "notsignedin" (an import YouTube
+    // Music answered as signed out), "unreadable" (a stored copy that would
+    // not open) or "signedout" (just signed out), with "+file" for the
+    // offer to delete an exported file.
     void showDemo(const QString &state);
 
 Q_SIGNALS:
@@ -273,12 +287,25 @@ Q_SIGNALS:
 private:
     struct CheckAnswers;
 
+    // Why a session is Rejected, which decides what the row tells the user
+    // to do: a session that ended is imported again; one that was never
+    // signed in is copied again, after signing in.
+    enum class Ended {
+        Unknown,      // before this run: only the name was left
+        Refused,      // 401 or 403 on a call with it
+        SignedOut,    // logged_in=0, twice
+        Unreadable,   // the stored copy is not a session Monolist can use
+        WontOpen,     // the stored copy does not open for this user here
+    };
+
     void setState(State state);
     void updateStatus();
     bool importResult(const CookieImport::Result &result, const QString &source);
     void check();
     void checkFinished(const CheckAnswers &answers);
-    void reject(const QString &reason);
+    void reject(Ended why, int httpStatus = 0);
+    // What the row says after a sign-out: where the session lives on.
+    static QString signedOutNotice();
     void scheduleCheck(qint64 ms);
     void save();
     void watchNetwork();
@@ -314,10 +341,18 @@ private:
     // When yt-dlp last cast doubt on the session (doubt()).
     QElapsedTimer m_lastDoubt;
     QString m_name;
+    QString m_handle;
+    QString m_headline;
     QString m_statusLine;
     QString m_importError;
     QString m_notice;        // what the row says when signed out
-    QString m_rejectReason;
+    Ended m_ended = Ended::Unknown;
+    int m_endedStatus = 0;   // the HTTP status that refused it
+    // Imported in this run and not yet confirmed: a refusal now says the
+    // copy was never signed in, where a later one says the session ended.
+    bool m_fresh = false;
+    // When a check that came to no verdict is made again (Unreachable).
+    QDateTime m_retryAt;
     QString m_importedFile;  // full path, for the offer to delete it
 
     QTimer m_checkTimer;
