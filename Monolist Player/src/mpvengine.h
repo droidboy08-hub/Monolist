@@ -39,7 +39,11 @@ public:
     // Only the file most recently asked for speaks: position, duration, the
     // picture's size, its end and its errors are reported for it alone, never
     // for one it replaced, and nothing at all is reported after stop().
-    void load(const QString &urlOrPath, bool startPlaying = true,
+    //
+    // True when mpv took the request: the file is on its way, and whether it
+    // opens is told later (fileLoaded, or loadFailed). False when it was
+    // refused outright, loadFailed having already been sent.
+    bool load(const QString &urlOrPath, bool startPlaying = true,
               const QString &audioUrl = QString(), qint64 startAt = 0,
               const QVariantMap &headers = QVariantMap());
     void stop();
@@ -87,6 +91,45 @@ public:
     QSize videoSize() const { return m_videoSize; }
     mpv_handle *handle() const { return m_mpv; }
 
+    // What mpv says it is playing, for the file most recently loaded: the
+    // codec it decodes, what the decoder puts out, what the sound device was
+    // opened with, and the bitrate. Every field is read from mpv, none is
+    // taken from where the link came from (an itag, a JioSaavn verdict), so
+    // it is what arrived rather than what was asked for. Empty or 0 until
+    // mpv has said; cleared by load() and stop(); streamInfoChanged as it
+    // fills in, which is once the sound has started.
+    struct StreamInfo {
+        QString codec;            // audio-codec-name: "opus", "aac", "mp3"
+        int sampleRate = 0;       // audio-params: the decoder's output
+        QString sampleFormat;     // "floatp"
+        QString channels;         // "stereo"
+        int outputRate = 0;       // audio-out-params: what the device plays
+        QString outputFormat;     // "float"
+        QString outputChannels;
+        QString output;           // current-ao: "wasapi", "coreaudio"
+        // For a file holding sound alone, its size over its length: the
+        // average of the whole file. For one with a picture in it (a video,
+        // a download's cover), whose size is not all sound, the bitrate its
+        // container declares for the sound, where it declares one (AAC and
+        // MP3 files usually do); otherwise mpv's own measure of the sound
+        // packets decoded, as soon as it has one.
+        int kbps = 0;
+        bool kbpsIsFileAverage = false;
+        bool kbpsIsDeclared = false;
+        double volume = -1.0;     // mpv's volume, in percent, as applied
+
+        bool operator==(const StreamInfo &o) const
+        {
+            return codec == o.codec && sampleRate == o.sampleRate && sampleFormat == o.sampleFormat
+                   && channels == o.channels && outputRate == o.outputRate
+                   && outputFormat == o.outputFormat && outputChannels == o.outputChannels
+                   && output == o.output && kbps == o.kbps && kbpsIsFileAverage == o.kbpsIsFileAverage
+                   && kbpsIsDeclared == o.kbpsIsDeclared && volume == o.volume;
+        }
+        bool operator!=(const StreamInfo &o) const { return !(*this == o); }
+    };
+    StreamInfo streamInfo() const { return m_streamInfo; }
+
 Q_SIGNALS:
     void positionChanged(qint64 ms);
     void durationChanged(qint64 ms);
@@ -102,6 +145,7 @@ Q_SIGNALS:
     // Empty until the file being played turns out to have a picture.
     void videoSizeChanged(const QSize &size);
     void audioDevicesChanged();
+    void streamInfoChanged();
 
 private Q_SLOTS:
     void drainEvents();
@@ -116,6 +160,10 @@ private:
     // True once the file of the latest load has started: what mpv reports
     // from then on is about it.
     bool currentFileStarted() const { return m_currentEntry > 0 && m_startedEntry == m_currentEntry; }
+    // Reads StreamInfo from mpv for the current file; streamInfoChanged if
+    // anything differs. clearStreamInfo empties it for a file on its way.
+    void refreshStreamInfo();
+    void clearStreamInfo();
 
     mpv_handle *m_mpv = nullptr;
     // Which file is the current one. Each load is numbered, and mpv's answer to
@@ -139,4 +187,5 @@ private:
     QSize m_videoSize;
     qint64 m_duration = 0;
     QVariantList m_audioDevices;
+    StreamInfo m_streamInfo;
 };

@@ -65,6 +65,29 @@ QString tierLabel(int tier)
     }
 }
 
+// A codec as a listener knows it, from mpv's name for its decoder.
+QString codecName(const QString &mpvName)
+{
+    static const QHash<QString, QString> names{
+        { QStringLiteral("opus"), QStringLiteral("Opus") },
+        { QStringLiteral("aac"), QStringLiteral("AAC") },
+        { QStringLiteral("mp3"), QStringLiteral("MP3") },
+        { QStringLiteral("mp3float"), QStringLiteral("MP3") },
+        { QStringLiteral("vorbis"), QStringLiteral("Vorbis") },
+        { QStringLiteral("flac"), QStringLiteral("FLAC") },
+        { QStringLiteral("alac"), QStringLiteral("ALAC") },
+    };
+    if (mpvName.startsWith(QLatin1String("pcm_")))
+        return QStringLiteral("PCM");
+    return names.value(mpvName, mpvName);
+}
+
+// 48000 as "48", 44100 as "44.1".
+QString kiloHertz(int hertz)
+{
+    return QString::number(hertz / 1000.0, 'g', 6);
+}
+
 // What JioSaavn needs to find a song: its name, who made it and how long it
 // is — the length being what tells one recording from another.
 Saavn::Target saavnTarget(const QVariantMap &track)
@@ -264,6 +287,12 @@ PlaybackController::PlaybackController(MpvEngine *engine,
         m_engine->setVolume(m_volume);
 
         connect(m_engine, &MpvEngine::audioDevicesChanged, this, &PlaybackController::applyAudioDevice);
+
+        // What mpv says it is playing, which fills in once the sound starts.
+        connect(m_engine, &MpvEngine::streamInfoChanged, this, [this]() {
+            logStreamInfo();
+            Q_EMIT streamInfoChanged();
+        });
     }
     applyAudioDevice();
 
@@ -281,6 +310,9 @@ PlaybackController::PlaybackController(MpvEngine *engine,
     if (QCoreApplication *app = QCoreApplication::instance()) {
         connect(app, &QCoreApplication::aboutToQuit, this, [this]() {
             closePlayEvent();
+            // Now, with any closed a moment ago: there is no next turn of
+            // the event loop to write them on.
+            writePlayEvents();
             // A volume still settling as the app closes is written now
             // rather than lost with the timer.
             if (m_volumeSave.isActive()) {
@@ -370,6 +402,13 @@ PlaybackController::PlaybackController(MpvEngine *engine,
                     setStatus(QStringLiteral("End of the queue"), QString(), false);
                 }
             });
+}
+
+// A listen closed just before the controller goes (a self-test's player at
+// the end of its scope) is still written.
+PlaybackController::~PlaybackController()
+{
+    writePlayEvents();
 }
 
 bool PlaybackController::engineAvailable() const
@@ -590,12 +629,79 @@ void PlaybackController::setStatus(const QString &text, const QString &source, b
                       || source != m_sourceLabel
                       || resolving != m_resolving
                       || error != m_statusError;
+    const bool sourceShown = !m_sourceLabel.isEmpty();
     m_statusText = text;
     m_sourceLabel = source;
     m_resolving = resolving;
     m_statusError = error;
     if (changed)
         Q_EMIT statusChanged();
+    // The stream-info line stands only while the status names a source.
+    if (sourceShown != !m_sourceLabel.isEmpty())
+        Q_EMIT streamInfoChanged();
+}
+
+QString PlaybackController::streamInfo() const
+{
+    // Nothing while the status line names no source (resolving, failed, the
+    // queue run out), whatever was loaded last.
+    if (m_soundOrigin.isEmpty() || m_sourceLabel.isEmpty())
+        return {};
+    QStringList parts{ m_soundOrigin };
+    if (m_engine) {
+        const MpvEngine::StreamInfo sound = m_engine->streamInfo();
+        if (!sound.codec.isEmpty())
+            parts << codecName(sound.codec);
+        if (sound.sampleRate > 0) {
+            parts << (sound.outputRate > 0 && sound.outputRate != sound.sampleRate
+                          ? QStringLiteral("%1 → %2 kHz").arg(kiloHertz(sound.sampleRate), kiloHertz(sound.outputRate))
+                          : QStringLiteral("%1 kHz").arg(kiloHertz(sound.sampleRate)));
+        }
+        if (sound.kbps > 0)
+            parts << QStringLiteral("%1 kbps").arg(sound.kbps);
+    }
+    return parts.join(QStringLiteral(" · "));
+}
+
+void PlaybackController::setSoundOrigin(const QString &origin)
+{
+    // A new load, whatever it is: its line is still to be written.
+    m_streamLogged = false;
+    if (origin == m_soundOrigin)
+        return;
+    m_soundOrigin = origin;
+    Q_EMIT streamInfoChanged();
+}
+
+// One line per file, once mpv has said what it decodes and what the device
+// was opened with: the instrument the engine work is measured by (did the
+// Opus stream arrive, is it resampled, at what gain). mpv -v says the same
+// in its ao and swresample lines, spread over dozens more.
+void PlaybackController::logStreamInfo()
+{
+    if (m_streamLogged || m_soundOrigin.isEmpty() || !m_engine)
+        return;
+    const MpvEngine::StreamInfo s = m_engine->streamInfo();
+    if (s.codec.isEmpty() || s.sampleRate <= 0 || s.outputRate <= 0 || s.output.isEmpty())
+        return;
+    m_streamLogged = true;
+    const QString videoId = currentSourceId();
+    const QString bitrate = s.kbps <= 0 ? QStringLiteral("bitrate not measured yet")
+                          : QStringLiteral("%1 kbps (%2)").arg(s.kbps).arg(
+                                s.kbpsIsFileAverage ? QStringLiteral("file average")
+                                : s.kbpsIsDeclared  ? QStringLiteral("as the file declares it")
+                                                    : QStringLiteral("measured"));
+    const QString resampling = s.outputRate != s.sampleRate
+                                   ? QStringLiteral("resampled %1 -> %2 Hz").arg(s.sampleRate).arg(s.outputRate)
+                                   : QStringLiteral("not resampled");
+    // UTF-8 throughout: the origin has a middle dot, which the message
+    // handler would otherwise get in the system's code page and print as "?".
+    qInfo("stream: %s from %s: %s %d Hz %s %s, %s -> %s %d Hz %s %s, %s, volume %s",
+          qUtf8Printable(videoId.isEmpty() ? m_currentTrack.value(QStringLiteral("title")).toString() : videoId),
+          qUtf8Printable(m_soundOrigin), qUtf8Printable(s.codec), s.sampleRate, qUtf8Printable(s.channels),
+          qUtf8Printable(s.sampleFormat), qUtf8Printable(bitrate), qUtf8Printable(s.output), s.outputRate,
+          qUtf8Printable(s.outputChannels), qUtf8Printable(s.outputFormat), qUtf8Printable(resampling),
+          qUtf8Printable(s.volume >= 0.0 ? QStringLiteral("%1%").arg(s.volume, 0, 'f', 0) : QStringLiteral("unknown")));
 }
 
 void PlaybackController::setPlayingFlag(bool playing)
@@ -1026,20 +1132,39 @@ void PlaybackController::closePlayEvent(bool restarting)
     if (!m_playEventKey.isEmpty() && !restarting)
         m_finalisedThisSession.insert(m_playEventKey);
 
-    // The duration is written here, not when the event opened: a track picked
-    // from search carries no length until mpv has opened the stream and said
-    // so, and a length of zero would make every ratio above meaningless.
-    QSqlQuery finish(AppDatabase::connection());
-    finish.prepare(QStringLiteral(
-        "UPDATE play_events SET track_ms = ?, listened_ms = ?, completed = ?, skipped = ?,"
-        " label = ? WHERE id = ?"));
-    finish.addBindValue(total);
-    finish.addBindValue(listened);
-    finish.addBindValue(completed ? 1 : 0);
-    finish.addBindValue(skipped ? 1 : 0);
-    finish.addBindValue(label);
-    finish.addBindValue(id);
-    finish.exec();
+    // The duration is written with the rest, not when the event opened: a
+    // track picked from search carries no length until mpv has opened the
+    // stream and said so, and a length of zero would make every ratio above
+    // meaningless.
+    //
+    // Written on the next turn of the event loop rather than here: whoever
+    // closes a listen is on the way to starting something (the next song, the
+    // same one again), which should not wait on the database. Everything is
+    // taken now, while the clock still belongs to the song being left, so a
+    // song that then fails to resolve cannot change it; a quit writes it at
+    // once (writePlayEvents).
+    m_playEventWrites.append({ id, total, listened, completed, skipped, label });
+    if (m_playEventWrites.size() == 1)
+        QTimer::singleShot(0, this, &PlaybackController::writePlayEvents);
+}
+
+void PlaybackController::writePlayEvents()
+{
+    const QList<PlayEventClose> writes = std::exchange(m_playEventWrites, {});
+    for (const PlayEventClose &close : writes) {
+        QSqlQuery finish(AppDatabase::connection());
+        finish.prepare(QStringLiteral(
+            "UPDATE play_events SET track_ms = ?, listened_ms = ?, completed = ?, skipped = ?,"
+            " label = ? WHERE id = ?"));
+        finish.addBindValue(close.trackMs);
+        finish.addBindValue(close.listenedMs);
+        finish.addBindValue(close.completed ? 1 : 0);
+        finish.addBindValue(close.skipped ? 1 : 0);
+        finish.addBindValue(close.label);
+        finish.addBindValue(close.id);
+        if (!finish.exec())
+            qWarning("Monolist: could not close a play event: %s", qPrintable(finish.lastError().text()));
+    }
 }
 
 // Everything that decides *where* audio comes from lives here; the rest of the
@@ -1065,6 +1190,7 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
     // skip the new track or an error that would be blamed on it.
     if (engineAvailable())
         m_engine->stop();
+    setSoundOrigin(QString());
 
     // Every track starts as sound. Its picture follows only if the listener
     // left the switch on (m_videoPreferred) and the song has one: asked for
@@ -1135,9 +1261,13 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
 
     // 1 — a downloaded copy, or any source that is already a local file.
     const QString localPath = localCopyOf(track);
+    // mpv first here too (see handleResolved), and nothing said of a file it
+    // refused outright: loadFailed has said that.
     if (!localPath.isEmpty()) {
+        if (!m_engine->load(localPath, autoPlay))
+            return;
         setStatus(QStringLiteral("Offline"), QStringLiteral("Local file"), false);
-        m_engine->load(localPath, autoPlay);
+        setSoundOrigin(QStringLiteral("Offline · Local file"));
         if (autoPlay) {
             startListening();
             prefetchUpcoming();
@@ -1156,8 +1286,10 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
     // 3 — a plain remote URL stored on the row.
     const QString source = track.value(QStringLiteral("sourceUrl")).toString();
     if (!source.isEmpty()) {
+        if (!m_engine->load(source, autoPlay))
+            return;
         setStatus(QStringLiteral("Streaming"), QStringLiteral("Direct URL"), false);
-        m_engine->load(source, autoPlay);
+        setSoundOrigin(QStringLiteral("Streaming · Direct URL"));
         if (autoPlay)
             startListening();
         return;
@@ -1175,28 +1307,37 @@ void PlaybackController::handleResolved(const QString &videoId, const QString &u
         return;                       // a later track superseded this one
     m_pendingVideoId.clear();
 
-    // JioSaavn's links name their bitrate, and that is the point of them, so
-    // the label says it: "JioSaavn · 320 kbps".
     const bool fromSaavn = tier == StreamResolver::TierJioSaavn;
-    const int kbps = fromSaavn && m_resolver ? m_resolver->saavnKbps(videoId) : 0;
-    setStatus(QStringLiteral("Streaming"),
-              kbps > 0 ? QStringLiteral("JioSaavn · %1 kbps").arg(kbps) : tierLabel(tier), false);
     m_consecutiveFailures = 0;
     m_streamVideoId = videoId;
     m_streamTier = tier;
     m_streamFromCache = fromCache;
     m_streamIsVideo = false;
-    // Someone is waiting to hear it, and now it can be heard: a listen. (Once
-    // only — a stream refreshed or re-resolved mid-song arrives here again.)
+    // mpv first: it opens the link on its own thread while everything below
+    // is done on this one. The status line, the listen written down and Home
+    // and History refreshed with it used to come first, and every song start
+    // waited 40-60 ms for them before mpv was even asked, over half a second
+    // once History held a few hundred songs (ROADMAP F35). A link some tiers
+    // only serve to the client that asked for it (the muxed stream's) comes
+    // with the headers to ask as; JioSaavn's CDN wants none, and must not be
+    // sent a YouTube client's.
+    const qint64 resumeAt = std::exchange(m_resumeAt, 0);
+    if (!m_engine
+        || !m_engine->load(url, m_autoPlayAfterResolve, QString(), resumeAt,
+                           m_resolver && !fromSaavn ? m_resolver->headersFor(videoId) : QVariantMap()))
+        return;   // refused outright: loadFailed has already taken it elsewhere, and nothing was heard
+
+    // JioSaavn's links name their bitrate, and that is the point of them, so
+    // the label says it: "JioSaavn · 320 kbps".
+    const int kbps = fromSaavn && m_resolver ? m_resolver->saavnKbps(videoId) : 0;
+    setStatus(QStringLiteral("Streaming"),
+              kbps > 0 ? QStringLiteral("JioSaavn · %1 kbps").arg(kbps) : tierLabel(tier), false);
+    setSoundOrigin(QStringLiteral("Streaming · ") + tierLabel(tier));
+    // Someone is waiting to hear it, and now it is on its way: a listen.
+    // (Once only — a stream refreshed or re-resolved mid-song arrives here
+    // again.)
     if (m_autoPlayAfterResolve)
         startListening();
-    // A link some tiers only serve to the client that asked for it (the muxed
-    // stream's) comes with the headers to ask as. JioSaavn's CDN wants none,
-    // and must not be sent a YouTube client's.
-    if (m_engine)
-        m_engine->load(url, m_autoPlayAfterResolve, QString(), m_resumeAt,
-                       m_resolver && !fromSaavn ? m_resolver->headersFor(videoId) : QVariantMap());
-    m_resumeAt = 0;
     prefetchUpcoming();
 }
 
@@ -1269,8 +1410,8 @@ void PlaybackController::backToSound(bool keepPlaying, const QString &resolvingT
         m_pendingVideoId.clear();
         m_streamIsVideo = false;
         setStatus(QStringLiteral("Offline"), QStringLiteral("Local file"), false);
-        if (m_engine)
-            m_engine->load(localPath, keepPlaying, QString(), m_position);
+        if (m_engine && m_engine->load(localPath, keepPlaying, QString(), m_position))
+            setSoundOrigin(QStringLiteral("Offline · Local file"));
         return;
     }
     const QString videoId = currentSourceId();
@@ -1626,7 +1767,8 @@ void PlaybackController::applyVideo(const QString &videoUrl, const QString &audi
         m_videoAdded = false;
         m_streamIsVideo = true;
         setStatus(QStringLiteral("Streaming"), QStringLiteral("yt-dlp · video"), false);
-        m_engine->load(videoUrl, m_playing || m_autoPlayAfterResolve, audioUrl, m_position, headers);
+        if (m_engine->load(videoUrl, m_playing || m_autoPlayAfterResolve, audioUrl, m_position, headers))
+            setSoundOrigin(QStringLiteral("Streaming · yt-dlp · video"));
     }
     if (!m_videoPlaying) {
         m_videoPlaying = true;

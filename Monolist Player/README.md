@@ -125,8 +125,10 @@ JioSaavn link mpv refuses is forgotten and the song carries on from
 YouTube's ladder at the same second, from a link fetched beside it. Requests
 carry an Indian `X-Forwarded-For` while "Send Indian region headers" is on,
 because some songs are offered only in India, and follow redirects only to
-JioSaavn's own hosts. Now Playing says which source is playing ("SOUND:
-JIOSAAVN · 320 KBPS"). Downloads and lyrics do not use it.
+JioSaavn's own hosts. Now Playing says which source is playing, and what
+mpv says arrived ("STREAMING · JIOSAAVN · AAC · 44.1 → 48 KHZ · 321 KBPS": the
+file's own average, container included).
+Downloads and lyrics do not use it.
 
 ### Downloads
 
@@ -520,6 +522,17 @@ the app is opened from Finder.
 The debug build keeps its console. Start it with `QT_FORCE_STDERR_LOGGING=1` to
 see the log there, and with `MONOLIST_MPV_LOG=warn` (or `info`, `v`) to add
 mpv's own messages.
+
+Every file that starts playing writes one `stream:` line, built only from what
+mpv reports once the sound has started: the codec and the decoder's rate,
+channels and sample format; the bitrate (the file's average for a file that
+holds sound alone; for one with a picture in it, what its container declares,
+or else mpv's own measure); what the sound device was opened with; whether the
+sound is resampled; and mpv's volume. For example
+`stream: CmThpha4Hoo from Streaming · InnerTube: aac 44100 Hz stereo floatp,
+130 kbps (file average) -> wasapi 48000 Hz stereo float, resampled 44100 ->
+48000 Hz, volume 65%`. Now Playing shows the short form of the same line
+(`Player.streamInfo`).
 
     monolist --play <videoId> [seconds] [--again] [--at <s>] [--spoil] [--video [--switch-at <s>]]
              [--as "<title>" "<artist>" [length s]] [--spoil-saavn] [--saavn-on]

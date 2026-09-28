@@ -700,6 +700,8 @@ int main(int argc, char *argv[])
                      qPrintable(player.currentTrack().value(QStringLiteral("title")).toString()),
                      qPrintable(player.currentTrack().value(QStringLiteral("artist")).toString()),
                      player.videoPlaying() ? "on" : "off");
+            // What Now Playing's note says of the sound by now.
+            qWarning("selftest: sound \"%s\"", qUtf8Printable(player.streamInfo()));
             QueueModel *queue = player.queue();
             QStringList upcoming;
             int fromRadio = 0;

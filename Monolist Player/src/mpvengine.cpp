@@ -27,8 +27,120 @@ enum ObservedProperty : uint64_t {
     PropMetaArtist,
     PropVideoWidth,
     PropVideoHeight,
-    PropAudioDeviceList
+    PropAudioDeviceList,
+    // What StreamInfo is read from. A change only says it is time to read
+    // it all again, together (refreshStreamInfo); the values themselves are
+    // not taken from the events.
+    PropAudioCodec,
+    PropAudioParams,
+    PropAudioOutParams,
+    PropCurrentAo,
+    PropAudioBitrate
 };
+
+// mpv's string property `name`, or empty while it has none.
+QString stringProperty(mpv_handle *mpv, const char *name)
+{
+    char *value = nullptr;
+    if (mpv_get_property(mpv, name, MPV_FORMAT_STRING, &value) < 0 || !value)
+        return {};
+    const QString text = QString::fromUtf8(value);
+    mpv_free(value);
+    return text;
+}
+
+// mpv's number property `name`, whichever of its two number formats it has;
+// false while it has none.
+bool numberProperty(mpv_handle *mpv, const char *name, double *out)
+{
+    mpv_node node;
+    if (mpv_get_property(mpv, name, MPV_FORMAT_NODE, &node) < 0)
+        return false;
+    bool ok = true;
+    if (node.format == MPV_FORMAT_INT64)
+        *out = double(node.u.int64);
+    else if (node.format == MPV_FORMAT_DOUBLE)
+        *out = node.u.double_;
+    else
+        ok = false;
+    mpv_free_node_contents(&node);
+    return ok;
+}
+
+// audio-params or audio-out-params: a map of the rate, sample format and
+// channel layout.
+void readAudioParams(mpv_handle *mpv, const char *name, int *rate, QString *format, QString *channels)
+{
+    *rate = 0;
+    format->clear();
+    channels->clear();
+    mpv_node node;
+    if (mpv_get_property(mpv, name, MPV_FORMAT_NODE, &node) < 0)
+        return;
+    if (node.format == MPV_FORMAT_NODE_MAP && node.u.list) {
+        for (int i = 0; i < node.u.list->num; ++i) {
+            const char *key = node.u.list->keys[i];
+            const mpv_node &value = node.u.list->values[i];
+            if (qstrcmp(key, "samplerate") == 0 && value.format == MPV_FORMAT_INT64)
+                *rate = int(value.u.int64);
+            else if (qstrcmp(key, "format") == 0 && value.format == MPV_FORMAT_STRING)
+                *format = QString::fromUtf8(value.u.string);
+            else if (qstrcmp(key, "hr-channels") == 0 && value.format == MPV_FORMAT_STRING)
+                *channels = QString::fromUtf8(value.u.string);
+        }
+    }
+    mpv_free_node_contents(&node);
+}
+
+// What the open file's track list says about its bitrate: whether the file
+// holds sound alone, so that its size is all sound (no picture in it, not
+// even a cover; a picture mpv found beside it, such as a folder's cover.jpg,
+// is another file and does not count); and the bitrate the container
+// declares for the sound playing, in bits per second, 0 where it declares
+// none (an Opus stream usually).
+void readTrackList(mpv_handle *mpv, bool *soundOnly, double *declaredBitrate)
+{
+    *soundOnly = false;
+    *declaredBitrate = 0.0;
+    mpv_node node;
+    if (mpv_get_property(mpv, "track-list", MPV_FORMAT_NODE, &node) < 0)
+        return;
+    bool sound = false;
+    bool other = false;
+    if (node.format == MPV_FORMAT_NODE_ARRAY && node.u.list) {
+        for (int i = 0; i < node.u.list->num; ++i) {
+            const mpv_node &track = node.u.list->values[i];
+            if (track.format != MPV_FORMAT_NODE_MAP || !track.u.list)
+                continue;
+            bool audio = false;
+            bool external = false;
+            bool selected = false;
+            double bitrate = 0.0;
+            for (int k = 0; k < track.u.list->num; ++k) {
+                const char *key = track.u.list->keys[k];
+                const mpv_node &value = track.u.list->values[k];
+                if (qstrcmp(key, "type") == 0 && value.format == MPV_FORMAT_STRING)
+                    audio = qstrcmp(value.u.string, "audio") == 0;
+                else if (qstrcmp(key, "external") == 0 && value.format == MPV_FORMAT_FLAG)
+                    external = value.u.flag != 0;
+                else if (qstrcmp(key, "selected") == 0 && value.format == MPV_FORMAT_FLAG)
+                    selected = value.u.flag != 0;
+                else if (qstrcmp(key, "demux-bitrate") == 0 && value.format == MPV_FORMAT_INT64)
+                    bitrate = double(value.u.int64);
+            }
+            if (external)
+                continue;
+            if (audio)
+                sound = true;
+            else
+                other = true;
+            if (audio && selected)
+                *declaredBitrate = bitrate;
+        }
+    }
+    mpv_free_node_contents(&node);
+    *soundOnly = sound && !other;
+}
 
 // The devices in mpv's audio-device-list: an array of maps, each with a
 // "name" and a "description".
@@ -157,10 +269,12 @@ void MpvEngine::applyBaseOptions()
     setOption("pause", "yes");
 
     // Network buffering. Generous enough that a hiccup on a remote stream does
-    // not audibly drop out.
+    // not audibly drop out: with the cache on, mpv reads ahead as far as this
+    // allows (its cache-secs default is all but unlimited), which holds a
+    // typical song whole. demuxer-readahead-secs is not set, because the
+    // cache on overrides it; the 20 s once set here did nothing.
     setOption("cache", "yes");
     setOption("demuxer-max-bytes", "64MiB");
-    setOption("demuxer-readahead-secs", "20");
 
     // Normalise loudness across tracks from different sources.
     setOption("replaygain", "track");
@@ -193,6 +307,18 @@ void MpvEngine::observeProperties()
     // and going; the first answer arrives with the first events, well before
     // anyone could reach the output menu.
     mpv_observe_property(m_mpv, PropAudioDeviceList, "audio-device-list",   MPV_FORMAT_NODE);
+    // What is actually playing (StreamInfo). A change only prompts a read of
+    // the lot; mpv may fold a quick change and change back into nothing, so
+    // the start of playback prompts one too (MPV_EVENT_PLAYBACK_RESTART).
+    mpv_observe_property(m_mpv, PropAudioCodec,     "audio-codec-name",     MPV_FORMAT_NONE);
+    mpv_observe_property(m_mpv, PropAudioParams,    "audio-params",         MPV_FORMAT_NONE);
+    mpv_observe_property(m_mpv, PropAudioOutParams, "audio-out-params",     MPV_FORMAT_NONE);
+    mpv_observe_property(m_mpv, PropCurrentAo,      "current-ao",           MPV_FORMAT_NONE);
+    // mpv looks at the bitrate on every tick of its clock. With a value asked
+    // for, it says only when the value changes (every second or so), where a
+    // bare notification would come with every tick. Only wanted until it is
+    // first known.
+    mpv_observe_property(m_mpv, PropAudioBitrate,   "audio-bitrate",        MPV_FORMAT_NODE);
 }
 
 // Called by libmpv from its own thread. Must not touch Qt state directly.
@@ -215,6 +341,23 @@ void MpvEngine::drainEvents()
         switch (event->event_id) {
         case MPV_EVENT_PROPERTY_CHANGE: {
             auto *prop = static_cast<mpv_event_property *>(event->data);
+            // StreamInfo's properties (see observeProperties): read again,
+            // for the current file only. The bitrate only until it is known.
+            switch (event->reply_userdata) {
+            case PropAudioBitrate:
+                if (m_streamInfo.kbps > 0)
+                    break;
+                Q_FALLTHROUGH();
+            case PropAudioCodec:
+            case PropAudioParams:
+            case PropAudioOutParams:
+            case PropCurrentAo:
+                if (currentFileStarted())
+                    refreshStreamInfo();
+                break;
+            default:
+                break;
+            }
             if (!prop->data)
                 break;
 
@@ -347,6 +490,14 @@ void MpvEngine::drainEvents()
             break;
         }
 
+        // The sound has started (or started again, after a seek), or its
+        // output was opened anew: what it is can be read now.
+        case MPV_EVENT_PLAYBACK_RESTART:
+        case MPV_EVENT_AUDIO_RECONFIG:
+            if (currentFileStarted())
+                refreshStreamInfo();
+            break;
+
         case MPV_EVENT_END_FILE: {
             auto *end = static_cast<mpv_event_end_file *>(event->data);
             // The end of a file that has since been replaced or stopped. Its
@@ -412,11 +563,11 @@ void MpvEngine::addVideo(const QString &url, const QVariantMap &headers)
         Q_EMIT videoAddFailed(QString::fromUtf8(mpv_error_string(rc)));
 }
 
-void MpvEngine::load(const QString &urlOrPath, bool startPlaying, const QString &audioUrl,
+bool MpvEngine::load(const QString &urlOrPath, bool startPlaying, const QString &audioUrl,
                      qint64 startAt, const QVariantMap &headers)
 {
     if (!m_mpv)
-        return;
+        return false;
 
     // Fetch the link the way it was obtained. Always set, so one file's
     // headers are never sent for the next one's.
@@ -431,6 +582,8 @@ void MpvEngine::load(const QString &urlOrPath, bool startPlaying, const QString 
         m_videoSize = QSize();
         Q_EMIT videoSizeChanged(m_videoSize);
     }
+    // And what it was: this file says for itself once its sound starts.
+    clearStreamInfo();
 
     // A stream whose sound comes separately (YouTube's larger sizes). Always
     // cleared first, so the last video's sound is never carried into the next
@@ -467,9 +620,10 @@ void MpvEngine::load(const QString &urlOrPath, bool startPlaying, const QString 
     const int rc = mpv_command_async(m_mpv, m_loadRequest, args);
     if (rc < 0) {
         Q_EMIT loadFailed(QString::fromUtf8(mpv_error_string(rc)));
-        return;
+        return false;
     }
     setPaused(!startPlaying);
+    return true;
 }
 
 // Silence now, while the next thing is found. Nothing the stopped file still
@@ -487,8 +641,60 @@ void MpvEngine::stop()
         m_videoSize = QSize();
         Q_EMIT videoSizeChanged(m_videoSize);
     }
+    clearStreamInfo();
     const char *args[] = { "stop", nullptr };
     mpv_command_async(m_mpv, 0, args);
+}
+
+void MpvEngine::clearStreamInfo()
+{
+    if (m_streamInfo == StreamInfo())
+        return;
+    m_streamInfo = StreamInfo();
+    Q_EMIT streamInfoChanged();
+}
+
+// All of it read again, together, whenever any part may have changed: a
+// codec without its output's rate would be half a sentence.
+void MpvEngine::refreshStreamInfo()
+{
+    StreamInfo info;
+    info.codec = stringProperty(m_mpv, "audio-codec-name");
+    readAudioParams(m_mpv, "audio-params", &info.sampleRate, &info.sampleFormat, &info.channels);
+    readAudioParams(m_mpv, "audio-out-params", &info.outputRate, &info.outputFormat, &info.outputChannels);
+    info.output = stringProperty(m_mpv, "current-ao");
+    numberProperty(m_mpv, "volume", &info.volume);
+
+    // The bitrate is kept once known: it describes the file, and the
+    // measure behind a picture's would otherwise wander from second to
+    // second on the screen.
+    if (m_streamInfo.kbps > 0) {
+        info.kbps = m_streamInfo.kbps;
+        info.kbpsIsFileAverage = m_streamInfo.kbpsIsFileAverage;
+        info.kbpsIsDeclared = m_streamInfo.kbpsIsDeclared;
+    } else {
+        bool soundOnly = false;
+        double declared = 0.0;
+        double bytes = 0.0;
+        double seconds = 0.0;
+        double measured = 0.0;
+        readTrackList(m_mpv, &soundOnly, &declared);
+        if (soundOnly && numberProperty(m_mpv, "file-size", &bytes)
+            && numberProperty(m_mpv, "duration", &seconds) && bytes > 0.0 && seconds > 1.0) {
+            info.kbps = qRound(bytes * 8.0 / seconds / 1000.0);
+            info.kbpsIsFileAverage = true;
+        } else if (declared > 0.0) {
+            info.kbps = qRound(declared / 1000.0);
+            info.kbpsIsDeclared = true;
+        } else if (numberProperty(m_mpv, "audio-bitrate", &measured) && measured > 0.0) {
+            info.kbps = qRound(measured / 1000.0);
+        }
+    }
+
+    if (info == m_streamInfo)
+        return;
+    m_streamInfo = info;
+    Q_EMIT streamInfoChanged();
 }
 
 // Off by default: with no video track selected mpv decodes nothing, which is

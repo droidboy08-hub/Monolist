@@ -50,7 +50,7 @@ Priority runs from 1 (first) to 9. Size: S under an hour, M a few hours, L a day
   Done when: The last queue, current index and position are saved on quit and restored, paused, at launch.
 - [ ] **P05** *(Partly done: the player bar has the song menu, from its dots or a right click on the song; Now Playing and the sleep timer are still to do.)* No menu for the song that is playing, and no sleep timer *(P5, S)*
   Done when: A more button on the player bar and in Now Playing opens TrackMenu for Player.currentTrack, plus a sleep timer (15, 30, 45 or 60 minutes, or end of song) shown as a countdown that pauses playback.
-- [ ] **P06** Buffering, streaming-versus-offline source and lyrics error reasons are never shown *(P5, S)*
+- [ ] **P06** *(Partly done: Now Playing's source note is now one line built from what mpv reports, such as 'Streaming · InnerTube · Opus · 48 kHz · 133 kbps' or 'Offline · Local file · AAC · 44.1 → 48 kHz', exposed as Player.streamInfo, and every file start writes a `stream:` line to the log. The player bar's buffering and source label and the lyrics error reasons are still to do.)* Buffering, streaming-versus-offline source and lyrics error reasons are never shown *(P5, S)*
   Done when: The player bar's status line shows buffering and a small source label such as 'Offline · local file' or 'Streaming · InnerTube'. The lyrics error says why it failed.
 
 ## Recommendations
@@ -261,6 +261,8 @@ Seen by the agents that fixed B01–B13 and by their reviewers, and not yet fixe
   Done when: the decode and the histogram run on ArtworkFetcher's pool and only the colour comes back.
 - [ ] **F34** "Add all to queue" on a long page (PageView, PlaylistView) still queues one song per call: each is a JS-to-C++ call with its map, a queue model insert that the queue panel's captions re-read, a scan for autoplay's first row and a prefetch, so a few thousand songs hold the window for seconds. Download all now goes in one call (Downloads.enqueueAll) *(P6, S)*
   Done when: Player takes the whole list in one call and inserts it as one block of rows, measured on a 5,000-song page.
+- [ ] **F35** Every recorded play rebuilds the whole History table: `playRecorded` reloads `Library.history` (up to 200 rows) with a model reset, and LibraryView's track table, made at launch, makes all its rows again, visible or not (F28). With 480 songs in Recently played (the size of the owner's Mac library) that is 490-600 ms of the interface standing still at every song start, measured in the Release build; Home's own ten take 25-35 ms more. Since B7 the sound no longer waits for it, but the window, the clock and mpv's events still do, and in the B7 runs the time from googlevideo's answer to the first sound rose from ~30 to ~100 ms whenever the rebuild or its repaint fell just after the load (likely CPU contention; not proven) *(P4, S)*
+  Done when: a play moves or adds one row at the top of History (row moves and inserts, not a reset) or History is refreshed only while it is shown, and a song start with 200+ songs in History costs under 20 ms on the interface thread.
 
 ## Connections
 

@@ -23,7 +23,7 @@ MpvEngine::MpvEngine(QObject *parent)
 
 MpvEngine::~MpvEngine() = default;
 
-void MpvEngine::load(const QString &urlOrPath, bool startPlaying, const QString &audioUrl, qint64 startAt,
+bool MpvEngine::load(const QString &urlOrPath, bool startPlaying, const QString &audioUrl, qint64 startAt,
                      const QVariantMap &headers)
 {
     Q_UNUSED(urlOrPath)
@@ -32,7 +32,13 @@ void MpvEngine::load(const QString &urlOrPath, bool startPlaying, const QString 
     Q_UNUSED(startAt)
     Q_UNUSED(headers)
     Q_EMIT loadFailed(m_lastError);
+    return false;
 }
+
+// Nothing ever plays, so there is never anything to say about it.
+void MpvEngine::refreshStreamInfo() {}
+
+void MpvEngine::clearStreamInfo() {}
 
 // Nothing plays, so there is never a picture: the switch is remembered and
 // changes nothing.

@@ -35,11 +35,13 @@ Rectangle {
     readonly property string switchTip: !Player.videoAvailable ? "This song has no video"
                                       : videoShowing ? "Show the cover"
                                       : "Play the video"
-    // Where the sound is coming from, once it is: "SOUND: JIOSAAVN · 320
-    // KBPS", or the YouTube tier. Set like the lyrics' credit, since it is
-    // the same kind of note.
-    readonly property string soundSource: hasTrack && !Player.resolving && Player.sourceLabel.length > 0
-                                          ? "SOUND: " + Player.sourceLabel.toUpperCase() : ""
+    // Where the sound is coming from, once it is, and what mpv says it is:
+    // "STREAMING · INNERTUBE · OPUS · 48 KHZ · 139 KBPS" (Player.streamInfo;
+    // the codec and the rest follow the source a moment later, once the
+    // sound has started). Set like the lyrics' credit, since it is the same
+    // kind of note.
+    readonly property string soundSource: hasTrack && !Player.resolving && Player.streamInfo.length > 0
+                                          ? Player.streamInfo.toUpperCase() : ""
 
     // The cover's colour as the field, signal red until it is known.
     property color field: Theme.accent

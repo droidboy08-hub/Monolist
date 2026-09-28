@@ -66,6 +66,14 @@ class PlaybackController : public QObject
     // exactly when a failure has something to say.
     Q_PROPERTY(bool statusError READ statusError NOTIFY statusChanged)
     Q_PROPERTY(QString sourceLabel READ sourceLabel NOTIFY statusChanged)
+    // One line on the sound playing: where it comes from, in the status
+    // line's words, then what mpv says it is decoding — "Streaming ·
+    // InnerTube · Opus · 48 kHz · 139 kbps", "Offline · Local file · AAC ·
+    // 44.1 → 48 kHz · 129 kbps" (the arrow: the device plays another rate,
+    // so the sound is resampled). The second half comes only from mpv
+    // (MpvEngine::StreamInfo) and appears once the sound has started. Empty
+    // while nothing is loaded.
+    Q_PROPERTY(QString streamInfo READ streamInfo NOTIFY streamInfoChanged)
     Q_PROPERTY(bool engineAvailable READ engineAvailable CONSTANT)
     // The picture. `videoAvailable` is whether this track has one at all
     // (YouTube Music's own songs are a still image, so they do not);
@@ -100,6 +108,7 @@ public:
                                 StreamResolver *resolver,
                                 DownloadManager *downloads,
                                 QObject *parent = nullptr);
+    ~PlaybackController() override;
 
     // The library, for likes and for recording plays against library rows,
     // and for the settings table the player's own choices are kept in.
@@ -144,6 +153,7 @@ public:
     QString statusText() const { return m_statusText; }
     bool statusError() const { return m_statusError; }
     QString sourceLabel() const { return m_sourceLabel; }
+    QString streamInfo() const;
     bool engineAvailable() const;
     bool videoAvailable() const;
     bool videoWanted() const { return m_videoWanted; }
@@ -235,6 +245,7 @@ Q_SIGNALS:
     void favouriteChanged();
     void bufferingChanged();
     void statusChanged();
+    void streamInfoChanged();
     void videoChanged();
     void audioDevicesChanged();
     void saavnChanged();
@@ -282,7 +293,14 @@ private:
     void openPlayEvent(const QVariantMap &track);
     // `restarting`: closed because Previous restarted the song, whose replay
     // is not a return to it (no repeat_in_session, no upgraded label).
+    // Measured at once, written on the next turn of the event loop.
     void closePlayEvent(bool restarting = false);
+    // The closed listens not yet written, written now.
+    void writePlayEvents();
+    // Where the sound just loaded comes from (see streamInfo), empty for
+    // nothing loaded; and the stream-info line in the log, once per load.
+    void setSoundOrigin(const QString &origin);
+    void logStreamInfo();
     bool extendWithRadio();   // false when there is nothing to seed a radio from
     void refreshFavourite();
     void setStatus(const QString &text, const QString &source, bool resolving, bool error = false);
@@ -325,6 +343,22 @@ private:
     qint64 m_playEventId = 0;
     QString m_playEventKey;
     QSet<QString> m_finalisedThisSession;
+    // Closed listens waiting for writePlayEvents: what closePlayEvent
+    // measured, as it will be written.
+    struct PlayEventClose {
+        qint64 id = 0;
+        qint64 trackMs = 0;
+        qint64 listenedMs = 0;
+        bool completed = false;
+        bool skipped = false;
+        QVariant label;   // null: not long enough to say
+    };
+    QList<PlayEventClose> m_playEventWrites;
+    // "Streaming · InnerTube", "Offline · Local file": the first half of
+    // streamInfo, set as a load is accepted. Whether that load's line has
+    // gone to the log yet.
+    QString m_soundOrigin;
+    bool m_streamLogged = false;
     // Time actually heard of the current track, for scrobbling. Separate from
     // the play event above, which records the playhead on purpose.
     ListenTracker m_listen;

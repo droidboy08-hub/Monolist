@@ -863,6 +863,9 @@ int runListenSelfTest()
         fake.play(20000);
         start({ song(QStringLiteral("After the restart"), 60000) });
         fake.duration(60000);
+        // A closed listen is written on the player's next turn of the event
+        // loop: its own queued calls only, not the engine's events.
+        QCoreApplication::sendPostedEvents(&player);
         QSqlQuery q(AppDatabase::connection());
         q.prepare(QStringLiteral("SELECT listened_ms, label, repeat_in_session FROM play_events"
                                  " WHERE title = ? ORDER BY id"));
