@@ -1,0 +1,30 @@
+﻿ 1 synced   506ms LRCLIB                       same=True ws=0 | Hey Jude, don't make it bad / Take a sad song and make it better / Remember to let her into your heart
+ 2 synced   483ms LRCLIB                       same=True ws=0 | Is this the real life? Is this just fantasy? / Caught in a landslide, no escape from reality / Open your eyes, look up to the skies and see
+ 3 synced   436ms LRCLIB                       same=True ws=0 | Now here you go again, you say you want your freedom / Well, who am I to keep you down? / It's only right that you should play the way you feel it
+ 4 synced   377ms LRCLIB                       same=True ws=0 | She was more like a beauty queen from a movie scene / I said "Don't mind, but what do you mean, I am the one" / Who will dance on the floor in the round?
+ 5 synced   342ms LRCLIB                       same=True ws=0 | Load up on guns, bring your friends / It's fun to lose and to pretend / She's over-bored and self-assured
+ 6 synced  1230ms LRCLIB                       same=True ws=0 | Yeah, this album is dedicated / To all the teachers that told me I'd never amount to nothin' / To all the people that lived above the buildings that I was hustlin'
+ 7 synced   383ms LRCLIB                       same=True ws=0 | Look / If you had one shot, or one opportunity / To seize everything you ever wanted
+ 8 synced   539ms LRCLIB                       same=True ws=0 | Like the legend of the phoenix, huh / Our ends were beginnings / What keeps the planet spinning? Ah
+ 9 synced   305ms LRCLIB                       same=True ws=0 | Yeah / I've been tryna call / I've been on my own for long enough
+10 synced   342ms LRCLIB                       same=True ws=0 | We were good, we were gold / Kind of dream that can't be sold / We were right, 'til we weren't
+11 synced   593ms LRCLIB                       same=True ws=0 | Psst, I see dead people / (Mustard on the beat, hoe) / Ayy, Mustard on the beat, hoe
+12 synced   421ms LRCLIB                       same=True ws=0 | Now he's thinkin' 'bout me every night, oh / Is it that sweet? I guess so / Say you can't sleep, baby, I know
+13 synced   458ms LRCLIB                       same=True ws=0 | Ay, ¡Fonsi! ¡D.Y. / Ohhh, oh, no, oh, no, oh / ¡Hey, yeah
+14 synced   494ms LRCLIB                       same=True ws=0 | Ey, Tití me preguntó si tengo muchas novias / Muchas novias / Hoy tengo a una, mañana otra, ey
+15 synced   845ms LRCLIB                       same=True ws=0 | Para bailar la bamba / Para bailar la bamba se necesita una poca de gracia / Una poca de gracia pa mí, pa ti, arriba y arriba
+16 synced   429ms LRCLIB                       same=True ws=0 | Sigo cruzando ríos / Andando selvas, amando el sol / Cada día sigo sacando espinas
+17 synced   375ms LRCLIB                       same=True ws=0 | Hum tere bin ab reh nahi sakte / Tere bina kya wajood mera / Hum tere bin ab reh nahi sakte
+18 plain   1071ms YouTube Music (Musixmatch)   same=True ws=0 | जिनके सर हो इश्क़ की छाँव / (इश्क़ की छाँव) / पाँव के नीचे जन्नत होगी
+19 synced   636ms LRCLIB                       same=True ws=0 | Gmi xr / Lambo truck ਵਿੱਚ ਗੇੜੀ ਸਿੱਧੀ Hollywood / ਗੀਤ ਦੇਸੀ ਮੁੰਡਿਆਂ ਦੇ ਸੁਣੇ Bollywood
+20 synced   616ms LRCLIB                       same=True ws=0 | 보고 싶다, 이렇게 말하니까 더 보고 싶다 / 너희 사진을 보고 있어도 보고 싶다 / 너무 야속한 시간 나는 우리가 밉다
+21 synced   419ms LRCLIB                       same=True ws=0 | 오빤 강남스타일 / 강남스타일 / 낮에는 따사로운 인간적인 여자
+22 synced   411ms LRCLIB                       same=True ws=0 | One, two, three, four / Baby / Got me looking so crazy
+23 synced   361ms LRCLIB                       same=True ws=0 | Lemon - Kenshi Yonezu / Yume naraba dore hodo yokatta deshou / Imada ni anata no koto wo yume ni miru
+24 synced   375ms LRCLIB                       same=True ws=0 | 相壊す ぐわんぐわんな その眼に / 課す 冥土 よこす 実に上の上 / 憂い目に 会う 故意 まさに
+25 synced   454ms LRCLIB                       same=True ws=0 | 上を向いて歩こう / 涙がこぼれないように / 思い出す 春の日
+26 synced   331ms LRCLIB                       same=True ws=0 | Des yeux qui font baisser les miens / Un rire qui se perd sur sa bouche / Voilà le portrait sans retouches
+27 synced   463ms LRCLIB                       same=True ws=0 | Hast du etwas Zeit für mich? / Dann singe ich ein Lied für dich / Von neunundneunzig Luftballons
+28 synced   336ms LRCLIB                       same=True ws=0 | تملي معاك ولو حتى بعيد عني / في قلبي هواك، تملي معاك / تملي فـ بالي وفـ قلبي ولا بنساك
+29 instrumental   342ms LRCLIB (instrumental flag)   same=True ws=0 | 
+30 none     806ms -                            same=True ws=0 | 

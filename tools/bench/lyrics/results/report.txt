@@ -1,0 +1,73 @@
+n  lang        title                                   cold med/p90 (n)   proxy LRCLIB leg med   cached med   class (all cold+proxy runs)                         YTM-alone class
+1  English     Hey Jude - The Beatles                    506/546  (10)                    474                   37           line-synced/LRCLIB x15                              plain/YouTube Music (Musixmatch) x3
+2  English     Bohemian Rhapsody - Queen                 475/586  (10)                    472                   50           line-synced/LRCLIB x15                              plain/YouTube Music (Musixmatch) x3
+3  English     Dreams (2004 Remaster) - Fleetwood Mac    419/462  (10)                    443                   18           line-synced/LRCLIB x14                              plain/YouTube Music (LyricFind) x3
+4  English     Billie Jean - Michael Jackson             398/415  (2)                     542                   33           line-synced/LRCLIB x3                               plain/YouTube Music (Musixmatch) x1
+5  English     Smells Like Teen Spirit - Nirvana         393/492  (10)                    481                   24           line-synced/LRCLIB x15                              plain/YouTube Music (LyricFind) x3
+6  English     Juicy (2005 Remaster) - Notorious B.I.G.  570/761  (10)                    586                   40           line-synced/LRCLIB x15                              plain/YouTube Music (Musixmatch) x3
+7  English     Lose Yourself - Eminem                    556/620  (10)                    550                   41           line-synced/LRCLIB x15                              none/- x3
+8  English     Get Lucky (feat. Pharrell Williams and N  448/508  (10)                    417                   31           line-synced/LRCLIB x15                              plain/YouTube Music (LyricFind) x3
+9  English     Blinding Lights - The Weeknd              371/465  (10)                    410                   25           line-synced/LRCLIB x15                              plain/YouTube Music (Musixmatch) x3
+10 English     Flowers - Miley Cyrus                     407/440  (10)                    449                   22           line-synced/LRCLIB x15                              plain/YouTube Music (LyricFind) x3
+11 English     Not Like Us - Kendrick Lamar              606/647  (10)                    531                   48           line-synced/LRCLIB x15                              plain/YouTube Music (LyricFind) x3
+12 English     Espresso - Sabrina Carpenter              473/529  (10)                    447                   27           line-synced/LRCLIB x15                              plain/YouTube Music (LyricFind) x3
+13 Spanish     Despacito - Luis Fonsi & Daddy Yankee     478/544  (10)                    463                   36           line-synced/LRCLIB x15                              plain/YouTube Music (LyricFind) x3
+14 Spanish     Tití Me Preguntó - Bad Bunny              481/559  (10)                    442                   40           line-synced/LRCLIB x15                              plain/YouTube Music (LyricFind) x3
+15 Spanish     La Bamba (Single Version) - Ritchie Vale  403/554  (10)                    445                   15           line-synced/LRCLIB x15                              plain/YouTube Music (LyricFind) x3
+16 Spanish     Hasta la Raíz - Natalia Lafourcade        420/504  (10)                    408                   28           line-synced/LRCLIB x15                              plain/YouTube Music (LyricFind) x3
+17 Hindi       Tum Hi Ho - Arijit Singh                  402/536  (10)                    459                   20           line-synced/LRCLIB x15                              plain/YouTube Music (LyricFind) x3
+18 Hindi       Chaiyya Chaiyya - Sukhwinder Singh & Sap  565/1082 (10)                    528                   43           line-synced/LRCLIB x14, plain/YouTube Music (Musixmatch) x1plain/YouTube Music (Musixmatch) x3
+19 Punjabi     Brown Munde - AP Dhillon, Gurinder Gill   516/638  (10)                    631                   72           line-synced/LRCLIB x15                              plain/YouTube Music (Musixmatch) x3
+20 Korean      Spring Day - BTS                          524/654  (10)                    563                   29           line-synced/LRCLIB x15                              plain/YouTube Music (Musixmatch) x3
+21 Korean      Gangnam Style - PSY                       451/525  (10)                    463                   29           line-synced/LRCLIB x15                              plain/YouTube Music (Musixmatch) x3
+22 Korean      Hype Boy - NewJeans                       420/487  (10)                    444                   24           line-synced/LRCLIB x15                              plain/YouTube Music (LyricFind) x3
+23 Japanese    Lemon - Kenshi Yonezu                     421/449  (10)                    454                   22           line-synced/LRCLIB x15                              none/- x3
+24 Japanese    アイドル - YOASOBI                            425/533  (10)                    442                   21           line-synced/LRCLIB x15                              plain/YouTube Music (Musixmatch) x3
+25 Japanese    上を向いて歩こう - Sukiyaki - Kyu Sakamoto        455/546  (10)                    369                   16           line-synced/LRCLIB x15                              plain/YouTube Music (LyricFind) x3
+26 French      La Vie En Rose - Edith Piaf               419/534  (10)                    360                   18           line-synced/LRCLIB x15                              none/- x3
+27 German      99 Luftballons - Nena                     419/461  (10)                    405                   23           line-synced/LRCLIB x15                              plain/YouTube Music (LyricFind) x3
+28 Arabic      Tamally Maak - Amr Diab                   409/448  (10)                    454                   23           line-synced/LRCLIB x15                              plain/YouTube Music (Musixmatch) x3
+29 InstrumentalClair De Lune - Claude Debussy            403/454  (10)                    393                   0            none (instrumental flag)/LRCLIB (instrumental flag) x15none/- x3
+30 InstrumentalSandstorm - Darude                        860/932  (5)                     421                   null         none/- x10                                          none/- x1
+
+Modal class by language:
+  English        {"line-synced":12}
+  Spanish        {"line-synced":4}
+  Hindi/Punjabi  {"line-synced":3}
+  Korean         {"line-synced":3}
+  Japanese       {"line-synced":3}
+  French/German  {"line-synced":2}
+  Arabic         {"line-synced":1}
+  Instrumental   {"none (instrumental flag)":1,"none":1}
+
+First lines (first cold run):
+  1   Hey Jude, don't make it bad / Take a sad song and make it better / Remember to let her into your heart
+  2   Is this the real life? Is this just fantasy? / Caught in a landslide, no escape from reality / Open your eyes, look up t
+  3   Now here you go again, you say you want your freedom / Well, who am I to keep you down? / It's only right that you shoul
+  4   She was more like a beauty queen from a movie scene / I said "Don't mind, but what do you mean, I am the one" / Who will
+  5   Load up on guns, bring your friends / It's fun to lose and to pretend / She's over-bored and self-assured
+  6   Yeah, this album is dedicated / To all the teachers that told me I'd never amount to nothin' / To all the people that li
+  7   Look / If you had one shot, or one opportunity / To seize everything you ever wanted
+  8   Like the legend of the phoenix, huh / Our ends were beginnings / What keeps the planet spinning? Ah
+  9   Yeah / I've been tryna call / I've been on my own for long enough
+  10  We were good, we were gold / Kind of dream that can't be sold / We were right, 'til we weren't
+  11  Psst, I see dead people / (Mustard on the beat, hoe) / Ayy, Mustard on the beat, hoe
+  12  Now he's thinkin' 'bout me every night, oh / Is it that sweet? I guess so / Say you can't sleep, baby, I know
+  13  Ay, ¡Fonsi! ¡D.Y. / Ohhh, oh, no, oh, no, oh / ¡Hey, yeah
+  14  Ey, Tití me preguntó si tengo muchas novias / Muchas novias / Hoy tengo a una, mañana otra, ey
+  15  Para bailar la bamba / Para bailar la bamba se necesita una poca de gracia / Una poca de gracia pa mí, pa ti, arriba y a
+  16  Sigo cruzando ríos / Andando selvas, amando el sol / Cada día sigo sacando espinas
+  17  Hum tere bin ab reh nahi sakte / Tere bina kya wajood mera / Hum tere bin ab reh nahi sakte
+  18  जिनके सर हो इश्क़ की छाँव / (इश्क़ की छाँव) / पाँव के नीचे जन्नत होगी
+  19  Gmi xr / Lambo truck ਵਿੱਚ ਗੇੜੀ ਸਿੱਧੀ Hollywood / ਗੀਤ ਦੇਸੀ ਮੁੰਡਿਆਂ ਦੇ ਸੁਣੇ Bollywood
+  20  보고 싶다, 이렇게 말하니까 더 보고 싶다 / 너희 사진을 보고 있어도 보고 싶다 / 너무 야속한 시간 나는 우리가 밉다
+  21  오빤 강남스타일 / 강남스타일 / 낮에는 따사로운 인간적인 여자
+  22  One, two, three, four / Baby / Got me looking so crazy
+  23  Lemon - Kenshi Yonezu / Yume naraba dore hodo yokatta deshou / Imada ni anata no koto wo yume ni miru
+  24  相壊す ぐわんぐわんな その眼に / 課す 冥土 よこす 実に上の上 / 憂い目に 会う 故意 まさに
+  25  上を向いて歩こう / 涙がこぼれないように / 思い出す 春の日
+  26  Des yeux qui font baisser les miens / Un rire qui se perd sur sa bouche / Voilà le portrait sans retouches
+  27  Hast du etwas Zeit für mich? / Dann singe ich ein Lied für dich / Von neunundneunzig Luftballons
+  28  تملي معاك ولو حتى بعيد عني / في قلبي هواك، تملي معاك / تملي فـ بالي وفـ قلبي ولا بنساك
+  29  
+  30  

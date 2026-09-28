@@ -1,0 +1,109 @@
+diff --git a/base/src/playbackcontroller.cpp b/b7/src/playbackcontroller.cpp
+index 7b2dea8..a59d141 100644
+--- a/base/src/playbackcontroller.cpp
++++ b/b7/src/playbackcontroller.cpp
+@@ -1,4 +1,5 @@
+ #include "playbackcontroller.h"
++#include "benchlog.h"
+ #include "appdatabase.h"
+ #include "downloadmanager.h"
+ #include "library.h"
+@@ -687,21 +688,18 @@ void PlaybackController::logStreamInfo()
+     m_streamLogged = true;
+     const QString videoId = currentSourceId();
+     const QString bitrate = s.kbps <= 0 ? QStringLiteral("bitrate not measured yet")
+-                          : QStringLiteral("%1 kbps (%2)").arg(s.kbps).arg(
+-                                s.kbpsIsFileAverage ? QStringLiteral("file average")
+-                                : s.kbpsIsDeclared  ? QStringLiteral("as the file declares it")
+-                                                    : QStringLiteral("measured"));
++                          : QStringLiteral("%1 kbps (%2)").arg(s.kbps).arg(s.kbpsIsFileAverage
++                                                                               ? QStringLiteral("file average")
++                                                                               : QStringLiteral("measured"));
+     const QString resampling = s.outputRate != s.sampleRate
+                                    ? QStringLiteral("resampled %1 -> %2 Hz").arg(s.sampleRate).arg(s.outputRate)
+                                    : QStringLiteral("not resampled");
+-    // UTF-8 throughout: the origin has a middle dot, which the message
+-    // handler would otherwise get in the system's code page and print as "?".
+     qInfo("stream: %s from %s: %s %d Hz %s %s, %s -> %s %d Hz %s %s, %s, volume %s",
+-          qUtf8Printable(videoId.isEmpty() ? m_currentTrack.value(QStringLiteral("title")).toString() : videoId),
+-          qUtf8Printable(m_soundOrigin), qUtf8Printable(s.codec), s.sampleRate, qUtf8Printable(s.channels),
+-          qUtf8Printable(s.sampleFormat), qUtf8Printable(bitrate), qUtf8Printable(s.output), s.outputRate,
+-          qUtf8Printable(s.outputChannels), qUtf8Printable(s.outputFormat), qUtf8Printable(resampling),
+-          qUtf8Printable(s.volume >= 0.0 ? QStringLiteral("%1%").arg(s.volume, 0, 'f', 0) : QStringLiteral("unknown")));
++          qPrintable(videoId.isEmpty() ? m_currentTrack.value(QStringLiteral("title")).toString() : videoId),
++          qPrintable(m_soundOrigin), qPrintable(s.codec), s.sampleRate, qPrintable(s.channels),
++          qPrintable(s.sampleFormat), qPrintable(bitrate), qPrintable(s.output), s.outputRate,
++          qPrintable(s.outputChannels), qPrintable(s.outputFormat), qPrintable(resampling),
++          qPrintable(s.volume >= 0.0 ? QStringLiteral("%1%").arg(s.volume, 0, 'f', 0) : QStringLiteral("unknown")));
+ }
+ 
+ void PlaybackController::setPlayingFlag(bool playing)
+@@ -992,6 +990,7 @@ void PlaybackController::prefetchUpcoming()
+     if (m_downloads && !m_downloads->localPathFor(upcoming->videoId).isEmpty())
+         return;
+     // JioSaavn too, so the next song finds its answer already there.
++    benchMark(QStringLiteral("prefetchUpcoming %1").arg(upcoming->videoId));
+     m_resolver->prefetchTrack(saavnTarget(upcoming->toMap()));
+ }
+ 
+@@ -1052,8 +1051,11 @@ void PlaybackController::startListening()
+         return;
+     m_listenPending = false;
+     recordHistory(m_currentTrack);
++    benchMark(QStringLiteral("startListening history written"));
+     openPlayEvent(m_currentTrack);
++    benchMark(QStringLiteral("startListening play event opened"));
+     Q_EMIT playRecorded();
++    benchMark(QStringLiteral("startListening playRecorded handled"));
+ }
+ 
+ void PlaybackController::openPlayEvent(const QVariantMap &track)
+@@ -1171,6 +1173,8 @@ void PlaybackController::writePlayEvents()
+ // class only cares that something is playing.
+ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
+ {
++    benchMark(QStringLiteral("beginTrack %1 autoPlay=%2")
++                  .arg(track.value(QStringLiteral("sourceId")).toString()).arg(autoPlay ? 1 : 0));
+     // First, while m_position still belongs to the track being left: how much
+     // of it was heard is the single most useful thing the recommender gets,
+     // and it exists only in this instant.
+@@ -1306,6 +1310,7 @@ void PlaybackController::handleResolved(const QString &videoId, const QString &u
+     if (videoId != m_pendingVideoId)
+         return;                       // a later track superseded this one
+     m_pendingVideoId.clear();
++    benchMark(QStringLiteral("handleResolved %1 tier=%2 fromCache=%3").arg(videoId).arg(tier).arg(fromCache ? 1 : 0));
+ 
+     const bool fromSaavn = tier == StreamResolver::TierJioSaavn;
+     m_consecutiveFailures = 0;
+@@ -1316,11 +1321,10 @@ void PlaybackController::handleResolved(const QString &videoId, const QString &u
+     // mpv first: it opens the link on its own thread while everything below
+     // is done on this one. The status line, the listen written down and Home
+     // and History refreshed with it used to come first, and every song start
+-    // waited 40-60 ms for them before mpv was even asked, over half a second
+-    // once History held a few hundred songs (ROADMAP F35). A link some tiers
+-    // only serve to the client that asked for it (the muxed stream's) comes
+-    // with the headers to ask as; JioSaavn's CDN wants none, and must not be
+-    // sent a YouTube client's.
++    // waited 50-80 ms for them before mpv was even asked (far longer with a
++    // long history). A link some tiers only serve to the client that asked
++    // for it (the muxed stream's) comes with the headers to ask as;
++    // JioSaavn's CDN wants none, and must not be sent a YouTube client's.
+     const qint64 resumeAt = std::exchange(m_resumeAt, 0);
+     if (!m_engine
+         || !m_engine->load(url, m_autoPlayAfterResolve, QString(), resumeAt,
+@@ -1338,6 +1342,7 @@ void PlaybackController::handleResolved(const QString &videoId, const QString &u
+     // again.)
+     if (m_autoPlayAfterResolve)
+         startListening();
++    benchMark(QStringLiteral("handleResolved %1 listening recorded, loading").arg(videoId));
+     prefetchUpcoming();
+ }
+ 
+@@ -1469,6 +1474,7 @@ bool PlaybackController::abandonVideo(const QString &reason)
+ 
+ void PlaybackController::handleEndOfFile()
+ {
++    benchMark(QStringLiteral("handleEndOfFile position=%1 duration=%2").arg(m_position).arg(m_duration));
+     // A video that stopped before it ever showed a frame did not finish the
+     // song; it failed. The queue must not move on.
+     if (abandonVideo(QStringLiteral("This video would not play — back to audio")))

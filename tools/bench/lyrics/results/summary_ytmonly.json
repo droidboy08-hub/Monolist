@@ -1,0 +1,335 @@
+{
+  "generated": "2026-09-26T23:19:00.234Z",
+  "passes": {
+    "ytmonly01": {
+      "tracks": 30,
+      "sameTrack": 27,
+      "mismatched": [
+        4,
+        19,
+        30
+      ],
+      "timedOut": [],
+      "byClass": {
+        "plain": 23,
+        "none": 4
+      },
+      "byProvider": {
+        "YouTube Music (Musixmatch)": 9,
+        "YouTube Music (LyricFind)": 14,
+        "-": 4
+      },
+      "byLanguage": {
+        "English": {
+          "plain": 10,
+          "none": 1
+        },
+        "Spanish": {
+          "plain": 4
+        },
+        "Hindi/Punjabi": {
+          "plain": 2
+        },
+        "Korean": {
+          "plain": 3
+        },
+        "Japanese": {
+          "none": 1,
+          "plain": 2
+        },
+        "French/German": {
+          "none": 1,
+          "plain": 1
+        },
+        "Arabic": {
+          "plain": 1
+        },
+        "Instrumental": {
+          "none": 1
+        }
+      },
+      "timeToLyricsAll": {
+        "n": 27,
+        "median": 4573,
+        "p90": 4654,
+        "min": 4437,
+        "max": 4847
+      },
+      "timeToLyricsHits": {
+        "n": 23,
+        "median": 4579,
+        "p90": 4658,
+        "min": 4482,
+        "max": 4847
+      },
+      "timeToLyricsByProvider": {
+        "YouTube Music (Musixmatch)": {
+          "n": 9,
+          "median": 4579,
+          "p90": 4623,
+          "min": 4482,
+          "max": 4640
+        },
+        "YouTube Music (LyricFind)": {
+          "n": 14,
+          "median": 4580,
+          "p90": 4733,
+          "min": 4502,
+          "max": 4847
+        },
+        "-": {
+          "n": 4,
+          "median": 4560,
+          "p90": 4582,
+          "min": 4437,
+          "max": 4590
+        }
+      },
+      "timeToNoLyrics": {
+        "n": 4,
+        "median": 4560,
+        "p90": 4582,
+        "min": 4437,
+        "max": 4590
+      },
+      "repeatFromDbSameProcess": {
+        "n": 27,
+        "median": 12,
+        "p90": 18,
+        "min": 0,
+        "max": 24
+      },
+      "extraLookupsWarmConnection": {
+        "n": 54,
+        "median": 4377,
+        "p90": 4464,
+        "min": 4284,
+        "max": 4505
+      }
+    },
+    "ytmonly02": {
+      "tracks": 30,
+      "sameTrack": 28,
+      "mismatched": [
+        4,
+        30
+      ],
+      "timedOut": [],
+      "byClass": {
+        "plain": 24,
+        "none": 4
+      },
+      "byProvider": {
+        "YouTube Music (Musixmatch)": 10,
+        "YouTube Music (LyricFind)": 14,
+        "-": 4
+      },
+      "byLanguage": {
+        "English": {
+          "plain": 10,
+          "none": 1
+        },
+        "Spanish": {
+          "plain": 4
+        },
+        "Hindi/Punjabi": {
+          "plain": 3
+        },
+        "Korean": {
+          "plain": 3
+        },
+        "Japanese": {
+          "none": 1,
+          "plain": 2
+        },
+        "French/German": {
+          "none": 1,
+          "plain": 1
+        },
+        "Arabic": {
+          "plain": 1
+        },
+        "Instrumental": {
+          "none": 1
+        }
+      },
+      "timeToLyricsAll": {
+        "n": 28,
+        "median": 4555,
+        "p90": 4644,
+        "min": 4458,
+        "max": 4765
+      },
+      "timeToLyricsHits": {
+        "n": 24,
+        "median": 4568,
+        "p90": 4647,
+        "min": 4458,
+        "max": 4765
+      },
+      "timeToLyricsByProvider": {
+        "YouTube Music (Musixmatch)": {
+          "n": 10,
+          "median": 4596,
+          "p90": 4654,
+          "min": 4482,
+          "max": 4765
+        },
+        "YouTube Music (LyricFind)": {
+          "n": 14,
+          "median": 4543,
+          "p90": 4636,
+          "min": 4458,
+          "max": 4652
+        },
+        "-": {
+          "n": 4,
+          "median": 4546,
+          "p90": 4600,
+          "min": 4482,
+          "max": 4615
+        }
+      },
+      "timeToNoLyrics": {
+        "n": 4,
+        "median": 4546,
+        "p90": 4600,
+        "min": 4482,
+        "max": 4615
+      },
+      "repeatFromDbSameProcess": {
+        "n": 28,
+        "median": 12,
+        "p90": 21,
+        "min": 0,
+        "max": 125
+      },
+      "extraLookupsWarmConnection": {
+        "n": 56,
+        "median": 4388,
+        "p90": 4522,
+        "min": 4280,
+        "max": 19790
+      }
+    }
+  },
+  "pooled": {
+    "ytmonly": {
+      "passes": 2,
+      "samples": 55,
+      "timeToLyricsAll": {
+        "n": 55,
+        "median": 4564,
+        "p90": 4650,
+        "min": 4437,
+        "max": 4847
+      },
+      "timeToLyricsHits": {
+        "n": 47,
+        "median": 4579,
+        "p90": 4651,
+        "min": 4458,
+        "max": 4847
+      },
+      "timeByProvider": {
+        "YouTube Music (Musixmatch)": {
+          "n": 19,
+          "median": 4594,
+          "p90": 4640,
+          "min": 4482,
+          "max": 4765
+        },
+        "YouTube Music (LyricFind)": {
+          "n": 28,
+          "median": 4565,
+          "p90": 4654,
+          "min": 4458,
+          "max": 4847
+        },
+        "-": {
+          "n": 8,
+          "median": 4560,
+          "p90": 4598,
+          "min": 4437,
+          "max": 4615
+        }
+      },
+      "repeatFromDbSameProcess": {
+        "n": 55,
+        "median": 12,
+        "p90": 21,
+        "min": 0,
+        "max": 125
+      },
+      "extraLookupsWarmConnection": {
+        "n": 110,
+        "median": 4381,
+        "p90": 4481,
+        "min": 4280,
+        "max": 19790
+      },
+      "perTrackMedian": {
+        "1": 4482,
+        "2": 4544,
+        "3": 4582,
+        "5": 4480,
+        "6": 4598,
+        "7": 4589,
+        "8": 4601,
+        "9": 4692,
+        "10": 4513,
+        "11": 4621,
+        "12": 4708,
+        "13": 4555,
+        "14": 4582,
+        "15": 4506,
+        "16": 4573,
+        "17": 4696,
+        "18": 4541,
+        "19": 4487,
+        "20": 4551,
+        "21": 4618,
+        "22": 4563,
+        "23": 4483,
+        "24": 4617,
+        "25": 4591,
+        "26": 4561,
+        "27": 4567,
+        "28": 4615,
+        "29": 4536
+      },
+      "classStability": {
+        "1": "plain/YouTube Music (Musixmatch)",
+        "2": "plain/YouTube Music (Musixmatch)",
+        "3": "plain/YouTube Music (LyricFind)",
+        "4": "",
+        "5": "plain/YouTube Music (LyricFind)",
+        "6": "plain/YouTube Music (Musixmatch)",
+        "7": "none/-",
+        "8": "plain/YouTube Music (LyricFind)",
+        "9": "plain/YouTube Music (Musixmatch)",
+        "10": "plain/YouTube Music (LyricFind)",
+        "11": "plain/YouTube Music (LyricFind)",
+        "12": "plain/YouTube Music (LyricFind)",
+        "13": "plain/YouTube Music (LyricFind)",
+        "14": "plain/YouTube Music (LyricFind)",
+        "15": "plain/YouTube Music (LyricFind)",
+        "16": "plain/YouTube Music (LyricFind)",
+        "17": "plain/YouTube Music (LyricFind)",
+        "18": "plain/YouTube Music (Musixmatch)",
+        "19": "plain/YouTube Music (Musixmatch)",
+        "20": "plain/YouTube Music (Musixmatch)",
+        "21": "plain/YouTube Music (Musixmatch)",
+        "22": "plain/YouTube Music (LyricFind)",
+        "23": "none/-",
+        "24": "plain/YouTube Music (Musixmatch)",
+        "25": "plain/YouTube Music (LyricFind)",
+        "26": "none/-",
+        "27": "plain/YouTube Music (LyricFind)",
+        "28": "plain/YouTube Music (Musixmatch)",
+        "29": "none/-",
+        "30": ""
+      }
+    }
+  }
+}

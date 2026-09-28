@@ -1,0 +1,630 @@
+{
+  "generated": "2026-09-27T20:33:25.245Z",
+  "passes": {
+    "proxyfail01": {
+      "tracks": 30,
+      "sameTrack": 29,
+      "mismatched": [
+        30
+      ],
+      "timedOut": [],
+      "byClass": {
+        "plain": 25,
+        "error": 4
+      },
+      "byProvider": {
+        "YouTube Music (Musixmatch)": 11,
+        "YouTube Music (LyricFind)": 14,
+        "-": 4
+      },
+      "byLanguage": {
+        "English": {
+          "plain": 11,
+          "error": 1
+        },
+        "Spanish": {
+          "plain": 4
+        },
+        "Hindi/Punjabi": {
+          "plain": 3
+        },
+        "Korean": {
+          "plain": 3
+        },
+        "Japanese": {
+          "error": 1,
+          "plain": 2
+        },
+        "French/German": {
+          "error": 1,
+          "plain": 1
+        },
+        "Arabic": {
+          "plain": 1
+        },
+        "Instrumental": {
+          "error": 1
+        }
+      },
+      "timeToLyricsAll": {
+        "n": 29,
+        "median": 545,
+        "p90": 622,
+        "min": 402,
+        "max": 748
+      },
+      "timeToLyricsHits": {
+        "n": 25,
+        "median": 549,
+        "p90": 648,
+        "min": 402,
+        "max": 748
+      },
+      "timeToLyricsByProvider": {
+        "YouTube Music (Musixmatch)": {
+          "n": 11,
+          "median": 534,
+          "p90": 579,
+          "min": 402,
+          "max": 587
+        },
+        "YouTube Music (LyricFind)": {
+          "n": 14,
+          "median": 565,
+          "p90": 725,
+          "min": 451,
+          "max": 748
+        },
+        "-": {
+          "n": 4,
+          "median": 530,
+          "p90": 556,
+          "min": 463,
+          "max": 566
+        }
+      },
+      "timeToNoLyrics": {
+        "n": 0,
+        "median": null,
+        "p90": null,
+        "min": null,
+        "max": null
+      },
+      "repeatFromDbSameProcess": {
+        "n": 29,
+        "median": 327,
+        "p90": 386,
+        "min": 248,
+        "max": 506
+      },
+      "extraLookupsWarmConnection": {
+        "n": 58,
+        "median": 323,
+        "p90": 398,
+        "min": 253,
+        "max": 880
+      },
+      "split": {
+        "lrclibStrictMs": {
+          "n": 29,
+          "median": 0,
+          "p90": 0,
+          "min": 0,
+          "max": 0
+        },
+        "lrclibStrictUpstreamMs": {
+          "n": 29,
+          "median": 0,
+          "p90": 0,
+          "min": 0,
+          "max": 0
+        },
+        "lrclibLooseMs": {
+          "n": 0,
+          "median": null,
+          "p90": null,
+          "min": null,
+          "max": null
+        },
+        "youtubeMs": {
+          "n": 29,
+          "median": 523,
+          "p90": 598,
+          "min": 384,
+          "max": 725
+        },
+        "askedYouTube": 29,
+        "usedLoose": 0,
+        "slowestProviderMs": {
+          "n": 29,
+          "median": 523,
+          "p90": 598,
+          "min": 384,
+          "max": 725
+        },
+        "slowestIs": {
+          "YouTube Music": 29
+        },
+        "overheadMs": {
+          "n": 29,
+          "median": 22,
+          "p90": 30,
+          "min": 4,
+          "max": 32
+        }
+      }
+    },
+    "proxyfail02": {
+      "tracks": 30,
+      "sameTrack": 29,
+      "mismatched": [
+        4
+      ],
+      "timedOut": [],
+      "byClass": {
+        "plain": 24,
+        "error": 5
+      },
+      "byProvider": {
+        "YouTube Music (Musixmatch)": 10,
+        "YouTube Music (LyricFind)": 14,
+        "-": 5
+      },
+      "byLanguage": {
+        "English": {
+          "plain": 10,
+          "error": 1
+        },
+        "Spanish": {
+          "plain": 4
+        },
+        "Hindi/Punjabi": {
+          "plain": 3
+        },
+        "Korean": {
+          "plain": 3
+        },
+        "Japanese": {
+          "error": 1,
+          "plain": 2
+        },
+        "French/German": {
+          "error": 1,
+          "plain": 1
+        },
+        "Arabic": {
+          "plain": 1
+        },
+        "Instrumental": {
+          "error": 2
+        }
+      },
+      "timeToLyricsAll": {
+        "n": 29,
+        "median": 563,
+        "p90": 642,
+        "min": 412,
+        "max": 806
+      },
+      "timeToLyricsHits": {
+        "n": 24,
+        "median": 557,
+        "p90": 636,
+        "min": 412,
+        "max": 806
+      },
+      "timeToLyricsByProvider": {
+        "YouTube Music (Musixmatch)": {
+          "n": 10,
+          "median": 556,
+          "p90": 634,
+          "min": 496,
+          "max": 806
+        },
+        "YouTube Music (LyricFind)": {
+          "n": 14,
+          "median": 572,
+          "p90": 636,
+          "min": 412,
+          "max": 647
+        },
+        "-": {
+          "n": 5,
+          "median": 600,
+          "p90": 654,
+          "min": 534,
+          "max": 689
+        }
+      },
+      "timeToNoLyrics": {
+        "n": 0,
+        "median": null,
+        "p90": null,
+        "min": null,
+        "max": null
+      },
+      "repeatFromDbSameProcess": {
+        "n": 29,
+        "median": 302,
+        "p90": 406,
+        "min": 248,
+        "max": 423
+      },
+      "extraLookupsWarmConnection": {
+        "n": 58,
+        "median": 334,
+        "p90": 399,
+        "min": 226,
+        "max": 659
+      },
+      "split": {
+        "lrclibStrictMs": {
+          "n": 29,
+          "median": 0,
+          "p90": 1,
+          "min": 0,
+          "max": 1
+        },
+        "lrclibStrictUpstreamMs": {
+          "n": 29,
+          "median": 0,
+          "p90": 0,
+          "min": 0,
+          "max": 0
+        },
+        "lrclibLooseMs": {
+          "n": 0,
+          "median": null,
+          "p90": null,
+          "min": null,
+          "max": null
+        },
+        "youtubeMs": {
+          "n": 29,
+          "median": 549,
+          "p90": 627,
+          "min": 390,
+          "max": 784
+        },
+        "askedYouTube": 29,
+        "usedLoose": 0,
+        "slowestProviderMs": {
+          "n": 29,
+          "median": 549,
+          "p90": 627,
+          "min": 390,
+          "max": 784
+        },
+        "slowestIs": {
+          "YouTube Music": 29
+        },
+        "overheadMs": {
+          "n": 29,
+          "median": 22,
+          "p90": 30,
+          "min": 3,
+          "max": 34
+        }
+      }
+    },
+    "proxyfail03": {
+      "tracks": 30,
+      "sameTrack": 28,
+      "mismatched": [
+        4,
+        30
+      ],
+      "timedOut": [],
+      "byClass": {
+        "plain": 24,
+        "error": 4
+      },
+      "byProvider": {
+        "YouTube Music (Musixmatch)": 10,
+        "YouTube Music (LyricFind)": 14,
+        "-": 4
+      },
+      "byLanguage": {
+        "English": {
+          "plain": 10,
+          "error": 1
+        },
+        "Spanish": {
+          "plain": 4
+        },
+        "Hindi/Punjabi": {
+          "plain": 3
+        },
+        "Korean": {
+          "plain": 3
+        },
+        "Japanese": {
+          "error": 1,
+          "plain": 2
+        },
+        "French/German": {
+          "error": 1,
+          "plain": 1
+        },
+        "Arabic": {
+          "plain": 1
+        },
+        "Instrumental": {
+          "error": 1
+        }
+      },
+      "timeToLyricsAll": {
+        "n": 28,
+        "median": 533,
+        "p90": 622,
+        "min": 420,
+        "max": 794
+      },
+      "timeToLyricsHits": {
+        "n": 24,
+        "median": 540,
+        "p90": 621,
+        "min": 420,
+        "max": 794
+      },
+      "timeToLyricsByProvider": {
+        "YouTube Music (Musixmatch)": {
+          "n": 10,
+          "median": 560,
+          "p90": 646,
+          "min": 436,
+          "max": 776
+        },
+        "YouTube Music (LyricFind)": {
+          "n": 14,
+          "median": 534,
+          "p90": 578,
+          "min": 420,
+          "max": 794
+        },
+        "-": {
+          "n": 4,
+          "median": 509,
+          "p90": 591,
+          "min": 427,
+          "max": 618
+        }
+      },
+      "timeToNoLyrics": {
+        "n": 0,
+        "median": null,
+        "p90": null,
+        "min": null,
+        "max": null
+      },
+      "repeatFromDbSameProcess": {
+        "n": 28,
+        "median": 319,
+        "p90": 379,
+        "min": 199,
+        "max": 1967
+      },
+      "extraLookupsWarmConnection": {
+        "n": 56,
+        "median": 301,
+        "p90": 398,
+        "min": 210,
+        "max": 517
+      },
+      "split": {
+        "lrclibStrictMs": {
+          "n": 28,
+          "median": 0,
+          "p90": 1,
+          "min": 0,
+          "max": 1
+        },
+        "lrclibStrictUpstreamMs": {
+          "n": 28,
+          "median": 0,
+          "p90": 0,
+          "min": 0,
+          "max": 0
+        },
+        "lrclibLooseMs": {
+          "n": 0,
+          "median": null,
+          "p90": null,
+          "min": null,
+          "max": null
+        },
+        "youtubeMs": {
+          "n": 28,
+          "median": 521,
+          "p90": 605,
+          "min": 401,
+          "max": 773
+        },
+        "askedYouTube": 28,
+        "usedLoose": 0,
+        "slowestProviderMs": {
+          "n": 28,
+          "median": 521,
+          "p90": 605,
+          "min": 401,
+          "max": 773
+        },
+        "slowestIs": {
+          "YouTube Music": 28
+        },
+        "overheadMs": {
+          "n": 28,
+          "median": 20,
+          "p90": 26,
+          "min": 5,
+          "max": 29
+        }
+      }
+    }
+  },
+  "pooled": {
+    "proxyfail": {
+      "passes": 3,
+      "samples": 86,
+      "timeToLyricsAll": {
+        "n": 86,
+        "median": 548,
+        "p90": 636,
+        "min": 402,
+        "max": 806
+      },
+      "timeToLyricsHits": {
+        "n": 73,
+        "median": 548,
+        "p90": 639,
+        "min": 402,
+        "max": 806
+      },
+      "timeByProvider": {
+        "YouTube Music (Musixmatch)": {
+          "n": 31,
+          "median": 549,
+          "p90": 615,
+          "min": 402,
+          "max": 806
+        },
+        "YouTube Music (LyricFind)": {
+          "n": 42,
+          "median": 547,
+          "p90": 646,
+          "min": 412,
+          "max": 794
+        },
+        "-": {
+          "n": 13,
+          "median": 534,
+          "p90": 615,
+          "min": 427,
+          "max": 689
+        }
+      },
+      "repeatFromDbSameProcess": {
+        "n": 86,
+        "median": 319,
+        "p90": 392,
+        "min": 199,
+        "max": 1967
+      },
+      "extraLookupsWarmConnection": {
+        "n": 172,
+        "median": 319,
+        "p90": 400,
+        "min": 210,
+        "max": 880
+      },
+      "perTrackMedian": {
+        "1": 579,
+        "2": 496,
+        "3": 558,
+        "4": 413,
+        "5": 548,
+        "6": 549,
+        "7": 566,
+        "8": 613,
+        "9": 572,
+        "10": 475,
+        "11": 470,
+        "12": 544,
+        "13": 469,
+        "14": 569,
+        "15": 561,
+        "16": 569,
+        "17": 524,
+        "18": 539,
+        "19": 587,
+        "20": 585,
+        "21": 548,
+        "22": 624,
+        "23": 488,
+        "24": 564,
+        "25": 451,
+        "26": 527,
+        "27": 543,
+        "28": 517,
+        "29": 532,
+        "30": 689
+      },
+      "classStability": {
+        "1": "plain/YouTube Music (Musixmatch)",
+        "2": "plain/YouTube Music (Musixmatch)",
+        "3": "plain/YouTube Music (LyricFind)",
+        "4": "plain/YouTube Music (Musixmatch)",
+        "5": "plain/YouTube Music (LyricFind)",
+        "6": "plain/YouTube Music (Musixmatch)",
+        "7": "error/-",
+        "8": "plain/YouTube Music (LyricFind)",
+        "9": "plain/YouTube Music (Musixmatch)",
+        "10": "plain/YouTube Music (LyricFind)",
+        "11": "plain/YouTube Music (LyricFind)",
+        "12": "plain/YouTube Music (LyricFind)",
+        "13": "plain/YouTube Music (LyricFind)",
+        "14": "plain/YouTube Music (LyricFind)",
+        "15": "plain/YouTube Music (LyricFind)",
+        "16": "plain/YouTube Music (LyricFind)",
+        "17": "plain/YouTube Music (LyricFind)",
+        "18": "plain/YouTube Music (Musixmatch)",
+        "19": "plain/YouTube Music (Musixmatch)",
+        "20": "plain/YouTube Music (Musixmatch)",
+        "21": "plain/YouTube Music (Musixmatch)",
+        "22": "plain/YouTube Music (LyricFind)",
+        "23": "error/-",
+        "24": "plain/YouTube Music (Musixmatch)",
+        "25": "plain/YouTube Music (LyricFind)",
+        "26": "error/-",
+        "27": "plain/YouTube Music (LyricFind)",
+        "28": "plain/YouTube Music (Musixmatch)",
+        "29": "error/-",
+        "30": "error/-"
+      },
+      "split": {
+        "lrclibStrictMs": {
+          "n": 86,
+          "median": 0,
+          "p90": 1,
+          "min": 0,
+          "max": 1
+        },
+        "lrclibStrictUpstreamMs": {
+          "n": 86,
+          "median": 0,
+          "p90": 0,
+          "min": 0,
+          "max": 0
+        },
+        "lrclibLooseMs": {
+          "n": 0,
+          "median": null,
+          "p90": null,
+          "min": null,
+          "max": null
+        },
+        "youtubeMs": {
+          "n": 86,
+          "median": 527,
+          "p90": 616,
+          "min": 384,
+          "max": 784
+        },
+        "slowestProviderMs": {
+          "n": 86,
+          "median": 527,
+          "p90": 616,
+          "min": 384,
+          "max": 784
+        },
+        "overheadMs": {
+          "n": 86,
+          "median": 21,
+          "p90": 30,
+          "min": 3,
+          "max": 34
+        }
+      }
+    }
+  }
+}

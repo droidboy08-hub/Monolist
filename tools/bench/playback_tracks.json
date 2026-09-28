@@ -1,0 +1,19 @@
+{
+  "purpose": "Fixed playback benchmark list (Step 2, playback area). Found with monolist.exe --search (YouTube Music, songs filter) on 2026-09-26; the first result was taken unless noted.",
+  "canary_purpose": "B2 (NC-1): ids canary.ps1 asks /player about as VISIONOS 1.02 and 0.1 before a benchmark, so a client YouTube stops answering shows up. Not part of the measured list. LrM_Y39Gmhk is the project's royalty-free test video.",
+  "canary": [ "LrM_Y39Gmhk" ],
+  "tracks": [
+    { "n": 1,  "videoId": "7nVctvQVz0U", "title": "The Fate of Ophelia",                     "artist": "Taylor Swift",   "duration": "3:47",  "kind": "new pop",         "query": "Taylor Swift The Fate of Ophelia" },
+    { "n": 2,  "videoId": "DntZ3-yCaFs", "title": "Manchild",                                "artist": "Sabrina Carpenter", "duration": "3:34", "kind": "new pop",       "query": "Sabrina Carpenter Manchild" },
+    { "n": 3,  "videoId": "BSTsnWoslP4", "title": "Bohemian Rhapsody",                       "artist": "Queen",          "duration": "5:55",  "kind": "older rock",      "query": "Queen Bohemian Rhapsody" },
+    { "n": 4,  "videoId": "7TDeBi34OtE", "title": "Smells Like Teen Spirit",                 "artist": "Nirvana",        "duration": "5:02",  "kind": "older rock",      "query": "Nirvana Smells Like Teen Spirit" },
+    { "n": 5,  "videoId": "phLb_SoPBlA", "title": "Not Like Us",                             "artist": "Kendrick Lamar", "duration": "4:35",  "kind": "hip hop",         "query": "Kendrick Lamar Not Like Us" },
+    { "n": 6,  "videoId": "LCIs3JXb5Aw", "title": "Supernova",                               "artist": "aespa",          "duration": "2:59",  "kind": "K-pop",           "query": "aespa Supernova" },
+    { "n": 7,  "videoId": "TiebZllW8As", "title": "DtMF",                                    "artist": "Bad Bunny",      "duration": "3:58",  "kind": "Latin",           "query": "Bad Bunny DtMF" },
+    { "n": 8,  "videoId": "fsiPzT50ZiM", "title": "Tum Hi Ho",                               "artist": "Arijit Singh",   "duration": "4:22",  "kind": "Bollywood",       "query": "Arijit Singh Tum Hi Ho" },
+    { "n": 9,  "videoId": "Tu7oq3VNgpY", "title": "Shine On You Crazy Diamond (Pts. 1-5)",   "artist": "Pink Floyd",     "duration": "13:32", "kind": "long track",      "query": "Pink Floyd Shine On You Crazy Diamond" },
+    { "n": 10, "videoId": "munhCAshfH0", "title": "Baibaba Bimba",                           "artist": "Tenniscoats",    "duration": "6:05",  "kind": "obscure track",   "query": "Tenniscoats Baibaba Bimba" },
+    { "n": 11, "videoId": "CmThpha4Hoo", "title": "Last Last",                               "artist": "Burna Boy",      "duration": "2:53",  "kind": "Afrobeats",       "query": "Burna Boy Last Last" },
+    { "n": 12, "videoId": "4D7u5KF7SP8", "title": "Get Lucky (feat. Pharrell Williams and Nile Rodgers)", "artist": "Daft Punk, Pharrell Williams & Nile Rodgers", "duration": "6:10", "kind": "electronic / disco", "query": "Daft Punk Get Lucky" }
+  ]
+}

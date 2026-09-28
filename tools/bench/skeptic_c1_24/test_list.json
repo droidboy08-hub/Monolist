@@ -1,0 +1,20 @@
+{
+  "purpose": "Checklist rows C1-C24 skeptic pass (Step 2). Fixed inputs so the same checks can be repeated in Step 4.",
+  "tracks": [
+    { "videoId": "LrM_Y39Gmhk", "title": "royalty-free test video (AGENT_BRIEF)", "used_by": ["ytdlp_solver_cache.ps1", "ytdlp_solver_cache_forced.ps1"] }
+  ],
+  "reused_inputs": {
+    "mpv_verbose_logs": "..\\logs\\*.log (written by the playback benchmark from ..\\playback_tracks.json, 2026-09-26 18:36-20:25)",
+    "used_by": ["start_threshold_from_logs.ps1"]
+  },
+  "tools": {
+    "yt_dlp": "C:\\dev\\monolist-build\\release\\tools\\yt-dlp\\yt-dlp.exe (2026.08.19)",
+    "deno": "C:\\dev\\monolist-build\\release\\tools\\deno.exe (2.9.7)",
+    "libmpv": "C:\\dev\\monolist-deps\\libmpv\\libmpv-2.dll (option strings checked: curl-max-request-size, request_size, initial_request_size, cache-pause-initial, cache-pause-wait, cache-secs, demuxer-max-bytes, cache-on-disk, audio-exclusive, prefetch-playlist, gapless-audio)"
+  },
+  "rerun": [
+    "powershell -File ytdlp_solver_cache.ps1            # default clients, 3 runs, scratch --cache-dir",
+    "powershell -File ytdlp_solver_cache_forced.ps1 -Client web_safari -Runs 2   # a client that needs the sig/n solver",
+    "powershell -File start_threshold_from_logs.ps1     # after a new playback benchmark run has refreshed ..\\logs"
+  ]
+}

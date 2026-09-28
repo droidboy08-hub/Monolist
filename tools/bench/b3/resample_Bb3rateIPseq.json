@@ -1,0 +1,14 @@
+{
+    "pattern":  "B_b3rateIP_seq_*",
+    "files":  2,
+    "opens":  4,
+    "openedWithAudio":  4,
+    "byItag":  "140=4",
+    "byCodecRate":  "aac@44100=4",
+    "resampled":  4,
+    "resampledIds":  "IPeJ7iM55hcx4(itag 140)",
+    "opusOfferedButAac":  2,
+    "choseLines":  2,
+    "choseByItag":  "140=2",
+    "choseNon251":  "IPeJ7iM55hc: itag 140: aac, 44.1 kHz, 130 kbps (of 139 140 249 250 251, by bitrate alone: youtube.format=bitrate)"
+}

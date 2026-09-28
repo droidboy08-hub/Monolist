@@ -1,0 +1,148 @@
+--- a/src/mpvengine.cpp
++++ b/src/mpvengine.cpp
+@@ -1,4 +1,5 @@
+ #include "mpvengine.h"
++#include "benchlog.h"
+ 
+ #include <QMetaObject>
+ #include <QtGlobal>
+@@ -288,6 +268,14 @@ void MpvEngine::applyBaseOptions()
+     // Keep libmpv from writing to the app's stderr; errors surface as signals.
+     setOption("terminal", "no");
+     setOption("msg-level", "all=no");
++
++    // BENCH: mpv's own log-file, every line stamped on mpv's clock by mpv.
++    const QByteArray benchLogFile = qgetenv("MONOLIST_MPV_LOGFILE");
++    if (!benchLogFile.isEmpty()) {
++        setOption("log-file", benchLogFile.constData());
++        const QByteArray level = qgetenv("MONOLIST_MPV_MSGLEVEL");
++        setOption("msg-level", level.isEmpty() ? "all=v" : level.constData());
++    }
+ }
+ 
+ void MpvEngine::observeProperties()
+@@ -372,9 +360,15 @@ void MpvEngine::drainEvents()
+                 break;
+ 
+             switch (event->reply_userdata) {
+-            case PropTimePos:
+-                Q_EMIT positionChanged(qint64(*static_cast<double *>(prop->data) * 1000.0));
++            case PropTimePos: {
++                const double pos = *static_cast<double *>(prop->data);
++                if (!m_benchFirstPos && pos > 0.0) {
++                    m_benchFirstPos = true;
++                    benchMark(QStringLiteral("mpv-event first time-pos %1").arg(pos, 0, 'f', 3));
++                }
++                Q_EMIT positionChanged(qint64(pos * 1000.0));
+                 break;
++            }
+             case PropDuration: {
+                 const qint64 ms = qint64(*static_cast<double *>(prop->data) * 1000.0);
+                 if (ms != m_duration) {
+@@ -395,6 +389,7 @@ void MpvEngine::drainEvents()
+                 const bool buffering = *static_cast<int *>(prop->data) != 0;
+                 if (buffering != m_buffering) {
+                     m_buffering = buffering;
++                    benchMark(QStringLiteral("mpv-event paused-for-cache %1").arg(buffering ? 1 : 0));
+                     Q_EMIT bufferingChanged(buffering);
+                 }
+                 break;
+@@ -473,6 +468,7 @@ void MpvEngine::drainEvents()
+         }
+ 
+         case MPV_EVENT_FILE_LOADED: {
++            benchMark(QStringLiteral("mpv-event FILE_LOADED"));
+             // For the file last asked for only: one it replaced can still
+             // report having opened, after the new load was sent.
+             if (!currentFileStarted())
+@@ -494,12 +490,16 @@ void MpvEngine::drainEvents()
+         // output was opened anew: what it is can be read now.
+         case MPV_EVENT_PLAYBACK_RESTART:
+         case MPV_EVENT_AUDIO_RECONFIG:
++            if (event->event_id == MPV_EVENT_PLAYBACK_RESTART)
++                benchMark(QStringLiteral("mpv-event PLAYBACK_RESTART"));
+             if (currentFileStarted())
+                 refreshStreamInfo();
+             break;
+ 
+         case MPV_EVENT_END_FILE: {
+             auto *end = static_cast<mpv_event_end_file *>(event->data);
++            benchMark(QStringLiteral("mpv-event END_FILE reason=%1 error=%2 entry=%3 current=%4")
++                          .arg(int(end->reason)).arg(end->error).arg(end->playlist_entry_id).arg(m_currentEntry));
+             // The end of a file that has since been replaced or stopped. Its
+             // natural end would skip the track that took its place, and its
+             // error would be blamed on it.
+@@ -616,6 +616,8 @@ bool MpvEngine::load(const QString &urlOrPath, bool startPlaying, const QString
+     // still reports goes nowhere.
+     ++m_loadRequest;
+     m_currentEntry = 0;
++    m_benchFirstPos = false;
++    benchMark(QStringLiteral("mpv loadfile %1").arg(urlOrPath.left(60)));
+     const char *args[] = { "loadfile", target.constData(), "replace", nullptr };
+     const int rc = mpv_command_async(m_mpv, m_loadRequest, args);
+     if (rc < 0) {
+@@ -642,6 +644,7 @@ void MpvEngine::stop()
+         Q_EMIT videoSizeChanged(m_videoSize);
+     }
+     clearStreamInfo();
++    benchMark(QStringLiteral("mpv stop"));
+     const char *args[] = { "stop", nullptr };
+     mpv_command_async(m_mpv, 0, args);
+ }
+@@ -760,6 +756,56 @@ void MpvEngine::setReplayGainEnabled(bool enabled)
+     setOption("replaygain", enabled ? "track" : "no");
+ }
+ 
++void MpvEngine::benchPrint(const QByteArray &text)
++{
++    if (!m_mpv)
++        return;
++    const QByteArray line = "BENCH " + text;
++    const char *args[] = { "print-text", line.constData(), nullptr };
++    mpv_command(m_mpv, args);
++}
++
++QString MpvEngine::benchCacheSample()
++{
++    if (!m_mpv)
++        return {};
++    int64_t speed = -1;
++    mpv_get_property(m_mpv, "cache-speed", MPV_FORMAT_INT64, &speed);
++    double timePos = -1;
++    mpv_get_property(m_mpv, "time-pos", MPV_FORMAT_DOUBLE, &timePos);
++    int pausedForCache = -1;
++    mpv_get_property(m_mpv, "paused-for-cache", MPV_FORMAT_FLAG, &pausedForCache);
++    double cacheDuration = -1;
++    mpv_get_property(m_mpv, "demuxer-cache-duration", MPV_FORMAT_DOUBLE, &cacheDuration);
++    int64_t fileSize = -1;
++    mpv_get_property(m_mpv, "file-size", MPV_FORMAT_INT64, &fileSize);
++    int64_t fwBytes = -1;
++    int64_t rawRate = -1;
++    int64_t totalBytes = -1;
++    int eof = -1;
++    mpv_node node;
++    if (mpv_get_property(m_mpv, "demuxer-cache-state", MPV_FORMAT_NODE, &node) >= 0) {
++        if (node.format == MPV_FORMAT_NODE_MAP && node.u.list) {
++            for (int i = 0; i < node.u.list->num; ++i) {
++                const char *key = node.u.list->keys[i];
++                const mpv_node &value = node.u.list->values[i];
++                if (qstrcmp(key, "fw-bytes") == 0 && value.format == MPV_FORMAT_INT64)
++                    fwBytes = value.u.int64;
++                else if (qstrcmp(key, "raw-input-rate") == 0 && value.format == MPV_FORMAT_INT64)
++                    rawRate = value.u.int64;
++                else if (qstrcmp(key, "total-bytes") == 0 && value.format == MPV_FORMAT_INT64)
++                    totalBytes = value.u.int64;
++                else if (qstrcmp(key, "eof") == 0 && value.format == MPV_FORMAT_FLAG)
++                    eof = value.u.flag;
++            }
++        }
++        mpv_free_node_contents(&node);
++    }
++    return QStringLiteral("pos=%1 pfc=%2 speed=%3 rawRate=%4 fwBytes=%5 totalBytes=%6 cacheDur=%7 eof=%8 fileSize=%9")
++        .arg(timePos, 0, 'f', 3).arg(pausedForCache).arg(qint64(speed)).arg(qint64(rawRate))
++        .arg(qint64(fwBytes)).arg(qint64(totalBytes)).arg(cacheDuration, 0, 'f', 1).arg(eof).arg(qint64(fileSize));
++}
++
+ // Asked without waiting for the answer: during a song, mpv reopens the sound
+ // output on the new device before it answers, which is long enough to be
+ // felt if the interface stood still for it.

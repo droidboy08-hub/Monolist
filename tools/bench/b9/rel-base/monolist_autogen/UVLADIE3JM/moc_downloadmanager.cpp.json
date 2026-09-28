@@ -1,0 +1,632 @@
+{
+    "classes": [
+        {
+            "className": "DownloadManager",
+            "lineNumber": 32,
+            "methods": [
+                {
+                    "access": "public",
+                    "index": 9,
+                    "lineNumber": 76,
+                    "name": "refreshTools",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 10,
+                    "lineNumber": 81,
+                    "name": "refreshToolsIfStale",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "videoId",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "title",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "artist",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "artwork",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "durationMs",
+                            "type": "qint64"
+                        },
+                        {
+                            "name": "isVideo",
+                            "type": "bool"
+                        }
+                    ],
+                    "index": 11,
+                    "lineNumber": 87,
+                    "name": "enqueue",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "videoId",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "title",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "artist",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "artwork",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "durationMs",
+                            "type": "qint64"
+                        }
+                    ],
+                    "index": 12,
+                    "isCloned": true,
+                    "lineNumber": 87,
+                    "name": "enqueue",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "videoId",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "title",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "artist",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "artwork",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 13,
+                    "isCloned": true,
+                    "lineNumber": 87,
+                    "name": "enqueue",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "videoId",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "title",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "artist",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 14,
+                    "isCloned": true,
+                    "lineNumber": 87,
+                    "name": "enqueue",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "tracks",
+                            "type": "QVariantList"
+                        }
+                    ],
+                    "index": 15,
+                    "lineNumber": 97,
+                    "name": "enqueueAll",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "videoId",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 16,
+                    "lineNumber": 99,
+                    "name": "cancel",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "videoId",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 17,
+                    "lineNumber": 100,
+                    "name": "retry",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "videoId",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 18,
+                    "lineNumber": 101,
+                    "name": "remove",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "videoId",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 19,
+                    "isConst": true,
+                    "lineNumber": 104,
+                    "name": "stateFor",
+                    "returnType": "QString"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "videoId",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 20,
+                    "isConst": true,
+                    "lineNumber": 105,
+                    "name": "progressFor",
+                    "returnType": "qreal"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "videoId",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 21,
+                    "isConst": true,
+                    "lineNumber": 106,
+                    "name": "isDownloaded",
+                    "returnType": "bool"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "videoId",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 22,
+                    "isConst": true,
+                    "lineNumber": 107,
+                    "name": "isPending",
+                    "returnType": "bool"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "tracks",
+                            "type": "QVariantList"
+                        }
+                    ],
+                    "index": 23,
+                    "isConst": true,
+                    "lineNumber": 111,
+                    "name": "downloadCounts",
+                    "returnType": "QVariantMap"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "tracks",
+                            "type": "QVariantList"
+                        }
+                    ],
+                    "index": 24,
+                    "lineNumber": 113,
+                    "name": "retryFailed",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "videoId",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 25,
+                    "isConst": true,
+                    "lineNumber": 114,
+                    "name": "localPathFor",
+                    "returnType": "QString"
+                },
+                {
+                    "access": "public",
+                    "index": 26,
+                    "isConst": true,
+                    "lineNumber": 116,
+                    "name": "openDownloadFolder",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "videoId",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 27,
+                    "isConst": true,
+                    "lineNumber": 117,
+                    "name": "revealFile",
+                    "returnType": "void"
+                }
+            ],
+            "object": true,
+            "properties": [
+                {
+                    "constant": true,
+                    "designable": true,
+                    "final": false,
+                    "index": 0,
+                    "lineNumber": 35,
+                    "name": "queue",
+                    "override": false,
+                    "read": "queue",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "DownloadQueueModel*",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": true,
+                    "designable": true,
+                    "final": false,
+                    "index": 1,
+                    "lineNumber": 36,
+                    "name": "library",
+                    "override": false,
+                    "read": "library",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "DownloadLibraryModel*",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 2,
+                    "lineNumber": 37,
+                    "name": "activeCount",
+                    "notify": "queueChanged",
+                    "override": false,
+                    "read": "activeCount",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "int",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 3,
+                    "lineNumber": 38,
+                    "name": "queuedCount",
+                    "notify": "queueChanged",
+                    "override": false,
+                    "read": "queuedCount",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "int",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 4,
+                    "lineNumber": 39,
+                    "name": "storedCount",
+                    "notify": "libraryChanged",
+                    "override": false,
+                    "read": "storedCount",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "int",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": true,
+                    "designable": true,
+                    "final": false,
+                    "index": 5,
+                    "lineNumber": 40,
+                    "name": "downloadDirectory",
+                    "override": false,
+                    "read": "downloadDirectory",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 6,
+                    "lineNumber": 41,
+                    "name": "format",
+                    "notify": "optionsChanged",
+                    "override": false,
+                    "read": "format",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false,
+                    "virtual": false,
+                    "write": "setFormat"
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 7,
+                    "lineNumber": 42,
+                    "name": "skipNonMusic",
+                    "notify": "optionsChanged",
+                    "override": false,
+                    "read": "skipNonMusic",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "bool",
+                    "user": false,
+                    "virtual": false,
+                    "write": "setSkipNonMusic"
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 8,
+                    "lineNumber": 45,
+                    "name": "available",
+                    "notify": "toolsChanged",
+                    "override": false,
+                    "read": "available",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "bool",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 9,
+                    "lineNumber": 46,
+                    "name": "canConvert",
+                    "notify": "toolsChanged",
+                    "override": false,
+                    "read": "canConvert",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "bool",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": true,
+                    "designable": true,
+                    "final": false,
+                    "index": 10,
+                    "lineNumber": 48,
+                    "name": "installHint",
+                    "override": false,
+                    "read": "installHint",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 11,
+                    "lineNumber": 49,
+                    "name": "revision",
+                    "notify": "revisionChanged",
+                    "override": false,
+                    "read": "revision",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "int",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 12,
+                    "lineNumber": 50,
+                    "name": "progressRevision",
+                    "notify": "progressRevisionChanged",
+                    "override": false,
+                    "read": "progressRevision",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "int",
+                    "user": false,
+                    "virtual": false
+                }
+            ],
+            "qualifiedClassName": "DownloadManager",
+            "signals": [
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "videoId",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "progress",
+                            "type": "qreal"
+                        }
+                    ],
+                    "index": 0,
+                    "lineNumber": 141,
+                    "name": "progressChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "videoId",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "path",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 1,
+                    "lineNumber": 142,
+                    "name": "completed",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "videoId",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "reason",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 2,
+                    "lineNumber": 143,
+                    "name": "failed",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 3,
+                    "lineNumber": 144,
+                    "name": "queueChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 4,
+                    "lineNumber": 145,
+                    "name": "libraryChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 5,
+                    "lineNumber": 146,
+                    "name": "optionsChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 6,
+                    "lineNumber": 147,
+                    "name": "revisionChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 7,
+                    "lineNumber": 148,
+                    "name": "progressRevisionChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 8,
+                    "lineNumber": 149,
+                    "name": "toolsChanged",
+                    "returnType": "void"
+                }
+            ],
+            "superClasses": [
+                {
+                    "access": "public",
+                    "name": "QObject"
+                }
+            ]
+        }
+    ],
+    "inputFile": "downloadmanager.h",
+    "outputRevision": 69
+}

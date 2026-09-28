@@ -1,0 +1,101 @@
+{
+    "classes": [
+        {
+            "className": "ArtworkFetcher",
+            "lineNumber": 34,
+            "object": true,
+            "qualifiedClassName": "ArtworkFetcher",
+            "slots": [
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "response",
+                            "type": "ArtworkResponse*"
+                        },
+                        {
+                            "name": "source",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "requestedSize",
+                            "type": "QSize"
+                        }
+                    ],
+                    "index": 0,
+                    "lineNumber": 51,
+                    "name": "fetch",
+                    "returnType": "void"
+                }
+            ],
+            "superClasses": [
+                {
+                    "access": "public",
+                    "name": "QObject"
+                }
+            ]
+        },
+        {
+            "className": "PaletteTool",
+            "lineNumber": 87,
+            "methods": [
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "source",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 1,
+                    "isConst": true,
+                    "lineNumber": 97,
+                    "name": "dominantColour",
+                    "returnType": "QColor"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "source",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 2,
+                    "lineNumber": 101,
+                    "name": "request",
+                    "returnType": "void"
+                }
+            ],
+            "object": true,
+            "qualifiedClassName": "PaletteTool",
+            "signals": [
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "source",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "colour",
+                            "type": "QColor"
+                        }
+                    ],
+                    "index": 0,
+                    "lineNumber": 106,
+                    "name": "colourReady",
+                    "returnType": "void"
+                }
+            ],
+            "superClasses": [
+                {
+                    "access": "public",
+                    "name": "QObject"
+                }
+            ]
+        }
+    ],
+    "inputFile": "artworkcache.h",
+    "outputRevision": 69
+}

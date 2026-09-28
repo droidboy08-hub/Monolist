@@ -1,0 +1,170 @@
+[
+    {
+        "run":  1,
+        "itags":  "251",
+        "requests":  2,
+        "firstStatus":  206,
+        "requestsAfterSeek":  1,
+        "afterSeekStatuses":  "206@10824041-",
+        "allStatuses":  "206,206",
+        "httpErrors":  "",
+        "streamLevelSeeks":  1,
+        "seekToAudioMs":  577,
+        "rescueLines":  [
+
+                        ],
+        "statuses":  "Resolving source? source= | Streaming source=InnerTube",
+        "eofCodes":  "",
+        "finalPosition":  "10:42 of 13:31, playing",
+        "stillSameTrack":  true,
+        "outcome":  "clean seek",
+        "foreignProcesses":  ""
+    },
+    {
+        "run":  2,
+        "itags":  "251",
+        "requests":  2,
+        "firstStatus":  206,
+        "requestsAfterSeek":  1,
+        "afterSeekStatuses":  "206@10824041-",
+        "allStatuses":  "206,206",
+        "httpErrors":  "",
+        "streamLevelSeeks":  1,
+        "seekToAudioMs":  854,
+        "rescueLines":  [
+
+                        ],
+        "statuses":  "Resolving source? source= | Streaming source=InnerTube",
+        "eofCodes":  "",
+        "finalPosition":  "10:41 of 13:31, playing",
+        "stillSameTrack":  true,
+        "outcome":  "clean seek",
+        "foreignProcesses":  ""
+    },
+    {
+        "run":  3,
+        "itags":  "251",
+        "requests":  2,
+        "firstStatus":  206,
+        "requestsAfterSeek":  1,
+        "afterSeekStatuses":  "206@10824041-",
+        "allStatuses":  "206,206",
+        "httpErrors":  "",
+        "streamLevelSeeks":  1,
+        "seekToAudioMs":  608,
+        "rescueLines":  [
+
+                        ],
+        "statuses":  "Resolving source? source= | Streaming source=InnerTube",
+        "eofCodes":  "",
+        "finalPosition":  "10:42 of 13:31, playing",
+        "stillSameTrack":  true,
+        "outcome":  "clean seek",
+        "foreignProcesses":  ""
+    },
+    {
+        "run":  4,
+        "itags":  "251",
+        "requests":  2,
+        "firstStatus":  206,
+        "requestsAfterSeek":  1,
+        "afterSeekStatuses":  "206@10824041-",
+        "allStatuses":  "206,206",
+        "httpErrors":  "",
+        "streamLevelSeeks":  1,
+        "seekToAudioMs":  608,
+        "rescueLines":  [
+
+                        ],
+        "statuses":  "Resolving source? source= | Streaming source=InnerTube",
+        "eofCodes":  "",
+        "finalPosition":  "10:42 of 13:31, playing",
+        "stillSameTrack":  true,
+        "outcome":  "clean seek",
+        "foreignProcesses":  ""
+    },
+    {
+        "run":  5,
+        "itags":  "251",
+        "requests":  2,
+        "firstStatus":  206,
+        "requestsAfterSeek":  1,
+        "afterSeekStatuses":  "206@10824041-",
+        "allStatuses":  "206,206",
+        "httpErrors":  "",
+        "streamLevelSeeks":  1,
+        "seekToAudioMs":  578,
+        "rescueLines":  [
+
+                        ],
+        "statuses":  "Resolving source? source= | Streaming source=InnerTube",
+        "eofCodes":  "",
+        "finalPosition":  "10:42 of 13:31, playing",
+        "stillSameTrack":  true,
+        "outcome":  "clean seek",
+        "foreignProcesses":  ""
+    },
+    {
+        "run":  6,
+        "itags":  "251",
+        "requests":  2,
+        "firstStatus":  206,
+        "requestsAfterSeek":  1,
+        "afterSeekStatuses":  "206@10824041-",
+        "allStatuses":  "206,206",
+        "httpErrors":  "",
+        "streamLevelSeeks":  1,
+        "seekToAudioMs":  573,
+        "rescueLines":  [
+
+                        ],
+        "statuses":  "Resolving source? source= | Streaming source=InnerTube",
+        "eofCodes":  "",
+        "finalPosition":  "10:42 of 13:31, playing",
+        "stillSameTrack":  true,
+        "outcome":  "clean seek",
+        "foreignProcesses":  ""
+    },
+    {
+        "run":  7,
+        "itags":  "251",
+        "requests":  2,
+        "firstStatus":  206,
+        "requestsAfterSeek":  1,
+        "afterSeekStatuses":  "206@10824041-",
+        "allStatuses":  "206,206",
+        "httpErrors":  "",
+        "streamLevelSeeks":  1,
+        "seekToAudioMs":  507,
+        "rescueLines":  [
+
+                        ],
+        "statuses":  "Resolving source? source= | Streaming source=InnerTube",
+        "eofCodes":  "",
+        "finalPosition":  "10:42 of 13:31, playing",
+        "stillSameTrack":  true,
+        "outcome":  "clean seek",
+        "foreignProcesses":  ""
+    },
+    {
+        "run":  8,
+        "itags":  "251",
+        "requests":  2,
+        "firstStatus":  206,
+        "requestsAfterSeek":  1,
+        "afterSeekStatuses":  "206@10824041-",
+        "allStatuses":  "206,206",
+        "httpErrors":  "",
+        "streamLevelSeeks":  1,
+        "seekToAudioMs":  757,
+        "rescueLines":  [
+
+                        ],
+        "statuses":  "Resolving source? source= | Streaming source=InnerTube",
+        "eofCodes":  "",
+        "finalPosition":  "10:42 of 13:31, playing",
+        "stillSameTrack":  true,
+        "outcome":  "clean seek",
+        "foreignProcesses":  ""
+    }
+]

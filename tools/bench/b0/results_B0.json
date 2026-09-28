@@ -1,0 +1,148 @@
+{
+    "step":  "B0-measure",
+    "date":  "2026-09-27T07:37:17.9773643-04:00",
+    "library":  {
+                    "path":  "macOS default: ~/Library/Application Support/Monolist/Monolist/monolist.db (AppDataLocation, org Monolist / app Monolist); Windows default %APPDATA%\\Monolist\\Monolist\\monolist.db holds only 7 test plays and no play_events table",
+                    "method":  "copy of db + wal into scratchpad, aggregates only; copies deleted afterwards",
+                    "plays":  485,
+                    "distinctSongs":  475,
+                    "spanDays":  1.4,
+                    "estListeningGiB":  1.48,
+                    "repeatAnyEarlierPct":  2.1,
+                    "hitIn1GiBLruPct":  2.1,
+                    "hitIn1GiBLruN":  10,
+                    "sameAsPreviousPct":  0.8,
+                    "over7m30sPct":  1.2,
+                    "over7m30sN":  6,
+                    "over8MiBEstPct":  0.6,
+                    "listenedTimeOver7m30sPct":  3.5,
+                    "sources":  {
+                                    "library":  298,
+                                    "playlist":  14,
+                                    "radio":  157,
+                                    "search":  16
+                                }
+                },
+    "at600":  {
+                  "runs":  8,
+                  "cleanSeeks":  8,
+                  "rescues":  0,
+                  "eofSkips":  0,
+                  "requests":  16,
+                  "http403":  0,
+                  "seekToAudioMs":  {
+                                        "median":  593,
+                                        "p90":  854,
+                                        "n":  8
+                                    },
+                  "postSeekDownloadMs":  {
+                                             "median":  2728.5,
+                                             "p90":  3171,
+                                             "n":  8,
+                                             "note":  "trace logging on"
+                                         }
+              },
+    "ebur128":  {
+                    "tracks":  13,
+                    "measuredSpreadLU":  12.5,
+                    "youtubeSpreadDb":  12.45,
+                    "maxAbsErrorLU":  0.1,
+                    "postGainSpreadAttenuateOnlyLU":  4.73,
+                    "postGainSpreadCap3LU":  1.73,
+                    "postGainSpreadExclQuietTrackLU":  0.1,
+                    "medianGainDb":  -5.3,
+                    "truePeakBeforeMedian":  2,
+                    "truePeakAfterGainMax":  1,
+                    "topLevelLoudnessMissing":  "13 of 13"
+                },
+    "nc1":  {
+                "value":  [
+                              {
+                                  "client":  "VISIONOS 1.02",
+                                  "n":  12,
+                                  "statusOK":  12,
+                                  "plainAudio":  12,
+                                  "anyCipher":  0,
+                                  "nParam":  0,
+                                  "potParam":  0,
+                                  "r1ok":  12,
+                                  "r2ok":  11,
+                                  "playerMedian":  390.5,
+                                  "playerP90":  506,
+                                  "statuses":  "OKx12"
+                              },
+                              {
+                                  "client":  "VISIONOS 0.1",
+                                  "n":  12,
+                                  "statusOK":  12,
+                                  "plainAudio":  12,
+                                  "anyCipher":  0,
+                                  "nParam":  0,
+                                  "potParam":  0,
+                                  "r1ok":  12,
+                                  "r2ok":  11,
+                                  "playerMedian":  456.5,
+                                  "playerP90":  501,
+                                  "statuses":  "OKx12"
+                              },
+                              {
+                                  "client":  "ANDROID_VR 1.65.10",
+                                  "n":  12,
+                                  "statusOK":  12,
+                                  "plainAudio":  12,
+                                  "anyCipher":  0,
+                                  "nParam":  0,
+                                  "potParam":  0,
+                                  "r1ok":  7,
+                                  "r2ok":  0,
+                                  "playerMedian":  384,
+                                  "playerP90":  432,
+                                  "statuses":  "OKx12"
+                              },
+                              {
+                                  "client":  "ANDROID_VR 1.61.48",
+                                  "n":  12,
+                                  "statusOK":  0,
+                                  "plainAudio":  0,
+                                  "anyCipher":  0,
+                                  "nParam":  0,
+                                  "potParam":  0,
+                                  "r1ok":  0,
+                                  "r2ok":  0,
+                                  "playerMedian":  254,
+                                  "playerP90":  336,
+                                  "statuses":  "LOGIN_REQUIREDx12"
+                              },
+                              {
+                                  "client":  "ANDROID_VR 1.43.32",
+                                  "n":  12,
+                                  "statusOK":  0,
+                                  "plainAudio":  0,
+                                  "anyCipher":  0,
+                                  "nParam":  0,
+                                  "potParam":  0,
+                                  "r1ok":  0,
+                                  "r2ok":  0,
+                                  "playerMedian":  266.5,
+                                  "playerP90":  342,
+                                  "statuses":  "LOGIN_REQUIREDx12"
+                              },
+                              {
+                                  "client":  "TVHTML5_SIMPLY 1.0",
+                                  "n":  12,
+                                  "statusOK":  0,
+                                  "plainAudio":  0,
+                                  "anyCipher":  0,
+                                  "nParam":  0,
+                                  "potParam":  0,
+                                  "r1ok":  0,
+                                  "r2ok":  0,
+                                  "playerMedian":  247.5,
+                                  "playerP90":  312,
+                                  "statuses":  "UNPLAYABLEx12"
+                              }
+                          ],
+                "Count":  6
+            },
+    "nc1_androidvr_followup":  "ANDROID_VR 1.65.10, 6 ids x 4 variants (no UA / okhttp+cpn / client UA+cpn / Chrome UA+cpn), 512 KiB ranges on a fresh URL: 24/24 served 0.5-1 MiB then 403"
+}

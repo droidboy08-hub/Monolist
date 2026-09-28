@@ -1,0 +1,30 @@
+﻿== b3opus
+  (b) B_b3opus_seq_rot0_112830                             n=11  median     554  p90     927  min    350  max   1058
+  (b) B_b3opus_seq_rot3_114350                             n=11  median    3895  p90    4478  min   3236  max   4869
+  (b) B_b3opus_seq_rot3_115535                             n=11  median     427  p90     494  min    297  max    753
+  (b) B_b3opus_seq_rot6_114003                             n=11  median     488  p90     542  min    329  max    718
+  (b) pooled, all                                          n=44  median   525.5  p90    4030  min    297  max   4869
+  (b) pooled, not refused                                  n=33  median     483  p90     753  min    297  max   1058
+  (b) resolve stage, not refused                           n=33  median     191  p90     231  min    147  max    737
+  (b) HTTP open to response, not refused                   n=33  median     202  p90     298  min     38  max    667
+  (b) response to audio, not refused                       n=33  median      34  p90     100  min     29  max    307
+  (b) rot0+rot6 only, not refused                          n=22  median   508.5  p90     854  min    329  max   1058
+  warm (link cache), all                                   n=48  median   336.5  p90     563  min    242  max    721
+  warm, links not from a rescue                            n=36  median   319.5  p90     467  min    242  max    721
+  warm rot0+rot6 only                                      n=24  median   313.5  p90     445  min    242  max    721
+  refused first plays: 12 of 48
+== b3rate
+  (b) B_b3rate_seq_rot0_113222                             n=11  median     540  p90    1468  min    349  max   1694
+  (b) B_b3rate_seq_rot3_114822                             n=11  median     474  p90     488  min    291  max    802
+  (b) B_b3rate_seq_rot3_115922                             n=11  median     508  p90     928  min    258  max   1087
+  (b) B_b3rate_seq_rot6_113612                             n=11  median     456  p90     748  min    324  max    751
+  (b) pooled, all                                          n=44  median   474.5  p90     804  min    258  max   1694
+  (b) pooled, not refused                                  n=44  median   474.5  p90     804  min    258  max   1694
+  (b) resolve stage, not refused                           n=44  median   197.5  p90     291  min    154  max    476
+  (b) HTTP open to response, not refused                   n=44  median   195.5  p90     323  min     23  max   1398
+  (b) response to audio, not refused                       n=44  median      35  p90      52  min     28  max    305
+  (b) rot0+rot6 only, not refused                          n=22  median     474  p90     751  min    324  max   1694
+  warm (link cache), all                                   n=48  median     334  p90     565  min    213  max    664
+  warm, links not from a rescue                            n=48  median     334  p90     565  min    213  max    664
+  warm rot0+rot6 only                                      n=24  median   348.5  p90     565  min    249  max    664
+  refused first plays: 0 of 48

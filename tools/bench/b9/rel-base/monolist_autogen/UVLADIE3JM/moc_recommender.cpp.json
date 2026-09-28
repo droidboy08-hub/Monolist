@@ -1,0 +1,701 @@
+{
+    "classes": [
+        {
+            "className": "RecommenderWorker",
+            "lineNumber": 23,
+            "object": true,
+            "qualifiedClassName": "RecommenderWorker",
+            "signals": [
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "ok",
+                            "type": "bool"
+                        },
+                        {
+                            "name": "rows",
+                            "type": "int"
+                        },
+                        {
+                            "name": "graphShards",
+                            "type": "int"
+                        },
+                        {
+                            "name": "message",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 0,
+                    "lineNumber": 46,
+                    "name": "loaded",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "generation",
+                            "type": "quint64"
+                        },
+                        {
+                            "name": "shelves",
+                            "type": "QVariantList"
+                        },
+                        {
+                            "name": "personal",
+                            "type": "bool"
+                        }
+                    ],
+                    "index": 1,
+                    "lineNumber": 47,
+                    "name": "built",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "generation",
+                            "type": "quint64"
+                        },
+                        {
+                            "name": "shelf",
+                            "type": "int"
+                        },
+                        {
+                            "name": "rows",
+                            "type": "QVariantList"
+                        },
+                        {
+                            "name": "exhausted",
+                            "type": "bool"
+                        }
+                    ],
+                    "index": 2,
+                    "lineNumber": 48,
+                    "name": "moreReady",
+                    "returnType": "void"
+                }
+            ],
+            "slots": [
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "catalogueDirectory",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "graphDirectory",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 3,
+                    "lineNumber": 33,
+                    "name": "load",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "generation",
+                            "type": "quint64"
+                        },
+                        {
+                            "name": "history",
+                            "type": "QList<Rec::PlayEvent>"
+                        },
+                        {
+                            "name": "exclude",
+                            "type": "Rec::Exclusions"
+                        },
+                        {
+                            "name": "rotation",
+                            "type": "quint64"
+                        },
+                        {
+                            "name": "region",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "regionName",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "perShelf",
+                            "type": "int"
+                        },
+                        {
+                            "name": "hideExplicit",
+                            "type": "bool"
+                        }
+                    ],
+                    "index": 4,
+                    "lineNumber": 36,
+                    "name": "build",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "generation",
+                            "type": "quint64"
+                        },
+                        {
+                            "name": "shelf",
+                            "type": "int"
+                        },
+                        {
+                            "name": "already",
+                            "type": "QVariantList"
+                        },
+                        {
+                            "name": "count",
+                            "type": "int"
+                        },
+                        {
+                            "name": "exclude",
+                            "type": "Rec::Exclusions"
+                        },
+                        {
+                            "name": "hideExplicit",
+                            "type": "bool"
+                        }
+                    ],
+                    "index": 5,
+                    "lineNumber": 42,
+                    "name": "more",
+                    "returnType": "void"
+                }
+            ],
+            "superClasses": [
+                {
+                    "access": "public",
+                    "name": "QObject"
+                }
+            ]
+        },
+        {
+            "className": "Recommender",
+            "lineNumber": 70,
+            "methods": [
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "shelf",
+                            "type": "int"
+                        }
+                    ],
+                    "index": 22,
+                    "isConst": true,
+                    "lineNumber": 196,
+                    "name": "rowsOf",
+                    "returnType": "QVariantList"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "shelf",
+                            "type": "int"
+                        }
+                    ],
+                    "index": 23,
+                    "isConst": true,
+                    "lineNumber": 199,
+                    "name": "moreKey",
+                    "returnType": "QString"
+                }
+            ],
+            "object": true,
+            "properties": [
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 0,
+                    "lineNumber": 74,
+                    "name": "available",
+                    "notify": "stateChanged",
+                    "override": false,
+                    "read": "available",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "bool",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 1,
+                    "lineNumber": 75,
+                    "name": "busy",
+                    "notify": "stateChanged",
+                    "override": false,
+                    "read": "busy",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "bool",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 2,
+                    "lineNumber": 77,
+                    "name": "message",
+                    "notify": "stateChanged",
+                    "override": false,
+                    "read": "message",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 3,
+                    "lineNumber": 78,
+                    "name": "shelves",
+                    "notify": "shelvesChanged",
+                    "override": false,
+                    "read": "shelves",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QVariantList",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 4,
+                    "lineNumber": 81,
+                    "name": "personal",
+                    "notify": "shelvesChanged",
+                    "override": false,
+                    "read": "personal",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "bool",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 5,
+                    "lineNumber": 82,
+                    "name": "dataDirectory",
+                    "notify": "stateChanged",
+                    "override": false,
+                    "read": "dataDirectory",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false,
+                    "virtual": false,
+                    "write": "setDataDirectory"
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 6,
+                    "lineNumber": 85,
+                    "name": "graphDirectory",
+                    "notify": "stateChanged",
+                    "override": false,
+                    "read": "graphDirectory",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false,
+                    "virtual": false,
+                    "write": "setGraphDirectory"
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 7,
+                    "lineNumber": 86,
+                    "name": "graphAvailable",
+                    "notify": "stateChanged",
+                    "override": false,
+                    "read": "graphAvailable",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "bool",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 8,
+                    "lineNumber": 90,
+                    "name": "hideExplicit",
+                    "notify": "hideExplicitChanged",
+                    "override": false,
+                    "read": "hideExplicit",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "bool",
+                    "user": false,
+                    "virtual": false,
+                    "write": "setHideExplicit"
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 9,
+                    "lineNumber": 94,
+                    "name": "pendingKey",
+                    "notify": "pendingChanged",
+                    "override": false,
+                    "read": "pendingKey",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 10,
+                    "lineNumber": 97,
+                    "name": "more",
+                    "notify": "moreChanged",
+                    "override": false,
+                    "read": "more",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QVariantMap",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 11,
+                    "lineNumber": 98,
+                    "name": "moreRows",
+                    "notify": "moreChanged",
+                    "override": false,
+                    "read": "moreRows",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QVariantList",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 12,
+                    "lineNumber": 99,
+                    "name": "moreLoading",
+                    "notify": "moreStateChanged",
+                    "override": false,
+                    "read": "moreLoading",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "bool",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 13,
+                    "lineNumber": 101,
+                    "name": "moreExhausted",
+                    "notify": "moreStateChanged",
+                    "override": false,
+                    "read": "moreExhausted",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "bool",
+                    "user": false,
+                    "virtual": false
+                }
+            ],
+            "qualifiedClassName": "Recommender",
+            "signals": [
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "purpose",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "track",
+                            "type": "QVariantMap"
+                        }
+                    ],
+                    "index": 0,
+                    "lineNumber": 203,
+                    "name": "resolved",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 1,
+                    "lineNumber": 204,
+                    "name": "stateChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 2,
+                    "lineNumber": 205,
+                    "name": "shelvesChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 3,
+                    "lineNumber": 206,
+                    "name": "hideExplicitChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 4,
+                    "lineNumber": 207,
+                    "name": "pendingChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 5,
+                    "lineNumber": 208,
+                    "name": "moreChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 6,
+                    "lineNumber": 209,
+                    "name": "moreStateChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "rows",
+                            "type": "QVariantList"
+                        }
+                    ],
+                    "index": 7,
+                    "lineNumber": 211,
+                    "name": "moreAppended",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "shelf",
+                            "type": "int"
+                        }
+                    ],
+                    "index": 8,
+                    "lineNumber": 214,
+                    "name": "rowsEdited",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "text",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 9,
+                    "lineNumber": 217,
+                    "name": "notice",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "text",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 10,
+                    "lineNumber": 219,
+                    "name": "undoable",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 11,
+                    "lineNumber": 222,
+                    "name": "dataLoaded",
+                    "returnType": "void"
+                }
+            ],
+            "slots": [
+                {
+                    "access": "public",
+                    "index": 12,
+                    "lineNumber": 159,
+                    "name": "refresh",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 13,
+                    "lineNumber": 162,
+                    "name": "rebuild",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "row",
+                            "type": "QVariantMap"
+                        }
+                    ],
+                    "index": 14,
+                    "lineNumber": 166,
+                    "name": "play",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "row",
+                            "type": "QVariantMap"
+                        },
+                        {
+                            "name": "purpose",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 15,
+                    "lineNumber": 171,
+                    "name": "resolve",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "shelf",
+                            "type": "int"
+                        }
+                    ],
+                    "index": 16,
+                    "lineNumber": 176,
+                    "name": "playAll",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "key",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 17,
+                    "lineNumber": 181,
+                    "name": "openMore",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 18,
+                    "lineNumber": 182,
+                    "name": "loadMore",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "track",
+                            "type": "QVariantMap"
+                        }
+                    ],
+                    "index": 19,
+                    "lineNumber": 187,
+                    "name": "notInterested",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "artist",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 20,
+                    "lineNumber": 189,
+                    "name": "dontSuggestArtist",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 21,
+                    "lineNumber": 192,
+                    "name": "undoNotInterested",
+                    "returnType": "void"
+                }
+            ],
+            "superClasses": [
+                {
+                    "access": "public",
+                    "name": "QObject"
+                }
+            ]
+        }
+    ],
+    "inputFile": "recommender.h",
+    "outputRevision": 69
+}

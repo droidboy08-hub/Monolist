@@ -1,0 +1,81 @@
+canary LrM_Y39Gmhk VISIONOS 1.02  OK               441 ms itag=251 plain=True 1st=[206 1048576] 2nd=[206 1048576] ok
+canary LrM_Y39Gmhk VISIONOS 0.1   OK               454 ms itag=251 plain=True 1st=[206 1048576] 2nd=[206 1048576] ok
+CANARY OK
+{
+    "ttfaColdLaunch":  {
+                           "n":  204,
+                           "median":  656.5,
+                           "p90":  988,
+                           "min":  422,
+                           "max":  9651
+                       },
+    "resolveColdLaunch":  {
+                              "n":  204,
+                              "median":  372,
+                              "p90":  476,
+                              "min":  216,
+                              "max":  6298
+                          },
+    "ttfaWarm":  {
+                     "n":  204,
+                     "median":  196.5,
+                     "p90":  358,
+                     "min":  110,
+                     "max":  825
+                 },
+    "resolveWarm":  {
+                        "n":  204,
+                        "median":  34,
+                        "p90":  42,
+                        "min":  20,
+                        "max":  304
+                    },
+    "openToEofCold":  {
+                          "n":  188,
+                          "median":  501,
+                          "p90":  741,
+                          "min":  206,
+                          "max":  5192
+                      },
+    "tiers":  "InnerTube=395 yt-dlp ? muxed=10 yt-dlp=3",
+    "refusals":  {
+                     "launches":  204,
+                     "refusedLaunches":  10,
+                     "refusedInnerTubeOpens":  20,
+                     "freshAsks":  10,
+                     "freshRescues":  0,
+                     "muxedRescues":  10,
+                     "otherRescues":  0,
+                     "keptLinkPlays":  10,
+                     "freshSkipped":  0,
+                     "freshRungCostMs":  {
+                                             "n":  10,
+                                             "median":  301,
+                                             "p90":  445,
+                                             "min":  221,
+                                             "max":  445
+                                         },
+                     "refusalToSoundMs":  {
+                                              "n":  10,
+                                              "median":  3578,
+                                              "p90":  3947,
+                                              "min":  2894,
+                                              "max":  4922
+                                          },
+                     "refusedColdTtfaMs":  {
+                                               "n":  10,
+                                               "median":  4242,
+                                               "p90":  4561,
+                                               "min":  3402,
+                                               "max":  5426
+                                           },
+                     "refusedReplayTtfaMs":  {
+                                                 "n":  10,
+                                                 "median":  276,
+                                                 "p90":  366,
+                                                 "min":  201,
+                                                 "max":  369
+                                             },
+                     "refusedReplayTiers":  "yt-dlp ? muxed=10"
+                 }
+}

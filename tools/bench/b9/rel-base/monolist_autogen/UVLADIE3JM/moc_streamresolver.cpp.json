@@ -1,0 +1,138 @@
+{
+    "classes": [
+        {
+            "className": "StreamResolver",
+            "enums": [
+                {
+                    "isClass": false,
+                    "isFlag": false,
+                    "lineNumber": 57,
+                    "name": "Tier",
+                    "values": [
+                        "TierInnerTube",
+                        "TierYtDlp",
+                        "TierMuxed",
+                        "TierPiped",
+                        "TierInvidious",
+                        "TierExhausted",
+                        "TierJioSaavn"
+                    ]
+                }
+            ],
+            "lineNumber": 52,
+            "object": true,
+            "qualifiedClassName": "StreamResolver",
+            "signals": [
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "videoId",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "url",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "tier",
+                            "type": "int"
+                        },
+                        {
+                            "name": "fromCache",
+                            "type": "bool"
+                        }
+                    ],
+                    "index": 0,
+                    "lineNumber": 187,
+                    "name": "resolved",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "videoId",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "reason",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 1,
+                    "lineNumber": 188,
+                    "name": "failed",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "videoId",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "tier",
+                            "type": "int"
+                        }
+                    ],
+                    "index": 2,
+                    "lineNumber": 189,
+                    "name": "tierChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "videoId",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "videoUrl",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "audioUrl",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "headers",
+                            "type": "QVariantMap"
+                        }
+                    ],
+                    "index": 3,
+                    "lineNumber": 191,
+                    "name": "videoResolved",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "videoId",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "reason",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 4,
+                    "lineNumber": 193,
+                    "name": "videoFailed",
+                    "returnType": "void"
+                }
+            ],
+            "superClasses": [
+                {
+                    "access": "public",
+                    "name": "QObject"
+                }
+            ]
+        }
+    ],
+    "inputFile": "streamresolver.h",
+    "outputRevision": 69
+}

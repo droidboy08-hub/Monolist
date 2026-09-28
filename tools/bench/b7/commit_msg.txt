@@ -1,0 +1,38 @@
+Ask mpv for the song before writing it down, and say what mpv plays (B7)
+
+Every song start waited for its own bookkeeping before mpv was even
+asked for the sound: the status line, the play written to History and
+play_events, and Home's Recently played and the History list reloaded
+with it. That was 40-60 ms on an empty history, and over half a second
+with a few hundred songs in Recently played, because the History table
+rebuilds every row on each play (now ROADMAP F35). handleResolved now
+loads first and does the rest after, and a play is written down only if
+mpv took the load; local files and plain URLs do the same. Closing the
+song being left is measured at once and written on the next turn of the
+event loop (at once on quit).
+
+Now Playing's "SOUND: INNERTUBE" note becomes one line built from what
+mpv reports once the sound has started (Player.streamInfo, ROADMAP P06's
+engine half): "Streaming · InnerTube · Opus · 48 kHz · 133 kbps", with
+"44.1 → 48 kHz" when the device's rate differs. Each file start writes
+the long form to the log as a stream: line: codec, the decoder's and the
+device's rate, channels and format, the bitrate (the file's average when
+it holds sound alone, else what its container declares, else mpv's
+measure), resampling and mpv's volume. The unused
+demuxer-readahead-secs=20 is gone: with the cache on, mpv ignores it.
+
+Measured with the instrumented Release build, bench_B seq --again and
+skip over the 12 ids, two rotations, before and after interleaved
+(median / p90; new n=22, replay n=24, skip n=22):
+- Empty history: resolved to loadfile 40/59, 61.5/68, 45.5/58 ms -> 0/1,
+  1/1, 1/1. TTFA 378.5 -> 324 (new), 286.5 -> 259 (replay),
+  263 -> 247.5 (skip): replay and skip fell less than the time saved.
+- 480 songs in Recently played: resolved to loadfile 540.5, 535, 535.5 ms
+  -> 0, 1, 1. TTFA 839 -> 320, 803 -> 178.5, 812 -> 173 ms.
+- Rows written (recent, plays, play_events, closed, labelled): the same
+  in all 16 runs.
+
+Checked: Debug build clean (qmllint), --listen-test 35/0,
+--scrobble-test 32/0, --queue-test; the stream line matches mpv -v's
+AO and swresample lines for an Opus and an AAC stream, JioSaavn, and
+local Opus, AAC-with-cover and video files.

@@ -1,0 +1,30 @@
+﻿{
+  "tables": {
+    "albums": 0,
+    "downloads": 1,
+    "featured": 0,
+    "history": 16,
+    "lyrics": 0,
+    "playlist_tracks": 0,
+    "playlists": 0,
+    "recent": 3,
+    "settings": 2,
+    "sqlite_sequence": 2,
+    "tracks": 1
+  },
+  "recentTable": {
+    "songs": 3,
+    "plays": 7,
+    "songsPlayedMoreThanOnce": 1,
+    "playsThatRepeatASong": 4,
+    "pctPlaysThatRepeat": 57.1,
+    "songsOver7m30s": 0,
+    "playsOfSongsOver7m30s": 0,
+    "pctPlaysOver7m30s": 0
+  },
+  "historyTable": {
+    "plays": 16,
+    "distinctTracks": 1,
+    "pctRepeat": 93.8
+  }
+}

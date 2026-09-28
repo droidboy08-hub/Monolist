@@ -1,0 +1,1177 @@
+[
+  {
+    "n": 1,
+    "title": "Hey Jude",
+    "query": {
+      "track_name": "Hey Jude",
+      "artist_name": "The Beatles",
+      "duration": 426
+    },
+    "search": {
+      "ms": 548,
+      "bytes": 274732,
+      "results": 20,
+      "pick": {
+        "id": 37324692,
+        "track": "Hey Jude",
+        "artist": "The Beatles",
+        "album": "Remember...the 1960s",
+        "duration": 426,
+        "synced": true,
+        "first": "Hey Jude, don't make it bad / Take a sad song and make it better"
+      },
+      "distinctTexts": 1
+    },
+    "get": {
+      "ms": 171,
+      "status": 200,
+      "bytes": 13909,
+      "entry": {
+        "id": 3708416,
+        "track": "Hey Jude",
+        "artist": "The Beatles",
+        "album": "1",
+        "duration": 428,
+        "synced": true,
+        "instrumental": false,
+        "first": "Hey Jude, don't make it bad / Take a sad song and make it better"
+      }
+    },
+    "sameText": true
+  },
+  {
+    "n": 2,
+    "title": "Bohemian Rhapsody",
+    "query": {
+      "track_name": "Bohemian Rhapsody",
+      "artist_name": "Queen",
+      "duration": 355
+    },
+    "search": {
+      "ms": 210,
+      "bytes": 228995,
+      "results": 20,
+      "pick": {
+        "id": 37174882,
+        "track": "Bohemian Rhapsody",
+        "artist": "Queen",
+        "album": "500 Greatest Songs - Rolling Stone Magazines 2010",
+        "duration": 355,
+        "synced": true,
+        "first": "Is this the real life? Is this just fantasy? / Caught in a landslide, no escape from reali"
+      },
+      "distinctTexts": 1
+    },
+    "get": {
+      "ms": 184,
+      "status": 200,
+      "bytes": 11445,
+      "entry": {
+        "id": 19080,
+        "track": "Bohemian Rhapsody",
+        "artist": "Queen",
+        "album": "A Night at the Opera",
+        "duration": 355,
+        "synced": true,
+        "instrumental": false,
+        "first": "Is this the real life? Is this just fantasy? / Caught in a landslide, no escape from reali"
+      }
+    },
+    "sameText": true
+  },
+  {
+    "n": 3,
+    "title": "Dreams (2004 Remaster)",
+    "query": {
+      "track_name": "Dreams",
+      "artist_name": "Fleetwood Mac",
+      "duration": 258
+    },
+    "search": {
+      "ms": 193,
+      "bytes": 149644,
+      "results": 20,
+      "pick": {
+        "id": 37160342,
+        "track": "Dreams",
+        "artist": "Fleetwood Mac",
+        "album": "Rumours [2013, Warner Bros. Records, 8122796778, XE]",
+        "duration": 258,
+        "synced": true,
+        "first": "Now here you go again, you say you want your freedom / Well, who am I to keep you down?"
+      },
+      "distinctTexts": 1
+    },
+    "get": {
+      "ms": 190,
+      "status": 200,
+      "bytes": 8247,
+      "entry": {
+        "id": 338535,
+        "track": "Dreams",
+        "artist": "Fleetwood Mac",
+        "album": "Rumours",
+        "duration": 256,
+        "synced": true,
+        "instrumental": false,
+        "first": "Now here you go again, you say you want your freedom / Well, who am I to keep you down?"
+      }
+    },
+    "sameText": true
+  },
+  {
+    "n": 4,
+    "title": "Billie Jean",
+    "query": {
+      "track_name": "Billie Jean",
+      "artist_name": "Michael Jackson",
+      "duration": 295
+    },
+    "search": {
+      "ms": 182,
+      "bytes": 300607,
+      "results": 20,
+      "pick": {
+        "id": 36973034,
+        "track": "Billie Jean",
+        "artist": "Michael Jackson",
+        "album": "Thriller [25th Anniversary Edition Alternate Cover]",
+        "duration": 294,
+        "synced": true,
+        "first": "She was more like a beauty queen from a movie scene / I said \"Don't mind, but what do you "
+      },
+      "distinctTexts": 1
+    },
+    "get": {
+      "ms": 181,
+      "status": 200,
+      "bytes": 15078,
+      "entry": {
+        "id": 130407,
+        "track": "Billie Jean",
+        "artist": "Michael Jackson",
+        "album": "Thriller",
+        "duration": 294,
+        "synced": true,
+        "instrumental": false,
+        "first": "She was more like a beauty queen from a movie scene / I said, \"Don't mind, but what do you"
+      }
+    },
+    "sameText": false
+  },
+  {
+    "n": 5,
+    "title": "Smells Like Teen Spirit",
+    "query": {
+      "track_name": "Smells Like Teen Spirit",
+      "artist_name": "Nirvana",
+      "duration": 302
+    },
+    "search": {
+      "ms": 194,
+      "bytes": 183065,
+      "results": 20,
+      "pick": {
+        "id": 36961307,
+        "track": "Smells Like Teen Spirit",
+        "artist": "Nirvana",
+        "album": "Nevermind (24kt Gold Remastered)",
+        "duration": 302,
+        "synced": true,
+        "first": "Load up on guns, bring your friends / It's fun to lose and to pretend"
+      },
+      "distinctTexts": 1
+    },
+    "get": {
+      "ms": 185,
+      "status": 200,
+      "bytes": 9091,
+      "entry": {
+        "id": 3664403,
+        "track": "Smells Like Teen Spirit",
+        "artist": "Nirvana",
+        "album": "Nevermind (Deluxe Edition)",
+        "duration": 302,
+        "synced": true,
+        "instrumental": false,
+        "first": "Load up on guns, bring your friends / It's fun to lose and to pretend"
+      }
+    },
+    "sameText": true
+  },
+  {
+    "n": 6,
+    "title": "Juicy (2005 Remaster)",
+    "query": {
+      "track_name": "Juicy",
+      "artist_name": "Notorious B.I.G.",
+      "duration": 303
+    },
+    "search": {
+      "ms": 334,
+      "bytes": 428786,
+      "results": 20,
+      "pick": {
+        "id": 33522278,
+        "track": "Juicy",
+        "artist": "Notorious B.I.G.",
+        "album": "Juicy",
+        "duration": 303,
+        "synced": true,
+        "first": "Yeah, this album is dedicated / To all the teachers that told me I'd never amount to nothi"
+      },
+      "distinctTexts": 1
+    },
+    "get": {
+      "ms": 192,
+      "status": 200,
+      "bytes": 21403,
+      "entry": {
+        "id": 38607730,
+        "track": "Juicy",
+        "artist": "Notorious B.I.G.",
+        "album": "Ready to Die (The Remaster; 2015 Remaster)",
+        "duration": 303,
+        "synced": true,
+        "instrumental": false,
+        "first": "Yeah, this album is dedicated / To all the teachers that told me I'd never amount to nothi"
+      }
+    },
+    "sameText": true
+  },
+  {
+    "n": 7,
+    "title": "Lose Yourself",
+    "query": {
+      "track_name": "Lose Yourself",
+      "artist_name": "Eminem",
+      "duration": 321
+    },
+    "search": {
+      "ms": 363,
+      "bytes": 450067,
+      "results": 20,
+      "pick": {
+        "id": 37487090,
+        "track": "Lose Yourself",
+        "artist": "Eminem",
+        "album": "8 Mile [Deluxe Edition]",
+        "duration": 320,
+        "synced": true,
+        "first": "Look / If you had one shot, or one opportunity"
+      },
+      "distinctTexts": 1
+    },
+    "get": {
+      "ms": 197,
+      "status": 200,
+      "bytes": 22579,
+      "entry": {
+        "id": 1008718,
+        "track": "Lose Yourself",
+        "artist": "Eminem",
+        "album": "8 Mile (Music From And Inspired By The Motion Picture)",
+        "duration": 320,
+        "synced": true,
+        "instrumental": false,
+        "first": "Look / If you had one shot, or one opportunity"
+      }
+    },
+    "sameText": true
+  },
+  {
+    "n": 8,
+    "title": "Get Lucky (feat. Pharrell Williams and Nile Rodgers)",
+    "query": {
+      "track_name": "Get Lucky",
+      "artist_name": "Daft Punk",
+      "duration": 370
+    },
+    "search": {
+      "ms": 188,
+      "bytes": 286995,
+      "results": 20,
+      "pick": {
+        "id": 37075924,
+        "track": "Get Lucky",
+        "artist": "Daft Punk",
+        "album": "Random Access Memories (10th Annyversary)",
+        "duration": 370,
+        "synced": true,
+        "first": "Like the legend of the phoenix, huh / Our ends were beginnings"
+      },
+      "distinctTexts": 1
+    },
+    "get": {
+      "ms": 255,
+      "status": 200,
+      "bytes": 21255,
+      "entry": {
+        "id": 3735335,
+        "track": "Get Lucky",
+        "artist": "Daft Punk",
+        "album": "Random Access Memories",
+        "duration": 370,
+        "synced": true,
+        "instrumental": false,
+        "first": "Like the legend of the phoenix, huh / All ends with beginnings"
+      }
+    },
+    "sameText": false
+  },
+  {
+    "n": 9,
+    "title": "Blinding Lights",
+    "query": {
+      "track_name": "Blinding Lights",
+      "artist_name": "The Weeknd",
+      "duration": 202
+    },
+    "search": {
+      "ms": 191,
+      "bytes": 165688,
+      "results": 20,
+      "pick": {
+        "id": 37015057,
+        "track": "Blinding Lights",
+        "artist": "The Weeknd",
+        "album": "The Com-Bil-ation",
+        "duration": 202,
+        "synced": true,
+        "first": "Yeah / I've been tryna call"
+      },
+      "distinctTexts": 1
+    },
+    "get": {
+      "ms": 182,
+      "status": 200,
+      "bytes": 7825,
+      "entry": {
+        "id": 511842,
+        "track": "Blinding Lights",
+        "artist": "The Weeknd",
+        "album": "Blinding Lights",
+        "duration": 200,
+        "synced": true,
+        "instrumental": false,
+        "first": "Yeah / I've been tryna call"
+      }
+    },
+    "sameText": true
+  },
+  {
+    "n": 10,
+    "title": "Flowers",
+    "query": {
+      "track_name": "Flowers",
+      "artist_name": "Miley Cyrus",
+      "duration": 201
+    },
+    "search": {
+      "ms": 216,
+      "bytes": 196691,
+      "results": 20,
+      "pick": {
+        "id": 33736661,
+        "track": "Flowers",
+        "artist": "Miley Cyrus",
+        "album": "Made for Spatial Audio",
+        "duration": 201,
+        "synced": true,
+        "first": "We were good, we were gold / Kind of dream that can't be sold"
+      },
+      "distinctTexts": 1
+    },
+    "get": {
+      "ms": 189,
+      "status": 200,
+      "bytes": 9807,
+      "entry": {
+        "id": 2160917,
+        "track": "Flowers",
+        "artist": "Miley Cyrus",
+        "album": "Flowers",
+        "duration": 201,
+        "synced": true,
+        "instrumental": false,
+        "first": "We were good, we were gold / Kinda dream that can't be sold"
+      }
+    },
+    "sameText": false
+  },
+  {
+    "n": 11,
+    "title": "Not Like Us",
+    "query": {
+      "track_name": "Not Like Us",
+      "artist_name": "Kendrick Lamar",
+      "duration": 275
+    },
+    "search": {
+      "ms": 332,
+      "bytes": 507218,
+      "results": 20,
+      "pick": {
+        "id": 36912695,
+        "track": "Not Like Us",
+        "artist": "Kendrick Lamar",
+        "album": "Mix - LOVE.",
+        "duration": 275,
+        "synced": true,
+        "first": "Psst, I see dead people / (Mustard on the beat, hoe)"
+      },
+      "distinctTexts": 1
+    },
+    "get": {
+      "ms": 202,
+      "status": 200,
+      "bytes": 25356,
+      "entry": {
+        "id": 9055922,
+        "track": "Not Like Us",
+        "artist": "Kendrick Lamar",
+        "album": "Not Like Us",
+        "duration": 274,
+        "synced": true,
+        "instrumental": false,
+        "first": "Psst, I see dead people / (Mustard on the beat, hoe)"
+      }
+    },
+    "sameText": true
+  },
+  {
+    "n": 12,
+    "title": "Espresso",
+    "query": {
+      "track_name": "Espresso",
+      "artist_name": "Sabrina Carpenter",
+      "duration": 176
+    },
+    "search": {
+      "ms": 188,
+      "bytes": 228970,
+      "results": 20,
+      "pick": {
+        "id": 37156763,
+        "track": "Espresso",
+        "artist": "Sabrina Carpenter",
+        "album": "Essentials",
+        "duration": 176,
+        "synced": true,
+        "first": "Now he's thinkin' 'bout me every night, oh / Is it that sweet? I guess so"
+      },
+      "distinctTexts": 1
+    },
+    "get": {
+      "ms": 190,
+      "status": 200,
+      "bytes": 11535,
+      "entry": {
+        "id": 9860932,
+        "track": "Espresso",
+        "artist": "Sabrina Carpenter",
+        "album": "Short n' Sweet",
+        "duration": 176,
+        "synced": true,
+        "instrumental": false,
+        "first": "Now he's thinkin' 'bout me every night, oh / Is it that sweet? I guess so"
+      }
+    },
+    "sameText": true
+  },
+  {
+    "n": 13,
+    "title": "Despacito",
+    "query": {
+      "track_name": "Despacito",
+      "artist_name": "Luis Fonsi",
+      "duration": 229
+    },
+    "search": {
+      "ms": 192,
+      "bytes": 318007,
+      "results": 20,
+      "pick": {
+        "id": 37084584,
+        "track": "Despacito",
+        "artist": "Luis Fonsi",
+        "album": "Die Ultimative Chartshow - Die erfolgreichsten Hits für Kids",
+        "duration": 229,
+        "synced": true,
+        "first": "Ay, ¡Fonsi! ¡D.Y. / Ohhh, oh, no, oh, no, oh"
+      },
+      "distinctTexts": 1
+    },
+    "get": {
+      "ms": 184,
+      "status": 200,
+      "bytes": 16604,
+      "entry": {
+        "id": 3927808,
+        "track": "Despacito",
+        "artist": "Luis Fonsi",
+        "album": "Despacito",
+        "duration": 229,
+        "synced": true,
+        "instrumental": false,
+        "first": "¡Ay! / ¡Fonsi!"
+      }
+    },
+    "sameText": false
+  },
+  {
+    "n": 14,
+    "title": "Tití Me Preguntó",
+    "query": {
+      "track_name": "Tití Me Preguntó",
+      "artist_name": "Bad Bunny",
+      "duration": 244
+    },
+    "search": {
+      "ms": 206,
+      "bytes": 320847,
+      "results": 20,
+      "pick": {
+        "id": 37495105,
+        "track": "Tití Me Preguntó",
+        "artist": "Bad Bunny",
+        "album": "Billboard Hot 100 Single Charts 2026.03",
+        "duration": 244,
+        "synced": true,
+        "first": "Ey, Tití me preguntó si tengo muchas novias / Muchas novias"
+      },
+      "distinctTexts": 1
+    },
+    "get": {
+      "ms": 218,
+      "status": 200,
+      "bytes": 15233,
+      "entry": {
+        "id": 1462,
+        "track": "Tití Me Preguntó",
+        "artist": "Bad Bunny",
+        "album": "Un Verano Sin Ti",
+        "duration": 244,
+        "synced": true,
+        "instrumental": false,
+        "first": "Ey, Tití me preguntó si tengo muchas novias, muchas novias / Hoy tengo a una, mañana a otr"
+      }
+    },
+    "sameText": false
+  },
+  {
+    "n": 15,
+    "title": "La Bamba (Single Version)",
+    "query": {
+      "track_name": "La Bamba (Single Version)",
+      "artist_name": "Ritchie Valens",
+      "duration": 127
+    },
+    "search": {
+      "ms": 192,
+      "bytes": 76033,
+      "results": 17,
+      "pick": {
+        "id": 36438413,
+        "track": "La Bamba (Single Version)",
+        "artist": "Ritchie Valens",
+        "album": "All Out 50s",
+        "duration": 127,
+        "synced": true,
+        "first": "Para bailar la bamba / Para bailar la bamba se necesita una poca de gracia"
+      },
+      "distinctTexts": 1
+    },
+    "get": {
+      "ms": 183,
+      "status": 200,
+      "bytes": 4458,
+      "entry": {
+        "id": 1008263,
+        "track": "La Bamba (Single Version)",
+        "artist": "Ritchie Valens",
+        "album": "Ritchie Valens",
+        "duration": 127,
+        "synced": true,
+        "instrumental": false,
+        "first": "Para bailar la bamba / Para bailar la bamba se necesita una poca de gracia"
+      }
+    },
+    "sameText": true
+  },
+  {
+    "n": 16,
+    "title": "Hasta la Raíz",
+    "query": {
+      "track_name": "Hasta la Raíz",
+      "artist_name": "Natalia Lafourcade",
+      "duration": 222
+    },
+    "search": {
+      "ms": 193,
+      "bytes": 229095,
+      "results": 20,
+      "pick": {
+        "id": 18558008,
+        "track": "Hasta la Raíz",
+        "artist": "Natalia Lafourcade",
+        "album": "Hasta la Raíz (Dolby Atmos)",
+        "duration": 222,
+        "synced": true,
+        "first": "Sigo cruzando ríos / Andando selvas, amando el sol"
+      },
+      "distinctTexts": 2
+    },
+    "get": {
+      "ms": 483,
+      "status": 404,
+      "bytes": 84,
+      "entry": null
+    },
+    "sameText": false
+  },
+  {
+    "n": 17,
+    "title": "Tum Hi Ho",
+    "query": {
+      "track_name": "Tum Hi Ho",
+      "artist_name": "Arijit Singh",
+      "duration": 262
+    },
+    "search": {
+      "ms": 207,
+      "bytes": 140295,
+      "results": 20,
+      "pick": {
+        "id": 34443533,
+        "track": "Tum Hi Ho",
+        "artist": "Arijit Singh",
+        "album": "Rising Star - Mithoon",
+        "duration": 262,
+        "synced": true,
+        "first": "Hum tere bin ab reh nahi sakte / Tere bina kya wajood mera"
+      },
+      "distinctTexts": 1
+    },
+    "get": {
+      "ms": 183,
+      "status": 200,
+      "bytes": 7000,
+      "entry": {
+        "id": 9910251,
+        "track": "Tum Hi Ho",
+        "artist": "Arijit Singh",
+        "album": "Aashiqui 2",
+        "duration": 261,
+        "synced": true,
+        "instrumental": false,
+        "first": "Hum tere bin ab reh nahi sakte / Tere bina kya wajood mera"
+      }
+    },
+    "sameText": true
+  },
+  {
+    "n": 18,
+    "title": "Chaiyya Chaiyya",
+    "query": {
+      "track_name": "Chaiyya Chaiyya",
+      "artist_name": "Sukhwinder Singh",
+      "duration": 407
+    },
+    "search": {
+      "ms": 336,
+      "bytes": 384525,
+      "results": 20,
+      "pick": {
+        "id": 34433019,
+        "track": "chaiyya chaiyya",
+        "artist": "sukhwinder singh",
+        "album": "dil se",
+        "duration": 407,
+        "synced": true,
+        "first": "Jinke sar hon ishq ki chaanv / Paanv ke neeche jaanat hogi"
+      },
+      "distinctTexts": 2
+    },
+    "get": {
+      "ms": 175,
+      "status": 200,
+      "bytes": 19357,
+      "entry": {
+        "id": 25824873,
+        "track": "Chaiyya Chaiyya",
+        "artist": "Sukhwinder Singh",
+        "album": "Dil Se (Original Motion Picture Soundtrack)",
+        "duration": 407,
+        "synced": true,
+        "instrumental": false,
+        "first": "Jinke sar hon ishq ki chaanv / Paanv ke neeche jaanat hogi"
+      }
+    },
+    "sameText": true
+  },
+  {
+    "n": 19,
+    "title": "Brown Munde",
+    "query": {
+      "track_name": "Brown Munde",
+      "artist_name": "AP Dhillon",
+      "duration": 255
+    },
+    "search": {
+      "ms": 347,
+      "bytes": 255165,
+      "results": 20,
+      "pick": {
+        "id": 29746285,
+        "track": "Brown Munde",
+        "artist": "AP Dhillon",
+        "album": "Related to Excuses",
+        "duration": 255,
+        "synced": true,
+        "first": "Gmi xr / Lambo truck ਵਿੱਚ ਗੇੜੀ ਸਿੱਧੀ Hollywood"
+      },
+      "distinctTexts": 6
+    },
+    "get": {
+      "ms": 179,
+      "status": 200,
+      "bytes": 13844,
+      "entry": {
+        "id": 7790458,
+        "track": "Brown Munde",
+        "artist": "AP Dhillon",
+        "album": "Brown Munde",
+        "duration": 254,
+        "synced": true,
+        "instrumental": false,
+        "first": "Gmi xr / Lambo truck ਵਿੱਚ ਗੇੜੀ ਸਿੱਧੀ Hollywood"
+      }
+    },
+    "sameText": true
+  },
+  {
+    "n": 20,
+    "title": "Spring Day",
+    "query": {
+      "track_name": "Spring Day",
+      "artist_name": "BTS",
+      "duration": 275
+    },
+    "search": {
+      "ms": 414,
+      "bytes": 151107,
+      "results": 20,
+      "pick": {
+        "id": 22356667,
+        "track": "Spring Day",
+        "artist": "BTS",
+        "album": "The Most Beautiful Moment in Life, Pt. 2",
+        "duration": 275,
+        "synced": true,
+        "first": "보고 싶다, 이렇게 말하니까 더 보고 싶다 / 너희 사진을 보고 있어도 보고 싶다"
+      },
+      "distinctTexts": 2
+    },
+    "get": {
+      "ms": 170,
+      "status": 200,
+      "bytes": 7595,
+      "entry": {
+        "id": 3674742,
+        "track": "Spring Day",
+        "artist": "BTS",
+        "album": "You Never Walk Alone",
+        "duration": 274,
+        "synced": true,
+        "instrumental": false,
+        "first": "보고 싶다, 이렇게 말하니까 더 보고 싶다 / 너희 사진을 보고 있어도 보고 싶다"
+      }
+    },
+    "sameText": true
+  },
+  {
+    "n": 21,
+    "title": "Gangnam Style",
+    "query": {
+      "track_name": "Gangnam Style",
+      "artist_name": "PSY",
+      "duration": 220
+    },
+    "search": {
+      "ms": 232,
+      "bytes": 151339,
+      "results": 20,
+      "pick": {
+        "id": 37499653,
+        "track": "Gangnam Style",
+        "artist": "PSY",
+        "album": "Club Sounds: Volume 64",
+        "duration": 220,
+        "synced": true,
+        "first": "오빤 강남스타일 / 강남스타일"
+      },
+      "distinctTexts": 1
+    },
+    "get": {
+      "ms": 180,
+      "status": 200,
+      "bytes": 8378,
+      "entry": {
+        "id": 4727489,
+        "track": "Gangnam Style",
+        "artist": "PSY",
+        "album": "SIX RULES, Part 1",
+        "duration": 219,
+        "synced": true,
+        "instrumental": false,
+        "first": "오빤 강남스타일 / 강남스타일"
+      }
+    },
+    "sameText": true
+  },
+  {
+    "n": 22,
+    "title": "Hype Boy",
+    "query": {
+      "track_name": "Hype Boy",
+      "artist_name": "NewJeans",
+      "duration": 180
+    },
+    "search": {
+      "ms": 194,
+      "bytes": 194658,
+      "results": 20,
+      "pick": {
+        "id": 34436082,
+        "track": "hype boy",
+        "artist": "newjeans",
+        "album": "melon top 100",
+        "duration": 180,
+        "synced": true,
+        "first": "One, two, three, four / Baby"
+      },
+      "distinctTexts": 3
+    },
+    "get": {
+      "ms": 192,
+      "status": 200,
+      "bytes": 9296,
+      "entry": {
+        "id": 2118076,
+        "track": "Hype Boy",
+        "artist": "NewJeans",
+        "album": "NewJeans 1st EP 'New Jeans'",
+        "duration": 179,
+        "synced": true,
+        "instrumental": false,
+        "first": "One, two, three, four / Baby"
+      }
+    },
+    "sameText": true
+  },
+  {
+    "n": 23,
+    "title": "Lemon",
+    "query": {
+      "track_name": "Lemon",
+      "artist_name": "Kenshi Yonezu",
+      "duration": 257
+    },
+    "search": {
+      "ms": 190,
+      "bytes": 182669,
+      "results": 20,
+      "pick": {
+        "id": 34873437,
+        "track": "Lemon",
+        "artist": "Kenshi Yonezu",
+        "album": "Kenshi Yonezu",
+        "duration": 256,
+        "synced": true,
+        "first": "Lemon - Kenshi Yonezu / Yume naraba dore hodo yokatta deshou"
+      },
+      "distinctTexts": 1
+    },
+    "get": {
+      "ms": 253,
+      "status": 200,
+      "bytes": 9110,
+      "entry": {
+        "id": 1319700,
+        "track": "Lemon",
+        "artist": "Kenshi Yonezu",
+        "album": "Lemon",
+        "duration": 256,
+        "synced": true,
+        "instrumental": false,
+        "first": "Lemon - Kenshi Yonezu / Yume naraba dore hodo yokatta deshou"
+      }
+    },
+    "sameText": true
+  },
+  {
+    "n": 24,
+    "title": "アイドル",
+    "query": {
+      "track_name": "アイドル",
+      "artist_name": "YOASOBI",
+      "duration": 214
+    },
+    "search": {
+      "ms": 189,
+      "bytes": 89973,
+      "results": 20,
+      "pick": {
+        "id": 34971523,
+        "track": "アイドル",
+        "artist": "YOASOBI",
+        "album": "Singles",
+        "duration": 214,
+        "synced": true,
+        "first": "相壊す ぐわんぐわんな その眼に / 課す 冥土 よこす 実に上の上"
+      },
+      "distinctTexts": 1
+    },
+    "get": {
+      "ms": 189,
+      "status": 200,
+      "bytes": 30066,
+      "entry": {
+        "id": 2116394,
+        "track": "アイドル",
+        "artist": "YOASOBI",
+        "album": "アイドル",
+        "duration": 213,
+        "synced": true,
+        "instrumental": false,
+        "first": "無敵の笑顔で荒らすメディア / 知りたいその秘密ミステリアス"
+      }
+    },
+    "sameText": false
+  },
+  {
+    "n": 25,
+    "title": "上を向いて歩こう - Sukiyaki",
+    "query": {
+      "track_name": "上を向いて歩こう - Sukiyaki",
+      "artist_name": "Kyu Sakamoto",
+      "duration": 189
+    },
+    "search": {
+      "ms": 177,
+      "bytes": 8388,
+      "results": 3,
+      "pick": {
+        "id": 34458225,
+        "track": "上を向いて歩こう - Sukiyaki",
+        "artist": "Kyu Sakamoto",
+        "album": "Best 9!",
+        "duration": 189,
+        "synced": true,
+        "first": "上を向いて歩こう / 涙がこぼれないように"
+      },
+      "distinctTexts": 1
+    },
+    "get": {
+      "ms": 180,
+      "status": 200,
+      "bytes": 2776,
+      "entry": {
+        "id": 34458225,
+        "track": "上を向いて歩こう - Sukiyaki",
+        "artist": "Kyu Sakamoto",
+        "album": "Best 9!",
+        "duration": 189,
+        "synced": true,
+        "instrumental": false,
+        "first": "上を向いて歩こう / 涙がこぼれないように"
+      }
+    },
+    "sameText": true
+  },
+  {
+    "n": 26,
+    "title": "La Vie En Rose",
+    "query": {
+      "track_name": "La Vie En Rose",
+      "artist_name": "Edith Piaf",
+      "duration": 188
+    },
+    "search": {
+      "ms": 207,
+      "bytes": 143066,
+      "results": 20,
+      "pick": {
+        "id": 37079487,
+        "track": "La Vie En Rose",
+        "artist": "Edith Piaf",
+        "album": "Grandes Voix De La Chanson Française",
+        "duration": 188,
+        "synced": true,
+        "first": "Des yeux qui font baisser les miens / Un rire qui se perd sur sa bouche"
+      },
+      "distinctTexts": 1
+    },
+    "get": {
+      "ms": 207,
+      "status": 200,
+      "bytes": 6882,
+      "entry": {
+        "id": 2572323,
+        "track": "La Vie en Rose",
+        "artist": "Édith Piaf",
+        "album": "La Vie en Rose",
+        "duration": 188,
+        "synced": true,
+        "instrumental": false,
+        "first": "Des yeux qui font baisser les miens / Un rire qui se perd sur sa bouche"
+      }
+    },
+    "sameText": true
+  },
+  {
+    "n": 27,
+    "title": "99 Luftballons",
+    "query": {
+      "track_name": "99 Luftballons",
+      "artist_name": "Nena",
+      "duration": 232
+    },
+    "search": {
+      "ms": 181,
+      "bytes": 170354,
+      "results": 20,
+      "pick": {
+        "id": 12897360,
+        "track": "99 Luftballons [99 Luftballons, 1984]",
+        "artist": "Nena",
+        "album": "Mixone 2024",
+        "duration": 232,
+        "synced": true,
+        "first": "Hast du etwas Zeit für mich? / Dann singe ich ein Lied für dich"
+      },
+      "distinctTexts": 1
+    },
+    "get": {
+      "ms": 195,
+      "status": 200,
+      "bytes": 8460,
+      "entry": {
+        "id": 705202,
+        "track": "99 Luftballons",
+        "artist": "Nena",
+        "album": "Nena",
+        "duration": 231,
+        "synced": true,
+        "instrumental": false,
+        "first": "Hast du etwas Zeit für mich? / Dann singe ich ein Lied für dich"
+      }
+    },
+    "sameText": true
+  },
+  {
+    "n": 28,
+    "title": "Tamally Maak",
+    "query": {
+      "track_name": "Tamally Maak",
+      "artist_name": "Amr Diab",
+      "duration": 272
+    },
+    "search": {
+      "ms": 191,
+      "bytes": 139076,
+      "results": 20,
+      "pick": {
+        "id": 35154151,
+        "track": "Tamally Maak",
+        "artist": "Amr Diab",
+        "album": "Amr Diab",
+        "duration": 272,
+        "synced": true,
+        "first": "تملي معاك ولو حتى بعيد عني / في قلبي هواك، تملي معاك"
+      },
+      "distinctTexts": 1
+    },
+    "get": {
+      "ms": 184,
+      "status": 200,
+      "bytes": 6941,
+      "entry": {
+        "id": 19004212,
+        "track": "Tamally Maak",
+        "artist": "Amr Diab",
+        "album": "Tamally Maak",
+        "duration": 272,
+        "synced": true,
+        "instrumental": false,
+        "first": "تملي معاك ولو حتى بعيد عني / في قلبي هواك، تملي معاك"
+      }
+    },
+    "sameText": true
+  },
+  {
+    "n": 29,
+    "title": "Clair De Lune",
+    "query": {
+      "track_name": "Clair De Lune",
+      "artist_name": "Claude Debussy",
+      "duration": 248
+    },
+    "search": {
+      "ms": 201,
+      "bytes": 8169,
+      "results": 20,
+      "pick": null,
+      "distinctTexts": 1
+    },
+    "get": {
+      "ms": 180,
+      "status": 200,
+      "bytes": 394,
+      "entry": {
+        "id": 9269892,
+        "track": "Clair De Lune",
+        "artist": "Claude Debussy",
+        "album": "Classical Best",
+        "duration": 248,
+        "synced": false,
+        "instrumental": true,
+        "first": ""
+      }
+    },
+    "sameText": false
+  },
+  {
+    "n": 30,
+    "title": "Sandstorm",
+    "query": {
+      "track_name": "Sandstorm",
+      "artist_name": "Darude",
+      "duration": 447
+    },
+    "search": {
+      "ms": 182,
+      "bytes": 7877,
+      "results": 20,
+      "pick": null,
+      "distinctTexts": 1
+    },
+    "get": {
+      "ms": 189,
+      "status": 200,
+      "bytes": 357,
+      "entry": {
+        "id": 10570044,
+        "track": "Sandstorm",
+        "artist": "Darude",
+        "album": "Sandstorm",
+        "duration": 446,
+        "synced": false,
+        "instrumental": true,
+        "first": ""
+      }
+    },
+    "sameText": false
+  }
+]

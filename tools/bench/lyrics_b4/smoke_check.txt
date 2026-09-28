@@ -1,0 +1,36 @@
+﻿Per track, over passes smoke01
+  #1  {}
+  #2  {}
+  #3  {}
+  #4  {}
+  #5  {}
+  #6  {}
+  #7  {}
+  #8  {}
+  #9  {"exact":1}
+  #10 {}
+  #11 {}
+  #12 {}
+  #13 {}
+  #14 {}
+  #15 {}
+  #16 {}
+  #17 {}
+  #18 {}
+  #19 {}
+  #20 {}
+  #21 {}
+  #22 {}
+  #23 {}
+  #24 {"exact":1}
+  #25 {}
+  #26 {}
+  #27 {}
+  #28 {}
+  #29 {}
+  #30 {"instrumental":1}
+Vocal tracks whose stored text was the right song's in every pass: 2/28
+Vocal tracks with the exact (/api/get) text in every pass: 2/28
+LRCLIB bytes per first lookup: n=3 median=7825 p90=30584 min=357 max=36274
+/api/get answer after sent: n=3 median=190 p90=200
+Search asked as well because /api/get was slow: 0 of 3 first lookups

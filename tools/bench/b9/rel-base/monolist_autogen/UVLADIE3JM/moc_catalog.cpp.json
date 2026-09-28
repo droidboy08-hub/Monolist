@@ -1,0 +1,723 @@
+{
+    "classes": [
+        {
+            "className": "Catalog",
+            "lineNumber": 18,
+            "object": true,
+            "properties": [
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 0,
+                    "lineNumber": 21,
+                    "name": "loading",
+                    "notify": "homeChanged",
+                    "override": false,
+                    "read": "loading",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "bool",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 1,
+                    "lineNumber": 22,
+                    "name": "error",
+                    "notify": "homeChanged",
+                    "override": false,
+                    "read": "error",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": true,
+                    "designable": true,
+                    "final": false,
+                    "index": 2,
+                    "lineNumber": 24,
+                    "name": "quickPicks",
+                    "override": false,
+                    "read": "quickPicks",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "SearchResultModel*",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 3,
+                    "lineNumber": 25,
+                    "name": "quickPicksTitle",
+                    "notify": "homeChanged",
+                    "override": false,
+                    "read": "quickPicksTitle",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 4,
+                    "lineNumber": 28,
+                    "name": "shelves",
+                    "notify": "homeChanged",
+                    "override": false,
+                    "read": "shelves",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QVariantList",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 5,
+                    "lineNumber": 30,
+                    "name": "featured",
+                    "notify": "homeChanged",
+                    "override": false,
+                    "read": "featured",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QVariantMap",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": true,
+                    "designable": true,
+                    "final": false,
+                    "index": 6,
+                    "lineNumber": 31,
+                    "name": "recent",
+                    "override": false,
+                    "read": "recent",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "SearchResultModel*",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 7,
+                    "lineNumber": 34,
+                    "name": "page",
+                    "notify": "pageChanged",
+                    "override": false,
+                    "read": "page",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QVariantMap",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": true,
+                    "designable": true,
+                    "final": false,
+                    "index": 8,
+                    "lineNumber": 35,
+                    "name": "pageTracks",
+                    "override": false,
+                    "read": "pageTracks",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "SearchResultModel*",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 9,
+                    "lineNumber": 36,
+                    "name": "pageLoading",
+                    "notify": "pageChanged",
+                    "override": false,
+                    "read": "pageLoading",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "bool",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 10,
+                    "lineNumber": 40,
+                    "name": "pageHasMore",
+                    "notify": "pageMoreChanged",
+                    "override": false,
+                    "read": "pageHasMore",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "bool",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 11,
+                    "lineNumber": 41,
+                    "name": "pageLoadingMore",
+                    "notify": "pageMoreChanged",
+                    "override": false,
+                    "read": "pageLoadingMore",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "bool",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 12,
+                    "lineNumber": 45,
+                    "name": "pageFetching",
+                    "notify": "pageMoreChanged",
+                    "override": false,
+                    "read": "pageFetching",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "bool",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 13,
+                    "lineNumber": 49,
+                    "name": "listing",
+                    "notify": "listingChanged",
+                    "override": false,
+                    "read": "listing",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QVariantMap",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": true,
+                    "designable": true,
+                    "final": false,
+                    "index": 14,
+                    "lineNumber": 50,
+                    "name": "listingSongs",
+                    "override": false,
+                    "read": "listingSongs",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "SearchResultModel*",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 15,
+                    "lineNumber": 51,
+                    "name": "listingLoading",
+                    "notify": "listingChanged",
+                    "override": false,
+                    "read": "listingLoading",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "bool",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 16,
+                    "lineNumber": 54,
+                    "name": "listingHasMore",
+                    "notify": "listingMoreChanged",
+                    "override": false,
+                    "read": "listingHasMore",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "bool",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 17,
+                    "lineNumber": 55,
+                    "name": "listingLoadingMore",
+                    "notify": "listingMoreChanged",
+                    "override": false,
+                    "read": "listingLoadingMore",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "bool",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 18,
+                    "lineNumber": 57,
+                    "name": "collectionLoading",
+                    "notify": "collectionLoadingChanged",
+                    "override": false,
+                    "read": "collectionLoading",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 19,
+                    "lineNumber": 63,
+                    "name": "artist",
+                    "notify": "artistChanged",
+                    "override": false,
+                    "read": "artist",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QVariantMap",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": true,
+                    "designable": true,
+                    "final": false,
+                    "index": 20,
+                    "lineNumber": 64,
+                    "name": "artistSongs",
+                    "override": false,
+                    "read": "artistSongs",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "SearchResultModel*",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 21,
+                    "lineNumber": 65,
+                    "name": "artistLoading",
+                    "notify": "artistChanged",
+                    "override": false,
+                    "read": "artistLoading",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "bool",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 22,
+                    "lineNumber": 67,
+                    "name": "artistMixLoading",
+                    "notify": "artistMixLoadingChanged",
+                    "override": false,
+                    "read": "artistMixLoading",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false,
+                    "virtual": false
+                }
+            ],
+            "qualifiedClassName": "Catalog",
+            "signals": [
+                {
+                    "access": "public",
+                    "index": 0,
+                    "lineNumber": 136,
+                    "name": "homeChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 1,
+                    "lineNumber": 137,
+                    "name": "pageChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 2,
+                    "lineNumber": 138,
+                    "name": "pageMoreChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 3,
+                    "lineNumber": 139,
+                    "name": "listingChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 4,
+                    "lineNumber": 140,
+                    "name": "listingMoreChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "section",
+                            "type": "int"
+                        },
+                        {
+                            "name": "cards",
+                            "type": "QVariantList"
+                        }
+                    ],
+                    "index": 5,
+                    "lineNumber": 144,
+                    "name": "listingAppended",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 6,
+                    "lineNumber": 145,
+                    "name": "collectionLoadingChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "origin",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "tracks",
+                            "type": "QVariantList"
+                        }
+                    ],
+                    "index": 7,
+                    "lineNumber": 146,
+                    "name": "collectionReady",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 8,
+                    "lineNumber": 147,
+                    "name": "artistChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 9,
+                    "lineNumber": 148,
+                    "name": "artistMixLoadingChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "name",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "browseId",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 10,
+                    "lineNumber": 149,
+                    "name": "artistResolved",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "name",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 11,
+                    "lineNumber": 150,
+                    "name": "artistNotFound",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "kind",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "tracks",
+                            "type": "QVariantList"
+                        }
+                    ],
+                    "index": 12,
+                    "lineNumber": 151,
+                    "name": "artistMixReady",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "text",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 13,
+                    "lineNumber": 153,
+                    "name": "notice",
+                    "returnType": "void"
+                }
+            ],
+            "slots": [
+                {
+                    "access": "public",
+                    "index": 14,
+                    "lineNumber": 96,
+                    "name": "refresh",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 15,
+                    "lineNumber": 97,
+                    "name": "reloadRecent",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "browseId",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 16,
+                    "lineNumber": 98,
+                    "name": "openPage",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 17,
+                    "isConst": true,
+                    "lineNumber": 101,
+                    "name": "pageTrackList",
+                    "returnType": "QVariantList"
+                },
+                {
+                    "access": "public",
+                    "index": 18,
+                    "lineNumber": 104,
+                    "name": "loadMorePage",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 19,
+                    "lineNumber": 107,
+                    "name": "loadRestOfPage",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "browseId",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "params",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "title",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 20,
+                    "lineNumber": 112,
+                    "name": "openListing",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 21,
+                    "lineNumber": 114,
+                    "name": "loadMoreListing",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "browseId",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "title",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "origin",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 22,
+                    "lineNumber": 120,
+                    "name": "playCollection",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "browseId",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "name",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 23,
+                    "lineNumber": 124,
+                    "name": "openArtist",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "browseId",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 24,
+                    "isCloned": true,
+                    "lineNumber": 124,
+                    "name": "openArtist",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "name",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 25,
+                    "lineNumber": 129,
+                    "name": "openArtistNamed",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "kind",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 26,
+                    "lineNumber": 132,
+                    "name": "loadArtistMix",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 27,
+                    "isConst": true,
+                    "lineNumber": 133,
+                    "name": "artistSongList",
+                    "returnType": "QVariantList"
+                }
+            ],
+            "superClasses": [
+                {
+                    "access": "public",
+                    "name": "QObject"
+                }
+            ]
+        }
+    ],
+    "inputFile": "catalog.h",
+    "outputRevision": 69
+}

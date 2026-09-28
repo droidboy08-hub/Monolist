@@ -1,0 +1,31 @@
+DE	table	artists	CREATE TABLE artists (
+            mbid TEXT NOT NULL,
+            name TEXT NOT NULL,
+            region TEXT NOT NULL,
+            popularity INTEGER NOT NULL DEFAULT 0,
+            confidence REAL NOT NULL DEFAULT 0,
+            PRIMARY KEY (mbid, region)
+        )
+DE	index	sqlite_autoindex_artists_1	
+DE	table	edges	CREATE TABLE edges (
+            a TEXT NOT NULL,
+            b TEXT NOT NULL,
+            score REAL NOT NULL,
+            source TEXT NOT NULL,
+            PRIMARY KEY (a, b, source)
+        )
+DE	index	sqlite_autoindex_edges_1	
+DE	table	tracks	CREATE TABLE tracks (
+            recording_mbid TEXT NOT NULL,
+            artist_mbid TEXT NOT NULL,
+            title TEXT NOT NULL,
+            length_ms INTEGER,
+            popularity INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY (recording_mbid, artist_mbid)
+        )
+DE	index	sqlite_autoindex_tracks_1	
+DE	index	artists_region_pop	CREATE INDEX artists_region_pop ON artists (region, popularity DESC)
+DE	index	edges_a	CREATE INDEX edges_a ON edges (a)
+DE	index	edges_b	CREATE INDEX edges_b ON edges (b)
+DE	index	tracks_artist	CREATE INDEX tracks_artist ON tracks (artist_mbid, popularity DESC)
+DE	299	128	1911

@@ -1,0 +1,3 @@
+- [Project goal & state](monolist-project-goal.md) — Melody → Phono → Monolist; engine, Home, queue, library, playlists, Now Playing, lyrics, fast playback tier, recommender (Search tab) done; artist pages open
+- [Dev environment](dev-environment.md) — ARM64 VM, toolchain in C:\dev\monolist-deps, build/test/screenshot commands, QML traps
+- [User working style](user-working-style.md) — terse "go" approvals, keep momentum, free to rewrite; still ask before downloads/deletes

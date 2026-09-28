@@ -1,0 +1,279 @@
+loaded yes
+
+=== Mgła  [region US]  liked-as "Mgła"
+  seed in graph: Mgła / PL / conf 0.94 / pop 3 / e7b4c928-8c45-4ecf-9f08-da64fe5c2ddd
+  seed sound: yes
+  graph neighbours (0): 
+  -> Sounds like Mgła  |  Artists whose sound sits closest to theirs  (12 rows)
+     Cult Of Fire — Blessing   [czsk black metal, pop 28, ~0.995]
+     Urfaust — Der halbtoten Dichters Schein-Existenz   [cosmic black metal, pop 31, ~0.992]
+     Darkspace — Dark 3.13   [instrumental black metal, pop 19, ~0.990]
+     Paysage D'Hiver — Im Winterwald   [black metal, pop 22, ~0.990]
+     Misþyrming — Söngur heiftar   [pagan black metal, pop 21, ~0.988]
+     Enisum — Desperate Souls - Original Mix   [autonomous black metal, pop 25, ~0.988]
+     Vredehammer — Viperous   [cryptic black metal, pop 20, ~0.988]
+     Vemod — True North Beckons   [cosmic black metal, pop 16, ~0.987]
+     Nordjevel — Sunset Glow   [black metal, pop 36, ~0.987]
+     Uada — Cult of a Dying Sun   [black metal, pop 32, ~0.986]
+     Walg — Het Vlees Vergaat   [dutch black metal, pop 31, ~0.986]
+     Sargeist — An Eternal Dream Beyond the Accursed Portent   [finnish black metal, pop 38, ~0.985]
+
+=== Mgła  [region PL]  liked-as "Mgła"
+  seed in graph: Mgła / PL / conf 0.94 / pop 3 / e7b4c928-8c45-4ecf-9f08-da64fe5c2ddd
+  seed sound: yes
+  graph neighbours (0): 
+  -> Sounds like Mgła  |  Artists whose sound sits closest to theirs  (12 rows)
+     Cult Of Fire — Blessing   [czsk black metal, pop 28, ~0.995]
+     Urfaust — Der halbtoten Dichters Schein-Existenz   [cosmic black metal, pop 31, ~0.992]
+     Darkspace — Dark 3.13   [instrumental black metal, pop 19, ~0.990]
+     Paysage D'Hiver — Im Winterwald   [black metal, pop 22, ~0.990]
+     Misþyrming — Söngur heiftar   [pagan black metal, pop 21, ~0.988]
+     Enisum — Desperate Souls - Original Mix   [autonomous black metal, pop 25, ~0.988]
+     Vredehammer — Viperous   [cryptic black metal, pop 20, ~0.988]
+     Vemod — True North Beckons   [cosmic black metal, pop 16, ~0.987]
+     Nordjevel — Sunset Glow   [black metal, pop 36, ~0.987]
+     Uada — Cult of a Dying Sun   [black metal, pop 32, ~0.986]
+     Walg — Het Vlees Vergaat   [dutch black metal, pop 31, ~0.986]
+     Sargeist — An Eternal Dream Beyond the Accursed Portent   [finnish black metal, pop 38, ~0.985]
+
+=== Deafheaven  [region US]  liked-as "Deafheaven"
+  seed in graph: NOT FOUND
+  -> Sounds like Deafheaven  |  Artists whose sound sits closest to theirs  (12 rows)
+     Numenorean — Adore   [atmospheric black metal, pop 33, ~0.974]
+     Wiegedood — De Doden Hebben Het Goed   [atmospheric black metal, pop 24, ~0.974]
+     Alkerdeel — Lede   [chaotic black metal, pop 5, ~0.973]
+     Lantlôs — Lake Fantasy   [german black metal, pop 35, ~0.973]
+     Afsky — Tyende Sang   [voidgaze, pop 29, ~0.971]
+     Underdark — Employment   [british black metal, pop 12, ~0.971]
+     Heretoir — Golden Dust   [german black metal, pop 38, ~0.969]
+     Amesoeurs — Gas in Veins   [blackgaze, pop 32, ~0.968]
+     Oranssi Pazuzu — Valotus   [post-metal, pop 30, ~0.968]
+     Unreqvited — The Autumn Fire   [atmospheric black metal, pop 29, ~0.966]
+     White Ward — Love Exchange Failure   [atmospheric black metal, pop 33, ~0.964]
+     Sylvaine — Nowhere, Still Somewhere   [autonomous black metal, pop 35, ~0.964]
+
+=== Batushka  [region US]  liked-as "Batushka"
+  seed in graph: NOT FOUND
+  -> NO ARTIST SHELF  (shelves: popular)
+
+=== Batushka  [region PL]  liked-as "Batushka"
+  seed in graph: NOT FOUND
+  -> NO ARTIST SHELF  (shelves: popular)
+
+=== Wolves in the Throne Room  [region US]  liked-as "Wolves in the Throne Room"
+  seed in graph: NOT FOUND
+  -> Sounds like Wolves in the Throne Room  |  Artists whose sound sits closest to theirs  (12 rows)
+     Numenorean — Adore   [atmospheric black metal, pop 33, ~0.992]
+     Oranssi Pazuzu — Muuntautuja   [post-metal, pop 37, ~0.982]
+     Underdark — Employment   [british black metal, pop 12, ~0.981]
+     Agalloch — In The Shadow Of Our Pale Companion (2016 - Remaster)   [black metal, pop 38, ~0.980]
+     Mare Cognitum — Abyss   [blackgaze, pop 29, ~0.979]
+     Leviathan — Fucking Your Ghost In Chains of Ice   [autonomous black metal, pop 35, ~0.977]
+     Barshasketh — Radiant Aperture   [voidgaze, pop 22, ~0.977]
+     Heretoir — Golden Dust   [german black metal, pop 38, ~0.976]
+     Afsky — Bondeplage   [voidgaze, pop 26, ~0.975]
+     Gnaw Their Tongues — My Orifices Await Ravaging   [experimental black metal, pop 15, ~0.975]
+     Falls of Rauros — Burial Pact   [atmospheric black metal, pop 22, ~0.975]
+     Xasthur — Screaming at Forgotten Tears   [autonomous black metal, pop 37, ~0.974]
+
+=== Summoning  [region US]  liked-as "Summoning"
+  seed in graph: Summoning / AT / conf 0.94 / pop 7 / 8363f94f-fd86-41b8-a56b-26eacb34f499
+  seed sound: yes
+  graph neighbours (0): 
+  -> Sounds like Summoning  |  Artists whose sound sits closest to theirs  (12 rows)
+     Sojourner — The Monolith   [epic black metal, pop 17, ~0.985]
+     Borknagar — Up North   [folk black metal, pop 36, ~0.980]
+     Fortíð — Drottnari   [viking black metal, pop 3, ~0.977]
+     Burzum — Spell of Destruction   [black metal, pop 42, ~0.976]
+     Windir — The Blacksmith and the Troll of Lundamyri   [norwegian metal, pop 33, ~0.975]
+     Negură Bunget — Cunoasterea Tacuta   [romanian black metal, pop 17, ~0.975]
+     Eldamar — Akt IV; ...as I Pass Through the Veil,...   [atmospheric black metal, pop 29, ~0.974]
+     Ildjarn — Mørklagt Sti   [black metal, pop 15, ~0.972]
+     Falkenbach — When Gjallarhorn Will Sound   [folk black metal, pop 29, ~0.970]
+     KULT — Malicious Metamorphosis   [italian black metal, pop 1, ~0.970]
+     Agathodaimon — Adio   [symphonic black metal, pop 30, ~0.968]
+     Mortem — Milena   [norwegian black metal, pop 3, ~0.967]
+
+=== Summoning  [region AT]  liked-as "Summoning"
+  seed in graph: Summoning / AT / conf 0.94 / pop 7 / 8363f94f-fd86-41b8-a56b-26eacb34f499
+  seed sound: yes
+  graph neighbours (0): 
+  -> Sounds like Summoning  |  Artists whose sound sits closest to theirs  (12 rows)
+     Sojourner — The Monolith   [epic black metal, pop 17, ~0.985]
+     Borknagar — Up North   [folk black metal, pop 36, ~0.980]
+     Fortíð — Drottnari   [viking black metal, pop 3, ~0.977]
+     Burzum — Spell of Destruction   [black metal, pop 42, ~0.976]
+     Windir — The Blacksmith and the Troll of Lundamyri   [norwegian metal, pop 33, ~0.975]
+     Negură Bunget — Cunoasterea Tacuta   [romanian black metal, pop 17, ~0.975]
+     Eldamar — Akt IV; ...as I Pass Through the Veil,...   [atmospheric black metal, pop 29, ~0.974]
+     Ildjarn — Mørklagt Sti   [black metal, pop 15, ~0.972]
+     Falkenbach — When Gjallarhorn Will Sound   [folk black metal, pop 29, ~0.970]
+     KULT — Malicious Metamorphosis   [italian black metal, pop 1, ~0.970]
+     Agathodaimon — Adio   [symphonic black metal, pop 30, ~0.968]
+     Mortem — Milena   [norwegian black metal, pop 3, ~0.967]
+
+=== Myrkur  [region US]  liked-as "Myrkur"
+  seed in graph: NOT FOUND
+  -> Sounds like Myrkur  |  Artists whose sound sits closest to theirs  (12 rows)
+     Sólstafir — Miðaftann   [icelandic metal, pop 29, ~0.944]
+     Oranssi Pazuzu — •   [post-metal, pop 28, ~0.922]
+     Agalloch — A Desolation Song (2016 - Remaster)   [black metal, pop 37, ~0.922]
+     Harakiri for the Sky — With Autumn I'll Surrender   [austrian black metal, pop 37, ~0.917]
+     Altar Of Plagues — God Alone   [avant-garde black metal, pop 19, ~0.911]
+     Numenorean — Shoreless   [atmospheric black metal, pop 26, ~0.906]
+     Oak Pantheon — Sol   [blackgaze, pop 17, ~0.905]
+     Thurisaz — Inner Voices   [belgian black metal, pop 37, ~0.903]
+     Panopticon — I Want to Be Alone   [kentucky metal, pop 27, ~0.902]
+     Lugubrum — Hoornkluiten   [belgian black metal, pop 3, ~0.901]
+     Ulver — Machine Guns and Peacock Feathers   [post-metal, pop 35, ~0.896]
+     Sylvaine — L'appel Du Vide   [autonomous black metal, pop 37, ~0.894]
+
+=== Myrkur  [region DK]  liked-as "Myrkur"
+  seed in graph: NOT FOUND
+  -> Sounds like Myrkur  |  Artists whose sound sits closest to theirs  (12 rows)
+     Sólstafir — Miðaftann   [icelandic metal, pop 29, ~0.944]
+     Oranssi Pazuzu — •   [post-metal, pop 28, ~0.922]
+     Agalloch — A Desolation Song (2016 - Remaster)   [black metal, pop 37, ~0.922]
+     Harakiri for the Sky — With Autumn I'll Surrender   [austrian black metal, pop 37, ~0.917]
+     Altar Of Plagues — God Alone   [avant-garde black metal, pop 19, ~0.911]
+     Numenorean — Shoreless   [atmospheric black metal, pop 26, ~0.906]
+     Oak Pantheon — Sol   [blackgaze, pop 17, ~0.905]
+     Thurisaz — Inner Voices   [belgian black metal, pop 37, ~0.903]
+     Panopticon — I Want to Be Alone   [kentucky metal, pop 27, ~0.902]
+     Lugubrum — Hoornkluiten   [belgian black metal, pop 3, ~0.901]
+     Ulver — Machine Guns and Peacock Feathers   [post-metal, pop 35, ~0.896]
+     Sylvaine — L'appel Du Vide   [autonomous black metal, pop 37, ~0.894]
+
+=== Dax  [region US]  liked-as "Dax"
+  seed in graph: NOT FOUND
+  -> Sounds like Dax  |  Artists whose sound sits closest to theirs  (12 rows)
+     Lil Windex — Wherever I May Roam   [bc underground hip hop, pop 52, ~0.977]
+     Casper TNG — Dope Boy   [toronto rap, pop 41, ~0.977]
+     TallupTwinz — Motivation   [canadian drill, pop 27, ~0.974]
+     Snotty Nose Rez Kids — Skoden   [canadian indigenous hip hop, pop 39, ~0.974]
+     Haviah Mighty — Double The Fun   [toronto rap, pop 36, ~0.973]
+     DillanPonders — Planet Ponders   [canadian hip hop, pop 40, ~0.973]
+     Belly — Hit Me Up   [canadian hip hop, pop 42, ~0.973]
+     Smoke Dawg — Trap House   [toronto rap, pop 40, ~0.973]
+     K Money — Dat Nigga   [toronto rap, pop 38, ~0.971]
+     Murda Beatz — 123   [canadian hip hop, pop 41, ~0.970]
+     Night Lovell — PLEASE DON'T GO   [ottawa rap, pop 59, ~0.970]
+     Burna Bandz — Prime   [toronto rap, pop 39, ~0.970]
+
+=== Dax  [region CA]  liked-as "Dax"
+  seed in graph: NOT FOUND
+  -> Sounds like Dax  |  Artists whose sound sits closest to theirs  (12 rows)
+     Lil Windex — Wherever I May Roam   [bc underground hip hop, pop 52, ~0.977]
+     Casper TNG — Dope Boy   [toronto rap, pop 41, ~0.977]
+     TallupTwinz — Motivation   [canadian drill, pop 27, ~0.974]
+     Snotty Nose Rez Kids — Skoden   [canadian indigenous hip hop, pop 39, ~0.974]
+     Haviah Mighty — Double The Fun   [toronto rap, pop 36, ~0.973]
+     DillanPonders — Planet Ponders   [canadian hip hop, pop 40, ~0.973]
+     Belly — Hit Me Up   [canadian hip hop, pop 42, ~0.973]
+     Smoke Dawg — Trap House   [toronto rap, pop 40, ~0.973]
+     K Money — Dat Nigga   [toronto rap, pop 38, ~0.971]
+     Murda Beatz — 123   [canadian hip hop, pop 41, ~0.970]
+     Night Lovell — PLEASE DON'T GO   [ottawa rap, pop 59, ~0.970]
+     Burna Bandz — Prime   [toronto rap, pop 39, ~0.970]
+
+=== Futuristic  [region US]  liked-as "Futuristic"
+  seed in graph: NOT FOUND
+  -> Sounds like Futuristic  |  Artists whose sound sits closest to theirs  (12 rows)
+     Bazanji — Demons   [indie pop rap, pop 50, ~0.997]
+     Ryan Oakes — STILL NUMB   [indie pop rap, pop 43, ~0.997]
+     JZAC — Shake The Tree   [indie pop rap, pop 41, ~0.997]
+     Justin Stone — Cannot Stop Me   [indie pop rap, pop 44, ~0.997]
+     Anilyst — Triple Threat   [indie pop rap, pop 44, ~0.996]
+     Ryan Caraveo — Jealousy   [indie pop rap, pop 45, ~0.995]
+     J-Wright — Don't Know Love   [indie pop rap, pop 42, ~0.994]
+     Jez Dior — Lucky Enough   [indie pop rap, pop 43, ~0.994]
+     Demrick — Runway Walk (Bonus) (feat. Brevi)   [indie pop rap, pop 71, ~0.993]
+     K.A.A.N. — Phoenix   [indie pop rap, pop 45, ~0.993]
+     Token — Household Name   [boston hip hop, pop 43, ~0.991]
+     Feeki — Still Going   [indie pop rap, pop 40, ~0.990]
+
+=== Mac Lethal  [region US]  liked-as "Mac Lethal"
+  seed in graph: NOT FOUND
+  -> Sounds like Mac Lethal  |  Artists whose sound sits closest to theirs  (12 rows)
+     Uncle Murda — We Outside   [battle rap, pop 36, ~0.990]
+     CES Cru — Seven Chakras   [kansas city hip hop, pop 43, ~0.988]
+     Kendrick Lamar — luther (with sza)   [hip hop, pop 94, ~0.983]
+     JAY-Z — Young Forever   [gangster rap, pop 67, ~0.979]
+     J. Cole — cLOUDs   [hip hop, pop 80, ~0.979]
+     Vince Staples — ARE YOU WITH THAT?   [hip hop, pop 58, ~0.979]
+     Ab-Soul — Don Julio 70   [hip hop, pop 45, ~0.978]
+     Russ — What They Want   [hawaiian hip hop, pop 71, ~0.978]
+     2Rare — Beat it   [philly drill, pop 42, ~0.978]
+     Styles P — Culture   [east coast hip hop, pop 39, ~0.977]
+     Big K.R.I.T. — Energy   [hip hop, pop 42, ~0.976]
+     Mac Dre — AndreNAndre   [cali rap, pop 44, ~0.976]
+
+=== Kanye West  [region US]  liked-as "Kanye West"
+  seed in graph: NOT FOUND
+  -> Sounds like Kanye West  |  Artists whose sound sits closest to theirs  (12 rows)
+     Nipsey Hussle — Double Up (feat. Belly and Dom Kennedy)   [rap, pop 63, ~0.993]
+     Chance the Rapper — All Night (feat. Knox Fortune)   [hip hop, pop 62, ~0.993]
+     JAY-Z — Suit & Tie (feat. JAY-Z)   [gangster rap, pop 68, ~0.992]
+     A$AP Rocky — LVL   [hip hop, pop 82, ~0.992]
+     NF — Lie   [hip hop, pop 75, ~0.991]
+     Big K.R.I.T. — Mixed Messages   [hip hop, pop 40, ~0.991]
+     JID — NEVER   [hip hop, pop 62, ~0.991]
+     Dave East — Russia   [canadian hip hop, pop 43, ~0.991]
+     Childish Gambino — Les   [rap, pop 85, ~0.991]
+     Baby Keem — trademark usa   [rap, pop 68, ~0.991]
+     Tyler, The Creator — Like Him (feat. Lola Young)   [rap, pop 91, ~0.990]
+     Pusha T — Feel The Love   [rap, pop 59, ~0.990]
+
+=== Ye  [region US]  liked-as "Ye"
+  seed in graph: Ye / US / conf 0.94 / pop 36 / 164f0d73-1234-4e2c-8743-d77bf2191051
+  seed sound: NONE
+    NB	Ye	J. Cole	LB	-9.000	hip hop	people 1
+    NB	Ye	Red Hot Chili Peppers	LB	-9.000	permanent wave	people 1
+    NB	Ye	David Bowie	LB	-9.000	rock	people 1
+    NB	Ye	Nirvana	LB	-9.000	permanent wave	people 1
+    NB	Ye	T.I.	LB	-9.000	trap	people 2
+    NB	Ye	Dr. Dre	LB	-9.000	gangster rap	people 1
+    NB	Ye	The Killers	LB	-9.000	permanent wave	people 1
+    NB	Ye	Michael Jackson	LB	-9.000	soul	people 2
+    NB	Ye	Death Grips	LB	-9.000	industrial hip hop	people 1
+    NB	Ye	Linkin Park	LB	-9.000	alternative metal	people 1
+    NB	Ye	Taylor Swift	LB	-9.000	pop	people 1
+    NB	Ye	Lil Wayne	LB	-9.000	rap	people 2
+    NB	Ye	OutKast	LB	-9.000	dirty south rap	people 1
+    NB	Ye	2Pac	LB	-9.000	gangster rap	people 1
+    NB	Ye	Black Eyed Peas	LB	-9.000	dance pop	people 1
+    NB	Ye	50 Cent	LB	-9.000	hip hop	people 1
+    NB	Ye	Lady Gaga	LB	-9.000	pop	people 1
+    NB	Ye	Eminem	LB	-9.000	hip hop	people 1
+    NB	Ye	MGMT	LB	-9.000	indie rock	people 1
+    NB	Ye	Lana Del Rey	LB	-9.000	pop	people 1
+    NB	Ye	Beastie Boys	LB	-9.000	rap	people 1
+    NB	Ye	Beyoncé	LB	-9.000	pop	people 1
+    NB	Ye	Bon Iver	LB	-9.000	chamber pop	people 1
+    NB	Ye	Ariana Grande	LB	-9.000	pop	people 1
+    NB	Ye	Muse	LB	-9.000	permanent wave	people 1
+    NB	Ye	Sia	LB	-9.000	pop	people 1
+    NB	Ye	Pink Floyd	LB	-9.000	art rock	people 1
+    NB	Ye	Arctic Monkeys	LB	-9.000	permanent wave	people 1
+    NB	Ye	Radiohead	LB	-9.000	rock	people 1
+    NB	Ye	Arcade Fire	LB	-9.000	canadian indie	people 1
+    NB	Ye	Drake	LB	-9.000	hip hop	people 1
+    NB	Ye	Justin Bieber	LB	-9.000	pop	people 1
+  graph neighbours (32): J. Cole(LB 1.00 ~-9.000), Red Hot Chili Peppers(LB 1.00 ~-9.000), David Bowie(LB 1.00 ~-9.000), Nirvana(LB 1.00 ~-9.000), T.I.(LB 1.00 ~-9.000), Dr. Dre(LB 1.00 ~-9.000), The Killers(LB 1.00 ~-9.000), Michael Jackson(LB 1.00 ~-9.000), Death Grips(LB 1.00 ~-9.000), Linkin Park(LB 1.00 ~-9.000), Taylor Swift(LB 1.00 ~-9.000), Lil Wayne(LB 1.00 ~-9.000), OutKast(LB 1.00 ~-9.000), 2Pac(LB 1.00 ~-9.000), Black Eyed Peas(LB 1.00 ~-9.000), 50 Cent(LB 1.00 ~-9.000), Lady Gaga(LB 1.00 ~-9.000), Eminem(LB 1.00 ~-9.000), MGMT(LB 1.00 ~-9.000), Lana Del Rey(LB 1.00 ~-9.000), Beastie Boys(LB 1.00 ~-9.000), Beyoncé(LB 1.00 ~-9.000), Bon Iver(LB 1.00 ~-9.000), Ariana Grande(LB 1.00 ~-9.000), Muse(LB 1.00 ~-9.000), Sia(LB 1.00 ~-9.000), Pink Floyd(LB 1.00 ~-9.000), Arctic Monkeys(LB 1.00 ~-9.000), Radiohead(LB 1.00 ~-9.000), Arcade Fire(LB 1.00 ~-9.000), Drake(LB 1.00 ~-9.000), Justin Bieber(LB 1.00 ~-9.000)
+  -> Because you like Ye  |  People who listen to Ye also play these  (12 rows)
+     J. Cole — No Role Modelz   [hip hop, pop 86, ~0.000]
+     Red Hot Chili Peppers — Can't Stop   [permanent wave, pop 86, ~0.000]
+     David Bowie — Starman - 2012 Remaster   [rock, pop 77, ~0.000]
+     Nirvana — Smells Like Teen Spirit   [permanent wave, pop 84, ~0.000]
+     T.I. — Whatever You Like   [trap, pop 77, ~0.000]
+     Dr. Dre — California Love - Original Version   [gangster rap, pop 82, ~0.000]
+     The Killers — Mr. Brightside   [permanent wave, pop 88, ~0.000]
+     Michael Jackson — Billie Jean   [soul, pop 83, ~0.000]
+     J. Cole — Wet Dreamz   [hip hop, pop 82, ~0.000]
+     Red Hot Chili Peppers — Under the Bridge   [permanent wave, pop 84, ~0.000]
+     David Bowie — Heroes - 2017 Remaster   [rock, pop 75, ~0.000]
+     Nirvana — Heart-Shaped Box   [permanent wave, pop 82, ~0.000]
+
+=== cache check: findArtist(name, own country) on the US-warmed graph vs a graph that only saw that country
+
+SUMMARY (US pass): graph 1, sounds-like 9, none 1, seed-in-own-shelf rows 0, duplicate rows 0

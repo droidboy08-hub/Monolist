@@ -1,0 +1,51 @@
+# truncation victims: what the full name would have found
+Simon & Garfunkel
+Simon
+AC/DC
+AC
+Earth, Wind & Fire
+Earth
+Tyler, The Creator
+Tyler
+Brooks & Dunn
+Brooks
+Above & Beyond
+Wisin & Yandel
+Black Country, New Road
+Henrique & Juliano
+# native-script names
+米津玄師
+Kenshi Yonezu
+Земфира
+Zemfira
+Кино
+Kino
+Сплин
+Король и Шут
+# common-word neighbours
+Death
+Europe
+Ghost
+Can
+Air
+Justice
+Phoenix
+Genesis
+Yes
+Kiss
+Boston
+Heart
+Low
+Wire
+Suicide
+Love
+Television
+Train
+Journey
+Chicago
+America
+Poison
+Free
+Saga
+Absurd
+Bushido

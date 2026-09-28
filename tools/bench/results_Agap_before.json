@@ -1,0 +1,102 @@
+﻿[
+    {
+        "id":  "LCIs3JXb5Aw",
+        "drainMs":  179,
+        "drainedToStatusMs":  -177,
+        "drainedToRequestMs":  3,
+        "requestToResponseMs":  385,
+        "responseToAudioMs":  39,
+        "silentGapMs":  427,
+        "source":  "InnerTube"
+    },
+    {
+        "id":  "CmThpha4Hoo",
+        "drainMs":  194,
+        "drainedToStatusMs":  -192,
+        "drainedToRequestMs":  2,
+        "requestToResponseMs":  410,
+        "responseToAudioMs":  34,
+        "silentGapMs":  446,
+        "source":  "InnerTube"
+    },
+    {
+        "id":  "DntZ3-yCaFs",
+        "drainMs":  196,
+        "drainedToStatusMs":  -191,
+        "drainedToRequestMs":  3,
+        "requestToResponseMs":  246,
+        "responseToAudioMs":  24,
+        "silentGapMs":  273,
+        "source":  "InnerTube"
+    },
+    {
+        "id":  "7nVctvQVz0U",
+        "drainMs":  177,
+        "drainedToStatusMs":  -172,
+        "drainedToRequestMs":  3,
+        "requestToResponseMs":  335,
+        "responseToAudioMs":  49,
+        "silentGapMs":  387,
+        "source":  "InnerTube"
+    },
+    {
+        "id":  "TiebZllW8As",
+        "drainMs":  182,
+        "drainedToStatusMs":  -180,
+        "drainedToRequestMs":  2,
+        "requestToResponseMs":  238,
+        "responseToAudioMs":  41,
+        "silentGapMs":  281,
+        "source":  "InnerTube"
+    },
+    {
+        "id":  "BSTsnWoslP4",
+        "drainMs":  171,
+        "drainedToStatusMs":  -161,
+        "drainedToRequestMs":  3,
+        "requestToResponseMs":  674,
+        "responseToAudioMs":  45,
+        "silentGapMs":  722,
+        "source":  "InnerTube"
+    },
+    {
+        "id":  "7TDeBi34OtE",
+        "drainMs":  187,
+        "drainedToStatusMs":  -169,
+        "drainedToRequestMs":  3,
+        "requestToResponseMs":  209,
+        "responseToAudioMs":  60,
+        "silentGapMs":  272,
+        "source":  "InnerTube"
+    },
+    {
+        "id":  "phLb_SoPBlA",
+        "drainMs":  217,
+        "drainedToStatusMs":  -214,
+        "drainedToRequestMs":  4,
+        "requestToResponseMs":  485,
+        "responseToAudioMs":  92,
+        "silentGapMs":  581,
+        "source":  "InnerTube"
+    },
+    {
+        "id":  "fsiPzT50ZiM",
+        "drainMs":  176,
+        "drainedToStatusMs":  -171,
+        "drainedToRequestMs":  2,
+        "requestToResponseMs":  102,
+        "responseToAudioMs":  40,
+        "silentGapMs":  144,
+        "source":  "InnerTube"
+    },
+    {
+        "id":  "4D7u5KF7SP8",
+        "drainMs":  195,
+        "drainedToStatusMs":  -157,
+        "drainedToRequestMs":  3,
+        "requestToResponseMs":  169,
+        "responseToAudioMs":  46,
+        "silentGapMs":  218,
+        "source":  "InnerTube"
+    }
+]

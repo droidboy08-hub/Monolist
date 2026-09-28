@@ -1,0 +1,1726 @@
+loaded yes
+
+=== Miles Davis  [region US]  liked-as "Miles Davis"
+  seed in graph: Miles Davis / US / conf 0.98 / pop 21 / 561d854a-6a28-4aa7-8c99-323e6ce46c2a
+  graph neighbours (19): Charles Mingus(LB 1.00), Bob Dylan(LB 1.00), The Doors(LB 1.00), Nirvana(LB 1.00), Red Hot Chili Peppers(LB 1.00), Johnny Cash(LB 1.00), R.E.M.(LB 1.00), The Beach Boys(LB 1.00), Metallica(LB 1.00), Beastie Boys(LB 1.00), Michael Jackson(LB 1.00), The Velvet Underground(LB 1.00), Radiohead(LB 1.00), The Beatles(LB 1.00), Pink Floyd(LB 1.00), Led Zeppelin(LB 1.00), The Rolling Stones(LB 1.00), Björk(LB 1.00), Neil Young(LB 1.00)
+  -> Because you like Miles Davis  |  People who listen to Miles Davis also play these  (12 rows)
+     Charles Mingus — Goodbye Pork Pie Hat   [jazz double bass, pop 54]
+     Bob Dylan — Knockin' On Heaven's Door   [country rock, pop 81]
+     The Doors — Riders on the Storm   [rock, pop 75]
+     Nirvana — Smells Like Teen Spirit   [permanent wave, pop 84]
+     Red Hot Chili Peppers — Can't Stop   [permanent wave, pop 86]
+     Johnny Cash — Hurt   [outlaw country, pop 74]
+     R.E.M. — Losing My Religion   [athens indie, pop 85]
+     The Beach Boys — Good Vibrations - Remastered 2001   [classic rock, pop 72]
+     Charles Mingus — Mood Indigo   [jazz double bass, pop 49]
+     Bob Dylan — Like a Rolling Stone   [country rock, pop 78]
+     The Doors — People Are Strange   [rock, pop 74]
+     Nirvana — Heart-Shaped Box   [permanent wave, pop 82]
+
+=== John Coltrane  [region US]  liked-as "John Coltrane"
+  seed in graph: John Coltrane / US / conf 0.98 / pop 9 / b625448e-bf4a-41c3-a421-72ad46cdb831
+  graph neighbours (16): Charles Mingus(LB 1.00), Tom Waits(LB 1.00), Johnny Cash(LB 1.00), The Beach Boys(LB 1.00), R.E.M.(LB 1.00), Pixies(LB 1.00), Nine Inch Nails(LB 1.00), The Smashing Pumpkins(LB 1.00), Frank Zappa(LB 1.00), Miles Davis(LB 1.00), Frank Sinatra(LB 1.00), Aphex Twin(LB 1.00), Gorillaz(LB 1.00), Coldplay(LB 1.00), Amy Winehouse(LB 1.00), Sigur Rós(LB 1.00)
+  -> Because you like John Coltrane  |  People who listen to John Coltrane also play these  (12 rows)
+     Charles Mingus — Goodbye Pork Pie Hat   [jazz double bass, pop 54]
+     Tom Waits — I Hope That I Don't Fall In Love With You   [singer-songwriter, pop 58]
+     Johnny Cash — Hurt   [outlaw country, pop 74]
+     The Beach Boys — Good Vibrations - Remastered 2001   [classic rock, pop 72]
+     R.E.M. — Losing My Religion   [athens indie, pop 85]
+     Pixies — Where Is My Mind? - 2007 Remaster   [alternative rock, pop 78]
+     Nine Inch Nails — Closer   [industrial, pop 74]
+     The Smashing Pumpkins — 1979 - Remastered 2012   [alternative rock, pop 79]
+     Charles Mingus — Mood Indigo   [jazz double bass, pop 49]
+     Tom Waits — Downtown Train - 2023 Remaster   [singer-songwriter, pop 52]
+     Johnny Cash — Ring of Fire   [outlaw country, pop 70]
+     The Beach Boys — Kokomo   [classic rock, pop 71]
+
+=== Kamasi Washington  [region US]  liked-as "Kamasi Washington"
+  seed in graph: NOT FOUND
+  -> Sounds like Kamasi Washington  |  Artists whose sound sits closest to theirs  (12 rows)
+     Robert Glasper — Going Home   [neo soul, pop 45]
+     Robert Glasper — First Responders   [neo soul, pop 47]
+     BADBADNOTGOOD — Running Away   [canadian modern jazz, pop 63]
+     BADBADNOTGOOD — Running Away (Time)   [canadian modern jazz, pop 58]   <<DUPTITLE,DUPKEY
+     Theo Croker — 6 Feet Down   [jazz brass, pop 40]
+     Theo Croker — 6 Feet Down   [jazz brass, pop 46]   <<DUPTITLE,DUPKEY
+     Alice Coltrane — Blue Nile   [spiritual jazz, pop 40]
+     Mansur Brown — It's My Time   [british jazz, pop 38]
+     Nubya Garcia — Set It Free   [british jazz, pop 40]
+     Yussef Dayes — Woman's Touch (feat. Jamilah Barry)   [british jazz, pop 54]
+     Yussef Dayes — Woman's Touch (feat. Jamilah Barry)   [british jazz, pop 47]   <<DUPTITLE,DUPKEY
+     corto.alto — Interlude   [scottish jazz, pop 34]
+
+=== Ludovico Einaudi  [region US]  liked-as "Ludovico Einaudi"
+  seed in graph: Ludovico Einaudi / IT / conf 0.94 / pop 2 / fa34b363-79df-434f-a5b8-be4e6898543f
+  graph neighbours (3): Antonio Vivaldi(LB 1.00), Ennio Morricone(LB 1.00), Richard Wagner(LB 1.00)
+  -> Because you like Ludovico Einaudi  |  People who listen to Ludovico Einaudi also play these  (6 rows)
+     Antonio Vivaldi — Vivaldi Variation (Arr. for Piano from Concerto for Strings in G Minor, RV 156 by F. Christl)   [early music, pop 67]
+     Ennio Morricone — The Ecstasy Of Gold - 2004 Remaster   [italian soundtrack, pop 62]
+     Richard Wagner — Die Walkure, Act III: Ride of the Valkyries   [late romantic era, pop 53]
+     Antonio Vivaldi — The Four Seasons: Concerto No. 4 in F Minor, RV 297 "L'inverno" (winter): I. Allegro non molto   [early music, pop 64]
+     Ennio Morricone — The Good, The Bad And The Ugly - 2004 Remaster   [italian soundtrack, pop 61]
+     Richard Wagner — Lohengrin: Prelude   [late romantic era, pop 45]
+
+=== Ludovico Einaudi  [region IT]  liked-as "Ludovico Einaudi"
+  seed in graph: Ludovico Einaudi / IT / conf 0.94 / pop 2 / fa34b363-79df-434f-a5b8-be4e6898543f
+  graph neighbours (3): Antonio Vivaldi(LB 1.00), Ennio Morricone(LB 1.00), Richard Wagner(LB 1.00)
+  -> Because you like Ludovico Einaudi  |  People who listen to Ludovico Einaudi also play these  (6 rows)
+     Antonio Vivaldi — Vivaldi Variation (Arr. for Piano from Concerto for Strings in G Minor, RV 156 by F. Christl)   [early music, pop 67]
+     Ennio Morricone — The Ecstasy Of Gold - 2004 Remaster   [italian soundtrack, pop 62]
+     Richard Wagner — Die Walkure, Act III: Ride of the Valkyries   [late romantic era, pop 53]
+     Antonio Vivaldi — The Four Seasons: Concerto No. 4 in F Minor, RV 297 "L'inverno" (winter): I. Allegro non molto   [early music, pop 64]
+     Ennio Morricone — The Good, The Bad And The Ugly - 2004 Remaster   [italian soundtrack, pop 61]
+     Richard Wagner — Lohengrin: Prelude   [late romantic era, pop 45]
+
+=== Johann Sebastian Bach  [region US]  liked-as "Johann Sebastian Bach"
+  seed in graph: Johann Sebastian Bach / DE / conf 0.98 / pop 32 / 24f1766e-9635-4d58-a4d4-9413f9f98a4c
+  graph neighbours (19): George Frideric Handel(LB 1.00), Max Richter(LB 1.00), Hans Zimmer(LB 1.00), Johannes Brahms(LB 1.00), Rammstein(LB 1.00), Franz Liszt(LB 1.00), Ludwig van Beethoven(LB 1.00), Felix Mendelssohn(LB 1.00), Wolfgang Amadeus Mozart(LB 1.00), The Beatles(LB 1.00), Antonio Vivaldi(LB 1.00), Pink Floyd(LB 1.00), David Bowie(LB 1.00), Radiohead(LB 1.00), Led Zeppelin(LB 1.00), Red Hot Chili Peppers(LB 1.00), Nirvana(LB 1.00), Metallica(LB 1.00), The Rolling Stones(LB 1.00)
+  -> Because you like Johann Sebastian Bach  |  People who listen to Johann Sebastian Bach also play these  (12 rows)
+     George Frideric Handel — Menuet in G Minor (trans. W. Kempff)   [english baroque, pop 55]
+     Max Richter — On the Nature of Daylight   [post-minimalism, pop 67]
+     Hans Zimmer — Cornfield Chase   [soundtrack, pop 78]
+     Johannes Brahms — Wiegenlied, Op. 49, No. 4 (Arr. for Cello and Piano) [Brahms Lullaby]   [classical, pop 62]
+     Rammstein — Sonne   [neue deutsche harte, pop 79]
+     Franz Liszt — Liebestraume, S541/R211 : No. 3: Nocturne in A-Flat Major   [late romantic era, pop 62]
+     Ludwig van Beethoven — Sonata No. 14 "Moonlight" in C-Sharp Minor", Op. 27 No. 2: I. Adagio sostenuto   [early romantic era, pop 70]
+     Felix Mendelssohn — Capriccio brillant, Op. 22: Andante   [german romanticism, pop 58]
+     George Frideric Handel — Handel: Suite No. 11 in D Minor, HWV 437: III. Sarabande - Remastered 2022   [english baroque, pop 55]
+     Max Richter — Spring 1 - 2012   [post-minimalism, pop 65]
+     Hans Zimmer — Time   [soundtrack, pop 74]
+     Johannes Brahms — 21 Hungarian Dances, WoO 1 (version for orchestra): Hungarian Dance No. 5 (orch. Schmeling)   [classical, pop 58]
+
+=== Johann Sebastian Bach  [region DE]  liked-as "Johann Sebastian Bach"
+  seed in graph: Johann Sebastian Bach / DE / conf 0.98 / pop 32 / 24f1766e-9635-4d58-a4d4-9413f9f98a4c
+  graph neighbours (19): George Frideric Handel(LB 1.00), Max Richter(LB 1.00), Hans Zimmer(LB 1.00), Johannes Brahms(LB 1.00), Rammstein(LB 1.00), Franz Liszt(LB 1.00), Ludwig van Beethoven(LB 1.00), Felix Mendelssohn(LB 1.00), Wolfgang Amadeus Mozart(LB 1.00), The Beatles(LB 1.00), Antonio Vivaldi(LB 1.00), Pink Floyd(LB 1.00), David Bowie(LB 1.00), Radiohead(LB 1.00), Led Zeppelin(LB 1.00), Red Hot Chili Peppers(LB 1.00), Nirvana(LB 1.00), Metallica(LB 1.00), The Rolling Stones(LB 1.00)
+  -> Because you like Johann Sebastian Bach  |  People who listen to Johann Sebastian Bach also play these  (12 rows)
+     George Frideric Handel — Menuet in G Minor (trans. W. Kempff)   [english baroque, pop 55]
+     Max Richter — On the Nature of Daylight   [post-minimalism, pop 67]
+     Hans Zimmer — Cornfield Chase   [soundtrack, pop 78]
+     Johannes Brahms — Wiegenlied, Op. 49, No. 4 (Arr. for Cello and Piano) [Brahms Lullaby]   [classical, pop 62]
+     Rammstein — Sonne   [neue deutsche harte, pop 79]
+     Franz Liszt — Liebestraume, S541/R211 : No. 3: Nocturne in A-Flat Major   [late romantic era, pop 62]
+     Ludwig van Beethoven — Sonata No. 14 "Moonlight" in C-Sharp Minor", Op. 27 No. 2: I. Adagio sostenuto   [early romantic era, pop 70]
+     Felix Mendelssohn — Capriccio brillant, Op. 22: Andante   [german romanticism, pop 58]
+     George Frideric Handel — Handel: Suite No. 11 in D Minor, HWV 437: III. Sarabande - Remastered 2022   [english baroque, pop 55]
+     Max Richter — Spring 1 - 2012   [post-minimalism, pop 65]
+     Hans Zimmer — Time   [soundtrack, pop 74]
+     Johannes Brahms — 21 Hungarian Dances, WoO 1 (version for orchestra): Hungarian Dance No. 5 (orch. Schmeling)   [classical, pop 58]
+
+=== Morgan Wallen  [region US]  liked-as "Morgan Wallen"
+  seed in graph: NOT FOUND
+  -> Sounds like Morgan Wallen  |  Artists whose sound sits closest to theirs  (12 rows)
+     Logan Mize — I Know What You Did Last Summer   [country pop, pop 40]
+     Riley Green — you look like you love me (feat. Riley Green)   [contemporary country, pop 75]
+     Riley Green — you look like you love me (feat. Riley Green)   [contemporary country, pop 75]   <<DUPTITLE,DUPKEY
+     Gabby Barrett — Build a Boat (feat. Gabby Barrett)   [contemporary country, pop 53]
+     Jason Aldean — Dirt Road Anthem   [country road, pop 75]
+     Jordan Davis — What My World Spins Around   [contemporary country, pop 73]
+     Russell Dickerson — Yours   [contemporary country, pop 64]
+     Jason Aldean — Burnin' It Down   [country road, pop 70]
+     Love and Theft — Runaway   [contemporary country, pop 39]
+     Frankie Ballard — Helluva Life   [contemporary country, pop 51]
+     Carly Pearce — What He Didn't Do   [country road, pop 68]
+     Russell Dickerson — Bones   [contemporary country, pop 57]
+
+=== Dolly Parton  [region US]  liked-as "Dolly Parton"
+  seed in graph: NOT FOUND
+  -> Sounds like Dolly Parton  |  Artists whose sound sits closest to theirs  (12 rows)
+     Johnny Lee — Country Party   [country, pop 45]
+     Highway 101 — (Do You Love Me) Just Say Yes   [country, pop 39]
+     Highway 101 — The Bed You Made for Me   [country, pop 46]
+     Toby Keith — Should've Been A Cowboy   [country, pop 74]
+     Ashley McBryde — A Little Dive Bar in Dahlonega   [country, pop 50]
+     Alan Jackson — Country Boy   [country, pop 66]
+     Suzy Bogguss — Aces   [country, pop 39]
+     Johnny Lee — Lookin' for Love   [country, pop 44]
+     Dan + Shay — Bigger Houses   [country road, pop 61]
+     Doug Stone — Why Didn't I Think Of That   [country, pop 51]
+     Lorrie Morgan — Watch Me   [country dawn, pop 40]
+     Alan Jackson — Drive (For Daddy Gene)   [country, pop 66]
+
+=== Brooks & Dunn  [region US]  liked-as "Brooks"
+  seed in graph: NOT FOUND
+  -> Sounds like Brooks  |  Artists whose sound sits closest to theirs  (12 rows)
+     Carrie Underwood — Blown Away   [country road, pop 63]
+     Carrie Underwood — Cowboy Casanova   [country road, pop 63]
+     AFROJACK — The Spark   [pop dance, pop 55]
+     Keith Urban — Days Go By   [country road, pop 59]
+     Keith Urban — Long Hot Summer   [country road, pop 62]
+     AFROJACK — Ten Feet Tall   [pop dance, pop 61]
+     Martin Garrix — Carry You   [pop dance, pop 65]
+     Showtek — Booyah   [edm, pop 58]
+     Martin Garrix — Gravity   [pop dance, pop 64]
+     Diplo — Ashes   [electro house, pop 65]
+     Timmy Trumpet — Narco   [dutch house, pop 63]
+     Showtek — Analogue Players In A Digital World - Primeshock Rework   [edm, pop 53]
+
+=== Slipknot  [region US]  liked-as "Slipknot"
+  seed in graph: Slipknot / US / conf 0.94 / pop 16 / a466c2a2-6517-42fb-a160-1087c3bafd9f
+  graph neighbours (19): Megadeth(LB 1.00), Seether(LB 1.00), Evanescence(LB 1.00), The Smashing Pumpkins(LB 1.00), Mastodon(LB 1.00), Eminem(LB 1.00), Serj Tankian(LB 1.00), Guns N’ Roses(LB 1.00), Death(LB 1.00), Thirty Seconds to Mars(LB 1.00), Linkin Park(LB 1.00), Skrillex(LB 1.00), Radiohead(LB 1.00), Nickelback(LB 1.00), Gorillaz(LB 1.00), Arctic Monkeys(LB 1.00), Coldplay(LB 1.00), The Beatles(LB 1.00), The Rolling Stones(LB 1.00)
+  -> Because you like Slipknot  |  People who listen to Slipknot also play these  (12 rows)
+     Megadeth — Symphony Of Destruction - Remastered 2012   [metal, pop 70]
+     Seether — Fake It   [nu metal, pop 75]
+     Evanescence — Bring Me To Life   [alternative metal, pop 86]
+     The Smashing Pumpkins — 1979 - Remastered 2012   [alternative rock, pop 79]
+     Mastodon — Blood and Thunder   [metal, pop 63]
+     Eminem — Without Me   [hip hop, pop 88]
+     Serj Tankian — Empty Walls   [alternative metal, pop 62]
+     Guns N' Roses — Sweet Child O' Mine   [hard rock, pop 87]
+     Megadeth — Holy Wars...The Punishment Due - 2004 Remix   [metal, pop 69]
+     Seether — Broken   [nu metal, pop 73]
+     Evanescence — Going Under   [alternative metal, pop 78]
+     The Smashing Pumpkins — Bullet With Butterfly Wings - Remastered 2012   [alternative rock, pop 78]
+
+=== Iron Maiden  [region US]  liked-as "Iron Maiden"
+  seed in graph: Iron Maiden / GB / conf 0.94 / pop 41 / ca891d65-d9b0-4258-89f7-e6ba29d83767
+  graph neighbours (20): Uriah Heep(LB 1.00), The Alan Parsons Project(LB 1.00), Jethro Tull(LB 1.00), DragonForce(LB 1.00), Coldplay(LB 1.00), Gorillaz(LB 1.00), Marillion(LB 1.00), The Prodigy(LB 1.00), Cradle of Filth(LB 1.00), Eric Clapton(LB 1.00), Emerson, Lake & Palmer(LB 1.00), Anathema(LB 1.00), Amorphis(LB 1.00), Death(LB 1.00), Thirty Seconds to Mars(LB 1.00), Arch Enemy(LB 1.00), NOFX(LB 1.00), Europe(LB 1.00), Guns N’ Roses(LB 1.00), System of a Down(LB 1.00)
+  -> Because you like Iron Maiden  |  People who listen to Iron Maiden also play these  (12 rows)
+     Uriah Heep — Lady In Black   [symphonic rock, pop 53]
+     The Alan Parsons Project — Eye In The Sky   [art rock, pop 74]
+     Jethro Tull — Aqualung   [art rock, pop 62]
+     DragonForce — Through The Fire And Flames   [power metal, pop 67]
+     Coldplay — Yellow   [permanent wave, pop 91]
+     Gorillaz — Feel Good Inc.   [rock, pop 88]
+     Marillion — Kayleigh - 2017 Remaster   [progressive rock, pop 61]
+     The Prodigy — Breathe   [rave, pop 68]
+     Uriah Heep — Easy Livin'   [symphonic rock, pop 51]
+     The Alan Parsons Project — Sirius   [art rock, pop 66]
+     Jethro Tull — Locomotive Breath   [art rock, pop 59]
+     DragonForce — Through the Fire and Flames   [power metal, pop 63]   <<DUPTITLE,DUPKEY
+
+=== Iron Maiden  [region GB]  liked-as "Iron Maiden"
+  seed in graph: Iron Maiden / GB / conf 0.94 / pop 41 / ca891d65-d9b0-4258-89f7-e6ba29d83767
+  graph neighbours (20): Uriah Heep(LB 1.00), The Alan Parsons Project(LB 1.00), Jethro Tull(LB 1.00), DragonForce(LB 1.00), Coldplay(LB 1.00), Gorillaz(LB 1.00), Marillion(LB 1.00), The Prodigy(LB 1.00), Cradle of Filth(LB 1.00), Eric Clapton(LB 1.00), Emerson, Lake & Palmer(LB 1.00), Anathema(LB 1.00), Amorphis(LB 1.00), Death(LB 1.00), Thirty Seconds to Mars(LB 1.00), Arch Enemy(LB 1.00), NOFX(LB 1.00), Europe(LB 1.00), Guns N’ Roses(LB 1.00), System of a Down(LB 1.00)
+  -> Because you like Iron Maiden  |  People who listen to Iron Maiden also play these  (12 rows)
+     Uriah Heep — Lady In Black   [symphonic rock, pop 53]
+     The Alan Parsons Project — Eye In The Sky   [art rock, pop 74]
+     Jethro Tull — Aqualung   [art rock, pop 62]
+     DragonForce — Through The Fire And Flames   [power metal, pop 67]
+     Coldplay — Yellow   [permanent wave, pop 91]
+     Gorillaz — Feel Good Inc.   [rock, pop 88]
+     Marillion — Kayleigh - 2017 Remaster   [progressive rock, pop 61]
+     The Prodigy — Breathe   [rave, pop 68]
+     Uriah Heep — Easy Livin'   [symphonic rock, pop 51]
+     The Alan Parsons Project — Sirius   [art rock, pop 66]
+     Jethro Tull — Locomotive Breath   [art rock, pop 59]
+     DragonForce — Through the Fire and Flames   [power metal, pop 63]   <<DUPTITLE,DUPKEY
+
+=== Sabaton  [region US]  liked-as "Sabaton"
+  seed in graph: Sabaton / SE / conf 0.94 / pop 13 / 39a31de6-763d-48b6-a45c-f7cfad58ffd8
+  graph neighbours (20): HammerFall(LB 1.00), Arch Enemy(LB 1.00), Opeth(LB 1.00), Therion(LB 1.00), Amon Amarth(LB 1.00), Dark Tranquillity(LB 1.00), Machinae Supremacy(LB 1.00), In Flames(LB 1.00), Ghost(LB 1.00), Iron Maiden(LB 1.00), Metallica(LB 1.00), Blind Guardian(LB 1.00), System of a Down(LB 1.00), Judas Priest(LB 1.00), Slipknot(LB 1.00), Megadeth(LB 1.00), Black Sabbath(LB 1.00), Slayer(LB 1.00), Linkin Park(LB 1.00), Pantera(LB 1.00)
+  -> Because you like Sabaton  |  People who listen to Sabaton also play these  (12 rows)
+     HammerFall — Hearts on Fire   [gothenburg metal, pop 62]
+     Arch Enemy — War Eternal   [swedish metal, pop 59]
+     Opeth — In My Time of Need   [progressive metal, pop 54]
+     Therion — The Rise of Sodom and Gomorrah   [symphonic death metal, pop 45]
+     Amon Amarth — Twilight Of The Thunder God   [swedish metal, pop 60]
+     Dark Tranquillity — Atoma   [swedish metal, pop 51]
+     Machinae Supremacy — Player One   [swedish power metal, pop 39]
+     In Flames — Only for the Weak   [gothenburg metal, pop 63]
+     HammerFall — Last Man Standing   [gothenburg metal, pop 59]
+     Arch Enemy — Nemesis   [swedish metal, pop 57]
+     Opeth — Windowpane   [progressive metal, pop 54]
+     Therion — Birth of Venus Illegitima   [symphonic death metal, pop 44]
+
+=== Sabaton  [region SE]  liked-as "Sabaton"
+  seed in graph: Sabaton / SE / conf 0.94 / pop 13 / 39a31de6-763d-48b6-a45c-f7cfad58ffd8
+  graph neighbours (20): HammerFall(LB 1.00), Arch Enemy(LB 1.00), Opeth(LB 1.00), Therion(LB 1.00), Amon Amarth(LB 1.00), Dark Tranquillity(LB 1.00), Machinae Supremacy(LB 1.00), In Flames(LB 1.00), Ghost(LB 1.00), Iron Maiden(LB 1.00), Metallica(LB 1.00), Blind Guardian(LB 1.00), System of a Down(LB 1.00), Judas Priest(LB 1.00), Slipknot(LB 1.00), Megadeth(LB 1.00), Black Sabbath(LB 1.00), Slayer(LB 1.00), Linkin Park(LB 1.00), Pantera(LB 1.00)
+  -> Because you like Sabaton  |  People who listen to Sabaton also play these  (12 rows)
+     HammerFall — Hearts on Fire   [gothenburg metal, pop 62]
+     Arch Enemy — War Eternal   [swedish metal, pop 59]
+     Opeth — In My Time of Need   [progressive metal, pop 54]
+     Therion — The Rise of Sodom and Gomorrah   [symphonic death metal, pop 45]
+     Amon Amarth — Twilight Of The Thunder God   [swedish metal, pop 60]
+     Dark Tranquillity — Atoma   [swedish metal, pop 51]
+     Machinae Supremacy — Player One   [swedish power metal, pop 39]
+     In Flames — Only for the Weak   [gothenburg metal, pop 63]
+     HammerFall — Last Man Standing   [gothenburg metal, pop 59]
+     Arch Enemy — Nemesis   [swedish metal, pop 57]
+     Opeth — Windowpane   [progressive metal, pop 54]
+     Therion — Birth of Venus Illegitima   [symphonic death metal, pop 44]
+
+=== Gojira  [region US]  liked-as "Gojira"
+  seed in graph: Gojira / FR / conf 0.94 / pop 7 / 1c5efd53-d6b6-4d63-9d22-a15025cf5f07
+  graph neighbours (1): Alcest(LB 1.00)
+  -> Sounds like Gojira  |  Artists whose sound sits closest to theirs  (12 rows)
+     Meshuggah — Born in Dissonance   [progressive groove metal, pop 49]
+     Meshuggah — Rational Gaze   [progressive groove metal, pop 50]
+     Nailbomb — Wasting Away   [groove metal, pop 46]
+     Voivod — Panorama   [canadian metal, pop 27]
+     Voivod — Astronomy Domine   [canadian metal, pop 31]
+     Strapping Young Lad — Love?   [progressive metal, pop 47]
+     Cavalera Conspiracy — Sanctuary   [groove metal, pop 39]
+     Nailbomb — Blind and Lost   [groove metal, pop 39]
+     Lamb of God — Omertá   [groove metal, pop 59]
+     Annihilator — Alison Hell   [metal, pop 51]
+     Lamb of God — Walk with Me In Hell   [groove metal, pop 60]
+     Testament — Down for Life   [groove metal, pop 58]
+
+=== Gojira  [region FR]  liked-as "Gojira"
+  seed in graph: Gojira / FR / conf 0.94 / pop 7 / 1c5efd53-d6b6-4d63-9d22-a15025cf5f07
+  graph neighbours (1): Alcest(LB 1.00)
+  -> Sounds like Gojira  |  Artists whose sound sits closest to theirs  (12 rows)
+     Meshuggah — Born in Dissonance   [progressive groove metal, pop 49]
+     Meshuggah — Rational Gaze   [progressive groove metal, pop 50]
+     Nailbomb — Wasting Away   [groove metal, pop 46]
+     Voivod — Panorama   [canadian metal, pop 27]
+     Voivod — Astronomy Domine   [canadian metal, pop 31]
+     Strapping Young Lad — Love?   [progressive metal, pop 47]
+     Cavalera Conspiracy — Sanctuary   [groove metal, pop 39]
+     Nailbomb — Blind and Lost   [groove metal, pop 39]
+     Lamb of God — Omertá   [groove metal, pop 59]
+     Annihilator — Alison Hell   [metal, pop 51]
+     Lamb of God — Walk with Me In Hell   [groove metal, pop 60]
+     Testament — Down for Life   [groove metal, pop 58]
+
+=== Drake  [region US]  liked-as "Drake"
+  seed in graph: Drake / CA / conf 0.94 / pop 12 / 9fff2f8a-21e6-47de-a2b8-7f449929d43f
+  graph neighbours (14): The Weeknd(LB 1.00), Justin Bieber(LB 1.00), Grimes(LB 1.00), Panic! at the Disco(LB 1.00), Death Grips(LB 1.00), Coldplay(LB 1.00), Michael Jackson(LB 1.00), Radiohead(LB 1.00), T.I.(LB 1.00), Arctic Monkeys(LB 1.00), Lil Wayne(LB 1.00), P!nk(LB 1.00), Black Eyed Peas(LB 1.00), Eminem(LB 1.00)
+  -> Because you like Drake  |  People who listen to Drake also play these  (12 rows)
+     The Weeknd — Timeless (feat Playboi Carti)   [canadian contemporary r&b, pop 93]
+     Justin Bieber — Let Me Love You   [pop, pop 86]
+     Grimes — Genesis   [indietronica, pop 73]
+     Panic! At The Disco — High Hopes   [pop, pop 80]
+     Death Grips — I've Seen Footage   [industrial hip hop, pop 58]
+     Coldplay — Yellow   [permanent wave, pop 91]
+     Michael Jackson — Billie Jean   [soul, pop 83]
+     Radiohead — Creep   [rock, pop 89]
+     The Weeknd — One Of The Girls (with JENNIE, Lily Rose Depp)   [canadian contemporary r&b, pop 92]
+     Justin Bieber — Sorry   [pop, pop 85]
+     Grimes — Genesis   [indietronica, pop 70]   <<DUPTITLE,DUPKEY
+     Panic! At The Disco — House of Memories   [pop, pop 79]
+
+=== Drake  [region CA]  liked-as "Drake"
+  seed in graph: Drake / CA / conf 0.94 / pop 12 / 9fff2f8a-21e6-47de-a2b8-7f449929d43f
+  graph neighbours (14): The Weeknd(LB 1.00), Justin Bieber(LB 1.00), Grimes(LB 1.00), Panic! at the Disco(LB 1.00), Death Grips(LB 1.00), Coldplay(LB 1.00), Michael Jackson(LB 1.00), Radiohead(LB 1.00), T.I.(LB 1.00), Arctic Monkeys(LB 1.00), Lil Wayne(LB 1.00), P!nk(LB 1.00), Black Eyed Peas(LB 1.00), Eminem(LB 1.00)
+  -> Because you like Drake  |  People who listen to Drake also play these  (12 rows)
+     The Weeknd — Timeless (feat Playboi Carti)   [canadian contemporary r&b, pop 93]
+     Justin Bieber — Let Me Love You   [pop, pop 86]
+     Grimes — Genesis   [indietronica, pop 73]
+     Panic! At The Disco — High Hopes   [pop, pop 80]
+     Death Grips — I've Seen Footage   [industrial hip hop, pop 58]
+     Coldplay — Yellow   [permanent wave, pop 91]
+     Michael Jackson — Billie Jean   [soul, pop 83]
+     Radiohead — Creep   [rock, pop 89]
+     The Weeknd — One Of The Girls (with JENNIE, Lily Rose Depp)   [canadian contemporary r&b, pop 92]
+     Justin Bieber — Sorry   [pop, pop 85]
+     Grimes — Genesis   [indietronica, pop 70]   <<DUPTITLE,DUPKEY
+     Panic! At The Disco — House of Memories   [pop, pop 79]
+
+=== Eminem  [region US]  liked-as "Eminem"
+  seed in graph: Eminem / US / conf 0.94 / pop 47 / b95ce3ff-3d05-4e87-9e01-c97b66af13d4
+  graph neighbours (14): T.I.(LB 1.00), Thirty Seconds to Mars(LB 1.00), Bob Marley & The Wailers(LB 1.00), Linkin Park(LB 1.00), P!nk(LB 1.00), Michael Jackson(LB 1.00), Black Eyed Peas(LB 1.00), Evanescence(LB 1.00), Guns N’ Roses(LB 1.00), Johnny Cash(LB 1.00), System of a Down(LB 1.00), My Chemical Romance(LB 1.00), Nickelback(LB 1.00), Justin Bieber(LB 1.00)
+  -> Because you like Eminem  |  People who listen to Eminem also play these  (12 rows)
+     T.I. — Whatever You Like   [trap, pop 77]
+     Thirty Seconds To Mars — The Kill   [modern rock, pop 79]
+     Bob Marley & The Wailers — Could You Be Loved   [roots reggae, pop 83]
+     Linkin Park — Numb   [alternative metal, pop 88]
+     P!nk — Just Give Me a Reason (feat. Nate Ruess)   [pop, pop 85]
+     Michael Jackson — Billie Jean   [soul, pop 83]
+     Black Eyed Peas — I Gotta Feeling   [dance pop, pop 83]
+     Evanescence — Bring Me To Life   [alternative metal, pop 86]
+     T.I. — What You Know   [trap, pop 67]
+     Thirty Seconds To Mars — This Is War   [modern rock, pop 67]
+     Bob Marley & The Wailers — Is This Love   [roots reggae, pop 79]
+     Linkin Park — In the End   [alternative metal, pop 88]
+
+=== Tyler, The Creator  [region US]  liked-as "Tyler"
+  seed in graph: NOT FOUND
+  -> Sounds like Tyler  |  Artists whose sound sits closest to theirs  (12 rows)
+     Canon — Space Dawgs   [christian hip hop, pop 37]
+     Hezekiah Walker — Amazing   [israelite hip hop, pop 45]
+     Hezekiah Walker — Grateful   [israelite hip hop, pop 50]
+     Angie Rose — Lifeline   [christian trap, pop 36]
+     Canon — KNOCKED OUT   [christian hip hop, pop 43]
+     Red Tips — Hedges and Highway   [christian trap, pop 48]
+     Foggieraw — Destiny   [christian trap, pop 36]
+     Foggieraw — Nefertiti   [christian trap, pop 46]
+     Benjah — My Everything   [gospel rap, pop 35]
+     Lathan Warlick — I'm Still Here   [christian trap, pop 39]
+     Benjah — Armored Up   [gospel rap, pop 34]
+     Red Tips — Stuff Back   [christian trap, pop 48]
+
+=== Travis Scott  [region US]  liked-as "Travis Scott"
+  seed in graph: NOT FOUND
+  -> Sounds like Travis Scott  |  Artists whose sound sits closest to theirs  (12 rows)
+     SAINt JHN — I Heard You Got Too Litt Last Night   [melodic rap, pop 58]
+     SAINt JHN — Reflex   [melodic rap, pop 61]
+     Far East Movement — Turn Up The Love   [pop rap, pop 46]
+     Far East Movement — Turn Up The Love   [pop rap, pop 53]   <<DUPTITLE,DUPKEY
+     Ja Rule — Life Ain't A Game   [rap, pop 53]
+     Dreamville — LamboTruck (with Cozz feat. REASON & Childish Major)   [rap, pop 49]
+     Diddy — Bad Boy for Life   [pop rap, pop 62]
+     Jaden — I'm Ready   [rap, pop 56]
+     Chance the Rapper — Cocoa Butter Kisses   [hip hop, pop 55]
+     Sik World — 7 Years (Remix)   [rap, pop 63]
+     Chance the Rapper — Cocoa Butter Kisses   [hip hop, pop 66]   <<DUPTITLE,DUPKEY
+     Lil Uzi Vert — Money Longer   [rap, pop 74]
+
+=== Avicii  [region US]  liked-as "Avicii"
+  seed in graph: Avicii / SE / conf 0.94 / pop 8 / c85cfd6b-b1e9-4a50-bd55-eb725f04f7d5
+  graph neighbours (13): Tim Bergling(st 0.38 -nocat), P!nk(LB 1.00), Black Eyed Peas(LB 1.00), Justin Bieber(LB 1.00), Adele(LB 1.00), Ariana Grande(LB 1.00), Coldplay(LB 1.00), Sia(LB 1.00), Panic! at the Disco(LB 1.00), Tiësto(LB 1.00), Imagine Dragons(LB 1.00), Miley Cyrus(LB 1.00), Taylor Swift(LB 1.00)
+  -> Because you like Avicii  |  People who listen to Avicii also play these  (12 rows)
+     P!nk — Just Give Me a Reason (feat. Nate Ruess)   [pop, pop 85]
+     Black Eyed Peas — I Gotta Feeling   [dance pop, pop 83]
+     Justin Bieber — Let Me Love You   [pop, pop 86]
+     Adele — Skyfall   [british soul, pop 85]
+     Ariana Grande — we can't be friends (wait for your love)   [pop, pop 88]
+     Coldplay — Yellow   [permanent wave, pop 91]
+     Sia — Dusk Till Dawn (feat. Sia) - Radio Edit   [pop, pop 83]
+     Panic! At The Disco — High Hopes   [pop, pop 80]
+     P!nk — Try   [pop, pop 84]
+     Black Eyed Peas — Where Is The Love?   [dance pop, pop 81]
+     Justin Bieber — Sorry   [pop, pop 85]
+     Adele — Easy On Me   [british soul, pop 84]
+
+=== Avicii  [region SE]  liked-as "Avicii"
+  seed in graph: Avicii / SE / conf 0.94 / pop 8 / c85cfd6b-b1e9-4a50-bd55-eb725f04f7d5
+  graph neighbours (13): Tim Bergling(st 0.38 -nocat), P!nk(LB 1.00), Black Eyed Peas(LB 1.00), Justin Bieber(LB 1.00), Adele(LB 1.00), Ariana Grande(LB 1.00), Coldplay(LB 1.00), Sia(LB 1.00), Panic! at the Disco(LB 1.00), Tiësto(LB 1.00), Imagine Dragons(LB 1.00), Miley Cyrus(LB 1.00), Taylor Swift(LB 1.00)
+  -> Because you like Avicii  |  People who listen to Avicii also play these  (12 rows)
+     P!nk — Just Give Me a Reason (feat. Nate Ruess)   [pop, pop 85]
+     Black Eyed Peas — I Gotta Feeling   [dance pop, pop 83]
+     Justin Bieber — Let Me Love You   [pop, pop 86]
+     Adele — Skyfall   [british soul, pop 85]
+     Ariana Grande — we can't be friends (wait for your love)   [pop, pop 88]
+     Coldplay — Yellow   [permanent wave, pop 91]
+     Sia — Dusk Till Dawn (feat. Sia) - Radio Edit   [pop, pop 83]
+     Panic! At The Disco — High Hopes   [pop, pop 80]
+     P!nk — Try   [pop, pop 84]
+     Black Eyed Peas — Where Is The Love?   [dance pop, pop 81]
+     Justin Bieber — Sorry   [pop, pop 85]
+     Adele — Easy On Me   [british soul, pop 84]
+
+=== David Guetta  [region US]  liked-as "David Guetta"
+  seed in graph: David Guetta / FR / conf 0.94 / pop 8 / 302bd7b9-d012-4360-897a-93b00c855680
+  graph neighbours (0): 
+  -> Sounds like David Guetta  |  Artists whose sound sits closest to theirs  (12 rows)
+     Alesso — I Wanna Know   [pop dance, pop 61]
+     Alesso — I Like It (with Nate Smith)   [pop dance, pop 75]
+     Cheat Codes — Hold On (feat. Cheat Codes) - Radio Edit   [edm, pop 53]
+     Avicii — Hey Brother   [pop dance, pop 81]
+     Avicii — Addicted To You   [pop dance, pop 76]
+     Galantis — Runaway (U & I)   [dance pop, pop 77]
+     Galantis — Runaway (U & I)   [dance pop, pop 60]   <<DUPTITLE,DUPKEY
+     Cheat Codes — Pretty Girl - Cheat Codes X CADE Remix   [edm, pop 66]
+     Major Lazer — Shake It To The Max (FLY) - Major Lazer Remix   [dance pop, pop 57]
+     DJ Snake — Middle   [electronic trap, pop 78]
+     Major Lazer — Particula   [dance pop, pop 60]
+     Kygo — For Life (feat. Nile Rodgers)   [tropical house, pop 71]
+
+=== David Guetta  [region FR]  liked-as "David Guetta"
+  seed in graph: David Guetta / FR / conf 0.94 / pop 8 / 302bd7b9-d012-4360-897a-93b00c855680
+  graph neighbours (0): 
+  -> Sounds like David Guetta  |  Artists whose sound sits closest to theirs  (12 rows)
+     Alesso — I Wanna Know   [pop dance, pop 61]
+     Alesso — I Like It (with Nate Smith)   [pop dance, pop 75]
+     Cheat Codes — Hold On (feat. Cheat Codes) - Radio Edit   [edm, pop 53]
+     Avicii — Hey Brother   [pop dance, pop 81]
+     Avicii — Addicted To You   [pop dance, pop 76]
+     Galantis — Runaway (U & I)   [dance pop, pop 77]
+     Galantis — Runaway (U & I)   [dance pop, pop 60]   <<DUPTITLE,DUPKEY
+     Cheat Codes — Pretty Girl - Cheat Codes X CADE Remix   [edm, pop 66]
+     Major Lazer — Shake It To The Max (FLY) - Major Lazer Remix   [dance pop, pop 57]
+     DJ Snake — Middle   [electronic trap, pop 78]
+     Major Lazer — Particula   [dance pop, pop 60]
+     Kygo — For Life (feat. Nile Rodgers)   [tropical house, pop 71]
+
+=== Skrillex  [region US]  liked-as "Skrillex"
+  seed in graph: Skrillex / US / conf 0.94 / pop 13 / ae002c5d-aac6-490b-a39a-30aa9e2edf2b
+  graph neighbours (19): Linkin Park(LB 1.00), Eminem(LB 1.00), System of a Down(LB 1.00), Lana Del Rey(LB 1.00), Nine Inch Nails(LB 1.00), The Black Keys(LB 1.00), Black Eyed Peas(LB 1.00), MGMT(LB 1.00), Ariana Grande(LB 1.00), Panic! at the Disco(LB 1.00), Michael Jackson(LB 1.00), My Chemical Romance(LB 1.00), Avicii(LB 1.00), Coldplay(LB 1.00), Gorillaz(LB 1.00), Justin Bieber(LB 1.00), Ed Sheeran(LB 1.00), Crystal Castles(LB 1.00), The Beatles(LB 1.00)
+  -> Because you like Skrillex  |  People who listen to Skrillex also play these  (12 rows)
+     Linkin Park — Numb   [alternative metal, pop 88]
+     Eminem — Without Me   [hip hop, pop 88]
+     System Of A Down — Toxicity   [alternative metal, pop 85]
+     Lana Del Rey — Cinnamon Girl   [pop, pop 86]
+     Nine Inch Nails — Closer   [industrial, pop 74]
+     The Black Keys — Lonely Boy - 2021 Remaster   [rock, pop 72]
+     Black Eyed Peas — I Gotta Feeling   [dance pop, pop 83]
+     MGMT — Kids   [indie rock, pop 82]
+     Linkin Park — In the End   [alternative metal, pop 88]
+     Eminem — Mockingbird   [hip hop, pop 87]
+     System Of A Down — Chop Suey!   [alternative metal, pop 85]
+     Lana Del Rey — Young And Beautiful   [pop, pop 86]
+
+=== Above & Beyond  [region US]  liked-as "Above"
+  seed in graph: NOT FOUND
+  -> Sounds like Above  |  Artists whose sound sits closest to theirs  (12 rows)
+     Gabriel & Dresden — As The Rush Comes - Gabriel & Dresden Chillout Mix   [trance, pop 45]
+     Oliver Smith — Be The One (ABGT629) - Mixed   [uplifting trance, pop 38]
+     Gabriel & Dresden — Tracking Treasure Down   [trance, pop 39]
+     Spencer Brown — It's Me   [progressive trance, pop 44]
+     Lange — Fireflies - Under The Moon Mix   [trance, pop 40]
+     Andrew Bayer — Midnight   [trance, pop 36]
+     Ilan Bluestone — Paradise   [trance, pop 44]
+     Ashley Wallbridge — Keep The Fire - Radio Edit   [trance, pop 36]
+     Eximinds — Sonata   [uplifting trance, pop 36]
+     Matt Fax — To The Ground   [progressive trance, pop 43]
+     Ashley Wallbridge — Hands Up To The Lights   [trance, pop 37]
+     Mark Sixma — The Raid   [progressive house, pop 45]
+
+=== Above & Beyond  [region GB]  liked-as "Above"
+  seed in graph: NOT FOUND
+  -> Sounds like Above  |  Artists whose sound sits closest to theirs  (12 rows)
+     Gabriel & Dresden — As The Rush Comes - Gabriel & Dresden Chillout Mix   [trance, pop 45]
+     Oliver Smith — Be The One (ABGT629) - Mixed   [uplifting trance, pop 38]
+     Gabriel & Dresden — Tracking Treasure Down   [trance, pop 39]
+     Spencer Brown — It's Me   [progressive trance, pop 44]
+     Lange — Fireflies - Under The Moon Mix   [trance, pop 40]
+     Andrew Bayer — Midnight   [trance, pop 36]
+     Ilan Bluestone — Paradise   [trance, pop 44]
+     Ashley Wallbridge — Keep The Fire - Radio Edit   [trance, pop 36]
+     Eximinds — Sonata   [uplifting trance, pop 36]
+     Matt Fax — To The Ground   [progressive trance, pop 43]
+     Ashley Wallbridge — Hands Up To The Lights   [trance, pop 37]
+     Mark Sixma — The Raid   [progressive house, pop 45]
+
+=== TWICE  [region US]  liked-as "TWICE"
+  seed in graph: TWICE / KR / conf 0.94 / pop 6 / 8da127cc-c432-418f-b356-ef36210d82ac
+  graph neighbours (4): BIGBANG(LB 1.00), Girls’ Generation(LB 1.00), BTS(LB 1.00), 東方神起(LB 1.00 -nocat)
+  -> Because you like TWICE  |  People who listen to TWICE also play these  (6 rows)
+     BIGBANG — BANG BANG BANG   [k-pop, pop 79]
+     Girls' Generation — Gee   [k-pop, pop 67]
+     BTS — Dynamite   [pop, pop 80]
+     BIGBANG — Fantastic Baby   [k-pop, pop 73]
+     Girls' Generation — Into the New World   [k-pop, pop 63]
+     BTS — FAKE LOVE   [pop, pop 79]
+
+=== TWICE  [region KR]  liked-as "TWICE"
+  seed in graph: TWICE / KR / conf 0.94 / pop 6 / 8da127cc-c432-418f-b356-ef36210d82ac
+  graph neighbours (4): BIGBANG(LB 1.00), Girls’ Generation(LB 1.00), BTS(LB 1.00), 東方神起(LB 1.00 -nocat)
+  -> Because you like TWICE  |  People who listen to TWICE also play these  (6 rows)
+     BIGBANG — BANG BANG BANG   [k-pop, pop 79]
+     Girls' Generation — Gee   [k-pop, pop 67]
+     BTS — Dynamite   [pop, pop 80]
+     BIGBANG — Fantastic Baby   [k-pop, pop 73]
+     Girls' Generation — Into the New World   [k-pop, pop 63]
+     BTS — FAKE LOVE   [pop, pop 79]
+
+=== IU  [region US]  liked-as "IU"
+  seed in graph: IU / KR / conf 0.94 / pop 2 / b9545342-1e6d-4dae-84ac-013374ad8d7c
+  graph neighbours (4): BIGBANG(LB 1.00), BTS(LB 1.00), 東方神起(LB 1.00 -nocat), Girls’ Generation(LB 1.00)
+  -> Because you like IU  |  People who listen to IU also play these  (6 rows)
+     BIGBANG — BANG BANG BANG   [k-pop, pop 79]
+     BTS — Dynamite   [pop, pop 80]
+     Girls' Generation — Gee   [k-pop, pop 67]
+     BIGBANG — Fantastic Baby   [k-pop, pop 73]
+     BTS — FAKE LOVE   [pop, pop 79]
+     Girls' Generation — Into the New World   [k-pop, pop 63]
+
+=== IU  [region KR]  liked-as "IU"
+  seed in graph: IU / KR / conf 0.94 / pop 2 / b9545342-1e6d-4dae-84ac-013374ad8d7c
+  graph neighbours (4): BIGBANG(LB 1.00), BTS(LB 1.00), 東方神起(LB 1.00 -nocat), Girls’ Generation(LB 1.00)
+  -> Because you like IU  |  People who listen to IU also play these  (6 rows)
+     BIGBANG — BANG BANG BANG   [k-pop, pop 79]
+     BTS — Dynamite   [pop, pop 80]
+     Girls' Generation — Gee   [k-pop, pop 67]
+     BIGBANG — Fantastic Baby   [k-pop, pop 73]
+     BTS — FAKE LOVE   [pop, pop 79]
+     Girls' Generation — Into the New World   [k-pop, pop 63]
+
+=== Stray Kids  [region US]  liked-as "Stray Kids"
+  seed in graph: NOT FOUND
+  -> Sounds like Stray Kids  |  Artists whose sound sits closest to theirs  (12 rows)
+     BTS — Permission to Dance   [pop, pop 74]
+     BTS — Boy With Luv (feat. Halsey)   [pop, pop 76]
+     MOMOLAND — Ready Or Not   [k-pop, pop 38]
+     Brown Eyed Girls — Kill Bill   [k-pop, pop 45]
+     3YE — QUEEN   [k-pop, pop 23]
+     Brave Girls — Rollin'   [k-pop, pop 61]
+     LADIES' CODE — Hate You   [k-pop, pop 29]
+     AOA — Come See Me   [k-pop, pop 42]
+     Cherry Bullet — P.O.W! (Play On the World)   [k-pop, pop 39]
+     IU — Good day   [pop, pop 61]
+     3YE — QUEEN   [k-pop, pop 20]   <<DUPTITLE,DUPKEY
+     Brown Eyed Girls — Sixth Sense   [k-pop, pop 43]
+
+=== Stray Kids  [region KR]  liked-as "Stray Kids"
+  seed in graph: NOT FOUND
+  -> Sounds like Stray Kids  |  Artists whose sound sits closest to theirs  (12 rows)
+     BTS — Permission to Dance   [pop, pop 74]
+     BTS — Boy With Luv (feat. Halsey)   [pop, pop 76]
+     MOMOLAND — Ready Or Not   [k-pop, pop 38]
+     Brown Eyed Girls — Kill Bill   [k-pop, pop 45]
+     3YE — QUEEN   [k-pop, pop 23]
+     Brave Girls — Rollin'   [k-pop, pop 61]
+     LADIES' CODE — Hate You   [k-pop, pop 29]
+     AOA — Come See Me   [k-pop, pop 42]
+     Cherry Bullet — P.O.W! (Play On the World)   [k-pop, pop 39]
+     IU — Good day   [pop, pop 61]
+     3YE — QUEEN   [k-pop, pop 20]   <<DUPTITLE,DUPKEY
+     Brown Eyed Girls — Sixth Sense   [k-pop, pop 43]
+
+=== YOASOBI  [region US]  liked-as "YOASOBI"
+  seed in graph: NOT FOUND
+  -> Sounds like YOASOBI  |  Artists whose sound sits closest to theirs  (12 rows)
+     Yoh kamiyama — 色香水   [japanese teen pop, pop 47]
+     和ぬか — 絶頂讃歌   [japanese teen pop, pop 49]
+     ARASHI — Love so sweet   [j-pop, pop 58]
+     ARASHI — Love so sweet   [j-pop, pop 54]   <<DUPTITLE,DUPKEY
+     Yoh kamiyama — 色香水   [japanese teen pop, pop 55]   <<DUPTITLE,DUPKEY
+     Ado — Backlight   [j-pop, pop 67]
+     Sonar Pocket — GIRIGIRI   [j-pop, pop 36]
+     莉犬 — ハルトレイン   [japanese teen pop, pop 37]
+     和ぬか — 絶頂讃歌   [japanese teen pop, pop 43]   <<DUPTITLE,DUPKEY
+     Ryokuoushoku Shakai — Mela!   [j-pop, pop 68]
+     sumika — 10時の方角   [j-pop, pop 50]
+     Hazzie — 君と。   [j-pop, pop 46]
+
+=== YOASOBI  [region JP]  liked-as "YOASOBI"
+  seed in graph: NOT FOUND
+  -> Sounds like YOASOBI  |  Artists whose sound sits closest to theirs  (12 rows)
+     Yoh kamiyama — 色香水   [japanese teen pop, pop 47]
+     和ぬか — 絶頂讃歌   [japanese teen pop, pop 49]
+     ARASHI — Love so sweet   [j-pop, pop 58]
+     ARASHI — Love so sweet   [j-pop, pop 54]   <<DUPTITLE,DUPKEY
+     Yoh kamiyama — 色香水   [japanese teen pop, pop 55]   <<DUPTITLE,DUPKEY
+     Ado — Backlight   [j-pop, pop 67]
+     Sonar Pocket — GIRIGIRI   [j-pop, pop 36]
+     莉犬 — ハルトレイン   [japanese teen pop, pop 37]
+     和ぬか — 絶頂讃歌   [japanese teen pop, pop 43]   <<DUPTITLE,DUPKEY
+     Ryokuoushoku Shakai — Mela!   [j-pop, pop 68]
+     sumika — 10時の方角   [j-pop, pop 50]
+     Hazzie — 君と。   [j-pop, pop 46]
+
+=== 米津玄師  [region US]  liked-as "米津玄師"
+  seed in graph: NOT FOUND
+  -> NO ARTIST SHELF  (shelves: popular)
+
+=== 米津玄師  [region JP]  liked-as "米津玄師"
+  seed in graph: NOT FOUND
+  -> NO ARTIST SHELF  (shelves: popular)
+
+=== X JAPAN  [region US]  liked-as "X JAPAN"
+  seed in graph: X JAPAN / JP / conf 0.94 / pop 9 / 3f77449d-48e4-4ceb-b869-69af48da877b
+  graph neighbours (23): L’Arc〜en〜Ciel(LB 1.00), DIR EN GREY(LB 1.00), the GazettE(LB 1.00), GACKT(LB 1.00), MIYAVI(LB 1.00), 宇多田ヒカル(LB 1.00 -nocat), 浜崎あゆみ(LB 1.00 -nocat), MALICE MIZER(LB 0.95 -nocat), ONE OK ROCK(LB 0.91), the pillows(LB 0.74), MUCC(LB 0.74), Do As Infinity(LB 0.67), Metallica(LB 1.00), Iron Maiden(LB 1.00), The Beatles(LB 1.00), Rammstein(LB 1.00), Guns N’ Roses(LB 1.00), System of a Down(LB 1.00), Radiohead(LB 1.00), Pink Floyd(LB 1.00), Linkin Park(LB 1.00), Nirvana(LB 1.00), Black Sabbath(LB 1.00)
+  -> Because you like X JAPAN  |  People who listen to X JAPAN also play these  (12 rows)
+     L'Arc-en-Ciel — Driver's High - Remastered 2022   [anime, pop 55]
+     DIR EN GREY — YOKAN   [j-metal, pop 38]
+     the GazettE — SHIVER   [j-metal, pop 48]
+     GACKT — U+K   [okinawan pop, pop 46]
+     MIYAVI — Flashback   [visual kei, pop 56]
+     ONE OK ROCK — Puppets Can’t Control You   [j-rock, pop 66]
+     the pillows — Thank you, my twilight   [hokkaido indie, pop 46]
+     MUCC — ニルヴァーナ   [visual kei, pop 41]
+     L'Arc-en-Ciel — READY STEADY GO - Remastered 2022   [anime, pop 54]
+     DIR EN GREY — Cage   [j-metal, pop 38]
+     the GazettE — Filth in the beauty   [j-metal, pop 41]
+     GACKT — Journey through the Decade   [okinawan pop, pop 45]
+
+=== X JAPAN  [region JP]  liked-as "X JAPAN"
+  seed in graph: X JAPAN / JP / conf 0.94 / pop 9 / 3f77449d-48e4-4ceb-b869-69af48da877b
+  graph neighbours (23): L’Arc〜en〜Ciel(LB 1.00), DIR EN GREY(LB 1.00), the GazettE(LB 1.00), GACKT(LB 1.00), MIYAVI(LB 1.00), 宇多田ヒカル(LB 1.00 -nocat), 浜崎あゆみ(LB 1.00 -nocat), MALICE MIZER(LB 0.95 -nocat), ONE OK ROCK(LB 0.91), the pillows(LB 0.74), MUCC(LB 0.74), Do As Infinity(LB 0.67), Metallica(LB 1.00), Iron Maiden(LB 1.00), The Beatles(LB 1.00), Rammstein(LB 1.00), Guns N’ Roses(LB 1.00), System of a Down(LB 1.00), Radiohead(LB 1.00), Pink Floyd(LB 1.00), Linkin Park(LB 1.00), Nirvana(LB 1.00), Black Sabbath(LB 1.00)
+  -> Because you like X JAPAN  |  People who listen to X JAPAN also play these  (12 rows)
+     L'Arc-en-Ciel — Driver's High - Remastered 2022   [anime, pop 55]
+     DIR EN GREY — YOKAN   [j-metal, pop 38]
+     the GazettE — SHIVER   [j-metal, pop 48]
+     GACKT — U+K   [okinawan pop, pop 46]
+     MIYAVI — Flashback   [visual kei, pop 56]
+     ONE OK ROCK — Puppets Can’t Control You   [j-rock, pop 66]
+     the pillows — Thank you, my twilight   [hokkaido indie, pop 46]
+     MUCC — ニルヴァーナ   [visual kei, pop 41]
+     L'Arc-en-Ciel — READY STEADY GO - Remastered 2022   [anime, pop 54]
+     DIR EN GREY — Cage   [j-metal, pop 38]
+     the GazettE — Filth in the beauty   [j-metal, pop 41]
+     GACKT — Journey through the Decade   [okinawan pop, pop 45]
+
+=== Shakira  [region US]  liked-as "Shakira"
+  seed in graph: Shakira / CO / conf 0.94 / pop 13 / bf24ca37-25f4-4e34-9aec-460b94364cfc
+  graph neighbours (14): Maluma(LB 1.00), Juanes(LB 1.00), T.I.(LB 1.00), Cher(LB 1.00), Coldplay(LB 1.00), Black Eyed Peas(LB 1.00), P!nk(LB 1.00), Michael Jackson(LB 1.00), Adele(LB 1.00), Ariana Grande(LB 1.00), Linkin Park(LB 1.00), Justin Bieber(LB 1.00), Avicii(LB 1.00), Evanescence(LB 1.00)
+  -> Because you like Shakira  |  People who listen to Shakira also play these  (12 rows)
+     Maluma — Borro Cassette   [reggaeton colombiano, pop 83]
+     Juanes — Es Por Ti   [mexican pop, pop 80]
+     T.I. — Whatever You Like   [trap, pop 77]
+     Cher — Believe   [pop, pop 82]
+     Coldplay — Yellow   [permanent wave, pop 91]
+     Black Eyed Peas — I Gotta Feeling   [dance pop, pop 83]
+     P!nk — Just Give Me a Reason (feat. Nate Ruess)   [pop, pop 85]
+     Michael Jackson — Billie Jean   [soul, pop 83]
+     Maluma — Cuatro Babys (feat. Trap Capos, Noriel, Bryant Myers & Juhn)   [reggaeton colombiano, pop 82]
+     Juanes — A Dios Le Pido   [mexican pop, pop 74]
+     T.I. — What You Know   [trap, pop 67]
+     Cher — If I Could Turn Back Time   [pop, pop 74]
+
+=== Shakira  [region CO]  liked-as "Shakira"
+  seed in graph: Shakira / CO / conf 0.94 / pop 13 / bf24ca37-25f4-4e34-9aec-460b94364cfc
+  graph neighbours (14): Maluma(LB 1.00), Juanes(LB 1.00), T.I.(LB 1.00), Cher(LB 1.00), Coldplay(LB 1.00), Black Eyed Peas(LB 1.00), P!nk(LB 1.00), Michael Jackson(LB 1.00), Adele(LB 1.00), Ariana Grande(LB 1.00), Linkin Park(LB 1.00), Justin Bieber(LB 1.00), Avicii(LB 1.00), Evanescence(LB 1.00)
+  -> Because you like Shakira  |  People who listen to Shakira also play these  (12 rows)
+     Maluma — Borro Cassette   [reggaeton colombiano, pop 83]
+     Juanes — Es Por Ti   [mexican pop, pop 80]
+     T.I. — Whatever You Like   [trap, pop 77]
+     Cher — Believe   [pop, pop 82]
+     Coldplay — Yellow   [permanent wave, pop 91]
+     Black Eyed Peas — I Gotta Feeling   [dance pop, pop 83]
+     P!nk — Just Give Me a Reason (feat. Nate Ruess)   [pop, pop 85]
+     Michael Jackson — Billie Jean   [soul, pop 83]
+     Maluma — Cuatro Babys (feat. Trap Capos, Noriel, Bryant Myers & Juhn)   [reggaeton colombiano, pop 82]
+     Juanes — A Dios Le Pido   [mexican pop, pop 74]
+     T.I. — What You Know   [trap, pop 67]
+     Cher — If I Could Turn Back Time   [pop, pop 74]
+
+=== Karol G  [region US]  liked-as "Karol G"
+  seed in graph: KAROL G / CO / conf 0.94 / pop 2 / de22adae-f8ac-414f-b653-b0162611bd60
+  graph neighbours (1): Kio DJ(st 0.38 -nocat)
+  -> Sounds like Karol G  |  Artists whose sound sits closest to theirs  (12 rows)
+     Beéle — sobelove   [urbano latino, pop 83]
+     Miky Woodz — 2 Way Player   [urbano latino, pop 50]
+     Casper Magico — Airforce Negras   [trap latino, pop 51]
+     Dalex — Apego Emocional   [trap latino, pop 49]
+     Farruko — Calma - Remix   [urbano latino, pop 73]
+     Myke Towers — Sigue Bailandome   [urbano latino, pop 76]
+     Keityn — Anoche   [urbano latino, pop 37]
+     Tempo — Me Quiero Perder   [urbano latino, pop 41]
+     Miky Woodz — La MVP   [urbano latino, pop 59]
+     Gonzy — MOJAITA   [urbano latino, pop 52]
+     ROBI — Café de Barcelona   [urbano latino, pop 37]
+     Blessd — POLOS OPUESTOS REMIX - BLESSD VERSION   [urbano latino, pop 77]
+
+=== Karol G  [region CO]  liked-as "Karol G"
+  seed in graph: KAROL G / CO / conf 0.94 / pop 2 / de22adae-f8ac-414f-b653-b0162611bd60
+  graph neighbours (1): Kio DJ(st 0.38 -nocat)
+  -> Sounds like Karol G  |  Artists whose sound sits closest to theirs  (12 rows)
+     Beéle — sobelove   [urbano latino, pop 83]
+     Miky Woodz — 2 Way Player   [urbano latino, pop 50]
+     Casper Magico — Airforce Negras   [trap latino, pop 51]
+     Dalex — Apego Emocional   [trap latino, pop 49]
+     Farruko — Calma - Remix   [urbano latino, pop 73]
+     Myke Towers — Sigue Bailandome   [urbano latino, pop 76]
+     Keityn — Anoche   [urbano latino, pop 37]
+     Tempo — Me Quiero Perder   [urbano latino, pop 41]
+     Miky Woodz — La MVP   [urbano latino, pop 59]
+     Gonzy — MOJAITA   [urbano latino, pop 52]
+     ROBI — Café de Barcelona   [urbano latino, pop 37]
+     Blessd — POLOS OPUESTOS REMIX - BLESSD VERSION   [urbano latino, pop 77]
+
+=== Wisin & Yandel  [region US]  liked-as "Wisin"
+  seed in graph: NOT FOUND
+  -> Sounds like Wisin  |  Artists whose sound sits closest to theirs  (12 rows)
+     Tonny Tun Tun — Noche De Copas   [reggaeton, pop 36]
+     Tony Dize — El Doctorado   [urbano latino, pop 54]
+     Don Chezina — Chezidon   [reggaeton, pop 40]
+     Cosculluela — Yo No Sé Bailar   [urbano latino, pop 57]
+     Arcángel — Pa' Que La Pases Bien   [urbano latino, pop 79]
+     Tony Dize — El Doctorado   [urbano latino, pop 71]   <<DUPTITLE,DUPKEY
+     R.K.M & Ken-Y — Te Regalo Amores   [reggaeton, pop 60]
+     Dragon & Caballero — Dime Si Volverás   [reggaeton, pop 43]
+     Golpe a Golpe — Juego de Niños   [reggaeton, pop 52]
+     Sir Speedy — Amor Con la Ropa   [reggaeton, pop 55]
+     Sir Speedy — Sientelo   [reggaeton, pop 50]
+     Tito "El Bambino" — Llueve El Amor   [reggaeton, pop 64]
+
+=== Wisin & Yandel  [region PR]  liked-as "Wisin"
+  seed in graph: NOT FOUND
+  -> Sounds like Wisin  |  Artists whose sound sits closest to theirs  (12 rows)
+     Tonny Tun Tun — Noche De Copas   [reggaeton, pop 36]
+     Tony Dize — El Doctorado   [urbano latino, pop 54]
+     Don Chezina — Chezidon   [reggaeton, pop 40]
+     Cosculluela — Yo No Sé Bailar   [urbano latino, pop 57]
+     Arcángel — Pa' Que La Pases Bien   [urbano latino, pop 79]
+     Tony Dize — El Doctorado   [urbano latino, pop 71]   <<DUPTITLE,DUPKEY
+     R.K.M & Ken-Y — Te Regalo Amores   [reggaeton, pop 60]
+     Dragon & Caballero — Dime Si Volverás   [reggaeton, pop 43]
+     Golpe a Golpe — Juego de Niños   [reggaeton, pop 52]
+     Sir Speedy — Amor Con la Ropa   [reggaeton, pop 55]
+     Sir Speedy — Sientelo   [reggaeton, pop 50]
+     Tito "El Bambino" — Llueve El Amor   [reggaeton, pop 64]
+
+=== Peso Pluma  [region US]  liked-as "Peso Pluma"
+  seed in graph: NOT FOUND
+  -> Sounds like Peso Pluma  |  Artists whose sound sits closest to theirs  (12 rows)
+     Ivan Orozco — Ni Triste, Ni Feliz   [corridos tumbados, pop 37]
+     miguel cornejo — QEP   [corrido, pop 46]
+     Ivan Orozco — ME LLUEVEN RECUERDOS   [corridos tumbados, pop 40]
+     Tony Herrera — Llámale al Dealer   [sad sierreno, pop 39]
+     Ivan Cornejo — Atención   [sad sierreno, pop 78]
+     Conjunto Rienda Real — Labios Rotos   [sad sierreno, pop 52]
+     Xavi — La Diabla   [sad sierreno, pop 77]
+     Xavi — La Diabla   [sad sierreno, pop 74]   <<DUPTITLE,DUPKEY
+     miguel cornejo — MODO CAMPAÑA   [corrido, pop 44]
+     Officialalex425 — Dame Amor   [sad sierreno, pop 72]
+     Cachas De Oro — Los Malaventurados No Lloran   [sad sierreno, pop 45]
+     Yahritza Y Su Esencia — Dejalo Ir   [sad sierreno, pop 45]
+
+=== Peso Pluma  [region MX]  liked-as "Peso Pluma"
+  seed in graph: NOT FOUND
+  -> Sounds like Peso Pluma  |  Artists whose sound sits closest to theirs  (12 rows)
+     Ivan Orozco — Ni Triste, Ni Feliz   [corridos tumbados, pop 37]
+     miguel cornejo — QEP   [corrido, pop 46]
+     Ivan Orozco — ME LLUEVEN RECUERDOS   [corridos tumbados, pop 40]
+     Tony Herrera — Llámale al Dealer   [sad sierreno, pop 39]
+     Ivan Cornejo — Atención   [sad sierreno, pop 78]
+     Conjunto Rienda Real — Labios Rotos   [sad sierreno, pop 52]
+     Xavi — La Diabla   [sad sierreno, pop 77]
+     Xavi — La Diabla   [sad sierreno, pop 74]   <<DUPTITLE,DUPKEY
+     miguel cornejo — MODO CAMPAÑA   [corrido, pop 44]
+     Officialalex425 — Dame Amor   [sad sierreno, pop 72]
+     Cachas De Oro — Los Malaventurados No Lloran   [sad sierreno, pop 45]
+     Yahritza Y Su Esencia — Dejalo Ir   [sad sierreno, pop 45]
+
+=== Wizkid  [region US]  liked-as "Wizkid"
+  seed in graph: Wizkid / NG / conf 0.94 / pop 2 / efc5d365-a448-4e2f-9b5f-4a7c84be725c
+  graph neighbours (0): 
+  -> Sounds like Wizkid  |  Artists whose sound sits closest to theirs  (12 rows)
+     Sean Tizzle — Pempe   [nigerian pop, pop 40]
+     Lil5ive — Omo Ologo   [nigerian hip hop, pop 37]
+     Olamide — Luvaluvah   [afrobeats, pop 67]
+     Jamopyper — Overdose   [afrobeats, pop 36]
+     Tekno — Jogodo   [nigerian pop, pop 49]
+     Oritse Femi — Double Wahala   [nigerian pop, pop 43]
+     Adekunle Gold — Antidote (feat. Adekunle Gold)   [alte, pop 52]
+     Adekunle Gold — Okay   [alte, pop 59]
+     Falz — Round of Applause   [nigerian pop, pop 49]
+     Falz — Round of Applause   [nigerian pop, pop 49]   <<DUPTITLE,DUPKEY
+     Jeriq — Remember   [nigerian hip hop, pop 49]
+     P-Square — Positif   [nigerian pop, pop 57]
+
+=== Wizkid  [region NG]  liked-as "Wizkid"
+  seed in graph: Wizkid / NG / conf 0.94 / pop 2 / efc5d365-a448-4e2f-9b5f-4a7c84be725c
+  graph neighbours (0): 
+  -> Sounds like Wizkid  |  Artists whose sound sits closest to theirs  (12 rows)
+     Sean Tizzle — Pempe   [nigerian pop, pop 40]
+     Lil5ive — Omo Ologo   [nigerian hip hop, pop 37]
+     Olamide — Luvaluvah   [afrobeats, pop 67]
+     Jamopyper — Overdose   [afrobeats, pop 36]
+     Tekno — Jogodo   [nigerian pop, pop 49]
+     Oritse Femi — Double Wahala   [nigerian pop, pop 43]
+     Adekunle Gold — Antidote (feat. Adekunle Gold)   [alte, pop 52]
+     Adekunle Gold — Okay   [alte, pop 59]
+     Falz — Round of Applause   [nigerian pop, pop 49]
+     Falz — Round of Applause   [nigerian pop, pop 49]   <<DUPTITLE,DUPKEY
+     Jeriq — Remember   [nigerian hip hop, pop 49]
+     P-Square — Positif   [nigerian pop, pop 57]
+
+=== Davido  [region US]  liked-as "Davido"
+  seed in graph: NOT FOUND
+  -> Sounds like Davido  |  Artists whose sound sits closest to theirs  (12 rows)
+     Reekado Banks — Ozumba Mbadiwe   [nigerian pop, pop 48]
+     Mayorkun — Would You? (feat. Olivetheboy)   [nigerian pop, pop 45]
+     Di'Ja — Awww   [nigerian pop, pop 47]
+     Di'Ja — Awww   [nigerian pop, pop 37]   <<DUPTITLE,DUPKEY
+     Tiwa Savage — All Over   [afrobeats, pop 48]
+     Patoranking — Celebrate Me   [nigerian pop, pop 42]
+     Joeboy — Nobody   [nigerian pop, pop 54]
+     Adekunle Gold — Obimo   [alte, pop 66]
+     Mayorkun — Lowkey!   [nigerian pop, pop 46]
+     Sean Tizzle — Pempe   [nigerian pop, pop 40]
+     Paul CleverLee — afroBHITS 2024   [cruise, pop 39]
+     Reekado Banks — Oluwa Ni (Wemi You)   [nigerian pop, pop 45]
+
+=== Davido  [region NG]  liked-as "Davido"
+  seed in graph: NOT FOUND
+  -> Sounds like Davido  |  Artists whose sound sits closest to theirs  (12 rows)
+     Reekado Banks — Ozumba Mbadiwe   [nigerian pop, pop 48]
+     Mayorkun — Would You? (feat. Olivetheboy)   [nigerian pop, pop 45]
+     Di'Ja — Awww   [nigerian pop, pop 47]
+     Di'Ja — Awww   [nigerian pop, pop 37]   <<DUPTITLE,DUPKEY
+     Tiwa Savage — All Over   [afrobeats, pop 48]
+     Patoranking — Celebrate Me   [nigerian pop, pop 42]
+     Joeboy — Nobody   [nigerian pop, pop 54]
+     Adekunle Gold — Obimo   [alte, pop 66]
+     Mayorkun — Lowkey!   [nigerian pop, pop 46]
+     Sean Tizzle — Pempe   [nigerian pop, pop 40]
+     Paul CleverLee — afroBHITS 2024   [cruise, pop 39]
+     Reekado Banks — Oluwa Ni (Wemi You)   [nigerian pop, pop 45]
+
+=== Fela Kuti  [region US]  liked-as "Fela Kuti"
+  seed in graph: Fela Kuti / NG / conf 0.98 / pop 2 / 6514cffa-fbe0-4965-ad88-e998ead8a82a
+  graph neighbours (2): Africa 70(st 0.38 -nocat), Koola Lobitos(st 0.38 -nocat)
+  -> Sounds like Fela Kuti  |  Artists whose sound sits closest to theirs  (12 rows)
+     Tony Allen — Never (Lagos Never Gonna Be the Same)   [afrobeat, pop 38]
+     Manu Dibango — Soul Makossa   [afropop, pop 52]
+     Manu Dibango — Coconut   [afropop, pop 47]
+     King Sunny Ade — Eni Nbinu Wa   [afrobeat, pop 36]
+     King Sunny Ade — E Kilo F'omo Ode   [afrobeat, pop 34]
+     The Lijadu Sisters — Come On Home   [afrobeat, pop 55]
+     Francis Bebey — Sanza Tristesse   [west african jazz, pop 33]
+     T. P. Orchestre Poly-Rythmo — Ne Te Fache Pas   [afropop, pop 29]
+     Vaudou Game — Anniversaire   [afropop, pop 25]
+     Vaudou Game — Tata fatiguée   [afropop, pop 30]
+     Francis Bebey — The Coffee Cola Song   [west african jazz, pop 41]
+     The Lijadu Sisters — Orere-Elejigbo   [afrobeat, pop 42]
+
+=== Fela Kuti  [region NG]  liked-as "Fela Kuti"
+  seed in graph: Fela Kuti / NG / conf 0.98 / pop 2 / 6514cffa-fbe0-4965-ad88-e998ead8a82a
+  graph neighbours (2): Africa 70(st 0.38 -nocat), Koola Lobitos(st 0.38 -nocat)
+  -> Sounds like Fela Kuti  |  Artists whose sound sits closest to theirs  (12 rows)
+     Tony Allen — Never (Lagos Never Gonna Be the Same)   [afrobeat, pop 38]
+     Manu Dibango — Soul Makossa   [afropop, pop 52]
+     Manu Dibango — Coconut   [afropop, pop 47]
+     King Sunny Ade — Eni Nbinu Wa   [afrobeat, pop 36]
+     King Sunny Ade — E Kilo F'omo Ode   [afrobeat, pop 34]
+     The Lijadu Sisters — Come On Home   [afrobeat, pop 55]
+     Francis Bebey — Sanza Tristesse   [west african jazz, pop 33]
+     T. P. Orchestre Poly-Rythmo — Ne Te Fache Pas   [afropop, pop 29]
+     Vaudou Game — Anniversaire   [afropop, pop 25]
+     Vaudou Game — Tata fatiguée   [afropop, pop 30]
+     Francis Bebey — The Coffee Cola Song   [west african jazz, pop 41]
+     The Lijadu Sisters — Orere-Elejigbo   [afrobeat, pop 42]
+
+=== Shreya Ghoshal  [region US]  liked-as "Shreya Ghoshal"
+  seed in graph: NOT FOUND
+  -> Sounds like Shreya Ghoshal  |  Artists whose sound sits closest to theirs  (12 rows)
+     Shweta Pandit — Tere Ho Ke Rahenge - Reprise   [filmi, pop 49]
+     Asees Kaur — Marjaawaan   [desi pop, pop 49]
+     Avadhoot Gupte — Bawara   [filmi, pop 41]
+     Yashita Sharma — Chaandaniya (From "2 States")   [modern bollywood, pop 52]
+     Yashita Sharma — Chaandaniya   [modern bollywood, pop 51]   <<DUPTITLE,DUPKEY
+     Harshdeep Kaur — Jannat   [sufi, pop 45]
+     Saleel Kulkarni — He Gajavadan   [marathi pop, pop 29]
+     Milind Ingle — Chhui Mui Si Tum Lagti Ho   [marathi pop, pop 38]
+     Bharath B J — Hale Gujuri Hosa Battery   [sandalwood, pop 19]
+     Vidyasagar — Nilamalare   [filmi, pop 57]
+     Shabab Sabri — Chaap Tilak   [filmi, pop 39]
+     A.M. Turaz — Phool Gendwa Na Maaro   [modern bollywood, pop 42]
+
+=== Shreya Ghoshal  [region IN]  liked-as "Shreya Ghoshal"
+  seed in graph: NOT FOUND
+  -> Sounds like Shreya Ghoshal  |  Artists whose sound sits closest to theirs  (12 rows)
+     Shweta Pandit — Tere Ho Ke Rahenge - Reprise   [filmi, pop 49]
+     Asees Kaur — Marjaawaan   [desi pop, pop 49]
+     Avadhoot Gupte — Bawara   [filmi, pop 41]
+     Yashita Sharma — Chaandaniya (From "2 States")   [modern bollywood, pop 52]
+     Yashita Sharma — Chaandaniya   [modern bollywood, pop 51]   <<DUPTITLE,DUPKEY
+     Harshdeep Kaur — Jannat   [sufi, pop 45]
+     Saleel Kulkarni — He Gajavadan   [marathi pop, pop 29]
+     Milind Ingle — Chhui Mui Si Tum Lagti Ho   [marathi pop, pop 38]
+     Bharath B J — Hale Gujuri Hosa Battery   [sandalwood, pop 19]
+     Vidyasagar — Nilamalare   [filmi, pop 57]
+     Shabab Sabri — Chaap Tilak   [filmi, pop 39]
+     A.M. Turaz — Phool Gendwa Na Maaro   [modern bollywood, pop 42]
+
+=== Lata Mangeshkar  [region US]  liked-as "Lata Mangeshkar"
+  seed in graph: Lata Mangeshkar / IN / conf 0.98 / pop 2 / aeb71bd8-447d-4415-8ea1-2b7d664f67e1
+  graph neighbours (12): Geeta Dutt(LB 1.00), Mukesh(LB 1.00), Arijit Singh(LB 1.00), Jagjit Singh(LB 1.00), A. R. Rahman(LB 1.00), Kishore Kumar(LB 1.00), Asha Bhosle(LB 1.00), Manna Dey(LB 1.00), Udit Narayan(LB 1.00), Hemanta Mukherjee(LB 1.00 -nocat), Mohammed Rafi(LB 1.00), Sonu Nigam(LB 1.00)
+  -> Because you like Lata Mangeshkar  |  People who listen to Lata Mangeshkar also play these  (12 rows)
+     Geeta Dutt — Babuji Dheere Chalna   [filmi, pop 48]
+     Mukesh — Main Pal Do Pal Ka Shair Hoon   [filmi, pop 64]
+     Arijit Singh — Tujhe Kitna Chahne Lage (From "Kabir Singh")   [filmi, pop 80]
+     Jagjit Singh — Hothon Se Chhu Lo Tum - From "Prem Geet"   [ghazal, pop 63]
+     A.R. Rahman — Muththa Mazhai (Reprise)   [filmi, pop 77]
+     Kishore Kumar — Yeh Sham Mastani   [classic bollywood, pop 68]
+     Asha Bhosle — Abhi Na Jao Chhod Kar   [filmi, pop 63]
+     Manna Dey — Zindagi Kaisi Hai Paheli   [classic bollywood, pop 58]
+     Geeta Dutt — Waqt Ne Kiya Kya Haseen Sitam   [filmi, pop 44]
+     Mukesh — Kahin Door Jab Din Dhal Jaye   [filmi, pop 63]
+     Arijit Singh — Sajni (From "Laapataa Ladies")   [filmi, pop 80]
+     Jagjit Singh — Hoshwalon Ko Khabar Kya   [ghazal, pop 63]
+
+=== Lata Mangeshkar  [region IN]  liked-as "Lata Mangeshkar"
+  seed in graph: Lata Mangeshkar / IN / conf 0.98 / pop 2 / aeb71bd8-447d-4415-8ea1-2b7d664f67e1
+  graph neighbours (12): Geeta Dutt(LB 1.00), Mukesh(LB 1.00), Arijit Singh(LB 1.00), Jagjit Singh(LB 1.00), A. R. Rahman(LB 1.00), Kishore Kumar(LB 1.00), Asha Bhosle(LB 1.00), Manna Dey(LB 1.00), Udit Narayan(LB 1.00), Hemanta Mukherjee(LB 1.00 -nocat), Mohammed Rafi(LB 1.00), Sonu Nigam(LB 1.00)
+  -> Because you like Lata Mangeshkar  |  People who listen to Lata Mangeshkar also play these  (12 rows)
+     Geeta Dutt — Babuji Dheere Chalna   [filmi, pop 48]
+     Mukesh — Main Pal Do Pal Ka Shair Hoon   [filmi, pop 64]
+     Arijit Singh — Tujhe Kitna Chahne Lage (From "Kabir Singh")   [filmi, pop 80]
+     Jagjit Singh — Hothon Se Chhu Lo Tum - From "Prem Geet"   [ghazal, pop 63]
+     A.R. Rahman — Muththa Mazhai (Reprise)   [filmi, pop 77]
+     Kishore Kumar — Yeh Sham Mastani   [classic bollywood, pop 68]
+     Asha Bhosle — Abhi Na Jao Chhod Kar   [filmi, pop 63]
+     Manna Dey — Zindagi Kaisi Hai Paheli   [classic bollywood, pop 58]
+     Geeta Dutt — Waqt Ne Kiya Kya Haseen Sitam   [filmi, pop 44]
+     Mukesh — Kahin Door Jab Din Dhal Jaye   [filmi, pop 63]
+     Arijit Singh — Sajni (From "Laapataa Ladies")   [filmi, pop 80]
+     Jagjit Singh — Hoshwalon Ko Khabar Kya   [ghazal, pop 63]
+
+=== Vishal–Shekhar  [region US]  liked-as "Vishal–Shekhar"
+  seed in graph: NOT FOUND
+  -> Sounds like Vishal–Shekhar  |  Artists whose sound sits closest to theirs  (12 rows)
+     Shweta Pandit — Tere Ho Ke Rahenge - Reprise   [filmi, pop 49]
+     Asees Kaur — Marjaawaan   [desi pop, pop 49]
+     Shabab Sabri — Chaap Tilak   [filmi, pop 39]
+     Avadhoot Gupte — Bawara   [filmi, pop 41]
+     Shreya Ghoshal — O Rangrez   [filmi, pop 74]
+     Indranil Sen — Rangamatir Pather   [rabindra sangeet, pop 21]
+     Harshdeep Kaur — Jannat   [sufi, pop 45]
+     Milind Ingle — Chhui Mui Si Tum Lagti Ho   [marathi pop, pop 38]
+     Devi — Nooraandukku Oru Murai   [bhojpuri folk, pop 33]
+     Sean Roldan — Yembuttu Irukkuthu Aasai   [tamil pop, pop 61]
+     Goldy Desi Crew — Kise De Kol Gal Na Kari   [punjabi pop, pop 47]
+     D. Imman — Koodamela Koodavechi   [filmi, pop 63]
+
+=== Vishal–Shekhar  [region IN]  liked-as "Vishal–Shekhar"
+  seed in graph: NOT FOUND
+  -> Sounds like Vishal–Shekhar  |  Artists whose sound sits closest to theirs  (12 rows)
+     Shweta Pandit — Tere Ho Ke Rahenge - Reprise   [filmi, pop 49]
+     Asees Kaur — Marjaawaan   [desi pop, pop 49]
+     Shabab Sabri — Chaap Tilak   [filmi, pop 39]
+     Avadhoot Gupte — Bawara   [filmi, pop 41]
+     Shreya Ghoshal — O Rangrez   [filmi, pop 74]
+     Indranil Sen — Rangamatir Pather   [rabindra sangeet, pop 21]
+     Harshdeep Kaur — Jannat   [sufi, pop 45]
+     Milind Ingle — Chhui Mui Si Tum Lagti Ho   [marathi pop, pop 38]
+     Devi — Nooraandukku Oru Murai   [bhojpuri folk, pop 33]
+     Sean Roldan — Yembuttu Irukkuthu Aasai   [tamil pop, pop 61]
+     Goldy Desi Crew — Kise De Kol Gal Na Kari   [punjabi pop, pop 47]
+     D. Imman — Koodamela Koodavechi   [filmi, pop 63]
+
+=== Sidhu Moose Wala  [region US]  liked-as "Sidhu Moose Wala"
+  seed in graph: Sidhu Moose Wala / IN-PB / conf 0.7 / pop 1 / 119a6864-622b-4e6c-8aab-a422080530c6
+  graph neighbours (14): Diljit Dosanjh(LB 0.96), Shubh(LB 0.64), Karan Aujla(LB 0.50), Gurinder Gill(LB 0.39), The Kidd(LB 0.37), Guru Randhawa(LB 0.32), Arjan Dhillon(LB 0.29), Prem Dhillon(LB 0.28), Jass Manak(LB 0.27), Harnoor(LB 0.26), The Landers(LB 0.25), NseeB(LB 0.23), B Praak(LB 0.23), Arijit Singh(LB 0.21)
+  -> Because you like Sidhu Moose Wala  |  People who listen to Sidhu Moose Wala also play these  (12 rows)
+     Diljit Dosanjh — Naina (From "Crew")   [punjabi pop, pop 76]
+     Shubh — Fell For You   [punjabi hip hop, pop 75]
+     Karan Aujla — Wavy   [punjabi pop, pop 80]
+     Gurinder Gill — WAKE UP   [punjabi pop, pop 58]
+     The Kidd — Conversation   [punjabi pop, pop 40]
+     Guru Randhawa — AZUL   [filmi, pop 68]
+     Arjan Dhillon — Gears   [punjabi pop, pop 71]
+     Prem Dhillon — ASTARR   [punjabi pop, pop 66]
+     Diljit Dosanjh — Born to Shine   [punjabi pop, pop 76]
+     Shubh — Cheques   [punjabi hip hop, pop 75]
+     Karan Aujla — Softly   [punjabi pop, pop 77]
+     Gurinder Gill — Don't Test   [punjabi pop, pop 54]
+
+=== Sidhu Moose Wala  [region IN]  liked-as "Sidhu Moose Wala"
+  seed in graph: Sidhu Moose Wala / IN-PB / conf 0.7 / pop 1 / 119a6864-622b-4e6c-8aab-a422080530c6
+  graph neighbours (14): Diljit Dosanjh(LB 0.96), Shubh(LB 0.64), Karan Aujla(LB 0.50), Gurinder Gill(LB 0.39), The Kidd(LB 0.37), Guru Randhawa(LB 0.32), Arjan Dhillon(LB 0.29), Prem Dhillon(LB 0.28), Jass Manak(LB 0.27), Harnoor(LB 0.26), The Landers(LB 0.25), NseeB(LB 0.23), B Praak(LB 0.23), Arijit Singh(LB 0.21)
+  -> Because you like Sidhu Moose Wala  |  People who listen to Sidhu Moose Wala also play these  (12 rows)
+     Diljit Dosanjh — Naina (From "Crew")   [punjabi pop, pop 76]
+     Shubh — Fell For You   [punjabi hip hop, pop 75]
+     Karan Aujla — Wavy   [punjabi pop, pop 80]
+     Gurinder Gill — WAKE UP   [punjabi pop, pop 58]
+     The Kidd — Conversation   [punjabi pop, pop 40]
+     Guru Randhawa — AZUL   [filmi, pop 68]
+     Arjan Dhillon — Gears   [punjabi pop, pop 71]
+     Prem Dhillon — ASTARR   [punjabi pop, pop 66]
+     Diljit Dosanjh — Born to Shine   [punjabi pop, pop 76]
+     Shubh — Cheques   [punjabi hip hop, pop 75]
+     Karan Aujla — Softly   [punjabi pop, pop 77]
+     Gurinder Gill — Don't Test   [punjabi pop, pop 54]
+
+=== Karan Aujla  [region US]  liked-as "Karan Aujla"
+  seed in graph: Karan Aujla / IN-PB / conf 0.89 / pop 0 / 4a779683-5404-4b90-a0d7-242495158265
+  graph neighbours (2): Sidhu Moose Wala(LB 0.50), Arjan Dhillon(LB 0.31)
+  -> Because you like Karan Aujla  |  People who listen to Karan Aujla also play these  (4 rows)
+     Sidhu Moose Wala — 0008   [pakistani hip hop, pop 76]
+     Arjan Dhillon — Gears   [punjabi pop, pop 71]
+     Sidhu Moose Wala — Take Notes   [pakistani hip hop, pop 75]
+     Arjan Dhillon — Ok Hoye Paye Haan   [punjabi pop, pop 71]
+
+=== Karan Aujla  [region IN]  liked-as "Karan Aujla"
+  seed in graph: Karan Aujla / IN-PB / conf 0.89 / pop 0 / 4a779683-5404-4b90-a0d7-242495158265
+  graph neighbours (2): Sidhu Moose Wala(LB 0.50), Arjan Dhillon(LB 0.31)
+  -> Because you like Karan Aujla  |  People who listen to Karan Aujla also play these  (4 rows)
+     Sidhu Moose Wala — 0008   [pakistani hip hop, pop 76]
+     Arjan Dhillon — Gears   [punjabi pop, pop 71]
+     Sidhu Moose Wala — Take Notes   [pakistani hip hop, pop 75]
+     Arjan Dhillon — Ok Hoye Paye Haan   [punjabi pop, pop 71]
+
+=== Fairuz  [region US]  liked-as "Fairuz"
+  seed in graph: NOT FOUND
+  -> Sounds like Fairuz  |  Artists whose sound sits closest to theirs  (12 rows)
+     Fayza Ahmed — Set El Habayib   [syrian pop, pop 36]
+     Faia Younan — Ya Qatily   [arab alternative, pop 38]
+     Abdel Halim Hafez — Gana El Hawa   [classic arab pop, pop 46]
+     Sayed Darwish — Zourouni Kouli Sanah Marah   [classic arab pop, pop 39]
+     Melhem Barakat — Habbaytek Wu Bhibek   [lebanese pop, pop 38]
+     Sabah — Yana Yana   [lebanese pop, pop 50]
+     Majida El Roumi — Kalimat   [lebanese pop, pop 49]
+     Sabah — Al Basata   [lebanese pop, pop 40]
+     Zaki Nassif — Frasha Wa Zahra   [lebanese pop, pop 39]
+     Aida el Ayoubi — Asfour   [arab pop, pop 42]
+     Tamer Ashour — Youm Ma Tensa   [arab pop, pop 59]
+     Hussein Al Deek — Jamalek Ma Byekhlas   [dabke, pop 38]
+
+=== Fairuz  [region LB]  liked-as "Fairuz"
+  seed in graph: NOT FOUND
+  -> Sounds like Fairuz  |  Artists whose sound sits closest to theirs  (12 rows)
+     Fayza Ahmed — Set El Habayib   [syrian pop, pop 36]
+     Faia Younan — Ya Qatily   [arab alternative, pop 38]
+     Abdel Halim Hafez — Gana El Hawa   [classic arab pop, pop 46]
+     Sayed Darwish — Zourouni Kouli Sanah Marah   [classic arab pop, pop 39]
+     Melhem Barakat — Habbaytek Wu Bhibek   [lebanese pop, pop 38]
+     Sabah — Yana Yana   [lebanese pop, pop 50]
+     Majida El Roumi — Kalimat   [lebanese pop, pop 49]
+     Sabah — Al Basata   [lebanese pop, pop 40]
+     Zaki Nassif — Frasha Wa Zahra   [lebanese pop, pop 39]
+     Aida el Ayoubi — Asfour   [arab pop, pop 42]
+     Tamer Ashour — Youm Ma Tensa   [arab pop, pop 59]
+     Hussein Al Deek — Jamalek Ma Byekhlas   [dabke, pop 38]
+
+=== Amr Diab  [region US]  liked-as "Amr Diab"
+  seed in graph: NOT FOUND
+  -> Sounds like Amr Diab  |  Artists whose sound sits closest to theirs  (12 rows)
+     Hamid Al Shaeri — Reet   [libyan pop, pop 43]
+     Wael Kfoury — El Bint El Awiye   [arab pop, pop 54]
+     Najwa Karam — يلعن البعد   [arab pop, pop 38]
+     Hamid Al Shaeri — Einy   [libyan pop, pop 38]
+     Nourhanne — Habibi Ya Einy   [arab pop, pop 37]
+     Adnan Sefiani — Ya men saken abda   [andalusian classical, pop 24]
+     Maher Zain — Baraka Allahu Lakuma   [sholawat, pop 67]
+     Bashir Abdel Aal — Ta'ala Oullak   [middle eastern traditional, pop 15]
+     Wael Kfoury — عمرى كلو   [arab pop, pop 48]
+     Fadel Chaker — Ya Ghayeb   [lebanese pop, pop 63]
+     Mahmoud Fadl — Ya Imam Al Rusli   [nubian traditional, pop 25]
+     Rachid Taha — Ya Rayah   [rai, pop 51]
+
+=== Amr Diab  [region EG]  liked-as "Amr Diab"
+  seed in graph: NOT FOUND
+  -> Sounds like Amr Diab  |  Artists whose sound sits closest to theirs  (12 rows)
+     Hamid Al Shaeri — Reet   [libyan pop, pop 43]
+     Wael Kfoury — El Bint El Awiye   [arab pop, pop 54]
+     Najwa Karam — يلعن البعد   [arab pop, pop 38]
+     Hamid Al Shaeri — Einy   [libyan pop, pop 38]
+     Nourhanne — Habibi Ya Einy   [arab pop, pop 37]
+     Adnan Sefiani — Ya men saken abda   [andalusian classical, pop 24]
+     Maher Zain — Baraka Allahu Lakuma   [sholawat, pop 67]
+     Bashir Abdel Aal — Ta'ala Oullak   [middle eastern traditional, pop 15]
+     Wael Kfoury — عمرى كلو   [arab pop, pop 48]
+     Fadel Chaker — Ya Ghayeb   [lebanese pop, pop 63]
+     Mahmoud Fadl — Ya Imam Al Rusli   [nubian traditional, pop 25]
+     Rachid Taha — Ya Rayah   [rai, pop 51]
+
+=== Umm Kulthum  [region US]  liked-as "Umm Kulthum"
+  seed in graph: NOT FOUND
+  -> Sounds like Umm Kulthum  |  Artists whose sound sits closest to theirs  (12 rows)
+     Munir Bashir — Taqsîm en maqâm : Kurdî   [middle eastern traditional, pop 26]
+     Munir Bashir — Taqsîm en maqâm : Awj   [middle eastern traditional, pop 25]
+     Zein Al-Jundi — Qaddukal Mayyas   [middle eastern traditional, pop 20]
+     Nazem al-Ghazali — Tal'a men bit abouha   [middle eastern traditional, pop 22]
+     Abdel Halim Hafez — Ala Hesb Wedad Live   [classic arab pop, pop 46]
+     Abdel Halim Hafez — Gana El Hawa   [classic arab pop, pop 46]
+     Habeeb Ali — Walla Haram   [khaleeji iraqi, pop 48]
+     Nazem al-Ghazali — حياك بابا حياك   [middle eastern traditional, pop 23]
+     Classical Arabic Orchestra of Aleppo — Samai Husseini (Samai Thaqil 10/8, Samai Darij 6/8)   [middle eastern traditional, pop 21]
+     Warda — Fe Youm We Leila Live   [arab pop, pop 41]
+     Naser Albhar — Al Sadma   [khaleeji iraqi, pop 40]
+     Sayed Darwish — Zourouni Kouli Sanah Marah   [classic arab pop, pop 39]
+
+=== Umm Kulthum  [region EG]  liked-as "Umm Kulthum"
+  seed in graph: NOT FOUND
+  -> Sounds like Umm Kulthum  |  Artists whose sound sits closest to theirs  (12 rows)
+     Munir Bashir — Taqsîm en maqâm : Kurdî   [middle eastern traditional, pop 26]
+     Munir Bashir — Taqsîm en maqâm : Awj   [middle eastern traditional, pop 25]
+     Zein Al-Jundi — Qaddukal Mayyas   [middle eastern traditional, pop 20]
+     Nazem al-Ghazali — Tal'a men bit abouha   [middle eastern traditional, pop 22]
+     Abdel Halim Hafez — Ala Hesb Wedad Live   [classic arab pop, pop 46]
+     Abdel Halim Hafez — Gana El Hawa   [classic arab pop, pop 46]
+     Habeeb Ali — Walla Haram   [khaleeji iraqi, pop 48]
+     Nazem al-Ghazali — حياك بابا حياك   [middle eastern traditional, pop 23]
+     Classical Arabic Orchestra of Aleppo — Samai Husseini (Samai Thaqil 10/8, Samai Darij 6/8)   [middle eastern traditional, pop 21]
+     Warda — Fe Youm We Leila Live   [arab pop, pop 41]
+     Naser Albhar — Al Sadma   [khaleeji iraqi, pop 40]
+     Sayed Darwish — Zourouni Kouli Sanah Marah   [classic arab pop, pop 39]
+
+=== Tarkan  [region US]  liked-as "Tarkan"
+  seed in graph: Tarkan / DE / conf 0.9 / pop 1 / 4ec2451d-ed0c-4273-b683-4c1312df25fd
+  graph neighbours (0): 
+  -> Sounds like Tarkan  |  Artists whose sound sits closest to theirs  (12 rows)
+     Ferhat Göçer — Ayrılsak Ölürüz Biz   [turkish pop, pop 53]
+     Kenan Doğulu — Şans Meleğim   [turkish pop, pop 60]
+     Mahmut Tuncer — Ay Gördüm Allah   [arabesk, pop 48]
+     Rober Hatemo — Giden Candan Gidiyor - Yaz Versiyon   [turkish pop, pop 42]
+     Soner Arıca — Vefasız   [turkish pop, pop 37]
+     İdo Tatlıses — Sonsuz Teşekkürler   [turkish pop, pop 51]
+     Atiye — Maazallah   [turkish pop, pop 45]
+     Ümit Sayın — Hicran   [turkish pop, pop 39]
+     Yaşar — Sevda Sinemalarda   [turkish pop, pop 51]
+     Resul Dindar — Sevduğum Diyeceğum   [turkish pop, pop 45]
+     Eylem — Aman   [turkish pop, pop 53]
+     Sinan Akçıl — Şarttır   [turkish pop, pop 49]
+
+=== Tarkan  [region TR]  liked-as "Tarkan"
+  seed in graph: Tarkan / DE / conf 0.9 / pop 1 / 4ec2451d-ed0c-4273-b683-4c1312df25fd
+  graph neighbours (0): 
+  -> Sounds like Tarkan  |  Artists whose sound sits closest to theirs  (12 rows)
+     Ferhat Göçer — Ayrılsak Ölürüz Biz   [turkish pop, pop 53]
+     Kenan Doğulu — Şans Meleğim   [turkish pop, pop 60]
+     Mahmut Tuncer — Ay Gördüm Allah   [arabesk, pop 48]
+     Rober Hatemo — Giden Candan Gidiyor - Yaz Versiyon   [turkish pop, pop 42]
+     Soner Arıca — Vefasız   [turkish pop, pop 37]
+     İdo Tatlıses — Sonsuz Teşekkürler   [turkish pop, pop 51]
+     Atiye — Maazallah   [turkish pop, pop 45]
+     Ümit Sayın — Hicran   [turkish pop, pop 39]
+     Yaşar — Sevda Sinemalarda   [turkish pop, pop 51]
+     Resul Dindar — Sevduğum Diyeceğum   [turkish pop, pop 45]
+     Eylem — Aman   [turkish pop, pop 53]
+     Sinan Akçıl — Şarttır   [turkish pop, pop 49]
+
+=== Sezen Aksu  [region US]  liked-as "Sezen Aksu"
+  seed in graph: NOT FOUND
+  -> Sounds like Sezen Aksu  |  Artists whose sound sits closest to theirs  (12 rows)
+     İdo Tatlıses — Sevgi Zararı   [turkish pop, pop 45]
+     Erkin Koray — Çöpçüler - 2022 Remastered   [anadolu rock, pop 50]
+     Demet Sağıroğlu — Kinali Bebek   [turkish pop, pop 43]
+     Gülben Ergen — Kalbimi Koydum   [arabesk, pop 54]
+     Bengü — Saygımdan   [turkish pop, pop 73]
+     emre aydın — Belki Bir Gün Özlersin   [turkish singer-songwriter, pop 57]
+     Sezer Sarıgöz — Sensiz Olmak Ne Haddime   [turkish pop, pop 56]
+     Erkin Koray — Öyle Bir Geçer Zaman ki   [anadolu rock, pop 55]
+     İzzet Yıldızhan — Bana Kara Diyen Dilber   [arabesk, pop 36]
+     Sıla — Sevişmeden Uyumayalım   [turkish pop, pop 62]
+     Barış Kocatürk — Kalmalısın   [turkish rock, pop 37]
+     Merve Özbey — Kül   [turkish pop, pop 64]
+
+=== Sezen Aksu  [region TR]  liked-as "Sezen Aksu"
+  seed in graph: NOT FOUND
+  -> Sounds like Sezen Aksu  |  Artists whose sound sits closest to theirs  (12 rows)
+     İdo Tatlıses — Sevgi Zararı   [turkish pop, pop 45]
+     Erkin Koray — Çöpçüler - 2022 Remastered   [anadolu rock, pop 50]
+     Demet Sağıroğlu — Kinali Bebek   [turkish pop, pop 43]
+     Gülben Ergen — Kalbimi Koydum   [arabesk, pop 54]
+     Bengü — Saygımdan   [turkish pop, pop 73]
+     emre aydın — Belki Bir Gün Özlersin   [turkish singer-songwriter, pop 57]
+     Sezer Sarıgöz — Sensiz Olmak Ne Haddime   [turkish pop, pop 56]
+     Erkin Koray — Öyle Bir Geçer Zaman ki   [anadolu rock, pop 55]
+     İzzet Yıldızhan — Bana Kara Diyen Dilber   [arabesk, pop 36]
+     Sıla — Sevişmeden Uyumayalım   [turkish pop, pop 62]
+     Barış Kocatürk — Kalmalısın   [turkish rock, pop 37]
+     Merve Özbey — Kül   [turkish pop, pop 64]
+
+=== Stromae  [region US]  liked-as "Stromae"
+  seed in graph: Stromae / BE / conf 0.94 / pop 7 / ab2528d9-719f-4261-8098-21849222a0f2
+  graph neighbours (0): 
+  -> Sounds like Stromae  |  Artists whose sound sits closest to theirs  (12 rows)
+     Henri PFR — Run (feat. Ragdoll)   [belgian pop, pop 55]
+     Henri PFR — Up In The Sky   [belgian pop, pop 50]
+     Tez Cadey — No Place I Call Home   [deep tropical house, pop 49]
+     Tez Cadey — Seve - Radio Edit   [deep tropical house, pop 42]
+     Mozambo — Dia De Sol   [deep tropical house, pop 39]
+     Madeon — All My Friends   [complextro, pop 49]
+     Madeon — Love You Back   [complextro, pop 51]
+     Fake Blood — I Think I Like It - Radio Edit   [fidget house, pop 54]
+     Oliver Dollar — Doin' Ya Thang   [fidget house, pop 55]
+     Oliver Dollar — Doin' Ya Thang   [fidget house, pop 36]   <<DUPTITLE,DUPKEY
+     Fake Blood — I Think I Like It   [fidget house, pop 62]   <<DUPTITLE,DUPKEY
+     Aniki — Ese Miedo (Bonus Track)   [fidget house, pop 40]
+
+=== Stromae  [region BE]  liked-as "Stromae"
+  seed in graph: Stromae / BE / conf 0.94 / pop 7 / ab2528d9-719f-4261-8098-21849222a0f2
+  graph neighbours (0): 
+  -> Sounds like Stromae  |  Artists whose sound sits closest to theirs  (12 rows)
+     Henri PFR — Run (feat. Ragdoll)   [belgian pop, pop 55]
+     Henri PFR — Up In The Sky   [belgian pop, pop 50]
+     Tez Cadey — No Place I Call Home   [deep tropical house, pop 49]
+     Tez Cadey — Seve - Radio Edit   [deep tropical house, pop 42]
+     Mozambo — Dia De Sol   [deep tropical house, pop 39]
+     Madeon — All My Friends   [complextro, pop 49]
+     Madeon — Love You Back   [complextro, pop 51]
+     Fake Blood — I Think I Like It - Radio Edit   [fidget house, pop 54]
+     Oliver Dollar — Doin' Ya Thang   [fidget house, pop 55]
+     Oliver Dollar — Doin' Ya Thang   [fidget house, pop 36]   <<DUPTITLE,DUPKEY
+     Fake Blood — I Think I Like It   [fidget house, pop 62]   <<DUPTITLE,DUPKEY
+     Aniki — Ese Miedo (Bonus Track)   [fidget house, pop 40]
+
+=== Édith Piaf  [region US]  liked-as "Édith Piaf"
+  seed in graph: Édith Piaf / FR / conf 0.98 / pop 3 / 4f8ef4a3-40fa-46b5-8773-97686a8424f4
+  graph neighbours (0): 
+  -> Sounds like Édith Piaf  |  Artists whose sound sits closest to theirs  (12 rows)
+     Jean Sablon — Vous qui passez sans me voir   [vintage chanson, pop 33]
+     Jean Sablon — Vous qui passez sans me voir   [vintage chanson, pop 36]   <<DUPTITLE,DUPKEY
+     Maurice Chevalier — Paris sera toujours Paris   [vintage chanson, pop 35]
+     Maurice Chevalier — Les Aristochats   [vintage chanson, pop 39]
+     Marlene Dietrich — Sag mir wo die Blumen sind   [vintage hollywood, pop 35]
+     Marlene Dietrich — Sag mir wo die Blumen sind   [vintage hollywood, pop 38]   <<DUPTITLE,DUPKEY
+     Ute Lemper — Mack the Knife   [cabaret, pop 34]
+     Lotte Lenya — Surabaya-Johnny   [cabaret, pop 8]
+     Lys Assia — Refrain   [vintage schlager, pop 22]
+     Camillo Felgen — Sag Warum   [vintage schlager, pop 11]
+     Lotte Lenya — September Song (From Knickerbocker Holiday)   [cabaret, pop 10]
+     Ken Page — Oogie Boogie's Song   [cabaret, pop 44]
+
+=== Édith Piaf  [region FR]  liked-as "Édith Piaf"
+  seed in graph: Édith Piaf / FR / conf 0.98 / pop 3 / 4f8ef4a3-40fa-46b5-8773-97686a8424f4
+  graph neighbours (0): 
+  -> Sounds like Édith Piaf  |  Artists whose sound sits closest to theirs  (12 rows)
+     Jean Sablon — Vous qui passez sans me voir   [vintage chanson, pop 33]
+     Jean Sablon — Vous qui passez sans me voir   [vintage chanson, pop 36]   <<DUPTITLE,DUPKEY
+     Maurice Chevalier — Paris sera toujours Paris   [vintage chanson, pop 35]
+     Maurice Chevalier — Les Aristochats   [vintage chanson, pop 39]
+     Marlene Dietrich — Sag mir wo die Blumen sind   [vintage hollywood, pop 35]
+     Marlene Dietrich — Sag mir wo die Blumen sind   [vintage hollywood, pop 38]   <<DUPTITLE,DUPKEY
+     Ute Lemper — Mack the Knife   [cabaret, pop 34]
+     Lotte Lenya — Surabaya-Johnny   [cabaret, pop 8]
+     Lys Assia — Refrain   [vintage schlager, pop 22]
+     Camillo Felgen — Sag Warum   [vintage schlager, pop 11]
+     Lotte Lenya — September Song (From Knickerbocker Holiday)   [cabaret, pop 10]
+     Ken Page — Oogie Boogie's Song   [cabaret, pop 44]
+
+=== Aya Nakamura  [region US]  liked-as "Aya Nakamura"
+  seed in graph: Aya Nakamura / FR / conf 0.8 / pop 2 / cf580d82-3f3e-4b86-8874-7e0fbe794f01
+  graph neighbours (0): 
+  -> Sounds like Aya Nakamura  |  Artists whose sound sits closest to theirs  (12 rows)
+     SAF — La surprise - Afro Tropical   [musique comorienne, pop 47]
+     Says'z — NATHALIE   [r&b francais, pop 46]
+     Says'z — Shatta Love #1   [r&b francais, pop 43]
+     SAF — INTACT   [musique comorienne, pop 39]
+     Goulam — Pour toujours   [musique comorienne, pop 37]
+     Nixo — Trala Paréni   [musique mahoraise, pop 9]
+     Goulam — C'est confirmé   [musique comorienne, pop 34]
+     Komo — Djira   [musique comorienne, pop 21]
+     Nawal — احاول1   [musique traditionnelle comorienne, pop 19]
+     M'Toro Chamou — Ritawalé   [musique mahoraise, pop 15]
+     M'Toro Chamou — Radio Tranganika   [musique mahoraise, pop 13]
+     Nawal — احاول2   [musique traditionnelle comorienne, pop 15]
+
+=== Aya Nakamura  [region FR]  liked-as "Aya Nakamura"
+  seed in graph: Aya Nakamura / FR / conf 0.8 / pop 2 / cf580d82-3f3e-4b86-8874-7e0fbe794f01
+  graph neighbours (0): 
+  -> Sounds like Aya Nakamura  |  Artists whose sound sits closest to theirs  (12 rows)
+     SAF — La surprise - Afro Tropical   [musique comorienne, pop 47]
+     Says'z — NATHALIE   [r&b francais, pop 46]
+     Says'z — Shatta Love #1   [r&b francais, pop 43]
+     SAF — INTACT   [musique comorienne, pop 39]
+     Goulam — Pour toujours   [musique comorienne, pop 37]
+     Nixo — Trala Paréni   [musique mahoraise, pop 9]
+     Goulam — C'est confirmé   [musique comorienne, pop 34]
+     Komo — Djira   [musique comorienne, pop 21]
+     Nawal — احاول1   [musique traditionnelle comorienne, pop 19]
+     M'Toro Chamou — Ritawalé   [musique mahoraise, pop 15]
+     M'Toro Chamou — Radio Tranganika   [musique mahoraise, pop 13]
+     Nawal — احاول2   [musique traditionnelle comorienne, pop 15]
+
+=== Kraftwerk  [region US]  liked-as "Kraftwerk"
+  seed in graph: Kraftwerk / DE / conf 0.94 / pop 18 / 5700dcd4-c139-4f31-aa3e-6382b9af9032
+  graph neighbours (15): Rammstein(LB 1.00), Tangerine Dream(LB 1.00), Can(LB 1.00), Radiohead(LB 1.00), The Cure(LB 1.00), The Beatles(LB 1.00), Pink Floyd(LB 1.00), Talking Heads(LB 1.00), The Clash(LB 1.00), Led Zeppelin(LB 1.00), Nine Inch Nails(LB 1.00), Nirvana(LB 1.00), The Rolling Stones(LB 1.00), Gorillaz(LB 1.00), Björk(LB 1.00)
+  -> Because you like Kraftwerk  |  People who listen to Kraftwerk also play these  (12 rows)
+     Rammstein — Sonne   [neue deutsche harte, pop 79]
+     Tangerine Dream — Love On A Real Train - From 'Risky Business' Original Motion Picture Soundtrack   [synthesizer, pop 49]
+     CAN — Vitamin C   [experimental rock, pop 54]
+     Radiohead — Creep   [rock, pop 89]
+     The Cure — Boys Don't Cry   [uk post-punk, pop 77]
+     The Beatles — Here Comes The Sun - Remastered 2009   [classic rock, pop 84]
+     Pink Floyd — Another Brick in the Wall, Pt. 2   [art rock, pop 82]
+     Talking Heads — Psycho Killer - 2005 Remaster   [permanent wave, pop 74]
+     Rammstein — Deutschland   [neue deutsche harte, pop 77]
+     Tangerine Dream — The Stargate [Tablet II]   [synthesizer, pop 46]
+     CAN — Vitamin C - 2004 Remastered Version   [experimental rock, pop 50]   <<DUPTITLE,DUPKEY
+     Radiohead — No Surprises   [rock, pop 84]
+
+=== Kraftwerk  [region DE]  liked-as "Kraftwerk"
+  seed in graph: Kraftwerk / DE / conf 0.94 / pop 18 / 5700dcd4-c139-4f31-aa3e-6382b9af9032
+  graph neighbours (15): Rammstein(LB 1.00), Tangerine Dream(LB 1.00), Can(LB 1.00), Radiohead(LB 1.00), The Cure(LB 1.00), The Beatles(LB 1.00), Pink Floyd(LB 1.00), Talking Heads(LB 1.00), The Clash(LB 1.00), Led Zeppelin(LB 1.00), Nine Inch Nails(LB 1.00), Nirvana(LB 1.00), The Rolling Stones(LB 1.00), Gorillaz(LB 1.00), Björk(LB 1.00)
+  -> Because you like Kraftwerk  |  People who listen to Kraftwerk also play these  (12 rows)
+     Rammstein — Sonne   [neue deutsche harte, pop 79]
+     Tangerine Dream — Love On A Real Train - From 'Risky Business' Original Motion Picture Soundtrack   [synthesizer, pop 49]
+     CAN — Vitamin C   [experimental rock, pop 54]
+     Radiohead — Creep   [rock, pop 89]
+     The Cure — Boys Don't Cry   [uk post-punk, pop 77]
+     The Beatles — Here Comes The Sun - Remastered 2009   [classic rock, pop 84]
+     Pink Floyd — Another Brick in the Wall, Pt. 2   [art rock, pop 82]
+     Talking Heads — Psycho Killer - 2005 Remaster   [permanent wave, pop 74]
+     Rammstein — Deutschland   [neue deutsche harte, pop 77]
+     Tangerine Dream — The Stargate [Tablet II]   [synthesizer, pop 46]
+     CAN — Vitamin C - 2004 Remastered Version   [experimental rock, pop 50]   <<DUPTITLE,DUPKEY
+     Radiohead — No Surprises   [rock, pop 84]
+
+=== Helene Fischer  [region US]  liked-as "Helene Fischer"
+  seed in graph: Helene Fischer / RU / conf 0.9 / pop 6 / 167e1cd2-4a9e-4f34-bcda-2e0acf0a1797
+  graph neighbours (0): 
+  -> Sounds like Helene Fischer  |  Artists whose sound sits closest to theirs  (12 rows)
+     Mike Leon Grosch — Ich lieb alles an dir   [schlager, pop 47]
+     Alisha — Stell dir vor   [schlager, pop 36]
+     Tim Peters — Krass verliebt   [schlager, pop 39]
+     Wolkenfrei — Ich versprech dir nichts und geb dir alles   [schlager, pop 43]
+     Charlien — Millionen Optionen   [schlager, pop 40]
+     Wolkenfrei — Der Zaubertrank ist leer   [schlager, pop 37]
+     Mike Leon Grosch — Wunderschön   [schlager, pop 47]
+     Sonia Liebing — Jugendliebe   [schlager, pop 51]
+     Sonia Liebing — Ich will mit dir (nicht nur reden)   [schlager, pop 47]
+     Kerstin Ott — Regenbogenfarben   [schlager, pop 54]
+     Andreas Gabalier — Hallihallo   [schlager, pop 49]
+     Eric Philippi — Schockverliebt   [schlager, pop 52]
+
+=== Helene Fischer  [region DE]  liked-as "Helene Fischer"
+  seed in graph: Helene Fischer / RU / conf 0.9 / pop 6 / 167e1cd2-4a9e-4f34-bcda-2e0acf0a1797
+  graph neighbours (0): 
+  -> Sounds like Helene Fischer  |  Artists whose sound sits closest to theirs  (12 rows)
+     Mike Leon Grosch — Ich lieb alles an dir   [schlager, pop 47]
+     Alisha — Stell dir vor   [schlager, pop 36]
+     Tim Peters — Krass verliebt   [schlager, pop 39]
+     Wolkenfrei — Ich versprech dir nichts und geb dir alles   [schlager, pop 43]
+     Charlien — Millionen Optionen   [schlager, pop 40]
+     Wolkenfrei — Der Zaubertrank ist leer   [schlager, pop 37]
+     Mike Leon Grosch — Wunderschön   [schlager, pop 47]
+     Sonia Liebing — Jugendliebe   [schlager, pop 51]
+     Sonia Liebing — Ich will mit dir (nicht nur reden)   [schlager, pop 47]
+     Kerstin Ott — Regenbogenfarben   [schlager, pop 54]
+     Andreas Gabalier — Hallihallo   [schlager, pop 49]
+     Eric Philippi — Schockverliebt   [schlager, pop 52]
+
+=== Böhse Onkelz  [region US]  liked-as "Böhse Onkelz"
+  seed in graph: Böhse Onkelz / DE / conf 0.94 / pop 6 / b3a70929-32bc-4ace-994f-434b26ce96fe
+  graph neighbours (2): Die Ärzte(LB 1.00), Die Toten Hosen(LB 1.00)
+  -> Because you like Böhse Onkelz  |  People who listen to Böhse Onkelz also play these  (4 rows)
+     Die Ärzte — Junge   [german rock, pop 67]
+     Die Toten Hosen — Tage wie diese   [german rock, pop 64]
+     Die Ärzte — Lasse redn   [german rock, pop 64]
+     Die Toten Hosen — Altes Fieber   [german rock, pop 60]
+
+=== Böhse Onkelz  [region DE]  liked-as "Böhse Onkelz"
+  seed in graph: Böhse Onkelz / DE / conf 0.94 / pop 6 / b3a70929-32bc-4ace-994f-434b26ce96fe
+  graph neighbours (2): Die Ärzte(LB 1.00), Die Toten Hosen(LB 1.00)
+  -> Because you like Böhse Onkelz  |  People who listen to Böhse Onkelz also play these  (4 rows)
+     Die Ärzte — Junge   [german rock, pop 67]
+     Die Toten Hosen — Tage wie diese   [german rock, pop 64]
+     Die Ärzte — Lasse redn   [german rock, pop 64]
+     Die Toten Hosen — Altes Fieber   [german rock, pop 60]
+
+=== Frei.Wild  [region US]  liked-as "Frei.Wild"
+  seed in graph: NOT FOUND
+  -> Sounds like Frei.Wild  |  Artists whose sound sits closest to theirs  (12 rows)
+     Haudegen — Feuer und Flamme   [german oi, pop 37]
+     Haudegen — Ein Mann ein Wort   [german oi, pop 39]
+     Störte.Priester — Klare Sicht   [deutschrock, pop 38]
+     Kärbholz — Vollgas   [deutschrock, pop 45]
+     Wilde Jungs — Senorita   [deutschrock, pop 36]
+     Kärbholz — Gar nichts   [deutschrock, pop 45]
+     Wilde Jungs — Himmel   [deutschrock, pop 42]
+     Der W — Geschichtenhasser   [german oi, pop 39]
+     KrawallBrüder — KrawallBrüder - 2015 Version   [deutschrock, pop 38]
+     KrawallBrüder — Gott mit uns   [deutschrock, pop 38]
+     Störte.Priester — Ehrlich und gehasst   [deutschrock, pop 48]
+     Artefuckt — Die Welt wartet nicht   [deutschrock, pop 43]
+
+=== Frei.Wild  [region IT]  liked-as "Frei.Wild"
+  seed in graph: NOT FOUND
+  -> Sounds like Frei.Wild  |  Artists whose sound sits closest to theirs  (12 rows)
+     Haudegen — Feuer und Flamme   [german oi, pop 37]
+     Haudegen — Ein Mann ein Wort   [german oi, pop 39]
+     Störte.Priester — Klare Sicht   [deutschrock, pop 38]
+     Kärbholz — Vollgas   [deutschrock, pop 45]
+     Wilde Jungs — Senorita   [deutschrock, pop 36]
+     Kärbholz — Gar nichts   [deutschrock, pop 45]
+     Wilde Jungs — Himmel   [deutschrock, pop 42]
+     Der W — Geschichtenhasser   [german oi, pop 39]
+     KrawallBrüder — KrawallBrüder - 2015 Version   [deutschrock, pop 38]
+     KrawallBrüder — Gott mit uns   [deutschrock, pop 38]
+     Störte.Priester — Ehrlich und gehasst   [deutschrock, pop 48]
+     Artefuckt — Die Welt wartet nicht   [deutschrock, pop 43]
+
+=== Anitta  [region US]  liked-as "Anitta"
+  seed in graph: NOT FOUND
+  -> Sounds like Anitta  |  Artists whose sound sits closest to theirs  (12 rows)
+     Pabllo Vittar — São Amores   [pop nacional, pop 59]
+     Pabllo Vittar — DEIXA ESTAR   [pop nacional, pop 55]
+     Mc Ster — ZELDA FUNK   [funk pop, pop 58]
+     Mc Ster — ZELDA FUNK - SUPER SLOWED   [funk pop, pop 53]
+     Lexa — Mania   [funk carioca, pop 41]
+     Lexa — Pior Que Sinto Falta   [funk carioca, pop 39]
+     Tília — Conteúdo Explícito   [funk pop, pop 37]
+     Melody — Princesinha   [pop teen brasileiro, pop 39]
+     MC Kevinho — Rabiola   [funk carioca, pop 53]
+     Melody — Atual Idiota   [pop teen brasileiro, pop 43]
+     MC Kevinho — Olha A Explosão   [funk carioca, pop 75]
+     ZAAC — Vai Embrazando   [funk carioca, pop 63]
+
+=== Anitta  [region BR]  liked-as "Anitta"
+  seed in graph: NOT FOUND
+  -> Sounds like Anitta  |  Artists whose sound sits closest to theirs  (12 rows)
+     Pabllo Vittar — São Amores   [pop nacional, pop 59]
+     Pabllo Vittar — DEIXA ESTAR   [pop nacional, pop 55]
+     Mc Ster — ZELDA FUNK   [funk pop, pop 58]
+     Mc Ster — ZELDA FUNK - SUPER SLOWED   [funk pop, pop 53]
+     Lexa — Mania   [funk carioca, pop 41]
+     Lexa — Pior Que Sinto Falta   [funk carioca, pop 39]
+     Tília — Conteúdo Explícito   [funk pop, pop 37]
+     Melody — Princesinha   [pop teen brasileiro, pop 39]
+     MC Kevinho — Rabiola   [funk carioca, pop 53]
+     Melody — Atual Idiota   [pop teen brasileiro, pop 43]
+     MC Kevinho — Olha A Explosão   [funk carioca, pop 75]
+     ZAAC — Vai Embrazando   [funk carioca, pop 63]
+
+=== Caetano Veloso  [region US]  liked-as "Caetano Veloso"
+  seed in graph: NOT FOUND
+  -> Sounds like Caetano Veloso  |  Artists whose sound sits closest to theirs  (12 rows)
+     Wilson Simonal — Mas Que Nada   [samba, pop 41]
+     Lô Borges — Paisagem Da Janela   [mpb, pop 42]
+     Chico Buarque — Apesar De Você   [bossa nova, pop 66]
+     Quarteto Em Cy — Canto de Ossanha   [velha guarda, pop 40]
+     Lô Borges — Paisagem Da Janela   [mpb, pop 44]   <<DUPTITLE,DUPKEY
+     Zizi Possi — Perigo   [samba, pop 52]
+     Angela Ro Ro — Balada Da Arrasada   [samba, pop 41]
+     Luiz Melodia — Mistério da raça   [samba, pop 44]
+     Gal Costa — Azul   [samba, pop 58]
+     Gal Costa — Folhetim   [samba, pop 55]
+     Milton Nascimento — Cacador De Mim   [samba, pop 51]
+     Cassiano — Coleção   [mpb, pop 47]
+
+=== Caetano Veloso  [region BR]  liked-as "Caetano Veloso"
+  seed in graph: NOT FOUND
+  -> Sounds like Caetano Veloso  |  Artists whose sound sits closest to theirs  (12 rows)
+     Wilson Simonal — Mas Que Nada   [samba, pop 41]
+     Lô Borges — Paisagem Da Janela   [mpb, pop 42]
+     Chico Buarque — Apesar De Você   [bossa nova, pop 66]
+     Quarteto Em Cy — Canto de Ossanha   [velha guarda, pop 40]
+     Lô Borges — Paisagem Da Janela   [mpb, pop 44]   <<DUPTITLE,DUPKEY
+     Zizi Possi — Perigo   [samba, pop 52]
+     Angela Ro Ro — Balada Da Arrasada   [samba, pop 41]
+     Luiz Melodia — Mistério da raça   [samba, pop 44]
+     Gal Costa — Azul   [samba, pop 58]
+     Gal Costa — Folhetim   [samba, pop 55]
+     Milton Nascimento — Cacador De Mim   [samba, pop 51]
+     Cassiano — Coleção   [mpb, pop 47]
+
+=== Henrique & Juliano  [region US]  liked-as "Henrique"
+  seed in graph: NOT FOUND
+  -> Sounds like Henrique  |  Artists whose sound sits closest to theirs  (12 rows)
+     Tayara Andreza — Revanche   [brega romantico, pop 40]
+     Tierry — Amava Porra Nenhuma   [sertanejo universitario, pop 52]
+     Hugo Pena & Gabriel — Mala Pronta   [sertanejo universitario, pop 51]
+     Israel Novaes — Tá Soltinha - Ao Vivo   [sertanejo universitario, pop 44]
+     Fred & Gustavo — Então valeu - Ao Vivo   [sertanejo pop, pop 49]
+     Zé Henrique & Gabriel — O que combina comigo é você   [sertanejo universitario, pop 49]   <<SEED
+     Gusttavo Lima — Desejo Imortal (It Must Have Been Love) - Ao Vivo   [sertanejo universitario, pop 69]
+     Naiara Azevedo — Segunda Prioridade - Ao Vivo   [sertanejo pop, pop 48]
+     Naiara Azevedo — Segunda Prioridade - Ao Vivo   [sertanejo pop, pop 46]   <<DUPTITLE,DUPKEY
+     João Gustavo e Murilo — Fecha o Porta Mala   [sertanejo universitario, pop 45]
+     Fernando & Sorocaba — Cortando as Br - Ao Vivo   [sertanejo universitario, pop 57]
+     João Bosco & Vinicius — Um Lugarzinho Na Sua Cama   [sertanejo universitario, pop 57]
+
+=== Henrique & Juliano  [region BR]  liked-as "Henrique"
+  seed in graph: NOT FOUND
+  -> Sounds like Henrique  |  Artists whose sound sits closest to theirs  (12 rows)
+     Tayara Andreza — Revanche   [brega romantico, pop 40]
+     Tierry — Amava Porra Nenhuma   [sertanejo universitario, pop 52]
+     Hugo Pena & Gabriel — Mala Pronta   [sertanejo universitario, pop 51]
+     Israel Novaes — Tá Soltinha - Ao Vivo   [sertanejo universitario, pop 44]
+     Fred & Gustavo — Então valeu - Ao Vivo   [sertanejo pop, pop 49]
+     Zé Henrique & Gabriel — O que combina comigo é você   [sertanejo universitario, pop 49]   <<SEED
+     Gusttavo Lima — Desejo Imortal (It Must Have Been Love) - Ao Vivo   [sertanejo universitario, pop 69]
+     Naiara Azevedo — Segunda Prioridade - Ao Vivo   [sertanejo pop, pop 48]
+     Naiara Azevedo — Segunda Prioridade - Ao Vivo   [sertanejo pop, pop 46]   <<DUPTITLE,DUPKEY
+     João Gustavo e Murilo — Fecha o Porta Mala   [sertanejo universitario, pop 45]
+     Fernando & Sorocaba — Cortando as Br - Ao Vivo   [sertanejo universitario, pop 57]
+     João Bosco & Vinicius — Um Lugarzinho Na Sua Cama   [sertanejo universitario, pop 57]
+
+=== Кино  [region US]  liked-as "Кино"
+  seed in graph: Кино / RU / conf 0.9 / pop 9 / 064db6e8-fdfb-4acb-a327-fc2de75b37de
+  graph neighbours (24): Nautilus Pompilius(LB 1.00), Сплин(LB 1.00 -nocat), ДДТ(LB 1.00), Агата Кристи(LB 1.00 -nocat), Земфира(LB 1.00 -nocat), Би-2(LB 1.00), Аквариум(LB 1.00 -nocat), Король и Шут(LB 1.00 -nocat), Алиса(LB 1.00 -nocat), Пикник(LB 1.00 -nocat), Гражданская оборона(LB 1.00 -nocat), Ленинград(LB 1.00 -nocat), Radiohead(LB 1.00), Nirvana(LB 1.00), The Beatles(LB 1.00), Rammstein(LB 1.00), Depeche Mode(LB 1.00), Metallica(LB 1.00), Linkin Park(LB 1.00), Pink Floyd(LB 1.00), Red Hot Chili Peppers(LB 1.00), System of a Down(LB 1.00), The Doors(LB 1.00), David Bowie(LB 1.00)
+  -> Because you like Кино  |  People who listen to Кино also play these  (12 rows)
+     Nautilus Pompilius — Крылья   [russian rock, pop 53]
+     ДДТ — Что такое осень   [russian rock, pop 50]
+     [Би-2] — Полковнику никто не пишет   [belarusian rock, pop 54]
+     Radiohead — Creep   [rock, pop 89]
+     Nirvana — Smells Like Teen Spirit   [permanent wave, pop 84]
+     The Beatles — Here Comes The Sun - Remastered 2009   [classic rock, pop 84]
+     Rammstein — Sonne   [neue deutsche harte, pop 79]
+     Depeche Mode — Enjoy the Silence   [new wave, pop 76]
+     Nautilus Pompilius — Дыхание   [russian rock, pop 48]
+     ДДТ — Просвистела   [russian rock, pop 49]
+     [Би-2] — Варвара   [belarusian rock, pop 51]
+     Radiohead — No Surprises   [rock, pop 84]
+
+=== Кино  [region RU]  liked-as "Кино"
+  seed in graph: Кино / RU / conf 0.9 / pop 9 / 064db6e8-fdfb-4acb-a327-fc2de75b37de
+  graph neighbours (24): Nautilus Pompilius(LB 1.00), Сплин(LB 1.00 -nocat), ДДТ(LB 1.00), Агата Кристи(LB 1.00 -nocat), Земфира(LB 1.00 -nocat), Би-2(LB 1.00), Аквариум(LB 1.00 -nocat), Король и Шут(LB 1.00 -nocat), Алиса(LB 1.00 -nocat), Пикник(LB 1.00 -nocat), Гражданская оборона(LB 1.00 -nocat), Ленинград(LB 1.00 -nocat), Radiohead(LB 1.00), Nirvana(LB 1.00), The Beatles(LB 1.00), Rammstein(LB 1.00), Depeche Mode(LB 1.00), Metallica(LB 1.00), Linkin Park(LB 1.00), Pink Floyd(LB 1.00), Red Hot Chili Peppers(LB 1.00), System of a Down(LB 1.00), The Doors(LB 1.00), David Bowie(LB 1.00)
+  -> Because you like Кино  |  People who listen to Кино also play these  (12 rows)
+     Nautilus Pompilius — Крылья   [russian rock, pop 53]
+     ДДТ — Что такое осень   [russian rock, pop 50]
+     [Би-2] — Полковнику никто не пишет   [belarusian rock, pop 54]
+     Radiohead — Creep   [rock, pop 89]
+     Nirvana — Smells Like Teen Spirit   [permanent wave, pop 84]
+     The Beatles — Here Comes The Sun - Remastered 2009   [classic rock, pop 84]
+     Rammstein — Sonne   [neue deutsche harte, pop 79]
+     Depeche Mode — Enjoy the Silence   [new wave, pop 76]
+     Nautilus Pompilius — Дыхание   [russian rock, pop 48]
+     ДДТ — Просвистела   [russian rock, pop 49]
+     [Би-2] — Варвара   [belarusian rock, pop 51]
+     Radiohead — No Surprises   [rock, pop 84]
+
+=== Земфира  [region US]  liked-as "Земфира"
+  seed in graph: Земфира / RU / conf 0.94 / pop 4 / cec59910-2d12-46ec-8e39-85ca06acb0ed
+  graph neighbours (1): Кино(LB 1.00 -nocat)
+  -> NO ARTIST SHELF  (shelves: popular)
+
+=== Земфира  [region RU]  liked-as "Земфира"
+  seed in graph: Земфира / RU / conf 0.94 / pop 4 / cec59910-2d12-46ec-8e39-85ca06acb0ed
+  graph neighbours (1): Кино(LB 1.00 -nocat)
+  -> NO ARTIST SHELF  (shelves: popular)
+
+=== Oxxxymiron  [region US]  liked-as "Oxxxymiron"
+  seed in graph: Oxxxymiron / RU / conf 0.9 / pop 2 / fb2a8279-79cf-4849-b692-1ce674709159
+  graph neighbours (0): 
+  -> Sounds like Oxxxymiron  |  Artists whose sound sits closest to theirs  (12 rows)
+     Lizer — заря   [russian hip hop, pop 46]
+     Gunwest — Сеньорита   [russian hip hop, pop 37]
+     Aarne — Slim Shady   [russian hip hop, pop 55]
+     Куок — ГОРОД ЗАСЫПАЕТ   [russian trap, pop 40]
+     вышел покурить — падаю   [russian hip hop, pop 48]
+     BUSHIDO ZHO — Дай мне посмотреть   [russian trap, pop 53]
+     10AGE — Зоопарк   [russian hip hop, pop 49]
+     Boulevard Depo — ВВВ - THE DAWLESS REMIX   [russian hip hop, pop 44]
+     Chester Nebro — Хлам   [russian gangster rap, pop 37]
+     METAN — Farma   [russian underground rap, pop 41]
+     YUNG TRAPPA — Молодые боссы   [russian trap, pop 40]
+     Зараза — Холод и апатия   [russian trap, pop 43]
+
+=== Oxxxymiron  [region RU]  liked-as "Oxxxymiron"
+  seed in graph: Oxxxymiron / RU / conf 0.9 / pop 2 / fb2a8279-79cf-4849-b692-1ce674709159
+  graph neighbours (0): 
+  -> Sounds like Oxxxymiron  |  Artists whose sound sits closest to theirs  (12 rows)
+     Lizer — заря   [russian hip hop, pop 46]
+     Gunwest — Сеньорита   [russian hip hop, pop 37]
+     Aarne — Slim Shady   [russian hip hop, pop 55]
+     Куок — ГОРОД ЗАСЫПАЕТ   [russian trap, pop 40]
+     вышел покурить — падаю   [russian hip hop, pop 48]
+     BUSHIDO ZHO — Дай мне посмотреть   [russian trap, pop 53]
+     10AGE — Зоопарк   [russian hip hop, pop 49]
+     Boulevard Depo — ВВВ - THE DAWLESS REMIX   [russian hip hop, pop 44]
+     Chester Nebro — Хлам   [russian gangster rap, pop 37]
+     METAN — Farma   [russian underground rap, pop 41]
+     YUNG TRAPPA — Молодые боссы   [russian trap, pop 40]
+     Зараза — Холод и апатия   [russian trap, pop 43]
+
+=== Tinariwen  [region US]  liked-as "Tinariwen"
+  seed in graph: NOT FOUND
+  -> Sounds like Tinariwen  |  Artists whose sound sits closest to theirs  (12 rows)
+     Djelimady Tounkara — Fanta Bourama   [mande pop, pop 35]
+     Nabil Baly Othmani — Edunia tigla   [tuareg guitar, pop 14]
+     Baaba Maal — Traveller   [mbalax, pop 33]
+     Fatoumata Diawara — Sonkolon   [mande pop, pop 45]
+     Amadou & Mariam — M' Bife   [malian blues, pop 49]
+     Etran Finatawa — Matinfa   [desert blues, pop 29]
+     Boubacar Traoré — Duna ma yelema   [malian blues, pop 36]
+     Fatoumata Diawara — Makoun Oumou   [mande pop, pop 42]
+     Les Filles de Illighadad — Inssegh Inssegh   [tuareg guitar, pop 31]
+     AMADEUS — JIIN   [mbalax, pop 38]
+     AMADEUS — Yow la   [mbalax, pop 45]
+     Nabil Baly Othmani — Djanet   [tuareg guitar, pop 26]
+
+=== Tinariwen  [region ML]  liked-as "Tinariwen"
+  seed in graph: NOT FOUND
+  -> Sounds like Tinariwen  |  Artists whose sound sits closest to theirs  (12 rows)
+     Djelimady Tounkara — Fanta Bourama   [mande pop, pop 35]
+     Nabil Baly Othmani — Edunia tigla   [tuareg guitar, pop 14]
+     Baaba Maal — Traveller   [mbalax, pop 33]
+     Fatoumata Diawara — Sonkolon   [mande pop, pop 45]
+     Amadou & Mariam — M' Bife   [malian blues, pop 49]
+     Etran Finatawa — Matinfa   [desert blues, pop 29]
+     Boubacar Traoré — Duna ma yelema   [malian blues, pop 36]
+     Fatoumata Diawara — Makoun Oumou   [mande pop, pop 42]
+     Les Filles de Illighadad — Inssegh Inssegh   [tuareg guitar, pop 31]
+     AMADEUS — JIIN   [mbalax, pop 38]
+     AMADEUS — Yow la   [mbalax, pop 45]
+     Nabil Baly Othmani — Djanet   [tuareg guitar, pop 26]
+
+=== Ichiko Aoba  [region US]  liked-as "Ichiko Aoba"
+  seed in graph: NOT FOUND
+  -> Sounds like Ichiko Aoba  |  Artists whose sound sits closest to theirs  (12 rows)
+     Lamp — 密やかに   [japanese alternative pop, pop 56]
+     Saho Terao — 愛よ届け   [j-acoustic, pop 36]
+     Naotaro Moriyama — 生きてることが辛いなら   [japanese singer-songwriter, pop 39]
+     Naotaro Moriyama — 愛し君へ   [japanese singer-songwriter, pop 44]
+     上野大樹 — て   [j-acoustic, pop 46]
+     Saho Terao — 魔法みたいに   [j-acoustic, pop 36]
+     Humbert Humbert — 虎   [j-acoustic, pop 39]
+     Koji Tamaki — メロディー   [classic j-pop, pop 51]
+     Koji Tamaki — メロディー   [classic j-pop, pop 48]   <<DUPTITLE,DUPKEY
+     mamerico — natsu no stole   [japanese indie folk, pop 37]
+     Mone Kamishiraishi — 366日   [j-pop, pop 40]
+     Hanare Gumi — 深呼吸   [j-rock, pop 40]
+
+=== Ichiko Aoba  [region JP]  liked-as "Ichiko Aoba"
+  seed in graph: NOT FOUND
+  -> Sounds like Ichiko Aoba  |  Artists whose sound sits closest to theirs  (12 rows)
+     Lamp — 密やかに   [japanese alternative pop, pop 56]
+     Saho Terao — 愛よ届け   [j-acoustic, pop 36]
+     Naotaro Moriyama — 生きてることが辛いなら   [japanese singer-songwriter, pop 39]
+     Naotaro Moriyama — 愛し君へ   [japanese singer-songwriter, pop 44]
+     上野大樹 — て   [j-acoustic, pop 46]
+     Saho Terao — 魔法みたいに   [j-acoustic, pop 36]
+     Humbert Humbert — 虎   [j-acoustic, pop 39]
+     Koji Tamaki — メロディー   [classic j-pop, pop 51]
+     Koji Tamaki — メロディー   [classic j-pop, pop 48]   <<DUPTITLE,DUPKEY
+     mamerico — natsu no stole   [japanese indie folk, pop 37]
+     Mone Kamishiraishi — 366日   [j-pop, pop 40]
+     Hanare Gumi — 深呼吸   [j-rock, pop 40]
+
+=== Black Country, New Road  [region US]  liked-as "Black Country"
+  seed in graph: NOT FOUND
+  -> Sounds like Black Country  |  Artists whose sound sits closest to theirs  (12 rows)
+     Jockstrap — Glasgow   [london indie, pop 36]
+     Jockstrap — Jennifer B   [london indie, pop 37]
+     Billy Nomates — Metalhorse   [crank wave, pop 38]
+     caroline — U R UR ONLY ACHING   [crank wave, pop 38]
+     Geese — Gravity Blues   [crank wave, pop 43]
+     Geese — Crusades   [crank wave, pop 44]
+     Squid — Fieldworks II   [crank wave, pop 43]
+     Heartworms — Just To Ask A Dance   [crank wave, pop 42]
+     Divorce — Lord   [crank wave, pop 40]
+     Divorce — Lord   [crank wave, pop 44]   <<DUPTITLE,DUPKEY
+     Grian Chatten — Last Time Every Time Forever   [crank wave, pop 41]
+     IDLES — POP POP POP   [crank wave, pop 51]
+
+=== Black Country, New Road  [region GB]  liked-as "Black Country"
+  seed in graph: NOT FOUND
+  -> Sounds like Black Country  |  Artists whose sound sits closest to theirs  (12 rows)
+     Jockstrap — Glasgow   [london indie, pop 36]
+     Jockstrap — Jennifer B   [london indie, pop 37]
+     Billy Nomates — Metalhorse   [crank wave, pop 38]
+     caroline — U R UR ONLY ACHING   [crank wave, pop 38]
+     Geese — Gravity Blues   [crank wave, pop 43]
+     Geese — Crusades   [crank wave, pop 44]
+     Squid — Fieldworks II   [crank wave, pop 43]
+     Heartworms — Just To Ask A Dance   [crank wave, pop 42]
+     Divorce — Lord   [crank wave, pop 40]
+     Divorce — Lord   [crank wave, pop 44]   <<DUPTITLE,DUPKEY
+     Grian Chatten — Last Time Every Time Forever   [crank wave, pop 41]
+     IDLES — POP POP POP   [crank wave, pop 51]
+
+=== AC/DC  [region US]  liked-as "AC"
+  seed in graph: NOT FOUND
+  -> Sounds like AC  |  Artists whose sound sits closest to theirs  (12 rows)
+     Lez Zeppelin — Kashmir   [tribute, pop 34]
+     Abbey Road — Here Comes The Sun   [tribute, pop 32]
+     Led Zepagain — Immigrant Song   [tribute, pop 35]
+     The Beatles Greatest Hits Performed By The Frank Berman Band — Hey Jude   [tribute, pop 29]
+     Tenacious D — Beelzeboss (The Final Showdown)   [parody, pop 57]
+     Led Zepagain — Rock and Roll   [tribute, pop 31]
+     The Kinx — Lola   [tribute, pop 38]
+     Leppard Def Rock — Two Steps Behind   [tribute, pop 40]
+     Lez Zeppelin — Immigrant Song   [tribute, pop 41]   <<DUPTITLE
+     Tenacious D — Kickapoo   [parody, pop 59]
+     The Beatles Recovered Band — In My Life   [tribute, pop 30]
+     The Beatles Recovered Band — Let It Be   [tribute, pop 40]
+
+=== AC/DC  [region AU]  liked-as "AC"
+  seed in graph: NOT FOUND
+  -> Sounds like AC  |  Artists whose sound sits closest to theirs  (12 rows)
+     Lez Zeppelin — Kashmir   [tribute, pop 34]
+     Abbey Road — Here Comes The Sun   [tribute, pop 32]
+     Led Zepagain — Immigrant Song   [tribute, pop 35]
+     The Beatles Greatest Hits Performed By The Frank Berman Band — Hey Jude   [tribute, pop 29]
+     Tenacious D — Beelzeboss (The Final Showdown)   [parody, pop 57]
+     Led Zepagain — Rock and Roll   [tribute, pop 31]
+     The Kinx — Lola   [tribute, pop 38]
+     Leppard Def Rock — Two Steps Behind   [tribute, pop 40]
+     Lez Zeppelin — Immigrant Song   [tribute, pop 41]   <<DUPTITLE
+     Tenacious D — Kickapoo   [parody, pop 59]
+     The Beatles Recovered Band — In My Life   [tribute, pop 30]
+     The Beatles Recovered Band — Let It Be   [tribute, pop 40]
+
+=== Simon & Garfunkel  [region US]  liked-as "Simon"
+  seed in graph: NOT FOUND
+  -> Sounds like Simon  |  Artists whose sound sits closest to theirs  (12 rows)
+     William White — For Your Love   [swiss reggae, pop 18]
+     William White — For Your Love   [swiss reggae, pop 15]   <<DUPTITLE,DUPKEY
+     Sektion Kuchikäschtli — Checksch dia Ironie?   [swiss hip hop, pop 15]
+     Stephan Eicher — Tu ne me dois rien   [french rock, pop 47]
+     Sektion Kuchikäschtli — Swissdate   [swiss hip hop, pop 18]
+     Stephan Eicher — Prisonnière   [french rock, pop 38]
+     Slimka — Cololo   [french hip hop, pop 44]
+     Slimka — Bergerac   [french hip hop, pop 40]
+     Myron — Free   [swiss rock, pop 17]
+     Patent Ochsner — Für immer uf di   [mundart, pop 45]
+     Büne Huber — Juanita La Luna   [mundart, pop 37]
+     Myron — Heaven   [swiss rock, pop 11]
+
+=== Earth, Wind & Fire  [region US]  liked-as "Earth"
+  seed in graph: NOT FOUND
+  -> Sounds like Earth  |  Artists whose sound sits closest to theirs  (12 rows)
+     Locomotiv GT — Embertelen dal   [classic hungarian rock, pop 28]
+     Locomotiv GT — Nem adom fel   [classic hungarian rock, pop 30]
+     Metro — Szobrok   [classic hungarian pop, pop 10]
+     Metro — Édes évek   [classic hungarian pop, pop 11]
+     Első Emelet — A lány körbejár   [classic hungarian rock, pop 27]
+     Első Emelet — A film forog tovább   [classic hungarian rock, pop 32]
+     Magna Cum Laude — Vidéki sanzon   [classic hungarian rock, pop 43]
+     Dinamit — Tinédzser dal   [classic hungarian rock, pop 37]
+     Presser Gabor — Nagy utazás   [classic hungarian rock, pop 30]
+     Illes — Good bye London   [classic hungarian rock, pop 17]
+     Magna Cum Laude — Piros az alma   [classic hungarian rock, pop 40]
+     Hungária — Csavard fel a szőnyeget   [classic hungarian rock, pop 32]
+
+=== cache check: findArtist(name, own country) on the US-warmed graph vs a graph that only saw that country
+
+SUMMARY (US pass): graph 21, sounds-like 39, none 2, seed-in-own-shelf rows 1, duplicate rows 29

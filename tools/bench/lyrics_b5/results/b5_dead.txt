@@ -1,0 +1,32 @@
+﻿== ytmonly (ytmonly01, ytmonly02)
+  first lookup states: {"plain":50,"error":10}; with an interim answer: 50 of 60
+  first lookup, first lines on screen (lyrics found): n=50 median=1222 p90=1254 min=1210 max=2444
+  first lookup, first lines on screen (all):          n=60 median=1225 p90=4066 min=1210 max=4090
+  first lookup, the interim answer itself:            n=50 median=1222 p90=1254 min=1210 max=2444
+  first lookup, final answer:                         n=60 median=4068 p90=4088 min=4047 max=4655
+  "none", first lookup:                               n=0
+  "none", warm lookups (2nd and 3rd song):            n=0
+== baseytmonly (baseytmonly01)
+  first lookup states: {"plain":25,"error":5}; with an interim answer: 0 of 30
+  first lookup, first lines on screen (lyrics found): n=25 median=4573 p90=4745 min=4420 max=5030
+  first lookup, first lines on screen (all):          n=30 median=4600 p90=4750 min=4420 max=5030
+  first lookup, the interim answer itself:            n=0
+  first lookup, final answer:                         n=30 median=4600 p90=4750 min=4420 max=5030
+  "none", first lookup:                               n=0
+  "none", warm lookups (2nd and 3rd song):            n=0
+== blackhole (blackhole01)
+  first lookup states: {"plain":25,"error":5}; with an interim answer: 25 of 30
+  first lookup, first lines on screen (lyrics found): n=25 median=1220 p90=1243 min=1208 max=1258
+  first lookup, first lines on screen (all):          n=30 median=1223 p90=6004 min=1208 max=6015
+  first lookup, the interim answer itself:            n=25 median=1220 p90=1243 min=1208 max=1258
+  first lookup, final answer:                         n=30 median=6016 p90=6026 min=5995 max=6032
+  "none", first lookup:                               n=0
+  "none", warm lookups (2nd and 3rd song):            n=0
+== baseblackhole (baseblackhole01)
+  first lookup states: {"plain":25,"error":5}; with an interim answer: 0 of 30
+  first lookup, first lines on screen (lyrics found): n=25 median=6533 p90=6664 min=6401 max=7619
+  first lookup, first lines on screen (all):          n=30 median=6535 p90=6699 min=6401 max=7619
+  first lookup, the interim answer itself:            n=0
+  first lookup, final answer:                         n=30 median=6535 p90=6699 min=6401 max=7619
+  "none", first lookup:                               n=0
+  "none", warm lookups (2nd and 3rd song):            n=0

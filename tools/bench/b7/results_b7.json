@@ -1,0 +1,1282 @@
+﻿[
+    {
+        "tag":  "b7beforee",
+        "group":  "new",
+        "metric":  "resolved-\u003eloadfile",
+        "n":  22,
+        "median":  40,
+        "p90":  59,
+        "min":  21,
+        "max":  60
+    },
+    {
+        "tag":  "b7beforee",
+        "group":  "new",
+        "metric":  "resolved-\u003erecorded",
+        "n":  22,
+        "median":  40,
+        "p90":  58,
+        "min":  20,
+        "max":  60
+    },
+    {
+        "tag":  "b7beforee",
+        "group":  "new",
+        "metric":  "TTFA (clean)",
+        "n":  22,
+        "median":  378.5,
+        "p90":  492,
+        "min":  306,
+        "max":  703
+    },
+    {
+        "tag":  "b7beforee",
+        "group":  "new",
+        "metric":  "resolve (press-\u003eresolved)",
+        "n":  22,
+        "median":  166.5,
+        "p90":  193,
+        "min":  148,
+        "max":  200
+    },
+    {
+        "tag":  "b7beforee",
+        "group":  "new",
+        "metric":  "loadfile-\u003ehttp open",
+        "n":  22,
+        "median":  2,
+        "p90":  29,
+        "min":  1,
+        "max":  39
+    },
+    {
+        "tag":  "b7beforee",
+        "group":  "new",
+        "metric":  "http open-\u003eresponse",
+        "n":  22,
+        "median":  107.5,
+        "p90":  167,
+        "min":  25,
+        "max":  223
+    },
+    {
+        "tag":  "b7beforee",
+        "group":  "new",
+        "metric":  "response-\u003eaudio",
+        "n":  22,
+        "median":  31,
+        "p90":  118,
+        "min":  25,
+        "max":  336
+    },
+    {
+        "tag":  "b7beforee",
+        "group":  "new",
+        "metric":  "refused first opens",
+        "n":  22,
+        "median":  0,
+        "p90":  null,
+        "min":  null,
+        "max":  null
+    },
+    {
+        "tag":  "b7beforee",
+        "group":  "replay",
+        "metric":  "resolved-\u003eloadfile",
+        "n":  24,
+        "median":  61.5,
+        "p90":  68,
+        "min":  56,
+        "max":  70
+    },
+    {
+        "tag":  "b7beforee",
+        "group":  "replay",
+        "metric":  "resolved-\u003erecorded",
+        "n":  24,
+        "median":  61,
+        "p90":  68,
+        "min":  56,
+        "max":  69
+    },
+    {
+        "tag":  "b7beforee",
+        "group":  "replay",
+        "metric":  "TTFA (clean)",
+        "n":  24,
+        "median":  286.5,
+        "p90":  340,
+        "min":  232,
+        "max":  594
+    },
+    {
+        "tag":  "b7beforee",
+        "group":  "replay",
+        "metric":  "resolve (press-\u003eresolved)",
+        "n":  24,
+        "median":  42,
+        "p90":  47,
+        "min":  36,
+        "max":  53
+    },
+    {
+        "tag":  "b7beforee",
+        "group":  "replay",
+        "metric":  "loadfile-\u003ehttp open",
+        "n":  24,
+        "median":  2,
+        "p90":  2,
+        "min":  1,
+        "max":  7
+    },
+    {
+        "tag":  "b7beforee",
+        "group":  "replay",
+        "metric":  "http open-\u003eresponse",
+        "n":  24,
+        "median":  123.5,
+        "p90":  166,
+        "min":  25,
+        "max":  210
+    },
+    {
+        "tag":  "b7beforee",
+        "group":  "replay",
+        "metric":  "response-\u003eaudio",
+        "n":  24,
+        "median":  46.5,
+        "p90":  133,
+        "min":  6,
+        "max":  345
+    },
+    {
+        "tag":  "b7beforee",
+        "group":  "replay",
+        "metric":  "refused first opens",
+        "n":  24,
+        "median":  0,
+        "p90":  null,
+        "min":  null,
+        "max":  null
+    },
+    {
+        "tag":  "b7beforee",
+        "group":  "skip",
+        "metric":  "resolved-\u003eloadfile",
+        "n":  22,
+        "median":  45.5,
+        "p90":  58,
+        "min":  22,
+        "max":  65
+    },
+    {
+        "tag":  "b7beforee",
+        "group":  "skip",
+        "metric":  "resolved-\u003erecorded",
+        "n":  22,
+        "median":  45.5,
+        "p90":  58,
+        "min":  22,
+        "max":  65
+    },
+    {
+        "tag":  "b7beforee",
+        "group":  "skip",
+        "metric":  "TTFA (clean)",
+        "n":  22,
+        "median":  263,
+        "p90":  321,
+        "min":  231,
+        "max":  539
+    },
+    {
+        "tag":  "b7beforee",
+        "group":  "skip",
+        "metric":  "resolve (press-\u003eresolved)",
+        "n":  22,
+        "median":  36.5,
+        "p90":  42,
+        "min":  31,
+        "max":  43
+    },
+    {
+        "tag":  "b7beforee",
+        "group":  "skip",
+        "metric":  "loadfile-\u003ehttp open",
+        "n":  22,
+        "median":  2,
+        "p90":  3,
+        "min":  1,
+        "max":  96
+    },
+    {
+        "tag":  "b7beforee",
+        "group":  "skip",
+        "metric":  "http open-\u003eresponse",
+        "n":  22,
+        "median":  126,
+        "p90":  156,
+        "min":  22,
+        "max":  169
+    },
+    {
+        "tag":  "b7beforee",
+        "group":  "skip",
+        "metric":  "response-\u003eaudio",
+        "n":  22,
+        "median":  55,
+        "p90":  153,
+        "min":  6,
+        "max":  345
+    },
+    {
+        "tag":  "b7beforee",
+        "group":  "skip",
+        "metric":  "refused first opens",
+        "n":  22,
+        "median":  0,
+        "p90":  null,
+        "min":  null,
+        "max":  null
+    },
+    {
+        "tag":  "b7beforee",
+        "group":  "launch",
+        "metric":  "resolved-\u003eloadfile",
+        "n":  4,
+        "median":  14,
+        "p90":  15,
+        "min":  13,
+        "max":  15
+    },
+    {
+        "tag":  "b7beforee",
+        "group":  "launch",
+        "metric":  "resolved-\u003erecorded",
+        "n":  4,
+        "median":  13,
+        "p90":  15,
+        "min":  12,
+        "max":  15
+    },
+    {
+        "tag":  "b7beforee",
+        "group":  "launch",
+        "metric":  "TTFA (clean)",
+        "n":  4,
+        "median":  555,
+        "p90":  572,
+        "min":  471,
+        "max":  572
+    },
+    {
+        "tag":  "b7beforee",
+        "group":  "launch",
+        "metric":  "resolve (press-\u003eresolved)",
+        "n":  4,
+        "median":  344.5,
+        "p90":  407,
+        "min":  292,
+        "max":  407
+    },
+    {
+        "tag":  "b7beforee",
+        "group":  "launch",
+        "metric":  "loadfile-\u003ehttp open",
+        "n":  4,
+        "median":  2.5,
+        "p90":  3,
+        "min":  1,
+        "max":  3
+    },
+    {
+        "tag":  "b7beforee",
+        "group":  "launch",
+        "metric":  "http open-\u003eresponse",
+        "n":  4,
+        "median":  123,
+        "p90":  179,
+        "min":  104,
+        "max":  179
+    },
+    {
+        "tag":  "b7beforee",
+        "group":  "launch",
+        "metric":  "response-\u003eaudio",
+        "n":  4,
+        "median":  40.5,
+        "p90":  53,
+        "min":  37,
+        "max":  53
+    },
+    {
+        "tag":  "b7beforee",
+        "group":  "launch",
+        "metric":  "refused first opens",
+        "n":  4,
+        "median":  0,
+        "p90":  null,
+        "min":  null,
+        "max":  null
+    },
+    {
+        "tag":  "b7aftere",
+        "group":  "new",
+        "metric":  "resolved-\u003eloadfile",
+        "n":  22,
+        "median":  0,
+        "p90":  1,
+        "min":  0,
+        "max":  1
+    },
+    {
+        "tag":  "b7aftere",
+        "group":  "new",
+        "metric":  "resolved-\u003erecorded",
+        "n":  22,
+        "median":  43.5,
+        "p90":  61,
+        "min":  22,
+        "max":  69
+    },
+    {
+        "tag":  "b7aftere",
+        "group":  "new",
+        "metric":  "TTFA (clean)",
+        "n":  22,
+        "median":  324,
+        "p90":  388,
+        "min":  250,
+        "max":  773
+    },
+    {
+        "tag":  "b7aftere",
+        "group":  "new",
+        "metric":  "resolve (press-\u003eresolved)",
+        "n":  22,
+        "median":  165,
+        "p90":  184,
+        "min":  144,
+        "max":  194
+    },
+    {
+        "tag":  "b7aftere",
+        "group":  "new",
+        "metric":  "loadfile-\u003ehttp open",
+        "n":  22,
+        "median":  20.5,
+        "p90":  29,
+        "min":  2,
+        "max":  38
+    },
+    {
+        "tag":  "b7aftere",
+        "group":  "new",
+        "metric":  "http open-\u003eresponse",
+        "n":  22,
+        "median":  105.5,
+        "p90":  129,
+        "min":  23,
+        "max":  177
+    },
+    {
+        "tag":  "b7aftere",
+        "group":  "new",
+        "metric":  "response-\u003eaudio",
+        "n":  22,
+        "median":  28,
+        "p90":  76,
+        "min":  23,
+        "max":  494
+    },
+    {
+        "tag":  "b7aftere",
+        "group":  "new",
+        "metric":  "refused first opens",
+        "n":  22,
+        "median":  0,
+        "p90":  null,
+        "min":  null,
+        "max":  null
+    },
+    {
+        "tag":  "b7aftere",
+        "group":  "replay",
+        "metric":  "resolved-\u003eloadfile",
+        "n":  24,
+        "median":  1,
+        "p90":  1,
+        "min":  0,
+        "max":  1
+    },
+    {
+        "tag":  "b7aftere",
+        "group":  "replay",
+        "metric":  "resolved-\u003erecorded",
+        "n":  24,
+        "median":  60.5,
+        "p90":  68,
+        "min":  55,
+        "max":  72
+    },
+    {
+        "tag":  "b7aftere",
+        "group":  "replay",
+        "metric":  "TTFA (clean)",
+        "n":  24,
+        "median":  259,
+        "p90":  293,
+        "min":  119,
+        "max":  523
+    },
+    {
+        "tag":  "b7aftere",
+        "group":  "replay",
+        "metric":  "resolve (press-\u003eresolved)",
+        "n":  24,
+        "median":  42.5,
+        "p90":  50,
+        "min":  35,
+        "max":  52
+    },
+    {
+        "tag":  "b7aftere",
+        "group":  "replay",
+        "metric":  "loadfile-\u003ehttp open",
+        "n":  24,
+        "median":  2,
+        "p90":  3,
+        "min":  1,
+        "max":  73
+    },
+    {
+        "tag":  "b7aftere",
+        "group":  "replay",
+        "metric":  "http open-\u003eresponse",
+        "n":  24,
+        "median":  120.5,
+        "p90":  147,
+        "min":  26,
+        "max":  199
+    },
+    {
+        "tag":  "b7aftere",
+        "group":  "replay",
+        "metric":  "response-\u003eaudio",
+        "n":  24,
+        "median":  91.5,
+        "p90":  149,
+        "min":  6,
+        "max":  335
+    },
+    {
+        "tag":  "b7aftere",
+        "group":  "replay",
+        "metric":  "refused first opens",
+        "n":  24,
+        "median":  0,
+        "p90":  null,
+        "min":  null,
+        "max":  null
+    },
+    {
+        "tag":  "b7aftere",
+        "group":  "skip",
+        "metric":  "resolved-\u003eloadfile",
+        "n":  22,
+        "median":  1,
+        "p90":  1,
+        "min":  0,
+        "max":  1
+    },
+    {
+        "tag":  "b7aftere",
+        "group":  "skip",
+        "metric":  "resolved-\u003erecorded",
+        "n":  22,
+        "median":  45,
+        "p90":  63,
+        "min":  20,
+        "max":  64
+    },
+    {
+        "tag":  "b7aftere",
+        "group":  "skip",
+        "metric":  "TTFA (clean)",
+        "n":  22,
+        "median":  247.5,
+        "p90":  283,
+        "min":  100,
+        "max":  657
+    },
+    {
+        "tag":  "b7aftere",
+        "group":  "skip",
+        "metric":  "resolve (press-\u003eresolved)",
+        "n":  22,
+        "median":  37.5,
+        "p90":  41,
+        "min":  31,
+        "max":  43
+    },
+    {
+        "tag":  "b7aftere",
+        "group":  "skip",
+        "metric":  "loadfile-\u003ehttp open",
+        "n":  22,
+        "median":  2,
+        "p90":  3,
+        "min":  1,
+        "max":  115
+    },
+    {
+        "tag":  "b7aftere",
+        "group":  "skip",
+        "metric":  "http open-\u003eresponse",
+        "n":  22,
+        "median":  116.5,
+        "p90":  128,
+        "min":  21,
+        "max":  169
+    },
+    {
+        "tag":  "b7aftere",
+        "group":  "skip",
+        "metric":  "response-\u003eaudio",
+        "n":  22,
+        "median":  97.5,
+        "p90":  171,
+        "min":  6,
+        "max":  496
+    },
+    {
+        "tag":  "b7aftere",
+        "group":  "skip",
+        "metric":  "refused first opens",
+        "n":  22,
+        "median":  0,
+        "p90":  null,
+        "min":  null,
+        "max":  null
+    },
+    {
+        "tag":  "b7aftere",
+        "group":  "launch",
+        "metric":  "resolved-\u003eloadfile",
+        "n":  4,
+        "median":  0.5,
+        "p90":  1,
+        "min":  0,
+        "max":  1
+    },
+    {
+        "tag":  "b7aftere",
+        "group":  "launch",
+        "metric":  "resolved-\u003erecorded",
+        "n":  4,
+        "median":  14,
+        "p90":  17,
+        "min":  14,
+        "max":  17
+    },
+    {
+        "tag":  "b7aftere",
+        "group":  "launch",
+        "metric":  "TTFA (clean)",
+        "n":  4,
+        "median":  469.5,
+        "p90":  559,
+        "min":  397,
+        "max":  559
+    },
+    {
+        "tag":  "b7aftere",
+        "group":  "launch",
+        "metric":  "resolve (press-\u003eresolved)",
+        "n":  4,
+        "median":  294,
+        "p90":  430,
+        "min":  248,
+        "max":  430
+    },
+    {
+        "tag":  "b7aftere",
+        "group":  "launch",
+        "metric":  "loadfile-\u003ehttp open",
+        "n":  4,
+        "median":  3.5,
+        "p90":  4,
+        "min":  3,
+        "max":  4
+    },
+    {
+        "tag":  "b7aftere",
+        "group":  "launch",
+        "metric":  "http open-\u003eresponse",
+        "n":  4,
+        "median":  110,
+        "p90":  142,
+        "min":  85,
+        "max":  142
+    },
+    {
+        "tag":  "b7aftere",
+        "group":  "launch",
+        "metric":  "response-\u003eaudio",
+        "n":  4,
+        "median":  40,
+        "p90":  46,
+        "min":  40,
+        "max":  46
+    },
+    {
+        "tag":  "b7aftere",
+        "group":  "launch",
+        "metric":  "refused first opens",
+        "n":  4,
+        "median":  0,
+        "p90":  null,
+        "min":  null,
+        "max":  null
+    },
+    {
+        "tag":  "b7befores",
+        "group":  "new",
+        "metric":  "resolved-\u003eloadfile",
+        "n":  22,
+        "median":  540.5,
+        "p90":  558,
+        "min":  512,
+        "max":  563
+    },
+    {
+        "tag":  "b7befores",
+        "group":  "new",
+        "metric":  "resolved-\u003erecorded",
+        "n":  22,
+        "median":  540,
+        "p90":  558,
+        "min":  512,
+        "max":  563
+    },
+    {
+        "tag":  "b7befores",
+        "group":  "new",
+        "metric":  "TTFA (clean)",
+        "n":  22,
+        "median":  839,
+        "p90":  887,
+        "min":  761,
+        "max":  1170
+    },
+    {
+        "tag":  "b7befores",
+        "group":  "new",
+        "metric":  "resolve (press-\u003eresolved)",
+        "n":  22,
+        "median":  165,
+        "p90":  190,
+        "min":  143,
+        "max":  194
+    },
+    {
+        "tag":  "b7befores",
+        "group":  "new",
+        "metric":  "loadfile-\u003ehttp open",
+        "n":  22,
+        "median":  2,
+        "p90":  2,
+        "min":  1,
+        "max":  3
+    },
+    {
+        "tag":  "b7befores",
+        "group":  "new",
+        "metric":  "http open-\u003eresponse",
+        "n":  22,
+        "median":  87.5,
+        "p90":  118,
+        "min":  25,
+        "max":  131
+    },
+    {
+        "tag":  "b7befores",
+        "group":  "new",
+        "metric":  "response-\u003eaudio",
+        "n":  22,
+        "median":  27.5,
+        "p90":  108,
+        "min":  24,
+        "max":  346
+    },
+    {
+        "tag":  "b7befores",
+        "group":  "new",
+        "metric":  "refused first opens",
+        "n":  22,
+        "median":  0,
+        "p90":  null,
+        "min":  null,
+        "max":  null
+    },
+    {
+        "tag":  "b7befores",
+        "group":  "replay",
+        "metric":  "resolved-\u003eloadfile",
+        "n":  24,
+        "median":  535,
+        "p90":  553,
+        "min":  512,
+        "max":  570
+    },
+    {
+        "tag":  "b7befores",
+        "group":  "replay",
+        "metric":  "resolved-\u003erecorded",
+        "n":  24,
+        "median":  535,
+        "p90":  552,
+        "min":  511,
+        "max":  570
+    },
+    {
+        "tag":  "b7befores",
+        "group":  "replay",
+        "metric":  "TTFA (clean)",
+        "n":  24,
+        "median":  803,
+        "p90":  845,
+        "min":  626,
+        "max":  1189
+    },
+    {
+        "tag":  "b7befores",
+        "group":  "replay",
+        "metric":  "resolve (press-\u003eresolved)",
+        "n":  24,
+        "median":  45.5,
+        "p90":  49,
+        "min":  38,
+        "max":  56
+    },
+    {
+        "tag":  "b7befores",
+        "group":  "replay",
+        "metric":  "loadfile-\u003ehttp open",
+        "n":  24,
+        "median":  2,
+        "p90":  2,
+        "min":  1,
+        "max":  2
+    },
+    {
+        "tag":  "b7befores",
+        "group":  "replay",
+        "metric":  "http open-\u003eresponse",
+        "n":  24,
+        "median":  122.5,
+        "p90":  143,
+        "min":  27,
+        "max":  209
+    },
+    {
+        "tag":  "b7befores",
+        "group":  "replay",
+        "metric":  "response-\u003eaudio",
+        "n":  24,
+        "median":  103,
+        "p90":  184,
+        "min":  28,
+        "max":  484
+    },
+    {
+        "tag":  "b7befores",
+        "group":  "replay",
+        "metric":  "refused first opens",
+        "n":  24,
+        "median":  0,
+        "p90":  null,
+        "min":  null,
+        "max":  null
+    },
+    {
+        "tag":  "b7befores",
+        "group":  "skip",
+        "metric":  "resolved-\u003eloadfile",
+        "n":  22,
+        "median":  535.5,
+        "p90":  568,
+        "min":  511,
+        "max":  595
+    },
+    {
+        "tag":  "b7befores",
+        "group":  "skip",
+        "metric":  "resolved-\u003erecorded",
+        "n":  22,
+        "median":  535.5,
+        "p90":  568,
+        "min":  511,
+        "max":  594
+    },
+    {
+        "tag":  "b7befores",
+        "group":  "skip",
+        "metric":  "TTFA (clean)",
+        "n":  22,
+        "median":  812,
+        "p90":  884,
+        "min":  628,
+        "max":  1044
+    },
+    {
+        "tag":  "b7befores",
+        "group":  "skip",
+        "metric":  "resolve (press-\u003eresolved)",
+        "n":  22,
+        "median":  38,
+        "p90":  45,
+        "min":  34,
+        "max":  51
+    },
+    {
+        "tag":  "b7befores",
+        "group":  "skip",
+        "metric":  "loadfile-\u003ehttp open",
+        "n":  22,
+        "median":  2,
+        "p90":  2,
+        "min":  1,
+        "max":  3
+    },
+    {
+        "tag":  "b7befores",
+        "group":  "skip",
+        "metric":  "http open-\u003eresponse",
+        "n":  22,
+        "median":  125.5,
+        "p90":  135,
+        "min":  25,
+        "max":  143
+    },
+    {
+        "tag":  "b7befores",
+        "group":  "skip",
+        "metric":  "response-\u003eaudio",
+        "n":  22,
+        "median":  106,
+        "p90":  172,
+        "min":  32,
+        "max":  342
+    },
+    {
+        "tag":  "b7befores",
+        "group":  "skip",
+        "metric":  "refused first opens",
+        "n":  22,
+        "median":  0,
+        "p90":  null,
+        "min":  null,
+        "max":  null
+    },
+    {
+        "tag":  "b7befores",
+        "group":  "launch",
+        "metric":  "resolved-\u003eloadfile",
+        "n":  4,
+        "median":  607.5,
+        "p90":  618,
+        "min":  601,
+        "max":  618
+    },
+    {
+        "tag":  "b7befores",
+        "group":  "launch",
+        "metric":  "resolved-\u003erecorded",
+        "n":  4,
+        "median":  607,
+        "p90":  617,
+        "min":  600,
+        "max":  617
+    },
+    {
+        "tag":  "b7befores",
+        "group":  "launch",
+        "metric":  "TTFA (clean)",
+        "n":  4,
+        "median":  1126.5,
+        "p90":  1214,
+        "min":  986,
+        "max":  1214
+    },
+    {
+        "tag":  "b7befores",
+        "group":  "launch",
+        "metric":  "resolve (press-\u003eresolved)",
+        "n":  4,
+        "median":  365.5,
+        "p90":  427,
+        "min":  263,
+        "max":  427
+    },
+    {
+        "tag":  "b7befores",
+        "group":  "launch",
+        "metric":  "loadfile-\u003ehttp open",
+        "n":  4,
+        "median":  2,
+        "p90":  3,
+        "min":  2,
+        "max":  3
+    },
+    {
+        "tag":  "b7befores",
+        "group":  "launch",
+        "metric":  "http open-\u003eresponse",
+        "n":  4,
+        "median":  110,
+        "p90":  129,
+        "min":  81,
+        "max":  129
+    },
+    {
+        "tag":  "b7befores",
+        "group":  "launch",
+        "metric":  "response-\u003eaudio",
+        "n":  4,
+        "median":  39.5,
+        "p90":  42,
+        "min":  38,
+        "max":  42
+    },
+    {
+        "tag":  "b7befores",
+        "group":  "launch",
+        "metric":  "refused first opens",
+        "n":  4,
+        "median":  0,
+        "p90":  null,
+        "min":  null,
+        "max":  null
+    },
+    {
+        "tag":  "b7afters",
+        "group":  "new",
+        "metric":  "resolved-\u003eloadfile",
+        "n":  22,
+        "median":  0,
+        "p90":  1,
+        "min":  0,
+        "max":  1
+    },
+    {
+        "tag":  "b7afters",
+        "group":  "new",
+        "metric":  "resolved-\u003erecorded",
+        "n":  22,
+        "median":  568,
+        "p90":  597,
+        "min":  547,
+        "max":  602
+    },
+    {
+        "tag":  "b7afters",
+        "group":  "new",
+        "metric":  "TTFA (clean)",
+        "n":  22,
+        "median":  320,
+        "p90":  345,
+        "min":  263,
+        "max":  619
+    },
+    {
+        "tag":  "b7afters",
+        "group":  "new",
+        "metric":  "resolve (press-\u003eresolved)",
+        "n":  22,
+        "median":  161.5,
+        "p90":  178,
+        "min":  145,
+        "max":  190
+    },
+    {
+        "tag":  "b7afters",
+        "group":  "new",
+        "metric":  "loadfile-\u003ehttp open",
+        "n":  22,
+        "median":  17.5,
+        "p90":  33,
+        "min":  2,
+        "max":  41
+    },
+    {
+        "tag":  "b7afters",
+        "group":  "new",
+        "metric":  "http open-\u003eresponse",
+        "n":  22,
+        "median":  104,
+        "p90":  129,
+        "min":  25,
+        "max":  133
+    },
+    {
+        "tag":  "b7afters",
+        "group":  "new",
+        "metric":  "response-\u003eaudio",
+        "n":  22,
+        "median":  28.5,
+        "p90":  96,
+        "min":  24,
+        "max":  338
+    },
+    {
+        "tag":  "b7afters",
+        "group":  "new",
+        "metric":  "refused first opens",
+        "n":  22,
+        "median":  0,
+        "p90":  null,
+        "min":  null,
+        "max":  null
+    },
+    {
+        "tag":  "b7afters",
+        "group":  "replay",
+        "metric":  "resolved-\u003eloadfile",
+        "n":  24,
+        "median":  1,
+        "p90":  1,
+        "min":  0,
+        "max":  1
+    },
+    {
+        "tag":  "b7afters",
+        "group":  "replay",
+        "metric":  "resolved-\u003erecorded",
+        "n":  24,
+        "median":  562.5,
+        "p90":  578,
+        "min":  536,
+        "max":  597
+    },
+    {
+        "tag":  "b7afters",
+        "group":  "replay",
+        "metric":  "TTFA (clean)",
+        "n":  24,
+        "median":  178.5,
+        "p90":  486,
+        "min":  112,
+        "max":  831
+    },
+    {
+        "tag":  "b7afters",
+        "group":  "replay",
+        "metric":  "resolve (press-\u003eresolved)",
+        "n":  24,
+        "median":  44,
+        "p90":  50,
+        "min":  33,
+        "max":  51
+    },
+    {
+        "tag":  "b7afters",
+        "group":  "replay",
+        "metric":  "loadfile-\u003ehttp open",
+        "n":  24,
+        "median":  2,
+        "p90":  3,
+        "min":  1,
+        "max":  74
+    },
+    {
+        "tag":  "b7afters",
+        "group":  "replay",
+        "metric":  "http open-\u003eresponse",
+        "n":  24,
+        "median":  96.5,
+        "p90":  124,
+        "min":  24,
+        "max":  675
+    },
+    {
+        "tag":  "b7afters",
+        "group":  "replay",
+        "metric":  "response-\u003eaudio",
+        "n":  24,
+        "median":  30,
+        "p90":  104,
+        "min":  4,
+        "max":  342
+    },
+    {
+        "tag":  "b7afters",
+        "group":  "replay",
+        "metric":  "refused first opens",
+        "n":  24,
+        "median":  0,
+        "p90":  null,
+        "min":  null,
+        "max":  null
+    },
+    {
+        "tag":  "b7afters",
+        "group":  "skip",
+        "metric":  "resolved-\u003eloadfile",
+        "n":  22,
+        "median":  1,
+        "p90":  1,
+        "min":  0,
+        "max":  1
+    },
+    {
+        "tag":  "b7afters",
+        "group":  "skip",
+        "metric":  "resolved-\u003erecorded",
+        "n":  22,
+        "median":  579.5,
+        "p90":  604,
+        "min":  553,
+        "max":  640
+    },
+    {
+        "tag":  "b7afters",
+        "group":  "skip",
+        "metric":  "TTFA (clean)",
+        "n":  22,
+        "median":  173,
+        "p90":  226,
+        "min":  112,
+        "max":  669
+    },
+    {
+        "tag":  "b7afters",
+        "group":  "skip",
+        "metric":  "resolve (press-\u003eresolved)",
+        "n":  22,
+        "median":  39,
+        "p90":  45,
+        "min":  32,
+        "max":  50
+    },
+    {
+        "tag":  "b7afters",
+        "group":  "skip",
+        "metric":  "loadfile-\u003ehttp open",
+        "n":  22,
+        "median":  2,
+        "p90":  3,
+        "min":  1,
+        "max":  72
+    },
+    {
+        "tag":  "b7afters",
+        "group":  "skip",
+        "metric":  "http open-\u003eresponse",
+        "n":  22,
+        "median":  100.5,
+        "p90":  125,
+        "min":  25,
+        "max":  136
+    },
+    {
+        "tag":  "b7afters",
+        "group":  "skip",
+        "metric":  "response-\u003eaudio",
+        "n":  22,
+        "median":  27.5,
+        "p90":  91,
+        "min":  4,
+        "max":  492
+    },
+    {
+        "tag":  "b7afters",
+        "group":  "skip",
+        "metric":  "refused first opens",
+        "n":  22,
+        "median":  0,
+        "p90":  null,
+        "min":  null,
+        "max":  null
+    },
+    {
+        "tag":  "b7afters",
+        "group":  "launch",
+        "metric":  "resolved-\u003eloadfile",
+        "n":  4,
+        "median":  0.5,
+        "p90":  1,
+        "min":  0,
+        "max":  1
+    },
+    {
+        "tag":  "b7afters",
+        "group":  "launch",
+        "metric":  "resolved-\u003erecorded",
+        "n":  4,
+        "median":  627.5,
+        "p90":  638,
+        "min":  619,
+        "max":  638
+    },
+    {
+        "tag":  "b7afters",
+        "group":  "launch",
+        "metric":  "TTFA (clean)",
+        "n":  4,
+        "median":  441.5,
+        "p90":  492,
+        "min":  433,
+        "max":  492
+    },
+    {
+        "tag":  "b7afters",
+        "group":  "launch",
+        "metric":  "resolve (press-\u003eresolved)",
+        "n":  4,
+        "median":  281.5,
+        "p90":  310,
+        "min":  263,
+        "max":  310
+    },
+    {
+        "tag":  "b7afters",
+        "group":  "launch",
+        "metric":  "loadfile-\u003ehttp open",
+        "n":  4,
+        "median":  8.5,
+        "p90":  24,
+        "min":  3,
+        "max":  24
+    },
+    {
+        "tag":  "b7afters",
+        "group":  "launch",
+        "metric":  "http open-\u003eresponse",
+        "n":  4,
+        "median":  118,
+        "p90":  135,
+        "min":  100,
+        "max":  135
+    },
+    {
+        "tag":  "b7afters",
+        "group":  "launch",
+        "metric":  "response-\u003eaudio",
+        "n":  4,
+        "median":  39,
+        "p90":  40,
+        "min":  37,
+        "max":  40
+    },
+    {
+        "tag":  "b7afters",
+        "group":  "launch",
+        "metric":  "refused first opens",
+        "n":  4,
+        "median":  0,
+        "p90":  null,
+        "min":  null,
+        "max":  null
+    }
+]

@@ -1,0 +1,2454 @@
+{
+  "generated": "2026-09-26T23:25:10.165Z",
+  "passes": {
+    "cold01": {
+      "tracks": 30,
+      "sameTrack": 30,
+      "mismatched": [],
+      "timedOut": [],
+      "byClass": {
+        "line-synced": 27,
+        "plain": 1,
+        "none (instrumental flag)": 1,
+        "none": 1
+      },
+      "byProvider": {
+        "LRCLIB": 27,
+        "YouTube Music (Musixmatch)": 1,
+        "LRCLIB (instrumental flag)": 1,
+        "-": 1
+      },
+      "byLanguage": {
+        "English": {
+          "line-synced": 12
+        },
+        "Spanish": {
+          "line-synced": 4
+        },
+        "Hindi/Punjabi": {
+          "line-synced": 2,
+          "plain": 1
+        },
+        "Korean": {
+          "line-synced": 3
+        },
+        "Japanese": {
+          "line-synced": 3
+        },
+        "French/German": {
+          "line-synced": 2
+        },
+        "Arabic": {
+          "line-synced": 1
+        },
+        "Instrumental": {
+          "none (instrumental flag)": 1,
+          "none": 1
+        }
+      },
+      "timeToLyricsAll": {
+        "n": 30,
+        "median": 433,
+        "p90": 810,
+        "min": 305,
+        "max": 1230
+      },
+      "timeToLyricsHits": {
+        "n": 28,
+        "median": 433,
+        "p90": 699,
+        "min": 305,
+        "max": 1230
+      },
+      "timeToLyricsByProvider": {
+        "LRCLIB": {
+          "n": 27,
+          "median": 429,
+          "p90": 624,
+          "min": 305,
+          "max": 1230
+        },
+        "YouTube Music (Musixmatch)": {
+          "n": 1,
+          "median": 1071,
+          "p90": 1071,
+          "min": 1071,
+          "max": 1071
+        },
+        "LRCLIB (instrumental flag)": {
+          "n": 1,
+          "median": 342,
+          "p90": 342,
+          "min": 342,
+          "max": 342
+        },
+        "-": {
+          "n": 1,
+          "median": 806,
+          "p90": 806,
+          "min": 806,
+          "max": 806
+        }
+      },
+      "timeToNoLyrics": {
+        "n": 2,
+        "median": 574,
+        "p90": 760,
+        "min": 342,
+        "max": 806
+      },
+      "repeatFromDbSameProcess": {
+        "n": 30,
+        "median": 11,
+        "p90": 21,
+        "min": 0,
+        "max": 42
+      },
+      "extraLookupsWarmConnection": {
+        "n": 60,
+        "median": 284,
+        "p90": 835,
+        "min": 177,
+        "max": 1332
+      }
+    },
+    "cold02": {
+      "tracks": 30,
+      "sameTrack": 28,
+      "mismatched": [
+        4,
+        30
+      ],
+      "timedOut": [],
+      "byClass": {
+        "line-synced": 27,
+        "none (instrumental flag)": 1
+      },
+      "byProvider": {
+        "LRCLIB": 27,
+        "LRCLIB (instrumental flag)": 1
+      },
+      "byLanguage": {
+        "English": {
+          "line-synced": 11
+        },
+        "Spanish": {
+          "line-synced": 4
+        },
+        "Hindi/Punjabi": {
+          "line-synced": 3
+        },
+        "Korean": {
+          "line-synced": 3
+        },
+        "Japanese": {
+          "line-synced": 3
+        },
+        "French/German": {
+          "line-synced": 2
+        },
+        "Arabic": {
+          "line-synced": 1
+        },
+        "Instrumental": {
+          "none (instrumental flag)": 1
+        }
+      },
+      "timeToLyricsAll": {
+        "n": 28,
+        "median": 454,
+        "p90": 617,
+        "min": 301,
+        "max": 1181
+      },
+      "timeToLyricsHits": {
+        "n": 27,
+        "median": 461,
+        "p90": 622,
+        "min": 301,
+        "max": 1181
+      },
+      "timeToLyricsByProvider": {
+        "LRCLIB": {
+          "n": 27,
+          "median": 461,
+          "p90": 622,
+          "min": 301,
+          "max": 1181
+        },
+        "LRCLIB (instrumental flag)": {
+          "n": 1,
+          "median": 331,
+          "p90": 331,
+          "min": 331,
+          "max": 331
+        }
+      },
+      "timeToNoLyrics": {
+        "n": 1,
+        "median": 331,
+        "p90": 331,
+        "min": 331,
+        "max": 331
+      },
+      "repeatFromDbSameProcess": {
+        "n": 28,
+        "median": 12,
+        "p90": 22,
+        "min": 0,
+        "max": 37
+      },
+      "extraLookupsWarmConnection": {
+        "n": 56,
+        "median": 257,
+        "p90": 820,
+        "min": 170,
+        "max": 1270
+      }
+    },
+    "cold03": {
+      "tracks": 30,
+      "sameTrack": 28,
+      "mismatched": [
+        4,
+        30
+      ],
+      "timedOut": [],
+      "byClass": {
+        "line-synced": 27,
+        "none (instrumental flag)": 1
+      },
+      "byProvider": {
+        "LRCLIB": 27,
+        "LRCLIB (instrumental flag)": 1
+      },
+      "byLanguage": {
+        "English": {
+          "line-synced": 11
+        },
+        "Spanish": {
+          "line-synced": 4
+        },
+        "Hindi/Punjabi": {
+          "line-synced": 3
+        },
+        "Korean": {
+          "line-synced": 3
+        },
+        "Japanese": {
+          "line-synced": 3
+        },
+        "French/German": {
+          "line-synced": 2
+        },
+        "Arabic": {
+          "line-synced": 1
+        },
+        "Instrumental": {
+          "none (instrumental flag)": 1
+        }
+      },
+      "timeToLyricsAll": {
+        "n": 28,
+        "median": 462,
+        "p90": 589,
+        "min": 343,
+        "max": 664
+      },
+      "timeToLyricsHits": {
+        "n": 27,
+        "median": 467,
+        "p90": 594,
+        "min": 343,
+        "max": 664
+      },
+      "timeToLyricsByProvider": {
+        "LRCLIB": {
+          "n": 27,
+          "median": 467,
+          "p90": 594,
+          "min": 343,
+          "max": 664
+        },
+        "LRCLIB (instrumental flag)": {
+          "n": 1,
+          "median": 455,
+          "p90": 455,
+          "min": 455,
+          "max": 455
+        }
+      },
+      "timeToNoLyrics": {
+        "n": 1,
+        "median": 455,
+        "p90": 455,
+        "min": 455,
+        "max": 455
+      },
+      "repeatFromDbSameProcess": {
+        "n": 28,
+        "median": 11,
+        "p90": 18,
+        "min": 0,
+        "max": 33
+      },
+      "extraLookupsWarmConnection": {
+        "n": 56,
+        "median": 242,
+        "p90": 710,
+        "min": 177,
+        "max": 1440
+      }
+    },
+    "cold04": {
+      "tracks": 30,
+      "sameTrack": 28,
+      "mismatched": [
+        4,
+        30
+      ],
+      "timedOut": [],
+      "byClass": {
+        "line-synced": 27,
+        "none (instrumental flag)": 1
+      },
+      "byProvider": {
+        "LRCLIB": 27,
+        "LRCLIB (instrumental flag)": 1
+      },
+      "byLanguage": {
+        "English": {
+          "line-synced": 11
+        },
+        "Spanish": {
+          "line-synced": 4
+        },
+        "Hindi/Punjabi": {
+          "line-synced": 3
+        },
+        "Korean": {
+          "line-synced": 3
+        },
+        "Japanese": {
+          "line-synced": 3
+        },
+        "French/German": {
+          "line-synced": 2
+        },
+        "Arabic": {
+          "line-synced": 1
+        },
+        "Instrumental": {
+          "none (instrumental flag)": 1
+        }
+      },
+      "timeToLyricsAll": {
+        "n": 28,
+        "median": 431,
+        "p90": 559,
+        "min": 288,
+        "max": 709
+      },
+      "timeToLyricsHits": {
+        "n": 27,
+        "median": 435,
+        "p90": 560,
+        "min": 288,
+        "max": 709
+      },
+      "timeToLyricsByProvider": {
+        "LRCLIB": {
+          "n": 27,
+          "median": 435,
+          "p90": 560,
+          "min": 288,
+          "max": 709
+        },
+        "LRCLIB (instrumental flag)": {
+          "n": 1,
+          "median": 423,
+          "p90": 423,
+          "min": 423,
+          "max": 423
+        }
+      },
+      "timeToNoLyrics": {
+        "n": 1,
+        "median": 423,
+        "p90": 423,
+        "min": 423,
+        "max": 423
+      },
+      "repeatFromDbSameProcess": {
+        "n": 28,
+        "median": 9,
+        "p90": 19,
+        "min": 0,
+        "max": 32
+      },
+      "extraLookupsWarmConnection": {
+        "n": 56,
+        "median": 246,
+        "p90": 702,
+        "min": 178,
+        "max": 946
+      }
+    },
+    "cold05": {
+      "tracks": 30,
+      "sameTrack": 29,
+      "mismatched": [
+        4
+      ],
+      "timedOut": [],
+      "byClass": {
+        "line-synced": 27,
+        "none (instrumental flag)": 1,
+        "none": 1
+      },
+      "byProvider": {
+        "LRCLIB": 27,
+        "LRCLIB (instrumental flag)": 1,
+        "-": 1
+      },
+      "byLanguage": {
+        "English": {
+          "line-synced": 11
+        },
+        "Spanish": {
+          "line-synced": 4
+        },
+        "Hindi/Punjabi": {
+          "line-synced": 3
+        },
+        "Korean": {
+          "line-synced": 3
+        },
+        "Japanese": {
+          "line-synced": 3
+        },
+        "French/German": {
+          "line-synced": 2
+        },
+        "Arabic": {
+          "line-synced": 1
+        },
+        "Instrumental": {
+          "none (instrumental flag)": 1,
+          "none": 1
+        }
+      },
+      "timeToLyricsAll": {
+        "n": 29,
+        "median": 454,
+        "p90": 575,
+        "min": 287,
+        "max": 832
+      },
+      "timeToLyricsHits": {
+        "n": 27,
+        "median": 454,
+        "p90": 555,
+        "min": 287,
+        "max": 634
+      },
+      "timeToLyricsByProvider": {
+        "LRCLIB": {
+          "n": 27,
+          "median": 454,
+          "p90": 555,
+          "min": 287,
+          "max": 634
+        },
+        "LRCLIB (instrumental flag)": {
+          "n": 1,
+          "median": 413,
+          "p90": 413,
+          "min": 413,
+          "max": 413
+        },
+        "-": {
+          "n": 1,
+          "median": 832,
+          "p90": 832,
+          "min": 832,
+          "max": 832
+        }
+      },
+      "timeToNoLyrics": {
+        "n": 2,
+        "median": 623,
+        "p90": 790,
+        "min": 413,
+        "max": 832
+      },
+      "repeatFromDbSameProcess": {
+        "n": 29,
+        "median": 9,
+        "p90": 17,
+        "min": 0,
+        "max": 32
+      },
+      "extraLookupsWarmConnection": {
+        "n": 58,
+        "median": 228,
+        "p90": 380,
+        "min": 165,
+        "max": 786
+      }
+    },
+    "cold06": {
+      "tracks": 30,
+      "sameTrack": 30,
+      "mismatched": [],
+      "timedOut": [],
+      "byClass": {
+        "line-synced": 28,
+        "none (instrumental flag)": 1,
+        "none": 1
+      },
+      "byProvider": {
+        "LRCLIB": 28,
+        "LRCLIB (instrumental flag)": 1,
+        "-": 1
+      },
+      "byLanguage": {
+        "English": {
+          "line-synced": 12
+        },
+        "Spanish": {
+          "line-synced": 4
+        },
+        "Hindi/Punjabi": {
+          "line-synced": 3
+        },
+        "Korean": {
+          "line-synced": 3
+        },
+        "Japanese": {
+          "line-synced": 3
+        },
+        "French/German": {
+          "line-synced": 2
+        },
+        "Arabic": {
+          "line-synced": 1
+        },
+        "Instrumental": {
+          "none (instrumental flag)": 1,
+          "none": 1
+        }
+      },
+      "timeToLyricsAll": {
+        "n": 30,
+        "median": 456,
+        "p90": 583,
+        "min": 297,
+        "max": 914
+      },
+      "timeToLyricsHits": {
+        "n": 28,
+        "median": 456,
+        "p90": 546,
+        "min": 297,
+        "max": 699
+      },
+      "timeToLyricsByProvider": {
+        "LRCLIB": {
+          "n": 28,
+          "median": 456,
+          "p90": 546,
+          "min": 297,
+          "max": 699
+        },
+        "LRCLIB (instrumental flag)": {
+          "n": 1,
+          "median": 454,
+          "p90": 454,
+          "min": 454,
+          "max": 454
+        },
+        "-": {
+          "n": 1,
+          "median": 914,
+          "p90": 914,
+          "min": 914,
+          "max": 914
+        }
+      },
+      "timeToNoLyrics": {
+        "n": 2,
+        "median": 684,
+        "p90": 868,
+        "min": 454,
+        "max": 914
+      },
+      "repeatFromDbSameProcess": {
+        "n": 30,
+        "median": 10,
+        "p90": 17,
+        "min": 0,
+        "max": 38
+      },
+      "extraLookupsWarmConnection": {
+        "n": 60,
+        "median": 249,
+        "p90": 644,
+        "min": 173,
+        "max": 882
+      }
+    },
+    "cold07": {
+      "tracks": 30,
+      "sameTrack": 28,
+      "mismatched": [
+        4,
+        30
+      ],
+      "timedOut": [],
+      "byClass": {
+        "line-synced": 27,
+        "none (instrumental flag)": 1
+      },
+      "byProvider": {
+        "LRCLIB": 27,
+        "LRCLIB (instrumental flag)": 1
+      },
+      "byLanguage": {
+        "English": {
+          "line-synced": 11
+        },
+        "Spanish": {
+          "line-synced": 4
+        },
+        "Hindi/Punjabi": {
+          "line-synced": 3
+        },
+        "Korean": {
+          "line-synced": 3
+        },
+        "Japanese": {
+          "line-synced": 3
+        },
+        "French/German": {
+          "line-synced": 2
+        },
+        "Arabic": {
+          "line-synced": 1
+        },
+        "Instrumental": {
+          "none (instrumental flag)": 1
+        }
+      },
+      "timeToLyricsAll": {
+        "n": 28,
+        "median": 424,
+        "p90": 629,
+        "min": 312,
+        "max": 690
+      },
+      "timeToLyricsHits": {
+        "n": 27,
+        "median": 427,
+        "p90": 632,
+        "min": 312,
+        "max": 690
+      },
+      "timeToLyricsByProvider": {
+        "LRCLIB": {
+          "n": 27,
+          "median": 427,
+          "p90": 632,
+          "min": 312,
+          "max": 690
+        },
+        "LRCLIB (instrumental flag)": {
+          "n": 1,
+          "median": 393,
+          "p90": 393,
+          "min": 393,
+          "max": 393
+        }
+      },
+      "timeToNoLyrics": {
+        "n": 1,
+        "median": 393,
+        "p90": 393,
+        "min": 393,
+        "max": 393
+      },
+      "repeatFromDbSameProcess": {
+        "n": 28,
+        "median": 10,
+        "p90": 18,
+        "min": 0,
+        "max": 38
+      },
+      "extraLookupsWarmConnection": {
+        "n": 56,
+        "median": 247,
+        "p90": 481,
+        "min": 184,
+        "max": 877
+      }
+    },
+    "cold08": {
+      "tracks": 30,
+      "sameTrack": 29,
+      "mismatched": [
+        4
+      ],
+      "timedOut": [],
+      "byClass": {
+        "line-synced": 27,
+        "none (instrumental flag)": 1,
+        "none": 1
+      },
+      "byProvider": {
+        "LRCLIB": 27,
+        "LRCLIB (instrumental flag)": 1,
+        "-": 1
+      },
+      "byLanguage": {
+        "English": {
+          "line-synced": 11
+        },
+        "Spanish": {
+          "line-synced": 4
+        },
+        "Hindi/Punjabi": {
+          "line-synced": 3
+        },
+        "Korean": {
+          "line-synced": 3
+        },
+        "Japanese": {
+          "line-synced": 3
+        },
+        "French/German": {
+          "line-synced": 2
+        },
+        "Arabic": {
+          "line-synced": 1
+        },
+        "Instrumental": {
+          "none (instrumental flag)": 1,
+          "none": 1
+        }
+      },
+      "timeToLyricsAll": {
+        "n": 29,
+        "median": 461,
+        "p90": 582,
+        "min": 297,
+        "max": 860
+      },
+      "timeToLyricsHits": {
+        "n": 27,
+        "median": 461,
+        "p90": 544,
+        "min": 297,
+        "max": 624
+      },
+      "timeToLyricsByProvider": {
+        "LRCLIB": {
+          "n": 27,
+          "median": 461,
+          "p90": 544,
+          "min": 297,
+          "max": 624
+        },
+        "LRCLIB (instrumental flag)": {
+          "n": 1,
+          "median": 383,
+          "p90": 383,
+          "min": 383,
+          "max": 383
+        },
+        "-": {
+          "n": 1,
+          "median": 860,
+          "p90": 860,
+          "min": 860,
+          "max": 860
+        }
+      },
+      "timeToNoLyrics": {
+        "n": 2,
+        "median": 622,
+        "p90": 812,
+        "min": 383,
+        "max": 860
+      },
+      "repeatFromDbSameProcess": {
+        "n": 29,
+        "median": 11,
+        "p90": 20,
+        "min": 0,
+        "max": 37
+      },
+      "extraLookupsWarmConnection": {
+        "n": 58,
+        "median": 245,
+        "p90": 439,
+        "min": 172,
+        "max": 1160
+      }
+    },
+    "cold09": {
+      "tracks": 30,
+      "sameTrack": 29,
+      "mismatched": [
+        4
+      ],
+      "timedOut": [],
+      "byClass": {
+        "line-synced": 27,
+        "none (instrumental flag)": 1,
+        "none": 1
+      },
+      "byProvider": {
+        "LRCLIB": 27,
+        "LRCLIB (instrumental flag)": 1,
+        "-": 1
+      },
+      "byLanguage": {
+        "English": {
+          "line-synced": 11
+        },
+        "Spanish": {
+          "line-synced": 4
+        },
+        "Hindi/Punjabi": {
+          "line-synced": 3
+        },
+        "Korean": {
+          "line-synced": 3
+        },
+        "Japanese": {
+          "line-synced": 3
+        },
+        "French/German": {
+          "line-synced": 2
+        },
+        "Arabic": {
+          "line-synced": 1
+        },
+        "Instrumental": {
+          "none (instrumental flag)": 1,
+          "none": 1
+        }
+      },
+      "timeToLyricsAll": {
+        "n": 29,
+        "median": 444,
+        "p90": 588,
+        "min": 339,
+        "max": 944
+      },
+      "timeToLyricsHits": {
+        "n": 27,
+        "median": 444,
+        "p90": 560,
+        "min": 339,
+        "max": 619
+      },
+      "timeToLyricsByProvider": {
+        "LRCLIB": {
+          "n": 27,
+          "median": 444,
+          "p90": 560,
+          "min": 339,
+          "max": 619
+        },
+        "LRCLIB (instrumental flag)": {
+          "n": 1,
+          "median": 423,
+          "p90": 423,
+          "min": 423,
+          "max": 423
+        },
+        "-": {
+          "n": 1,
+          "median": 944,
+          "p90": 944,
+          "min": 944,
+          "max": 944
+        }
+      },
+      "timeToNoLyrics": {
+        "n": 2,
+        "median": 684,
+        "p90": 892,
+        "min": 423,
+        "max": 944
+      },
+      "repeatFromDbSameProcess": {
+        "n": 29,
+        "median": 10,
+        "p90": 19,
+        "min": 0,
+        "max": 32
+      },
+      "extraLookupsWarmConnection": {
+        "n": 58,
+        "median": 270,
+        "p90": 688,
+        "min": 182,
+        "max": 1081
+      }
+    },
+    "cold10": {
+      "tracks": 30,
+      "sameTrack": 28,
+      "mismatched": [
+        4,
+        30
+      ],
+      "timedOut": [],
+      "byClass": {
+        "line-synced": 27,
+        "none (instrumental flag)": 1
+      },
+      "byProvider": {
+        "LRCLIB": 27,
+        "LRCLIB (instrumental flag)": 1
+      },
+      "byLanguage": {
+        "English": {
+          "line-synced": 11
+        },
+        "Spanish": {
+          "line-synced": 4
+        },
+        "Hindi/Punjabi": {
+          "line-synced": 3
+        },
+        "Korean": {
+          "line-synced": 3
+        },
+        "Japanese": {
+          "line-synced": 3
+        },
+        "French/German": {
+          "line-synced": 2
+        },
+        "Arabic": {
+          "line-synced": 1
+        },
+        "Instrumental": {
+          "none (instrumental flag)": 1
+        }
+      },
+      "timeToLyricsAll": {
+        "n": 28,
+        "median": 454,
+        "p90": 552,
+        "min": 339,
+        "max": 611
+      },
+      "timeToLyricsHits": {
+        "n": 27,
+        "median": 454,
+        "p90": 552,
+        "min": 339,
+        "max": 611
+      },
+      "timeToLyricsByProvider": {
+        "LRCLIB": {
+          "n": 27,
+          "median": 454,
+          "p90": 552,
+          "min": 339,
+          "max": 611
+        },
+        "LRCLIB (instrumental flag)": {
+          "n": 1,
+          "median": 370,
+          "p90": 370,
+          "min": 370,
+          "max": 370
+        }
+      },
+      "timeToNoLyrics": {
+        "n": 1,
+        "median": 370,
+        "p90": 370,
+        "min": 370,
+        "max": 370
+      },
+      "repeatFromDbSameProcess": {
+        "n": 28,
+        "median": 10,
+        "p90": 25,
+        "min": 0,
+        "max": 35
+      },
+      "extraLookupsWarmConnection": {
+        "n": 56,
+        "median": 275,
+        "p90": 717,
+        "min": 168,
+        "max": 1160
+      }
+    },
+    "proxy01": {
+      "tracks": 30,
+      "sameTrack": 28,
+      "mismatched": [
+        3,
+        4
+      ],
+      "timedOut": [],
+      "byClass": {
+        "line-synced": 26,
+        "none (instrumental flag)": 1,
+        "none": 1
+      },
+      "byProvider": {
+        "LRCLIB": 26,
+        "LRCLIB (instrumental flag)": 1,
+        "-": 1
+      },
+      "byLanguage": {
+        "English": {
+          "line-synced": 10
+        },
+        "Spanish": {
+          "line-synced": 4
+        },
+        "Hindi/Punjabi": {
+          "line-synced": 3
+        },
+        "Korean": {
+          "line-synced": 3
+        },
+        "Japanese": {
+          "line-synced": 3
+        },
+        "French/German": {
+          "line-synced": 2
+        },
+        "Arabic": {
+          "line-synced": 1
+        },
+        "Instrumental": {
+          "none (instrumental flag)": 1,
+          "none": 1
+        }
+      },
+      "timeToLyricsAll": {
+        "n": 28,
+        "median": 529,
+        "p90": 742,
+        "min": 346,
+        "max": 1069
+      },
+      "timeToLyricsHits": {
+        "n": 26,
+        "median": 529,
+        "p90": 727,
+        "min": 346,
+        "max": 1069
+      },
+      "timeToLyricsByProvider": {
+        "LRCLIB": {
+          "n": 26,
+          "median": 529,
+          "p90": 727,
+          "min": 346,
+          "max": 1069
+        },
+        "LRCLIB (instrumental flag)": {
+          "n": 1,
+          "median": 363,
+          "p90": 363,
+          "min": 363,
+          "max": 363
+        },
+        "-": {
+          "n": 1,
+          "median": 734,
+          "p90": 734,
+          "min": 734,
+          "max": 734
+        }
+      },
+      "timeToNoLyrics": {
+        "n": 2,
+        "median": 549,
+        "p90": 697,
+        "min": 363,
+        "max": 734
+      },
+      "repeatFromDbSameProcess": {
+        "n": 28,
+        "median": 12,
+        "p90": 27,
+        "min": 0,
+        "max": 59
+      },
+      "extraLookupsWarmConnection": {
+        "n": 56,
+        "median": 507,
+        "p90": 1048,
+        "min": 337,
+        "max": 1598
+      },
+      "split": {
+        "lrclibStrictMs": {
+          "n": 28,
+          "median": 451,
+          "p90": 627,
+          "min": 314,
+          "max": 1005
+        },
+        "lrclibStrictUpstreamMs": {
+          "n": 28,
+          "median": 450,
+          "p90": 626,
+          "min": 313,
+          "max": 1004
+        },
+        "lrclibLooseMs": {
+          "n": 0,
+          "median": null,
+          "p90": null,
+          "min": null,
+          "max": null
+        },
+        "youtubeMs": {
+          "n": 1,
+          "median": 363,
+          "p90": 363,
+          "min": 363,
+          "max": 363
+        },
+        "askedYouTube": 1,
+        "usedLoose": 0,
+        "slowestProviderMs": {
+          "n": 28,
+          "median": 451,
+          "p90": 627,
+          "min": 314,
+          "max": 1005
+        },
+        "slowestIs": {
+          "LRCLIB": 28
+        },
+        "overheadMs": {
+          "n": 28,
+          "median": 63,
+          "p90": 90,
+          "min": 4,
+          "max": 130
+        }
+      }
+    },
+    "proxy02": {
+      "tracks": 30,
+      "sameTrack": 29,
+      "mismatched": [
+        4
+      ],
+      "timedOut": [],
+      "byClass": {
+        "line-synced": 27,
+        "none (instrumental flag)": 1,
+        "none": 1
+      },
+      "byProvider": {
+        "LRCLIB": 27,
+        "LRCLIB (instrumental flag)": 1,
+        "-": 1
+      },
+      "byLanguage": {
+        "English": {
+          "line-synced": 11
+        },
+        "Spanish": {
+          "line-synced": 4
+        },
+        "Hindi/Punjabi": {
+          "line-synced": 3
+        },
+        "Korean": {
+          "line-synced": 3
+        },
+        "Japanese": {
+          "line-synced": 3
+        },
+        "French/German": {
+          "line-synced": 2
+        },
+        "Arabic": {
+          "line-synced": 1
+        },
+        "Instrumental": {
+          "none (instrumental flag)": 1,
+          "none": 1
+        }
+      },
+      "timeToLyricsAll": {
+        "n": 29,
+        "median": 480,
+        "p90": 706,
+        "min": 368,
+        "max": 959
+      },
+      "timeToLyricsHits": {
+        "n": 27,
+        "median": 480,
+        "p90": 689,
+        "min": 368,
+        "max": 762
+      },
+      "timeToLyricsByProvider": {
+        "LRCLIB": {
+          "n": 27,
+          "median": 480,
+          "p90": 689,
+          "min": 368,
+          "max": 762
+        },
+        "LRCLIB (instrumental flag)": {
+          "n": 1,
+          "median": 410,
+          "p90": 410,
+          "min": 410,
+          "max": 410
+        },
+        "-": {
+          "n": 1,
+          "median": 959,
+          "p90": 959,
+          "min": 959,
+          "max": 959
+        }
+      },
+      "timeToNoLyrics": {
+        "n": 2,
+        "median": 685,
+        "p90": 904,
+        "min": 410,
+        "max": 959
+      },
+      "repeatFromDbSameProcess": {
+        "n": 29,
+        "median": 10,
+        "p90": 22,
+        "min": 0,
+        "max": 39
+      },
+      "extraLookupsWarmConnection": {
+        "n": 58,
+        "median": 500,
+        "p90": 712,
+        "min": 344,
+        "max": 1205
+      },
+      "split": {
+        "lrclibStrictMs": {
+          "n": 29,
+          "median": 417,
+          "p90": 586,
+          "min": 320,
+          "max": 667
+        },
+        "lrclibStrictUpstreamMs": {
+          "n": 29,
+          "median": 417,
+          "p90": 582,
+          "min": 318,
+          "max": 666
+        },
+        "lrclibLooseMs": {
+          "n": 0,
+          "median": null,
+          "p90": null,
+          "min": null,
+          "max": null
+        },
+        "youtubeMs": {
+          "n": 1,
+          "median": 467,
+          "p90": 467,
+          "min": 467,
+          "max": 467
+        },
+        "askedYouTube": 1,
+        "usedLoose": 0,
+        "slowestProviderMs": {
+          "n": 29,
+          "median": 417,
+          "p90": 586,
+          "min": 320,
+          "max": 667
+        },
+        "slowestIs": {
+          "LRCLIB": 29
+        },
+        "overheadMs": {
+          "n": 29,
+          "median": 66,
+          "p90": 94,
+          "min": 14,
+          "max": 119
+        }
+      }
+    },
+    "proxy03": {
+      "tracks": 30,
+      "sameTrack": 30,
+      "mismatched": [],
+      "timedOut": [],
+      "byClass": {
+        "line-synced": 28,
+        "none (instrumental flag)": 1,
+        "none": 1
+      },
+      "byProvider": {
+        "LRCLIB": 28,
+        "LRCLIB (instrumental flag)": 1,
+        "-": 1
+      },
+      "byLanguage": {
+        "English": {
+          "line-synced": 12
+        },
+        "Spanish": {
+          "line-synced": 4
+        },
+        "Hindi/Punjabi": {
+          "line-synced": 3
+        },
+        "Korean": {
+          "line-synced": 3
+        },
+        "Japanese": {
+          "line-synced": 3
+        },
+        "French/German": {
+          "line-synced": 2
+        },
+        "Arabic": {
+          "line-synced": 1
+        },
+        "Instrumental": {
+          "none (instrumental flag)": 1,
+          "none": 1
+        }
+      },
+      "timeToLyricsAll": {
+        "n": 30,
+        "median": 513,
+        "p90": 638,
+        "min": 366,
+        "max": 865
+      },
+      "timeToLyricsHits": {
+        "n": 28,
+        "median": 513,
+        "p90": 628,
+        "min": 366,
+        "max": 689
+      },
+      "timeToLyricsByProvider": {
+        "LRCLIB": {
+          "n": 28,
+          "median": 513,
+          "p90": 628,
+          "min": 366,
+          "max": 689
+        },
+        "LRCLIB (instrumental flag)": {
+          "n": 1,
+          "median": 442,
+          "p90": 442,
+          "min": 442,
+          "max": 442
+        },
+        "-": {
+          "n": 1,
+          "median": 865,
+          "p90": 865,
+          "min": 865,
+          "max": 865
+        }
+      },
+      "timeToNoLyrics": {
+        "n": 2,
+        "median": 654,
+        "p90": 823,
+        "min": 442,
+        "max": 865
+      },
+      "repeatFromDbSameProcess": {
+        "n": 30,
+        "median": 9,
+        "p90": 22,
+        "min": 0,
+        "max": 34
+      },
+      "extraLookupsWarmConnection": {
+        "n": 60,
+        "median": 483,
+        "p90": 698,
+        "min": 272,
+        "max": 1483
+      },
+      "split": {
+        "lrclibStrictMs": {
+          "n": 30,
+          "median": 447,
+          "p90": 542,
+          "min": 317,
+          "max": 599
+        },
+        "lrclibStrictUpstreamMs": {
+          "n": 30,
+          "median": 447,
+          "p90": 541,
+          "min": 316,
+          "max": 598
+        },
+        "lrclibLooseMs": {
+          "n": 0,
+          "median": null,
+          "p90": null,
+          "min": null,
+          "max": null
+        },
+        "youtubeMs": {
+          "n": 1,
+          "median": 417,
+          "p90": 417,
+          "min": 417,
+          "max": 417
+        },
+        "askedYouTube": 1,
+        "usedLoose": 0,
+        "slowestProviderMs": {
+          "n": 30,
+          "median": 447,
+          "p90": 542,
+          "min": 317,
+          "max": 599
+        },
+        "slowestIs": {
+          "LRCLIB": 30
+        },
+        "overheadMs": {
+          "n": 30,
+          "median": 57,
+          "p90": 90,
+          "min": 27,
+          "max": 107
+        }
+      }
+    },
+    "proxy04": {
+      "tracks": 30,
+      "sameTrack": 29,
+      "mismatched": [
+        4
+      ],
+      "timedOut": [],
+      "byClass": {
+        "line-synced": 27,
+        "none (instrumental flag)": 1,
+        "none": 1
+      },
+      "byProvider": {
+        "LRCLIB": 27,
+        "LRCLIB (instrumental flag)": 1,
+        "-": 1
+      },
+      "byLanguage": {
+        "English": {
+          "line-synced": 11
+        },
+        "Spanish": {
+          "line-synced": 4
+        },
+        "Hindi/Punjabi": {
+          "line-synced": 3
+        },
+        "Korean": {
+          "line-synced": 3
+        },
+        "Japanese": {
+          "line-synced": 3
+        },
+        "French/German": {
+          "line-synced": 2
+        },
+        "Arabic": {
+          "line-synced": 1
+        },
+        "Instrumental": {
+          "none (instrumental flag)": 1,
+          "none": 1
+        }
+      },
+      "timeToLyricsAll": {
+        "n": 29,
+        "median": 537,
+        "p90": 705,
+        "min": 359,
+        "max": 891
+      },
+      "timeToLyricsHits": {
+        "n": 27,
+        "median": 537,
+        "p90": 683,
+        "min": 359,
+        "max": 891
+      },
+      "timeToLyricsByProvider": {
+        "LRCLIB": {
+          "n": 27,
+          "median": 537,
+          "p90": 683,
+          "min": 359,
+          "max": 891
+        },
+        "LRCLIB (instrumental flag)": {
+          "n": 1,
+          "median": 425,
+          "p90": 425,
+          "min": 425,
+          "max": 425
+        },
+        "-": {
+          "n": 1,
+          "median": 851,
+          "p90": 851,
+          "min": 851,
+          "max": 851
+        }
+      },
+      "timeToNoLyrics": {
+        "n": 2,
+        "median": 638,
+        "p90": 808,
+        "min": 425,
+        "max": 851
+      },
+      "repeatFromDbSameProcess": {
+        "n": 29,
+        "median": 10,
+        "p90": 22,
+        "min": 0,
+        "max": 36
+      },
+      "extraLookupsWarmConnection": {
+        "n": 58,
+        "median": 497,
+        "p90": 782,
+        "min": 317,
+        "max": 1477
+      },
+      "split": {
+        "lrclibStrictMs": {
+          "n": 29,
+          "median": 474,
+          "p90": 595,
+          "min": 333,
+          "max": 821
+        },
+        "lrclibStrictUpstreamMs": {
+          "n": 29,
+          "median": 471,
+          "p90": 594,
+          "min": 333,
+          "max": 820
+        },
+        "lrclibLooseMs": {
+          "n": 0,
+          "median": null,
+          "p90": null,
+          "min": null,
+          "max": null
+        },
+        "youtubeMs": {
+          "n": 1,
+          "median": 401,
+          "p90": 401,
+          "min": 401,
+          "max": 401
+        },
+        "askedYouTube": 1,
+        "usedLoose": 0,
+        "slowestProviderMs": {
+          "n": 29,
+          "median": 474,
+          "p90": 595,
+          "min": 333,
+          "max": 821
+        },
+        "slowestIs": {
+          "LRCLIB": 29
+        },
+        "overheadMs": {
+          "n": 29,
+          "median": 59,
+          "p90": 88,
+          "min": 16,
+          "max": 126
+        }
+      }
+    },
+    "proxy05": {
+      "tracks": 30,
+      "sameTrack": 29,
+      "mismatched": [
+        4
+      ],
+      "timedOut": [],
+      "byClass": {
+        "line-synced": 27,
+        "none (instrumental flag)": 1,
+        "none": 1
+      },
+      "byProvider": {
+        "LRCLIB": 27,
+        "LRCLIB (instrumental flag)": 1,
+        "-": 1
+      },
+      "byLanguage": {
+        "English": {
+          "line-synced": 11
+        },
+        "Spanish": {
+          "line-synced": 4
+        },
+        "Hindi/Punjabi": {
+          "line-synced": 3
+        },
+        "Korean": {
+          "line-synced": 3
+        },
+        "Japanese": {
+          "line-synced": 3
+        },
+        "French/German": {
+          "line-synced": 2
+        },
+        "Arabic": {
+          "line-synced": 1
+        },
+        "Instrumental": {
+          "none (instrumental flag)": 1,
+          "none": 1
+        }
+      },
+      "timeToLyricsAll": {
+        "n": 29,
+        "median": 532,
+        "p90": 696,
+        "min": 415,
+        "max": 815
+      },
+      "timeToLyricsHits": {
+        "n": 27,
+        "median": 523,
+        "p90": 662,
+        "min": 415,
+        "max": 815
+      },
+      "timeToLyricsByProvider": {
+        "LRCLIB": {
+          "n": 27,
+          "median": 523,
+          "p90": 662,
+          "min": 415,
+          "max": 815
+        },
+        "LRCLIB (instrumental flag)": {
+          "n": 1,
+          "median": 641,
+          "p90": 641,
+          "min": 641,
+          "max": 641
+        },
+        "-": {
+          "n": 1,
+          "median": 739,
+          "p90": 739,
+          "min": 739,
+          "max": 739
+        }
+      },
+      "timeToNoLyrics": {
+        "n": 2,
+        "median": 690,
+        "p90": 729,
+        "min": 641,
+        "max": 739
+      },
+      "repeatFromDbSameProcess": {
+        "n": 29,
+        "median": 10,
+        "p90": 23,
+        "min": 0,
+        "max": 38
+      },
+      "extraLookupsWarmConnection": {
+        "n": 58,
+        "median": 516,
+        "p90": 805,
+        "min": 301,
+        "max": 1568
+      },
+      "split": {
+        "lrclibStrictMs": {
+          "n": 29,
+          "median": 460,
+          "p90": 605,
+          "min": 360,
+          "max": 744
+        },
+        "lrclibStrictUpstreamMs": {
+          "n": 29,
+          "median": 459,
+          "p90": 604,
+          "min": 359,
+          "max": 742
+        },
+        "lrclibLooseMs": {
+          "n": 0,
+          "median": null,
+          "p90": null,
+          "min": null,
+          "max": null
+        },
+        "youtubeMs": {
+          "n": 1,
+          "median": 325,
+          "p90": 325,
+          "min": 325,
+          "max": 325
+        },
+        "askedYouTube": 1,
+        "usedLoose": 0,
+        "slowestProviderMs": {
+          "n": 29,
+          "median": 460,
+          "p90": 605,
+          "min": 360,
+          "max": 744
+        },
+        "slowestIs": {
+          "LRCLIB": 29
+        },
+        "overheadMs": {
+          "n": 29,
+          "median": 60,
+          "p90": 91,
+          "min": 21,
+          "max": 121
+        }
+      }
+    },
+    "cached01": {
+      "tracks": 30,
+      "sameTrack": 29,
+      "mismatched": [
+        30
+      ],
+      "timedOut": [],
+      "byClass": {
+        "line-synced": 27,
+        "plain": 1,
+        "none (instrumental flag)": 1
+      },
+      "byProvider": {
+        "LRCLIB": 27,
+        "YouTube Music (Musixmatch)": 1,
+        "LRCLIB (instrumental flag)": 1
+      },
+      "byLanguage": {
+        "English": {
+          "line-synced": 12
+        },
+        "Spanish": {
+          "line-synced": 4
+        },
+        "Hindi/Punjabi": {
+          "line-synced": 2,
+          "plain": 1
+        },
+        "Korean": {
+          "line-synced": 3
+        },
+        "Japanese": {
+          "line-synced": 3
+        },
+        "French/German": {
+          "line-synced": 2
+        },
+        "Arabic": {
+          "line-synced": 1
+        },
+        "Instrumental": {
+          "none (instrumental flag)": 1
+        }
+      },
+      "timeToLyricsAll": {
+        "n": 29,
+        "median": 26,
+        "p90": 47,
+        "min": 0,
+        "max": 72
+      },
+      "timeToLyricsHits": {
+        "n": 28,
+        "median": 27,
+        "p90": 47,
+        "min": 15,
+        "max": 72
+      },
+      "timeToLyricsByProvider": {
+        "LRCLIB": {
+          "n": 27,
+          "median": 26,
+          "p90": 47,
+          "min": 15,
+          "max": 72
+        },
+        "YouTube Music (Musixmatch)": {
+          "n": 1,
+          "median": 32,
+          "p90": 32,
+          "min": 32,
+          "max": 32
+        },
+        "LRCLIB (instrumental flag)": {
+          "n": 1,
+          "median": 0,
+          "p90": 0,
+          "min": 0,
+          "max": 0
+        }
+      },
+      "timeToNoLyrics": {
+        "n": 1,
+        "median": 0,
+        "p90": 0,
+        "min": 0,
+        "max": 0
+      },
+      "repeatFromDbSameProcess": {
+        "n": 29,
+        "median": 11,
+        "p90": 16,
+        "min": 1,
+        "max": 21
+      },
+      "extraLookupsWarmConnection": {
+        "n": 58,
+        "median": 13,
+        "p90": 452,
+        "min": 0,
+        "max": 781
+      }
+    },
+    "cached02": {
+      "tracks": 30,
+      "sameTrack": 28,
+      "mismatched": [
+        4,
+        30
+      ],
+      "timedOut": [],
+      "byClass": {
+        "line-synced": 27,
+        "none (instrumental flag)": 1
+      },
+      "byProvider": {
+        "LRCLIB": 27,
+        "LRCLIB (instrumental flag)": 1
+      },
+      "byLanguage": {
+        "English": {
+          "line-synced": 11
+        },
+        "Spanish": {
+          "line-synced": 4
+        },
+        "Hindi/Punjabi": {
+          "line-synced": 3
+        },
+        "Korean": {
+          "line-synced": 3
+        },
+        "Japanese": {
+          "line-synced": 3
+        },
+        "French/German": {
+          "line-synced": 2
+        },
+        "Arabic": {
+          "line-synced": 1
+        },
+        "Instrumental": {
+          "none (instrumental flag)": 1
+        }
+      },
+      "timeToLyricsAll": {
+        "n": 28,
+        "median": 28,
+        "p90": 49,
+        "min": 0,
+        "max": 83
+      },
+      "timeToLyricsHits": {
+        "n": 27,
+        "median": 29,
+        "p90": 49,
+        "min": 15,
+        "max": 83
+      },
+      "timeToLyricsByProvider": {
+        "LRCLIB": {
+          "n": 27,
+          "median": 29,
+          "p90": 49,
+          "min": 15,
+          "max": 83
+        },
+        "LRCLIB (instrumental flag)": {
+          "n": 1,
+          "median": 0,
+          "p90": 0,
+          "min": 0,
+          "max": 0
+        }
+      },
+      "timeToNoLyrics": {
+        "n": 1,
+        "median": 0,
+        "p90": 0,
+        "min": 0,
+        "max": 0
+      },
+      "repeatFromDbSameProcess": {
+        "n": 28,
+        "median": 12,
+        "p90": 25,
+        "min": 0,
+        "max": 35
+      },
+      "extraLookupsWarmConnection": {
+        "n": 56,
+        "median": 15,
+        "p90": 471,
+        "min": 0,
+        "max": 931
+      }
+    },
+    "cached03": {
+      "tracks": 30,
+      "sameTrack": 29,
+      "mismatched": [
+        30
+      ],
+      "timedOut": [],
+      "byClass": {
+        "line-synced": 28,
+        "none (instrumental flag)": 1
+      },
+      "byProvider": {
+        "LRCLIB": 28,
+        "LRCLIB (instrumental flag)": 1
+      },
+      "byLanguage": {
+        "English": {
+          "line-synced": 12
+        },
+        "Spanish": {
+          "line-synced": 4
+        },
+        "Hindi/Punjabi": {
+          "line-synced": 3
+        },
+        "Korean": {
+          "line-synced": 3
+        },
+        "Japanese": {
+          "line-synced": 3
+        },
+        "French/German": {
+          "line-synced": 2
+        },
+        "Arabic": {
+          "line-synced": 1
+        },
+        "Instrumental": {
+          "none (instrumental flag)": 1
+        }
+      },
+      "timeToLyricsAll": {
+        "n": 29,
+        "median": 28,
+        "p90": 48,
+        "min": 0,
+        "max": 54
+      },
+      "timeToLyricsHits": {
+        "n": 28,
+        "median": 29,
+        "p90": 48,
+        "min": 15,
+        "max": 54
+      },
+      "timeToLyricsByProvider": {
+        "LRCLIB": {
+          "n": 28,
+          "median": 29,
+          "p90": 48,
+          "min": 15,
+          "max": 54
+        },
+        "LRCLIB (instrumental flag)": {
+          "n": 1,
+          "median": 0,
+          "p90": 0,
+          "min": 0,
+          "max": 0
+        }
+      },
+      "timeToNoLyrics": {
+        "n": 1,
+        "median": 0,
+        "p90": 0,
+        "min": 0,
+        "max": 0
+      },
+      "repeatFromDbSameProcess": {
+        "n": 29,
+        "median": 12,
+        "p90": 22,
+        "min": 0,
+        "max": 38
+      },
+      "extraLookupsWarmConnection": {
+        "n": 58,
+        "median": 16,
+        "p90": 453,
+        "min": 0,
+        "max": 951
+      }
+    }
+  },
+  "pooled": {
+    "cold": {
+      "passes": 10,
+      "samples": 287,
+      "timeToLyricsAll": {
+        "n": 287,
+        "median": 453,
+        "p90": 608,
+        "min": 287,
+        "max": 1230
+      },
+      "timeToLyricsHits": {
+        "n": 272,
+        "median": 454,
+        "p90": 592,
+        "min": 287,
+        "max": 1230
+      },
+      "timeByProvider": {
+        "LRCLIB": {
+          "n": 271,
+          "median": 453,
+          "p90": 587,
+          "min": 287,
+          "max": 1230
+        },
+        "YouTube Music (Musixmatch)": {
+          "n": 1,
+          "median": 1071,
+          "p90": 1071,
+          "min": 1071,
+          "max": 1071
+        },
+        "LRCLIB (instrumental flag)": {
+          "n": 10,
+          "median": 403,
+          "p90": 454,
+          "min": 331,
+          "max": 455
+        },
+        "-": {
+          "n": 5,
+          "median": 860,
+          "p90": 932,
+          "min": 806,
+          "max": 944
+        }
+      },
+      "repeatFromDbSameProcess": {
+        "n": 287,
+        "median": 10,
+        "p90": 20,
+        "min": 0,
+        "max": 42
+      },
+      "extraLookupsWarmConnection": {
+        "n": 574,
+        "median": 253,
+        "p90": 691,
+        "min": 165,
+        "max": 1440
+      },
+      "perTrackMedian": {
+        "1": 506,
+        "2": 475,
+        "3": 419,
+        "4": 398,
+        "5": 393,
+        "6": 570,
+        "7": 556,
+        "8": 448,
+        "9": 371,
+        "10": 407,
+        "11": 606,
+        "12": 473,
+        "13": 478,
+        "14": 481,
+        "15": 403,
+        "16": 420,
+        "17": 402,
+        "18": 565,
+        "19": 516,
+        "20": 524,
+        "21": 451,
+        "22": 420,
+        "23": 421,
+        "24": 425,
+        "25": 455,
+        "26": 419,
+        "27": 419,
+        "28": 409,
+        "29": 403,
+        "30": 860
+      },
+      "classStability": {
+        "1": "line-synced/LRCLIB",
+        "2": "line-synced/LRCLIB",
+        "3": "line-synced/LRCLIB",
+        "4": "line-synced/LRCLIB",
+        "5": "line-synced/LRCLIB",
+        "6": "line-synced/LRCLIB",
+        "7": "line-synced/LRCLIB",
+        "8": "line-synced/LRCLIB",
+        "9": "line-synced/LRCLIB",
+        "10": "line-synced/LRCLIB",
+        "11": "line-synced/LRCLIB",
+        "12": "line-synced/LRCLIB",
+        "13": "line-synced/LRCLIB",
+        "14": "line-synced/LRCLIB",
+        "15": "line-synced/LRCLIB",
+        "16": "line-synced/LRCLIB",
+        "17": "line-synced/LRCLIB",
+        "18": "plain/YouTube Music (Musixmatch) ; line-synced/LRCLIB",
+        "19": "line-synced/LRCLIB",
+        "20": "line-synced/LRCLIB",
+        "21": "line-synced/LRCLIB",
+        "22": "line-synced/LRCLIB",
+        "23": "line-synced/LRCLIB",
+        "24": "line-synced/LRCLIB",
+        "25": "line-synced/LRCLIB",
+        "26": "line-synced/LRCLIB",
+        "27": "line-synced/LRCLIB",
+        "28": "line-synced/LRCLIB",
+        "29": "none (instrumental flag)/LRCLIB (instrumental flag)",
+        "30": "none/-"
+      }
+    },
+    "proxy": {
+      "passes": 5,
+      "samples": 145,
+      "timeToLyricsAll": {
+        "n": 145,
+        "median": 517,
+        "p90": 699,
+        "min": 346,
+        "max": 1069
+      },
+      "timeToLyricsHits": {
+        "n": 135,
+        "median": 516,
+        "p90": 684,
+        "min": 346,
+        "max": 1069
+      },
+      "timeByProvider": {
+        "LRCLIB": {
+          "n": 135,
+          "median": 516,
+          "p90": 684,
+          "min": 346,
+          "max": 1069
+        },
+        "LRCLIB (instrumental flag)": {
+          "n": 5,
+          "median": 425,
+          "p90": 561,
+          "min": 363,
+          "max": 641
+        },
+        "-": {
+          "n": 5,
+          "median": 851,
+          "p90": 921,
+          "min": 734,
+          "max": 959
+        }
+      },
+      "repeatFromDbSameProcess": {
+        "n": 145,
+        "median": 10,
+        "p90": 24,
+        "min": 0,
+        "max": 59
+      },
+      "extraLookupsWarmConnection": {
+        "n": 290,
+        "median": 500,
+        "p90": 860,
+        "min": 272,
+        "max": 1598
+      },
+      "perTrackMedian": {
+        "1": 537,
+        "2": 555,
+        "3": 490,
+        "4": 590,
+        "5": 523,
+        "6": 672,
+        "7": 640,
+        "8": 484,
+        "9": 449,
+        "10": 505,
+        "11": 641,
+        "12": 508,
+        "13": 532,
+        "14": 516,
+        "15": 469,
+        "16": 450,
+        "17": 514,
+        "18": 617,
+        "19": 723,
+        "20": 633,
+        "21": 531,
+        "22": 508,
+        "23": 517,
+        "24": 496,
+        "25": 396,
+        "26": 415,
+        "27": 463,
+        "28": 517,
+        "29": 425,
+        "30": 851
+      },
+      "classStability": {
+        "1": "line-synced/LRCLIB",
+        "2": "line-synced/LRCLIB",
+        "3": "line-synced/LRCLIB",
+        "4": "line-synced/LRCLIB",
+        "5": "line-synced/LRCLIB",
+        "6": "line-synced/LRCLIB",
+        "7": "line-synced/LRCLIB",
+        "8": "line-synced/LRCLIB",
+        "9": "line-synced/LRCLIB",
+        "10": "line-synced/LRCLIB",
+        "11": "line-synced/LRCLIB",
+        "12": "line-synced/LRCLIB",
+        "13": "line-synced/LRCLIB",
+        "14": "line-synced/LRCLIB",
+        "15": "line-synced/LRCLIB",
+        "16": "line-synced/LRCLIB",
+        "17": "line-synced/LRCLIB",
+        "18": "line-synced/LRCLIB",
+        "19": "line-synced/LRCLIB",
+        "20": "line-synced/LRCLIB",
+        "21": "line-synced/LRCLIB",
+        "22": "line-synced/LRCLIB",
+        "23": "line-synced/LRCLIB",
+        "24": "line-synced/LRCLIB",
+        "25": "line-synced/LRCLIB",
+        "26": "line-synced/LRCLIB",
+        "27": "line-synced/LRCLIB",
+        "28": "line-synced/LRCLIB",
+        "29": "none (instrumental flag)/LRCLIB (instrumental flag)",
+        "30": "none/-"
+      },
+      "split": {
+        "lrclibStrictMs": {
+          "n": 145,
+          "median": 447,
+          "p90": 595,
+          "min": 314,
+          "max": 1005
+        },
+        "lrclibStrictUpstreamMs": {
+          "n": 145,
+          "median": 447,
+          "p90": 593,
+          "min": 313,
+          "max": 1004
+        },
+        "lrclibLooseMs": {
+          "n": 0,
+          "median": null,
+          "p90": null,
+          "min": null,
+          "max": null
+        },
+        "youtubeMs": {
+          "n": 5,
+          "median": 401,
+          "p90": 447,
+          "min": 325,
+          "max": 467
+        },
+        "slowestProviderMs": {
+          "n": 145,
+          "median": 447,
+          "p90": 595,
+          "min": 314,
+          "max": 1005
+        },
+        "overheadMs": {
+          "n": 145,
+          "median": 61,
+          "p90": 90,
+          "min": 4,
+          "max": 130
+        }
+      }
+    },
+    "cached": {
+      "passes": 3,
+      "samples": 86,
+      "timeToLyricsAll": {
+        "n": 86,
+        "median": 28,
+        "p90": 48,
+        "min": 0,
+        "max": 83
+      },
+      "timeToLyricsHits": {
+        "n": 83,
+        "median": 28,
+        "p90": 48,
+        "min": 15,
+        "max": 83
+      },
+      "timeByProvider": {
+        "LRCLIB": {
+          "n": 82,
+          "median": 28,
+          "p90": 48,
+          "min": 15,
+          "max": 83
+        },
+        "YouTube Music (Musixmatch)": {
+          "n": 1,
+          "median": 32,
+          "p90": 32,
+          "min": 32,
+          "max": 32
+        },
+        "LRCLIB (instrumental flag)": {
+          "n": 3,
+          "median": 0,
+          "p90": 0,
+          "min": 0,
+          "max": 0
+        }
+      },
+      "repeatFromDbSameProcess": {
+        "n": 86,
+        "median": 12,
+        "p90": 21,
+        "min": 0,
+        "max": 38
+      },
+      "extraLookupsWarmConnection": {
+        "n": 172,
+        "median": 14,
+        "p90": 453,
+        "min": 0,
+        "max": 951
+      },
+      "perTrackMedian": {
+        "1": 37,
+        "2": 50,
+        "3": 18,
+        "4": 33,
+        "5": 24,
+        "6": 40,
+        "7": 41,
+        "8": 31,
+        "9": 25,
+        "10": 22,
+        "11": 48,
+        "12": 27,
+        "13": 36,
+        "14": 40,
+        "15": 15,
+        "16": 28,
+        "17": 20,
+        "18": 43,
+        "19": 72,
+        "20": 29,
+        "21": 29,
+        "22": 24,
+        "23": 22,
+        "24": 21,
+        "25": 16,
+        "26": 18,
+        "27": 23,
+        "28": 23,
+        "29": 0
+      },
+      "classStability": {
+        "1": "line-synced/LRCLIB",
+        "2": "line-synced/LRCLIB",
+        "3": "line-synced/LRCLIB",
+        "4": "line-synced/LRCLIB",
+        "5": "line-synced/LRCLIB",
+        "6": "line-synced/LRCLIB",
+        "7": "line-synced/LRCLIB",
+        "8": "line-synced/LRCLIB",
+        "9": "line-synced/LRCLIB",
+        "10": "line-synced/LRCLIB",
+        "11": "line-synced/LRCLIB",
+        "12": "line-synced/LRCLIB",
+        "13": "line-synced/LRCLIB",
+        "14": "line-synced/LRCLIB",
+        "15": "line-synced/LRCLIB",
+        "16": "line-synced/LRCLIB",
+        "17": "line-synced/LRCLIB",
+        "18": "plain/YouTube Music (Musixmatch) ; line-synced/LRCLIB",
+        "19": "line-synced/LRCLIB",
+        "20": "line-synced/LRCLIB",
+        "21": "line-synced/LRCLIB",
+        "22": "line-synced/LRCLIB",
+        "23": "line-synced/LRCLIB",
+        "24": "line-synced/LRCLIB",
+        "25": "line-synced/LRCLIB",
+        "26": "line-synced/LRCLIB",
+        "27": "line-synced/LRCLIB",
+        "28": "line-synced/LRCLIB",
+        "29": "none (instrumental flag)/LRCLIB (instrumental flag)",
+        "30": ""
+      }
+    }
+  }
+}

@@ -1,0 +1,46 @@
+{
+    "classes": [
+        {
+            "className": "ArtworkResponse",
+            "lineNumber": 120,
+            "object": true,
+            "qualifiedClassName": "ArtworkResponse",
+            "slots": [
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "image",
+                            "type": "QImage"
+                        }
+                    ],
+                    "index": 0,
+                    "lineNumber": 153,
+                    "name": "succeed",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "reason",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 1,
+                    "lineNumber": 159,
+                    "name": "fail",
+                    "returnType": "void"
+                }
+            ],
+            "superClasses": [
+                {
+                    "access": "public",
+                    "name": "QQuickImageResponse"
+                }
+            ]
+        }
+    ],
+    "inputFile": "artworkcache.cpp",
+    "outputRevision": 69
+}

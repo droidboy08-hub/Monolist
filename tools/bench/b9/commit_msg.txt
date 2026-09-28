@@ -1,0 +1,60 @@
+Give a song 20 s to resolve, hedge a stalled /player, and run yt-dlp one at a time (B9)
+
+When YouTube stalled, a song could sit on "Resolving source..." for well
+over half a minute before the player said it could not play it and moved
+on: 8 s for /player, a retry 1.2 s later with 8 s more, then 12 s each for
+yt-dlp and the muxed stream (41 s measured with everything dark, ~49 s
+with a visitor id to fetch first). Qt's limits count only silence, and
+the retry went out on the same, possibly stalled, HTTP/2 connection.
+Meanwhile a song fetched ahead of time could hold a yt-dlp lookup while
+the song being waited for started a second one beside it, and a download
+starting at that moment made three.
+
+- A song someone is waiting for has 20 s from being asked for to its
+  answer, JioSaavn's part included. Past it the walk stops, failed() says
+  what was tried, and the player skips on as for any song that will not
+  resolve. A YouTube answer held for JioSaavn plays instead.
+- /player has 3 s for the whole call (visitor id, second client and a
+  renewed id included). A first request with no answer at 1.2 s, or one
+  that fails before then, is sent once more beside it through a network
+  manager made for it, so it gets a connection of its own; the first
+  answer wins and the other is dropped. One hedge a call, none for the
+  second client. yt-dlp now starts at ~3 s instead of ~17 s.
+- One yt-dlp resolve at a time (the sound's and the muxed stream's). The
+  song being waited for goes first: a prefetch's lookup is stopped for it
+  and starts again after, still on its rung. Each rung's 12 s counts from
+  when its lookup starts. No new download starts while such a song
+  resolves; running ones carry on.
+- Switches back: youtube.player_deadline=off,
+  playback.resolve_deadline=off, ytdlp.resolves=parallel. The log says
+  when each yt-dlp lookup starts, waits its turn or is stopped.
+- New --bounds-test [rounds] [--before]: 22 checks against a stand-in
+  YouTube, with yt-dlp real or sent through a proxy that never answers,
+  and the real mpv for the skip notice; --before times the same with
+  every switch back.
+
+Measured on the Release build, before -> after (median / p90):
+- --bounds-test 6 --before, every /player delayed 10 s: yt-dlp started
+  at 17,192 / 17,206 -> 3,002 / 3,008 ms; the song answered at
+  19,697 / 19,901 -> 5,388 / 5,631 ms (n=6 each). Plan target ~6 s: met.
+- First /player stalled, a second connection fine: answered at 1,231 ms.
+- YouTube and yt-dlp both dark: the skip notice 41,292 -> 20,011 ms
+  after Play (n=1 each). That is the 20 s limit itself plus 11 ms of
+  timer and handling, so "within 20 s" holds only to that margin.
+- bench_A_play.ps1, 12 ids, the B8 and B9 releases interleaved over 4
+  rounds (2 in each order), n=48 per arm: TTFA at launch 575.5 / 788 ->
+  568.5 / 794 ms; resolve at launch 329.5 / 429 -> 340.5 / 416 (all of
+  it the /player request, which is sent unchanged; 0 hedges in 96 new
+  plays); replay TTFA 167.5 / 511 -> 181.5 / 711, per round +55, +0.5,
+  +1 and -17 ms, with the app's own resolved-to-open step 14-16 ms in
+  every arm; replay resolve 34 / 44 -> 35 / 46. Unchanged within the
+  run-to-run spread. One real googlevideo 403 (B9 arm), rescued by the
+  muxed stream as in B8.
+- --cancel-test 3 on the Release build: a skip during a yt-dlp resolve
+  holds the interface's thread at most 13 ms.
+
+Checked: Debug build clean (qmllint); --bounds-test 22/0 (Debug and
+Release), --player-client-test 16/0, --visitor-test 30/0,
+--format-test 21/0, --recovery-test 20/0, --listen-test 35/0,
+--scrobble-test 32/0, --cancel-test 4/0. Also ROADMAP F38 (the
+picture's yt-dlp lookups are outside the queue) and a note on F07.

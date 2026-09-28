@@ -1,0 +1,10 @@
+﻿{
+    "metric":  "first response bytes -\u003e mpv starts audio (ms), mpv log clock",
+    "n":  176,
+    "median":  49,
+    "p90":  209,
+    "max":  481,
+    "aoFormats":  {
+                      "48000Hz stereo 2ch float":  171
+                  }
+}

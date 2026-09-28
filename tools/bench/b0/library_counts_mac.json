@@ -1,0 +1,92 @@
+﻿{
+  "tables": {
+    "albums": 0,
+    "artist_links": 560,
+    "downloads": 37,
+    "featured": 0,
+    "history": 29,
+    "lyrics": 12,
+    "play_events": 485,
+    "playlist_tracks": 0,
+    "playlists": 0,
+    "recent": 475,
+    "scrobble_queue": 0,
+    "settings": 4,
+    "sqlite_sequence": 3,
+    "tracks": 37
+  },
+  "playEventKinds": {
+    "play": 485
+  },
+  "playSources": {
+    "library": 298,
+    "playlist": 14,
+    "radio": 157,
+    "search": 16
+  },
+  "playSpanDays": 1.4,
+  "distinctPlayDays": 2,
+  "plays": {
+    "total": 485,
+    "withVideoId": 485,
+    "withoutVideoId": 0,
+    "durationUnknownUsedMedian": 0,
+    "distinctSongs": 475,
+    "estimatedListeningBytesGiB": 1.48,
+    "medianTrackMin": 3.13
+  },
+  "replay": {
+    "repeatOfAnyEarlierPlay": {
+      "n": 10,
+      "pct": 2.1
+    },
+    "hitIn1GiBLRU": {
+      "n": 10,
+      "pct": 2.1
+    },
+    "hitIn512MiBLRU": {
+      "n": 9,
+      "pct": 1.9
+    },
+    "sameSongAsPreviousPlay": {
+      "n": 4,
+      "pct": 0.8
+    },
+    "repeatInSessionFlag": {
+      "n": 9,
+      "pct": 1.9
+    }
+  },
+  "long": {
+    "playsOver7m30s": {
+      "n": 6,
+      "pct": 1.2
+    },
+    "playsOver8MiBEstimated": {
+      "n": 3,
+      "pct": 0.6,
+      "note": "track_s x 16.8 kB/s > 8 MiB, i.e. > ~8.3 min"
+    },
+    "shareOfListenedTimeOver7m30s": 3.5,
+    "shareOfEstimatedBytesOver7m30s": 3.8,
+    "distinctSongsOver7m30s": {
+      "n": 5,
+      "pct": 1.1
+    }
+  },
+  "recentTable": {
+    "songs": 475,
+    "plays": 485,
+    "songsPlayedMoreThanOnce": 7,
+    "playsThatRepeatASong": 10,
+    "pctPlaysThatRepeat": 2.1,
+    "songsOver7m30s": 5,
+    "playsOfSongsOver7m30s": 6,
+    "pctPlaysOver7m30s": 1.2
+  },
+  "historyTable": {
+    "plays": 29,
+    "distinctTracks": 28,
+    "pctRepeat": 3.4
+  }
+}

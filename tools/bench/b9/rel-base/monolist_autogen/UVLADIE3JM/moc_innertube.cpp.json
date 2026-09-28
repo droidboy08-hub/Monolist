@@ -1,0 +1,139 @@
+{
+    "classes": [
+        {
+            "className": "InnerTube",
+            "lineNumber": 34,
+            "object": true,
+            "qualifiedClassName": "InnerTube",
+            "signals": [
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "query",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "tracks",
+                            "type": "QList<InnerTube::Track>"
+                        }
+                    ],
+                    "index": 0,
+                    "lineNumber": 423,
+                    "name": "searchFinished",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "query",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "reason",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 1,
+                    "lineNumber": 424,
+                    "name": "searchFailed",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "query",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "tracks",
+                            "type": "QList<InnerTube::Track>"
+                        }
+                    ],
+                    "index": 2,
+                    "lineNumber": 425,
+                    "name": "youtubeSearchFinished",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "query",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "reason",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 3,
+                    "lineNumber": 426,
+                    "name": "youtubeSearchFailed",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "input",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "suggestions",
+                            "type": "QStringList"
+                        }
+                    ],
+                    "index": 4,
+                    "lineNumber": 427,
+                    "name": "suggestionsReady",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "seedVideoId",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "tracks",
+                            "type": "QList<InnerTube::Track>"
+                        }
+                    ],
+                    "index": 5,
+                    "lineNumber": 428,
+                    "name": "radioReady",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "seedVideoId",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "reason",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 6,
+                    "lineNumber": 429,
+                    "name": "radioFailed",
+                    "returnType": "void"
+                }
+            ],
+            "superClasses": [
+                {
+                    "access": "public",
+                    "name": "QObject"
+                }
+            ]
+        }
+    ],
+    "inputFile": "innertube.h",
+    "outputRevision": 69
+}

@@ -1,0 +1,23 @@
+{
+  "purpose": "Fixed cases for checklist row C40 (title/artist cleaning that keeps version markers). Replays Monolist's searchTitle()/leadArtist() regexes from src/lyrics.cpp:38-69 in .NET regex (same syntax as PCRE2 for these patterns). Rerun regex_check.ps1 after Step 4 changes; update the regexes in the script if lyrics.cpp changes.",
+  "cases": [
+    { "title": "Song (Remix)", "artist": "Artist", "wantTitle": "Song (Remix)", "note": "version marker alone in its bracket" },
+    { "title": "Song (Live)", "artist": "Artist", "wantTitle": "Song (Live)", "note": "version marker alone" },
+    { "title": "Song (Sped Up)", "artist": "Artist", "wantTitle": "Song (Sped Up)", "note": "version marker alone" },
+    { "title": "Song (Acoustic Version) [Official Audio]", "artist": "Artist", "wantTitle": "Song (Acoustic Version)", "note": "marker and noise in separate brackets" },
+    { "title": "Song (Official Live Video)", "artist": "Artist", "wantTitle": "Song (Live)", "note": "marker shares a bracket with a noise word" },
+    { "title": "Song (Live Video)", "artist": "Artist", "wantTitle": "Song (Live)", "note": "marker shares a bracket with a noise word" },
+    { "title": "Song (Official Remix)", "artist": "Artist", "wantTitle": "Song (Remix)", "note": "marker shares a bracket with a noise word" },
+    { "title": "Song (Sped Up Audio)", "artist": "Artist", "wantTitle": "Song (Sped Up)", "note": "marker shares a bracket with a noise word" },
+    { "title": "To Sir (With Love)", "artist": "Lulu", "wantTitle": "To Sir (With Love)", "note": "paper L13: 'with' is not a credit here" },
+    { "title": "Song feat. Guest (Remix)", "artist": "Artist", "wantTitle": "Song (Remix)", "note": "paper L13: unbracketed feat. swallows the marker" },
+    { "title": "Song (feat. Guest)", "artist": "Artist", "wantTitle": "Song", "note": "credit correctly removed" },
+    { "title": "Dancing with a Stranger", "artist": "Sam Smith", "wantTitle": "Dancing with a Stranger", "note": "unbracketed 'with' must survive" },
+    { "title": "Artist - Song (Official Video)", "artist": "Artist", "wantTitle": "Song", "note": "artist prefix and noise removed" },
+    { "title": "Song (Remastered 2011)", "artist": "Artist", "wantTitle": "Song", "note": "remaster is packaging, same words; stripping is acceptable for lyrics" },
+    { "title": "The Boxer", "artist": "Simon & Garfunkel", "wantArtist": "Simon & Garfunkel", "note": "band name containing &" },
+    { "title": "September", "artist": "Earth, Wind & Fire", "wantArtist": "Earth, Wind & Fire", "note": "band name containing , and &" },
+    { "title": "Song", "artist": "Feathers", "wantArtist": "Feathers", "note": "\\bfeat has no trailing boundary" },
+    { "title": "Song", "artist": "Daft Punk, Pharrell Williams & Nile Rodgers", "wantArtist": "Daft Punk", "note": "the case leadArtist was written for" }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "area": "playback",
+  "measured": "2026-09-26 18:36-20:25 EDT, Windows 11 ARM64 VM (x64 emulation), Parallels NAT, release build C:\\dev\\monolist-build\\release\\monolist.exe (repo HEAD 1566fdc) and an instrumented copy of the same sources (bench\\build, patch bench\\instrumentation.diff)",
+  "ttfa_endpoint": "mpv verbose line 'cplayer: starting audio playback' (the AO is started with the first decoded samples queued; WASAPI shared mode, 22 ms device buffer). Instrumented runs read it from mpv's own log-file (mpv clock, aligned to the Qt clock by print-text marks, median mark delay 1 ms); unmodified runs read it from the app's stderr (Qt thread delivery; lag median 1 ms, p90 11 ms, max 419 ms vs. the mpv clock over 102 plays).",
+  "metrics_ms": {
+    "ttfa_cold_launch_unmodified_suiteA": { "n": 24, "median": 677, "p90": 1365, "note": "--play <id> 30 --again, fresh process, play 500 ms after QML load; 2 of 24 fell back (1 InnerTube failure -> yt-dlp 5968 ms, 1 HTTP 403 -> muxed 3875 ms); without those n=22 median 662 p90 953" },
+    "ttfa_cold_launch_instrumented": { "n": 18, "median": 665.5, "p90": 1167, "note": "includes 1 HTTP 403 -> muxed (5839 ms)" },
+    "ttfa_cold_launch_at_window_ready": { "n": 12, "median": 1048, "p90": 1460, "note": "--settle 0; visitorData wait median 434.5 p90 816" },
+    "ttfa_cold_new_track_warm_session": { "n": 22, "median": 553.5, "p90": 761 },
+    "ttfa_warm_link_cache_hit_seq": { "n": 24, "median": 421.5, "p90": 592, "note": "same track again after 11 others (~100 s later)" },
+    "ttfa_warm_link_cache_hit_immediate_suiteA": { "n": 24, "median": 196, "p90": 525, "note": "same track again 15 s later while its connection is still open (curl reuses it)" },
+    "skip_latency_next_prefetched": { "n": 22, "median": 412.5, "p90": 660 },
+    "silent_gap_natural_track_end_unmodified": { "n": 10, "median": 334, "p90": 581, "note": "old track's audio drained -> next track's first audio; plus ~180 ms drain of buffered audio before it" },
+    "resolve_innertube_tier_alone": { "n": 12, "median": 199, "p90": 247 },
+    "resolve_ytdlp_tier_alone": { "n": 12, "median": 2913, "p90": 3207 },
+    "resolve_muxed_tier_alone": { "n": 12, "median": 2742.5, "p90": 3198 },
+    "resolve_in_app_first_play_launch": { "n": 18, "median": 267, "p90": 395 },
+    "resolve_in_app_new_track_warm_session": { "n": 22, "median": 203.5, "p90": 283 },
+    "resolve_in_app_link_cache_hit": { "n": 46, "median": "42.5-49", "p90": "51-64" },
+    "innertube_visitorData_wait_play_500ms_after_ui": { "n": 18, "median": 0, "p90": 0 },
+    "innertube_visitorData_wait_play_at_ui_ready": { "n": 12, "median": 434.5, "p90": 816 },
+    "innertube_player_post_launch": { "n": 18, "median": 219, "p90": 355 },
+    "innertube_player_post_warm_session": { "n": 22, "median": 169, "p90": 254 },
+    "visitorData_home_page_fetch_at_launch": { "n": 24, "median": 970.5, "p90": 1225, "note": "resolver's instance; 6 instances fetch ~885 KB each in parallel" },
+    "curl_home_page_get_fresh_connection": { "n": 17, "median": 848, "p90": 1036 },
+    "curl_player_post_fresh_connection": { "n": 17, "median": 499.6, "p90": 702.5, "after_tls_median": 309.7, "after_tls_p90": 432.6 }
+  },
+  "throughput_bytes_per_s": {
+    "in_app_whole_file_tracks_up_to_6.3MB": { "n": 93, "median": 6022063, "p90": 11494034, "note": "request start -> mpv 'EOF reached' (whole file in the 64 MiB demuxer cache): median 754 ms" },
+    "in_app_long_track_14.6MB": { "n": 1, "value": 36772, "note": "paced for the whole file: 396.7 s to download; raw-input-rate samples median ~35.4 kB/s" },
+    "curl_long_track_open_ended_bytes_0_": { "chrome": 35621, "vision": 35472, "none": 35543, "mpv_headers": 35467, "no_range_header": 35642, "runs_each": 5, "refused_403": "1 of 5 URLs" },
+    "curl_long_track_1MiB_ranges": { "chrome": 6305652, "vision": 4341942, "none": 6837985, "runs_each": 5, "refused_403": "1 of 5 URLs (first range 206, every later request 403)" },
+    "curl_survey_open_ended_other_11_tracks": "1.7-13.8 MB/s (all 2.8-6.2 MB files served whole at full speed)",
+    "curl_range_length_threshold": "single requests of <= 8 MiB served at 3.9-11.3 MB/s; >= 12 MiB (incl. 0- and 0-<clen-1>) paced at ~35.6 kB/s; 10000000- (4.6 MB left) fast"
+  },
+  "rebuffer": { "continuous_play_seconds": 1555.2, "tracks": 6, "stalls": 0, "ratio": 0, "all_instrumented_audible_seconds": 2319.7, "all_stalls": 0 },
+  "refusals": "googlevideo 403 on the InnerTube link at the first request: 2 of 178 in-app stream opens, both on a freshly resolved link (recovered via muxed itag 18 in 3.4-5.4 s, then replays reuse the 96 kbps AAC link); curl: 2 of 8 fresh long-track URLs served exactly one request then 403 for every later one; InnerTube /player never failed in 96 instrumented calls, 1 unexplained fall-through to yt-dlp in 24 unmodified launches",
+  "rerun": {
+    "suite_A_unmodified": "powershell -File bench_A_play.ps1 -Exe <monolist.exe> -Tag after   (then compare results_A_after.json with results_A_before*.json)",
+    "suite_A_gap_unmodified": "powershell -File bench_A_gap.ps1 -Exe <monolist.exe> -Tag after",
+    "suite_B_instrumented": "apply instrumentation.diff to a copy of the new sources in bench\\src-copy, build-bench.ps1, then bench_B.ps1 -Suite cold|seq|skip|play|resolve -Tag after (seq/skip with -Rotate 0 and 6; cold also with -Settle 0), summarize_B.ps1 -Tag after",
+    "suite_C_curl": "bench_C_throughput.ps1 -Part ua|survey -Tag after; bench_C_rangesize.ps1 -Tag after; summarize_C.ps1 -Tag after",
+    "track_list": "playback_tracks.json"
+  }
+}

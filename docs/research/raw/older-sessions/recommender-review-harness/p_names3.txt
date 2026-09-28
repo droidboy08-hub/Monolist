@@ -1,0 +1,127 @@
+
+### Clawfinger   key "clawfinger"  firstPerformer "Clawfinger"
+  catalogue lead for key: Clawfinger
+  credits in key group (1): Clawfinger
+  creditedRows(Clawfinger): 3
+     Clawfinger — Biggest & the Best [rap metal, pop 43]
+     Clawfinger — Biggest & The Best - Remastered version [rap metal, pop 42]
+     Clawfinger — Nigger [rap metal, pop 41]
+  graph: Clawfinger / SE
+  neighbours: DJ Sleepy -nocat
+
+### Mindless Self Indulgence   key "mindless self indulgence"  firstPerformer "Mindless Self Indulgence"
+  catalogue lead for key: Mindless Self Indulgence
+  credits in key group (1): Mindless Self Indulgence
+  creditedRows(Mindless Self Indulgence): 3
+     Mindless Self Indulgence — Bitches [dance-punk, pop 73]
+     Mindless Self Indulgence — Shut Me Up [dance-punk, pop 71]
+     Mindless Self Indulgence — Lights Out [dance-punk, pop 68]
+  graph: not found
+
+### Body Count   key "body count"  firstPerformer "Body Count"
+  catalogue lead for key: Body Count
+  credits in key group (1): Body Count
+  creditedRows(Body Count): 3
+     Body Count — Body Count's in the House [funk metal, pop 48]
+     Body Count — Institutionalized 2014 [funk metal, pop 44]
+     Body Count — Body Count [funk metal, pop 41]
+  graph: not found
+
+### El-P   key "el p"  firstPerformer "El-P"
+  catalogue lead for key: El-P
+  credits in key group (1): El-P
+  creditedRows(El-P): 3
+     El-P — I Changed My Mind [abstract hip hop, pop 39]
+     El-P — The Full Retard [abstract hip hop, pop 39]
+     El-P — Glib Tongued [abstract hip hop, pop 38]
+  graph: not found
+
+### Webbie   key "webbie"  firstPerformer "Webbie"
+  catalogue lead for key: Webbie
+  credits in key group (1): Webbie
+  creditedRows(Webbie): 3
+     Webbie — What is It [dirty south rap, pop 49]
+     Webbie — Six 12's (feat. Mouse On Tha Track) [dirty south rap, pop 47]
+     Webbie — G-Shit [dirty south rap, pop 46]
+  graph: not found
+
+### Carnivore   key "carnivore"  firstPerformer "Carnivore"
+  catalogue lead for key: Carnivore
+  credits in key group (1): Carnivore
+  creditedRows(Carnivore): 2
+     Carnivore — Male Supremacy [old school thrash, pop 41]
+     Carnivore — Jesus Hitler [old school thrash, pop 36]
+  graph: not found
+
+### Uncle Dave Macon   key "uncle dave macon"  firstPerformer "Uncle Dave Macon"
+  catalogue lead for key: Uncle Dave Macon
+  credits in key group (1): Uncle Dave Macon
+  creditedRows(Uncle Dave Macon): 1
+     Uncle Dave Macon — Run, Nigger, Run - Remastered [traditional country, pop 38]
+  graph: not found
+
+### Lil Darkie   key "lil darkie"  firstPerformer "Lil Darkie"
+  catalogue lead for key: Lil Darkie
+  credits in key group (1): Lil Darkie
+  creditedRows(Lil Darkie): 3
+     Lil Darkie — i can see clearly [meme rap, pop 68]
+     Lil Darkie — banana pie [meme rap, pop 64]
+     Lil Darkie — HOLOCAUST [meme rap, pop 62]
+  graph: not found
+
+### Eric Reprid   key "eric reprid"  firstPerformer "Eric Reprid"
+  catalogue lead for key: Eric Reprid
+  credits in key group (1): Eric Reprid
+  creditedRows(Eric Reprid): 3
+     Eric Reprid — Cold World [asian american hip hop, pop 57]
+     Eric Reprid — LIKE A CHINK BITCH (G6) [asian american hip hop, pop 57]
+     Eric Reprid — SUKI [asian american hip hop, pop 56]
+  graph: not found
+
+### London Yellow   key "london yellow"  firstPerformer "London Yellow"
+  catalogue lead for key: London Yellow
+  credits in key group (1): London Yellow
+  creditedRows(London Yellow): 3
+     London Yellow — I Don't Like Niggers [meme rap, pop 49]
+     London Yellow — KRUSTY KREW ANTHEM GAY REMIX [meme rap, pop 38]
+     London Yellow — Nigga Athem 2019 [meme rap, pop 36]
+  graph: not found
+
+### Anal Cunt   key "anal cunt"  firstPerformer "Anal Cunt"
+  catalogue lead for key: Anal Cunt
+  credits in key group (1): Anal Cunt
+  creditedRows(Anal Cunt): 3
+     Anal Cunt — I Went Back In TIme And Voted For Hitler [noisecore, pop 28]
+     Anal Cunt — I Thought Hitler Was Cool Until I Found Out He Didn't Drink [noisecore, pop 27]
+     Anal Cunt — Beating Up N$%&$gers That Sell Fake Crack [noisecore, pop 27]
+  graph: not found
+
+### Mayhem   key "mayhem"  firstPerformer "Mayhem"
+  catalogue lead for key: Mayhem
+  credits in key group (1): Mayhem
+  creditedRows(Mayhem): 3
+     Mayhem — Freezing Moon [black metal, pop 55]
+     Mayhem — Chainsaw Gutsfuck [black metal, pop 51]
+     Mayhem — Deathcrush [black metal, pop 49]
+  graph: Mayhem / NO
+  neighbours: Darkthrone, Ulver, Burzum, Dimmu Borgir
+
+### Emperor   key "emperor"  firstPerformer "Emperor"
+  catalogue lead for key: Emperor
+  credits in key group (2): Emperor | Emperor X
+  creditedRows(Emperor): 3
+     Emperor — I Am The Black Wizards [norwegian metal, pop 45]
+     Emperor — Still [liquid funk, pop 41]
+     Emperor — Inno A Satana [norwegian metal, pop 40]
+  graph: Emperor / NO
+  neighbours: Darkthrone, Ulver, Burzum, Dimmu Borgir, Ildjarn
+
+### Texas Faggott   key "texas faggott"  firstPerformer "Texas Faggott"
+  catalogue lead for key: Texas Faggott
+  credits in key group (1): Texas Faggott
+  creditedRows(Texas Faggott): 3
+     Texas Faggott — Back to Mad [suomisaundi, pop 22]
+     Texas Faggott — Narkpsy [suomisaundi, pop 15]
+     Texas Faggott — Hector Sector [suomisaundi, pop 13]
+  graph: Texas Faggott / FI
+  neighbours: 

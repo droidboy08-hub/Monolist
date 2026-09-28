@@ -1,0 +1,178 @@
+﻿[
+    {
+        "run":  "D_before_play_1_7nVctvQVz0U",
+        "cpuPct":  1.6,
+        "windowSec":  29.1,
+        "peakWsMB":  358.5,
+        "peakPrivMB":  323.4,
+        "wsAtEndMB":  355.1,
+        "source":  "InnerTube",
+        "position":  "0:48 of 3:46, playing",
+        "foreign":  ""
+    },
+    {
+        "run":  "D_before_play_2_DntZ3-yCaFs",
+        "cpuPct":  3.2,
+        "windowSec":  29.2,
+        "peakWsMB":  356.6,
+        "peakPrivMB":  321.7,
+        "wsAtEndMB":  353.2,
+        "source":  "InnerTube",
+        "position":  "0:48 of 3:33, playing",
+        "foreign":  ""
+    },
+    {
+        "run":  "D_before_play_3_BSTsnWoslP4",
+        "cpuPct":  2.5,
+        "windowSec":  29.2,
+        "peakWsMB":  366.3,
+        "peakPrivMB":  332.7,
+        "wsAtEndMB":  361.5,
+        "source":  "InnerTube",
+        "position":  "0:48 of 5:54, playing",
+        "foreign":  ""
+    },
+    {
+        "run":  "D_before_play_4_7TDeBi34OtE",
+        "cpuPct":  2.8,
+        "windowSec":  29.2,
+        "peakWsMB":  362.2,
+        "peakPrivMB":  327.6,
+        "wsAtEndMB":  359.1,
+        "source":  "InnerTube",
+        "position":  "0:48 of 5:01, playing",
+        "foreign":  ""
+    },
+    {
+        "run":  "D_before_play_5_phLb_SoPBlA",
+        "cpuPct":  2,
+        "windowSec":  29.6,
+        "peakWsMB":  352.4,
+        "peakPrivMB":  316.4,
+        "wsAtEndMB":  349.5,
+        "source":  "InnerTube",
+        "position":  "0:43 of 4:34, playing",
+        "foreign":  "yt-dlp:7156"
+    },
+    {
+        "run":  "D_before_play_6_LCIs3JXb5Aw",
+        "cpuPct":  2.1,
+        "windowSec":  29.1,
+        "peakWsMB":  350.7,
+        "peakPrivMB":  318.7,
+        "wsAtEndMB":  347.3,
+        "source":  "InnerTube",
+        "position":  "0:48 of 2:58, playing",
+        "foreign":  ""
+    },
+    {
+        "run":  "D_before_play_7_TiebZllW8As",
+        "cpuPct":  2.5,
+        "windowSec":  29.7,
+        "peakWsMB":  360.5,
+        "peakPrivMB":  326.5,
+        "wsAtEndMB":  353.9,
+        "source":  "InnerTube",
+        "position":  "0:48 of 3:57, playing",
+        "foreign":  ""
+    },
+    {
+        "run":  "D_before_play_8_fsiPzT50ZiM",
+        "cpuPct":  2.8,
+        "windowSec":  29.6,
+        "peakWsMB":  360.5,
+        "peakPrivMB":  325.1,
+        "wsAtEndMB":  356.3,
+        "source":  "InnerTube",
+        "position":  "0:48 of 4:22, playing",
+        "foreign":  ""
+    },
+    {
+        "run":  "D_before_play_9_Tu7oq3VNgpY",
+        "cpuPct":  2.5,
+        "windowSec":  29.2,
+        "peakWsMB":  346.9,
+        "peakPrivMB":  314.1,
+        "wsAtEndMB":  345.8,
+        "source":  "InnerTube",
+        "position":  "0:48 of 13:31, playing",
+        "foreign":  ""
+    },
+    {
+        "run":  "D_before_play_10_munhCAshfH0",
+        "cpuPct":  2.5,
+        "windowSec":  29.6,
+        "peakWsMB":  369,
+        "peakPrivMB":  334.3,
+        "wsAtEndMB":  362.9,
+        "source":  "InnerTube",
+        "position":  "0:48 of 6:04, playing",
+        "foreign":  ""
+    },
+    {
+        "run":  "D_before_play_11_CmThpha4Hoo",
+        "cpuPct":  2.3,
+        "windowSec":  29.2,
+        "peakWsMB":  355,
+        "peakPrivMB":  319.1,
+        "wsAtEndMB":  352.4,
+        "source":  "InnerTube",
+        "position":  "0:48 of 2:52, playing",
+        "foreign":  ""
+    },
+    {
+        "run":  "D_before_play_12_4D7u5KF7SP8",
+        "cpuPct":  2.2,
+        "windowSec":  29.3,
+        "peakWsMB":  369.8,
+        "peakPrivMB":  334.9,
+        "wsAtEndMB":  367,
+        "source":  "InnerTube",
+        "position":  "0:48 of 6:09, playing",
+        "foreign":  ""
+    },
+    {
+        "run":  "D_before_idle_1",
+        "cpuPct":  0,
+        "windowSec":  29.5,
+        "peakWsMB":  175.5,
+        "peakPrivMB":  148.9,
+        "wsAtEndMB":  172.6,
+        "source":  "",
+        "position":  "",
+        "foreign":  ""
+    },
+    {
+        "run":  "D_before_idle_2",
+        "cpuPct":  0,
+        "windowSec":  29.1,
+        "peakWsMB":  175.8,
+        "peakPrivMB":  149.2,
+        "wsAtEndMB":  173,
+        "source":  "",
+        "position":  "",
+        "foreign":  ""
+    },
+    {
+        "run":  "D_before_idle_3",
+        "cpuPct":  0,
+        "windowSec":  29.2,
+        "peakWsMB":  175,
+        "peakPrivMB":  148.1,
+        "wsAtEndMB":  172.1,
+        "source":  "",
+        "position":  "",
+        "foreign":  ""
+    },
+    {
+        "run":  "D_before_idle_4",
+        "cpuPct":  0.1,
+        "windowSec":  29.3,
+        "peakWsMB":  178,
+        "peakPrivMB":  148.3,
+        "wsAtEndMB":  175.2,
+        "source":  "",
+        "position":  "",
+        "foreign":  ""
+    }
+]

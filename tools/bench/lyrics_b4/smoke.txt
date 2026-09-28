@@ -1,0 +1,21 @@
+== 09
+2026-09-27T15:34:04.964 lyrics: LRCLIB synced in 481 ms for J7p4bzqLvCw: get found 170 ms after sent (7825 bytes); 7825 bytes
+2026-09-27T15:34:05.192 lyrics: LRCLIB synced in 195 ms for RmYCOm4ehKs: get found 194 ms after sent (8494 bytes); 8494 bytes
+2026-09-27T15:34:05.508 lyrics: LRCLIB synced in 262 ms for H64a2ggVIWc: get slow, search asked too, get found 260 ms after sent (7825 bytes); 7825 bytes
+J7p4bzqLvCw LRCLIB first=Yeah / I've been tryna call / I've been on my own for long enough
+RmYCOm4ehKs LRCLIB first=(Ooh) na-na, yeah / I saw you dancing in a crowded room, uh / You look so happy when I'm not with you
+H64a2ggVIWc LRCLIB first=Yeah / I've been tryna call / I've been on my own for long enough
+== 24
+2026-09-27T15:34:08.313 lyrics: LRCLIB synced in 418 ms for m9SMT5ipbxk: get found 202 ms after sent (36274 bytes); 36274 bytes
+2026-09-27T15:34:08.640 lyrics: LRCLIB synced in 252 ms for IzJ_ioBHrPU: get found 248 ms after sent (18915 bytes); 18915 bytes
+2026-09-27T15:34:08.850 lyrics: LRCLIB synced in 169 ms for pbNRQVJrnQ4: get found 166 ms after sent (19160 bytes); 19160 bytes
+m9SMT5ipbxk LRCLIB first=無敵の笑顔で荒らすメディア / 知りたいその秘密ミステリアス / 抜けてるとこさえ彼女のエリア
+IzJ_ioBHrPU LRCLIB first=Couldn't beat her smile; it stirred up all the media / Secret side, I wanna know it / So mysterious
+pbNRQVJrnQ4 LRCLIB first=With a smile wreaking havoc on the media / Makes you wanna know her secret, so mysterious / Hasn't got a flaw, she is an expert in that area
+== 30
+2026-09-27T15:34:11.339 lyrics: LRCLIB instrumental in 414 ms for 5Rk8u2FTaG0: get found 190 ms after sent (357 bytes); 357 bytes
+2026-09-27T15:34:11.600 lyrics: LRCLIB instrumental in 254 ms for XjvkxXblpz8: get slow, search asked too, get found 253 ms after sent (395 bytes); 395 bytes
+2026-09-27T15:34:12.016 lyrics: LRCLIB instrumental in 409 ms for yAVui3qJ5xM: get slow, search asked too, get found 408 ms after sent (438 bytes); 438 bytes
+5Rk8u2FTaG0 instrumental first=
+XjvkxXblpz8 instrumental first=
+yAVui3qJ5xM instrumental first=

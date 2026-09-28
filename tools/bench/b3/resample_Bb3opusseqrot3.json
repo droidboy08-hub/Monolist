@@ -1,0 +1,14 @@
+{
+    "pattern":  "B_b3opus_seq_rot3_*",
+    "files":  1,
+    "opens":  36,
+    "openedWithAudio":  24,
+    "byItag":  "140=1 18=24 251=11",
+    "byCodecRate":  "aac@44100=24",
+    "resampled":  24,
+    "resampledIds":  "7TDeBi34OtEx2(itag 18) phLb_SoPBlAx2(itag 18) LCIs3JXb5Awx2(itag 18) TiebZllW8Asx2(itag 18) fsiPzT50ZiMx2(itag 18) Tu7oq3VNgpYx2(itag 18) munhCAshfH0x2(itag 18) CmThpha4Hoox2(itag 18) 4D7u5KF7SP8x2(itag 18) 7nVctvQVz0Ux2(itag 18) DntZ3-yCaFsx2(itag 18) BSTsnWoslP4x2(itag 18)",
+    "opusOfferedButAac":  0,
+    "choseLines":  12,
+    "choseByItag":  "140=1 251=11",
+    "choseNon251":  "CmThpha4Hoo: itag 140: aac, 44.1 kHz, 130 kbps (of 139 140)"
+}

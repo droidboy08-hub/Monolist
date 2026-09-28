@@ -1,0 +1,15 @@
+﻿== pane (pane_on01, pane_off01, pane_on02, pane_off02, pane_on03, pane_off03, pane_on04, pane_off04, pane_on05, pane_off05)
+  off/current: opened 150 times, a lookup still out 0; states {"synced":140,"instrumental":10}
+    open -> first lines: n=150 median=396 p90=480 min=306 max=640
+    open -> answer:      n=150 median=396 p90=480 min=306 max=640
+  off/next: opened 150 times, a lookup still out 0; states {"synced":119,"none":6,"plain":14,"instrumental":10,"error":1}
+    open -> first lines: n=150 median=217 p90=284 min=170 max=710
+    open -> answer:      n=150 median=217 p90=284 min=170 max=710
+  on/current: opened 150 times, a lookup still out 0; states {"synced":140,"instrumental":10}
+    open -> first lines: n=150 median=27 p90=44 min=0 max=100
+    open -> answer:      n=150 median=28 p90=44 min=0 max=100
+  on/next: opened 150 times, a lookup still out 0; states {"synced":116,"none":12,"plain":12,"instrumental":10}
+    open -> first lines: n=150 median=19 p90=31 min=1 max=85
+    open -> answer:      n=150 median=19 p90=31 min=1 max=85
+  on, both steps: open -> first lines n=300 median=24 p90=41 min=0 max=100
+  off, both steps: open -> first lines n=300 median=336 p90=460 min=170 max=710

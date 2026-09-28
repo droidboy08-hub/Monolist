@@ -1,0 +1,68 @@
+US	Oscar Rasputin	US	0.8	0	1	e162ff5c-f373-40a9-973d-8374086dbff3
+US	Pope Leo XIV	US	0.9	0	0	7b86915e-a640-426f-9278-3c932cee949a
+US	Marilyn Manson	US	0.94	21	60	5dfdca28-9ddc-4853-933c-8bc97d87beec
+BO	Che Guevara	BO	0.65	1	0	b5316590-b39e-4991-8602-dbf276361eed
+CA	Propagandhi	CA	0.94	4	0	cc546218-cc08-4ae9-9592-ac1596c1470d
+MX	Cristian Castro	MX	0.8	2	0	8cc00e45-94c9-40e0-882b-0e76dd5b472b
+IE	Adrian Crowley	IE	0.8	0	0	fde36fb7-0f06-4203-8686-84915bdeeb25
+FR	Antoine Reicha	FR	0.84	1	0	3903b08e-fc55-42f9-826c-f66faab3b98d
+CO	Joseph Manson	CO	0.8	1	0	da5d92a2-bdba-4688-b9e3-c06a2c8a1f3c
+IN-HR	Jaxxy Aaryan	IN-PB	0.6	0	0	521dc31d-f4a9-45f4-bd5f-eeb847049fa3
+IN-HR	Mahatma Gandhi	IN-DL	0.7	0	0	b0b244dd-b976-4dc4-ba7a-a394da724de0
+IN-HR	Indira Gandhi	IN-DL	0.7	0	0	b1da9dfa-2bab-4e42-818a-124ed5ccb4bd
+IN-HR	Narendra Damodardas Modi	IN-DL	0.85	0	0	c70fe252-9f6a-4082-b447-22c66e52b571
+IN-HR	Hustler	IN-DL	0.95	0	0	77ef5836-7d80-4a8e-85f8-cdb4feaae8df
+IN-HR	Jaxxy Aaryan	IN-CH	0.85	0	0	521dc31d-f4a9-45f4-bd5f-eeb847049fa3
+PH	Moonstar88	PH	0.94	1	1	f05b85a7-893d-4c2f-bccf-35af6d4bd478
+TW	9m88	TW	0.94	1	0	55baa3aa-1914-4a9c-a0ec-636eaaaba904
+UA	Drudkh	UA	0.94	5	0	469eb232-7163-47a8-96a3-8c82d24b2888
+UA	Nokturnal Mortum	UA	0.94	1	0	656a7ed6-fb23-4bc3-a7f2-90406ca86fc9
+GB	George Orwell	GB	0.84	0	0	3705ef0e-1de7-42cf-a1ea-334e1128b1f7
+FI	Leningrad Cowboys	FI	0.94	3	0	bd872e2f-3dce-4932-b8dc-91cf949cfbb5
+FI	Satanic Warmaster	FI	0.94	2	0	cf9e4560-c798-477e-8fe5-93423009b71b
+TH	Louise Kennedy	TH	0.8	0	0	e7e6404b-6403-48b1-b4bb-6ec9b2208735
+global	Marilyn Manson	ZZ	0.94	21	117	5dfdca28-9ddc-4853-933c-8bc97d87beec
+AR	Che Guevara	AR	0.94	1	0	b5316590-b39e-4991-8602-dbf276361eed
+AR	Pope Francis	AR	0.9	0	0	5778d5f1-ae14-42bf-9fe9-d79d6feb6835
+DO	Ricky Castro y su Banda Soberbia	DO	0.8	1	0	5e5d45c9-a538-47c4-900f-a4ea4e32731f
+DO	Ricky Castro	DO	0.8	1	0	7b70858f-f1a5-4c28-904f-81e1d5a6ed45
+CZ	Antoine Reicha	CZ	0.9	1	0	3903b08e-fc55-42f9-826c-f66faab3b98d
+PY	Jorge Castro	PY	0.8	0	0	90c4d7de-8171-482e-8415-45e40a2a6a09
+CR	Gandhi	CR	0.8	1	0	e6dfe5df-8340-4faa-907f-b7c4e8474f47
+EE	Ultima Thule	EE	0.8	1	3	a54f8952-adc3-4769-b805-0cfa48c0206e
+DK	Østkyst Hustlers	DK	0.8	2	0	b89faeed-3487-47b0-8b97-99b0f90b18ad
+RU	Владимир Жириновский	RU	0.8	0	0	af13e3a2-3209-4c3c-97e0-8bceeb4e86fb
+RU	Ленинград	RU	0.94	3	1	2bf704b3-4c05-441f-ad54-52722c1bdba9
+HN	Rómulo Castro y El Grupo Tuira	HN	0.8	0	0	5860fd72-86c9-4b1f-894c-d882e4747d9a
+HN	Oscar Castro	HN	0.8	0	0	c61ae3a5-4334-49e8-934e-814cc110056f
+HN	Josue Castro	HN	0.8	0	0	b086047b-59be-48e3-9aaf-847ea90be881
+HN	Rafa Castro	HN	0.9	0	0	97d84728-9522-4c50-8dcf-ff0625738011
+IN	Aryan rather	IN	0.98	1	0	83a70073-77c8-4178-b433-a134c68782e9
+IN	Irrfan Khan	IN	0.98	1	0	8a6b1833-1e78-47f4-85f6-17f0ad5c42cf
+IN	Aaryan	IN	0.94	0	0	0d3b821a-46d2-40bb-9f48-9a6841a78e61
+IN	Vethathiri Maharishi	IN	0.98	2	0	91a22560-a98f-465e-a4a8-1941a4f442b8
+IN	Mahatma Gandhi	IN	0.98	0	0	b0b244dd-b976-4dc4-ba7a-a394da724de0
+IN	Indira Gandhi	IN	0.98	0	0	b1da9dfa-2bab-4e42-818a-124ed5ccb4bd
+IN	Aryan	IN	0.8	0	0	b3fe6af8-869c-458c-82fd-798c4139501b
+IN	Nikhita Gandhi	IN	0.94	0	5	12829680-473d-4787-8c53-a9e35b94ed18
+IN	Osho	IN	0.98	0	0	1a54b906-00d8-48ba-aecc-8d210fc437a6
+IN	Rajiv Gandhi	IN	0.98	0	0	e8880a75-68a4-4c2c-b8f4-e3be20018d0f
+IN	Nazriya Nazim	IN	0.8	0	0	bb69064d-6627-4854-b4fd-dd813c91d0b5
+IN	Narendra Damodardas Modi	IN	0.94	0	0	c70fe252-9f6a-4082-b447-22c66e52b571
+IN	Aryan Katoch	IN	0.94	1	0	d48c7d1b-c1e0-4b6a-8fc7-a718a78db959
+IN	Aryan Mishra	IN	0.94	0	0	348d1dba-dccb-4228-baed-89330a6b240b
+IN	George Orwell	IN	0.9	0	0	3705ef0e-1de7-42cf-a1ea-334e1128b1f7
+IN	Lenin Bharathi	IN	0.8	0	0	37c14891-f78f-41d1-9d6e-40a22be1efd8
+IN	Aaryan	IN	0.94	0	0	506a2efb-03c0-42e8-8e4c-1590e0b329ad
+IN	Jaxxy Aaryan	IN	0.8	0	0	521dc31d-f4a9-45f4-bd5f-eeb847049fa3
+IN	Sri Srimad Bhaktivedanta Swami Prabhupada	IN	0.98	0	0	55222944-b2f2-457c-b8ac-6376af1ff9c3
+IN	Punit Gandhi	IN	0.8	0	0	6c1c4003-9766-4471-ac98-363580a6d4b5
+IN	Hustler	IN	0.9	0	0	77ef5836-7d80-4a8e-85f8-cdb4feaae8df
+IN-PB	Jaxxy Aaryan	IN-PB	0.6	0	0	521dc31d-f4a9-45f4-bd5f-eeb847049fa3
+DE	Adolf Hitler	DE	0.84	3	0	8530d70e-778c-4eba-b08d-831d16783c03
+DE	Eugen Reiche	DE	0.8	0	0	ca975823-a857-41e7-8227-374b2e20becc
+DE	Landser	DE	0.8	5	0	808adccd-e52b-4382-9ff6-70a3b2ab25a2
+DE	Pope Benedict XVI	DE	0.9	0	0	9d83aa0b-ce3c-4247-961b-66a9dbd02677
+DE	Böhse Onkelz	DE	0.94	6	2	b3a70929-32bc-4ace-994f-434b26ce96fe
+AT	Adolf Hitler	AT	0.9	3	0	8530d70e-778c-4eba-b08d-831d16783c03
+AT	Dornenreich	AT	0.94	2	0	faf9cc45-7618-4e59-b964-c8e72138e917

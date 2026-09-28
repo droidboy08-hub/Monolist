@@ -1,0 +1,204 @@
+﻿=== Ludwig van Beethoven  [region US]  liked-as "Ludwig van Beethoven"
+  seed in graph: Ludwig van Beethoven / DE / conf 0.94 / pop 26 / 1f9df192-a621-4f54-8850-2c5373b7eac9
+  graph neighbours (22): George Frideric Handel(LB 1.00), Hans Zimmer(LB 1.00), Franz Liszt(LB 1.00), Rammstein(LB 1.00), Max Richter(LB 1.00), Scorpions(LB 1.00), Johannes Brahms(LB 1.00), Richard Wagner(LB 1.00), Johann Sebastian Bach(LB 1.00), Felix Mendelssohn(LB 1.00), The Beatles(LB 1.00), Radiohead(LB 1.00), Pink Floyd(LB 1.00), David Bowie(LB 1.00), Led Zeppelin(LB 1.00), Coldplay(LB 1.00), Nirvana(LB 1.00), Metallica(LB 1.00), Red Hot Chili Peppers(LB 1.00), U2(LB 1.00), The Doors(LB 1.00), Muse(LB 1.00)
+  -> Because you like Ludwig van Beethoven  |  People who listen to Ludwig van Beethoven also play these  (12 rows)
+     George Frideric Handel — Menuet in G Minor (trans. W. Kempff)   [english baroque, pop 55]
+     Hans Zimmer — Cornfield Chase   [soundtrack, pop 78]
+     Franz Liszt — Liebestraume, S541/R211 : No. 3: Nocturne in A-Flat Major   [late romantic era, pop 62]
+     Rammstein — Sonne   [neue deutsche harte, pop 79]
+     Max Richter — On the Nature of Daylight   [post-minimalism, pop 67]
+     Scorpions — Wind Of Change   [hard rock, pop 81]
+     Johannes Brahms — Wiegenlied, Op. 49, No. 4 (Arr. for Cello and Piano) [Brahms Lullaby]   [classical, pop 62]
+     Richard Wagner — Die Walkure, Act III: Ride of the Valkyries   [late romantic era, pop 53]
+     George Frideric Handel — Handel: Suite No. 11 in D Minor, HWV 437: III. Sarabande - Remastered 2022   [english baroque, pop 55]
+     Hans Zimmer — Time   [soundtrack, pop 74]
+     Franz Liszt — Ständchen in D Minor (After Schubert), S. 560   [late romantic era, pop 59]
+     Rammstein — Deutschland   [neue deutsche harte, pop 77]
+=== David Bowie  [region US]  liked-as "David Bowie"
+  seed in graph: David Bowie / US / conf 0.65 / pop 34 / 5441c29d-3602-4898-b1a1-b77fa23b8e50
+  graph neighbours (18): The Doors(LB 1.00), R.E.M.(LB 1.00), Simon & Garfunkel(LB 1.00), The Killers(LB 1.00), The Black Keys(LB 1.00), Sonic Youth(LB 1.00), Marvin Gaye(LB 1.00), Guns N’ Roses(LB 1.00), Red Hot Chili Peppers(LB 1.00), Metallica(LB 1.00), ZZ Top(LB 1.00), Michael Jackson(LB 1.00), Radiohead(LB 1.00), The Who(LB 1.00), AC/DC(LB 1.00), Arctic Monkeys(LB 1.00), Deep Purple(LB 1.00), Björk(LB 1.00)
+  -> Because you like David Bowie  |  People who listen to David Bowie also play these  (12 rows)
+     The Doors — Riders on the Storm   [rock, pop 75]
+     R.E.M. — Losing My Religion   [athens indie, pop 85]
+     Simon & Garfunkel — Mrs. Robinson - From "The Graduate" Soundtrack   [classic rock, pop 76]
+     The Killers — Mr. Brightside   [permanent wave, pop 88]
+     The Black Keys — Lonely Boy - 2021 Remaster   [rock, pop 72]
+     Sonic Youth — Teen Age Riot (Album Version)   [noise pop, pop 60]
+     Marvin Gaye — Ain't No Mountain High Enough   [neo soul, pop 83]
+     Guns N' Roses — Sweet Child O' Mine   [hard rock, pop 87]
+     The Doors — People Are Strange   [rock, pop 74]
+     R.E.M. — Everybody Hurts   [athens indie, pop 75]
+     Simon & Garfunkel — The Sound of Silence - Acoustic Version   [classic rock, pop 73]
+     The Killers — Somebody Told Me   [permanent wave, pop 81]
+=== Muse  [region US]  liked-as "Muse"
+  seed in graph: Muse / GB / conf 0.94 / pop 48 / 9c9f1380-2516-4fc9-a3e6-f9f61941d090
+  graph neighbours (21): Fleetwood Mac(LB 1.00), Radiohead(LB 1.00), Arctic Monkeys(LB 1.00), Franz Ferdinand(LB 1.00), The Rolling Stones(LB 1.00), Panic! at the Disco(LB 1.00), The Who(LB 1.00), Adele(LB 1.00), Gorillaz(LB 1.00), The Police(LB 1.00), Amy Winehouse(LB 1.00), Elton John(LB 1.00), Megadeth(LB 1.00), Nickelback(LB 1.00), Slipknot(LB 1.00), Scorpions(LB 1.00), Talking Heads(LB 1.00), Ramones(LB 1.00), Black Eyed Peas(LB 1.00), Lynyrd Skynyrd(LB 1.00), Linkin Park(LB 1.00)
+  -> Because you like Muse  |  People who listen to Muse also play these  (12 rows)
+     Fleetwood Mac — Dreams - 2004 Remaster   [rock, pop 88]
+     Radiohead — Creep   [rock, pop 89]
+     Arctic Monkeys — I Wanna Be Yours   [permanent wave, pop 92]
+     Franz Ferdinand — Take Me Out   [scottish rock, pop 83]
+     The Rolling Stones — Paint It, Black   [rock, pop 82]
+     Panic! At The Disco — High Hopes   [pop, pop 80]
+     The Who — Baba O'Riley   [rock, pop 76]
+     Adele — Skyfall   [british soul, pop 85]
+     Fleetwood Mac — The Chain - 2004 Remaster   [rock, pop 84]
+     Radiohead — No Surprises   [rock, pop 84]
+     Arctic Monkeys — No. 1 Party Anthem   [permanent wave, pop 89]
+     Franz Ferdinand — This fffire - New Version   [scottish rock, pop 67]
+=== The Beatles  [region US]  liked-as "The Beatles"
+  seed in graph: The Beatles / GB / conf 0.94 / pop 86 / b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d
+  graph neighbours (19): Panic! at the Disco(LB 1.00), Belle and Sebastian(LB 1.00), Eurythmics(LB 1.00), Yes(LB 1.00), Jethro Tull(LB 1.00), Adele(LB 1.00), Aphex Twin(LB 1.00), Amy Winehouse(LB 1.00), King Crimson(LB 1.00), Iron Maiden(LB 1.00), PJ Harvey(LB 1.00), Fleetwood Mac(LB 1.00), Nickelback(LB 1.00), Evanescence(LB 1.00), Scorpions(LB 1.00), Tom Petty and the Heartbreakers(LB 1.00), Black Eyed Peas(LB 1.00), Heart(LB 1.00), MGMT(LB 1.00)
+  -> Because you like The Beatles  |  People who listen to The Beatles also play these  (12 rows)
+     Panic! At The Disco — High Hopes   [pop, pop 80]
+     Belle and Sebastian — The Boy With the Arab Strap   [twee pop, pop 57]
+     Eurythmics — Sexcrime (Nineteen Eighty-Four)   [new wave pop, pop 44]
+     Yes — Owner of a Lonely Heart   [rock, pop 74]
+     Jethro Tull — Aqualung   [art rock, pop 62]
+     Adele — Skyfall   [british soul, pop 85]
+     Aphex Twin — QKThr   [uk experimental electronic, pop 67]
+     Amy Winehouse — Back To Black   [neo soul, pop 82]
+     Panic! At The Disco — House of Memories   [pop, pop 79]
+     Belle and Sebastian — Get Me Away from Here, I'm Dying   [twee pop, pop 52]
+     Eurythmics — Winter Wonderland   [new wave pop, pop 33]
+     Yes — Roundabout - 2024 Remaster   [rock, pop 62]
+=== Pink Floyd  [region US]  liked-as "Pink Floyd"
+  seed in graph: Pink Floyd / GB / conf 0.94 / pop 81 / 83d91898-7763-47d7-b03b-b92132375c47
+  graph neighbours (22): The Alan Parsons Project(LB 1.00), Franz Ferdinand(LB 1.00), Mogwai(LB 1.00), Aphex Twin(LB 1.00), Bee Gees(LB 1.00), PJ Harvey(LB 1.00), Peter Gabriel(LB 1.00), The Beatles(LB 1.00), Radiohead(LB 1.00), The Rolling Stones(LB 1.00), The Who(LB 1.00), Fleetwood Mac(LB 1.00), Megadeth(LB 1.00), Marvin Gaye(LB 1.00), Björk(LB 1.00), Evanescence(LB 1.00), The Black Keys(LB 1.00), Slipknot(LB 1.00), Stone Temple Pilots(LB 1.00), Bob Marley & The Wailers(LB 1.00), Tom Petty and the Heartbreakers(LB 1.00), Heart(LB 1.00)
+  -> Because you like Pink Floyd  |  People who listen to Pink Floyd also play these  (12 rows)
+     The Alan Parsons Project — Eye In The Sky   [art rock, pop 74]
+     Franz Ferdinand — Take Me Out   [scottish rock, pop 83]
+     Mogwai — Take Me Somewhere Nice   [dream pop, pop 49]
+     Aphex Twin — QKThr   [uk experimental electronic, pop 67]
+     Bee Gees — How Deep Is Your Love   [soft rock, pop 80]
+     PJ Harvey — Down By The Water   [piano rock, pop 61]
+     Peter Gabriel — Solsbury Hill   [soft rock, pop 71]
+     The Beatles — Here Comes The Sun - Remastered 2009   [classic rock, pop 84]
+     The Alan Parsons Project — Sirius   [art rock, pop 66]
+     Franz Ferdinand — This fffire - New Version   [scottish rock, pop 67]
+     Mogwai — Kids Will Be Skeletons   [dream pop, pop 49]
+     Aphex Twin — Xtal   [uk experimental electronic, pop 66]
+=== Vladimír Mišík  [region US]  liked-as "Vladimír Mišík"
+  seed in graph: Vladimír Mišík / CZ / conf 0.94 / pop 1 / b575d963-c135-47c0-b835-78a1274f28fb
+  graph neighbours (2): Flamengo(st 0.38), The Matadors(st 0.38)
+  -> Because you like Vladimír Mišík  |  Artists MusicBrainz connects with Vladimír Mišík  (4 rows)
+     Flamengo — Paní V Černém   [czech rock, pop 22]
+     The Matadors — Let Me Dream   [eastern bloc groove, pop 29]
+     Flamengo — Svou Lásku Jsem Rozdal   [czech rock, pop 20]
+     The Matadors — Teenage Zombie Sluts   [canadian rockabilly, pop 19]
+=== Flamengo  [region US]  liked-as "Flamengo"
+  seed in graph: Flamengo / CZ / conf 0.94 / pop 2 / 7d686004-dd68-444f-a240-422a4259dfd0
+  graph neighbours (1): Vladimír Mišík(st 0.38)
+  -> Sounds like Flamengo  |  Artists whose sound sits closest to theirs  (12 rows)
+     Orlik — My Proti Nam   [czech rock, pop 40]
+     Turbo — Krásným Dívkám   [czech rock, pop 37]
+     Turbo — Chtěl Jsem Mít   [czech rock, pop 47]
+     Keks — Proč Holky Pláčou   [czech rock, pop 38]
+     Ales Brichta — Barák Na Vodstřel   [czech rock, pop 50]
+     Ales Brichta — American Bull   [czech rock, pop 46]
+     Xiii. Stoleti — Můj bratře můj   [czech rock, pop 27]
+     Xiii. Stoleti — Karneval - Gothic Machine Edit 2019   [czech rock, pop 31]
+     Wanastowi Vjecy — Ty Jsi Tak Hezká   [czech rock, pop 42]
+     Wanastowi Vjecy — Vlkodlak   [czech rock, pop 39]
+     Citron — Už Couvám   [czech rock, pop 39]
+     Traktor — Láskožrouti   [czech rock, pop 46]
+=== The Matadors  [region US]  liked-as "The Matadors"
+  seed in graph: The Matadors / CZ / conf 0.9 / pop 0 / 81fb42fb-1a7c-42c6-8be5-b0e6c0ce1437
+  graph neighbours (1): Vladimír Mišík(st 0.38)
+  -> Sounds like The Matadors  |  Artists whose sound sits closest to theirs  (12 rows)
+     Gutter Demons — Till' the End   [canadian rockabilly, pop 32]
+     Gutter Demons — Run Away Loco   [canadian rockabilly, pop 29]
+     The Creepshow — Run for Your Life   [psychobilly, pop 31]
+     The Creepshow — Blood Blood Blood   [psychobilly, pop 34]
+     The Brains — I'm Your Nightmare   [psychobilly, pop 30]
+     The Epileptic Hillbilly's — I'll Never Love Again   [deep psychobilly, pop 27]
+     Milwaukee Wildmen — In My Blood   [deep psychobilly, pop 25]
+     Hillbilly Casino — Debt With the Devil   [deep psychobilly, pop 27]
+     The Hellbound Hepcats — Country Girls   [canadian rockabilly, pop 29]
+     Milwaukee Wildmen — Blood Moon Shadow   [deep psychobilly, pop 31]
+     Reckless Ones — Dead and Gone   [deep psychobilly, pop 29]
+     The Hillbilly Moon Explosion — My Love for Evermore   [psychobilly, pop 43]
+=== Clawfinger  [region US]  liked-as "Clawfinger"
+  seed in graph: Clawfinger / SE / conf 0.94 / pop 3 / f16d25c6-556f-42f9-b648-5f48a8f96ec2
+  graph neighbours (1): DJ Sleepy(st 0.38 -nocat)
+  -> Sounds like Clawfinger  |  Artists whose sound sits closest to theirs  (12 rows)
+     P.O.D. — Satellite   [rap metal, pop 55]
+     Powerman 5000 — Bombshell   [rap metal, pop 40]
+     Powerman 5000 — Bombshell   [rap metal, pop 55]   <<DUPTITLE,DUPKEY
+     One Minute Silence — South Central   [rap metal, pop 25]
+     Alien Ant Farm — Glow   [nu metal, pop 44]
+     CKY — Disengage the Simulator   [nu metal, pop 45]
+     Alien Ant Farm — Wish   [nu metal, pop 53]
+     One Minute Silence — New Dogs New Tricks   [rap metal, pop 28]
+     Serj Tankian — Empty Walls   [alternative metal, pop 62]
+     Serj Tankian — Harakiri   [alternative metal, pop 51]
+     CKY — Escape From Hellview   [nu metal, pop 48]
+     Kid Rock — Born Free   [nu metal, pop 57]
+=== Gustavo Cerati  [region US]  liked-as "Gustavo Cerati"
+  seed in graph: Gustavo Cerati / AR / conf 0.98 / pop 3 / 979d01bc-a4da-4c80-8cc1-be40bd35cd5e
+  graph neighbours (1): Soda Stereo(st 0.38)
+  -> Sounds like Gustavo Cerati  |  Artists whose sound sits closest to theirs  (12 rows)
+     Vicentico — Solo un Momento   [latin alternative, pop 58]
+     Fobia — Hipnotízame   [latin rock, pop 52]
+     Vicentico — Ya No Te Quiero   [latin alternative, pop 51]
+     Fito Paez — Tumbas de la gloria   [latin alternative, pop 59]
+     Fobia — Hoy Tengo Miedo   [latin rock, pop 58]
+     El Tri — Pobre soñador   [mexican rock, pop 64]
+     Bunbury — Lady Blue   [latin rock, pop 64]
+     Divididos — El Arriero   [ska argentino, pop 51]
+     Miguel Mateos - Zas — Tirá para Arriba   [latin rock, pop 47]
+     La Gusana Ciega — Tu Volverás   [rock en espanol, pop 59]
+     Los Daniels — Te Deseo lo Mejor   [latin rock, pop 41]
+     Rata Blanca — Talismán   [argentine rock, pop 59]
+=== Soda Stereo  [region US]  liked-as "Soda Stereo"
+  seed in graph: Soda Stereo / AR / conf 0.98 / pop 5 / 3f8a5e5b-c24b-4068-9f1c-afad8829e06b
+  graph neighbours (1): Gustavo Cerati(st 0.38)
+  -> Sounds like Soda Stereo  |  Artists whose sound sits closest to theirs  (12 rows)
+     Los Auténticos Decadentes — El Murguero   [latin alternative, pop 55]
+     Bersuit Vergarabat — El Baile De La Gambeta   [latin alternative, pop 58]
+     Los Auténticos Decadentes — El Pájaro Vio el Cielo y Se Voló   [latin alternative, pop 56]
+     Las Pelotas — Ya Lo Sabés   [rock en espanol, pop 47]
+     Gustavo Cerati — Lago en el Cielo   [latin alternative, pop 66]
+     Genitallica — Ya Nada Es Igual   [rock en espanol, pop 51]
+     Miranda! — Tu Misterioso Alguien   [rock en espanol, pop 65]
+     Las Pelotas — ¿Qué Podés Dar?   [rock en espanol, pop 47]
+     Los Caligaris — Tus Besos   [latin alternative, pop 55]
+     Volován — No Quieres Venir   [rock en espanol, pop 37]
+     Fidel Nadal — Te Robaste Mi Corazón   [latin alternative, pop 47]
+     Attaque 77 — Arrancacorazones   [argentine rock, pop 65]
+=== Nightwish  [region US]  liked-as "Nightwish"
+  seed in graph: Nightwish / FI / conf 0.94 / pop 29 / 00a9f935-ba93-4fc8-a33a-993abe9c936b
+  graph neighbours (21): Sonata Arctica(LB 1.00), Tarja(LB 1.00), Children of Bodom(LB 1.00), Stratovarius(LB 1.00), HIM(LB 1.00), Korpiklaani(LB 1.00), Amorphis(LB 1.00), Ensiferum(LB 1.00), Apocalyptica(LB 1.00), Metallica(LB 1.00), Evanescence(LB 1.00), Linkin Park(LB 1.00), Nirvana(LB 1.00), In Flames(LB 1.00), Muse(LB 1.00), Queen(LB 1.00), Slipknot(LB 1.00), Red Hot Chili Peppers(LB 1.00), Pink Floyd(LB 1.00), Green Day(LB 1.00), Black Sabbath(LB 1.00)
+  -> Because you like Nightwish  |  People who listen to Nightwish also play these  (12 rows)
+     Sonata Arctica — FullMoon   [symphonic metal, pop 50]
+     Tarja — I Walk Alone   [gothic metal, pop 46]
+     Children Of Bodom — Are You Dead Yet?   [melodic death metal, pop 59]
+     Stratovarius — Hunting High and Low   [neo classical metal, pop 58]
+     HIM — Wicked Game   [finnish alternative rock, pop 62]
+     Korpiklaani — Vodka   [folk metal, pop 56]
+     Amorphis — The Bee   [viking metal, pop 47]
+     Ensiferum — In My Sword I Trust   [folk metal, pop 47]
+     Sonata Arctica — Tallulah   [symphonic metal, pop 49]
+     Tarja — Until My Last Breath   [gothic metal, pop 43]
+     Children Of Bodom — Oops!...I Did It Again   [melodic death metal, pop 51]
+     Stratovarius — Black Diamond   [neo classical metal, pop 57]
+=== Enya  [region US]  liked-as "Enya"
+  seed in graph: Enya / IE / conf 0.94 / pop 15 / 4967c0a1-b9f3-465e-8440-4598fd9fc33c
+  graph neighbours (15): U2(LB 1.00), The Cranberries(LB 1.00), Clannad(LB 1.00), The Corrs(LB 1.00), Coldplay(LB 1.00), The Beatles(LB 1.00), Radiohead(LB 1.00), Pink Floyd(LB 1.00), Moby(LB 1.00), Depeche Mode(LB 1.00), David Bowie(LB 1.00), Madonna(LB 1.00), R.E.M.(LB 1.00), Red Hot Chili Peppers(LB 1.00), Vangelis(LB 1.00)
+  -> Because you like Enya  |  People who listen to Enya also play these  (12 rows)
+     U2 — With Or Without You   [irish rock, pop 81]
+     The Cranberries — Linger   [irish rock, pop 85]
+     Clannad — Theme from Harry's Game   [new age, pop 57]
+     The Corrs — Breathless   [pop rock, pop 71]
+     Coldplay — Yellow   [permanent wave, pop 91]
+     The Beatles — Here Comes The Sun - Remastered 2009   [classic rock, pop 84]
+     Radiohead — Creep   [rock, pop 89]
+     Pink Floyd — Another Brick in the Wall, Pt. 2   [art rock, pop 82]
+     U2 — I Still Haven't Found What I'm Looking For   [irish rock, pop 79]
+     The Cranberries — Zombie   [irish rock, pop 85]
+     Clannad — I Will Find You (Theme from "The Last of the Mohicans")   [new age, pop 50]
+     The Corrs — Runaway   [pop rock, pop 64]
+cache check: findArtist(name, own country) on the US-warmed graph vs a graph that only saw that country
+
+SUMMARY (US pass): graph 8, sounds-like 5, none 0, seed-in-own-shelf rows 0, duplicate rows 1
+

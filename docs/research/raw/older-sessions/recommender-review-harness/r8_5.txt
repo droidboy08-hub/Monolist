@@ -1,0 +1,971 @@
+loaded yes
+
+=== Ludwig van Beethoven  [region US]  liked-as "Ludwig van Beethoven"
+  seed in graph: Ludwig van Beethoven / DE / conf 0.94 / pop 26 / 1f9df192-a621-4f54-8850-2c5373b7eac9
+  seed sound: yes
+    NB	Ludwig van Beethoven	George Frideric Handel	LB	0.856	english baroque
+    NB	Ludwig van Beethoven	Hans Zimmer	LB	0.049	soundtrack
+    NB	Ludwig van Beethoven	Franz Liszt	LB	0.978	late romantic era
+    NB	Ludwig van Beethoven	Rammstein	LB	-0.026	neue deutsche harte
+    NB	Ludwig van Beethoven	Max Richter	LB	0.143	post-minimalism
+    NB	Ludwig van Beethoven	Scorpions	LB	-0.010	hard rock
+    NB	Ludwig van Beethoven	Johannes Brahms	LB	0.982	classical
+    NB	Ludwig van Beethoven	Richard Wagner	LB	0.986	late romantic era
+    NB	Ludwig van Beethoven	Johann Sebastian Bach	LB	0.872	early music
+    NB	Ludwig van Beethoven	Felix Mendelssohn	LB	0.982	german romanticism
+    NB	Ludwig van Beethoven	The Beatles	LB	0.013	classic rock
+    NB	Ludwig van Beethoven	Radiohead	LB	0.013	rock
+    NB	Ludwig van Beethoven	Pink Floyd	LB	0.024	art rock
+    NB	Ludwig van Beethoven	David Bowie	LB	-0.004	rock
+    NB	Ludwig van Beethoven	Led Zeppelin	LB	-0.006	rock
+    NB	Ludwig van Beethoven	Coldplay	LB	0.010	permanent wave
+    NB	Ludwig van Beethoven	Nirvana	LB	-0.019	permanent wave
+    NB	Ludwig van Beethoven	Metallica	LB	-0.016	hard rock
+    NB	Ludwig van Beethoven	Red Hot Chili Peppers	LB	-0.025	permanent wave
+    NB	Ludwig van Beethoven	U2	LB	-0.015	irish rock
+    NB	Ludwig van Beethoven	The Doors	LB	-0.009	rock
+    NB	Ludwig van Beethoven	Muse	LB	-0.019	permanent wave
+    NB	Ludwig van Beethoven	The Rolling Stones	LB	-0.012	rock
+    NB	Ludwig van Beethoven	Bob Dylan	LB	0.028	country rock
+    NB	Ludwig van Beethoven	Foo Fighters	LB	-0.017	permanent wave
+    NB	Ludwig van Beethoven	Simon & Garfunkel	LB	0.030	classic rock
+    NB	Ludwig van Beethoven	Johnny Cash	LB	0.010	outlaw country
+    NB	Ludwig van Beethoven	Nine Inch Nails	LB	-0.012	industrial
+    NB	Ludwig van Beethoven	Björk	LB	-0.028	art pop
+    NB	Ludwig van Beethoven	R.E.M.	LB	-0.014	athens indie
+    NB	Ludwig van Beethoven	Linkin Park	LB	-0.031	alternative metal
+    NB	Ludwig van Beethoven	Ennio Morricone	LB	0.187	italian soundtrack
+    NB	Ludwig van Beethoven	Moby	LB	0.003	electronica
+    NB	Ludwig van Beethoven	Enya	LB	0.074	middle earth
+  graph neighbours (34): George Frideric Handel(LB 1.00 ~0.856), Hans Zimmer(LB 1.00 ~0.049), Franz Liszt(LB 1.00 ~0.978), Rammstein(LB 1.00 ~-0.026), Max Richter(LB 1.00 ~0.143), Scorpions(LB 1.00 ~-0.010), Johannes Brahms(LB 1.00 ~0.982), Richard Wagner(LB 1.00 ~0.986), Johann Sebastian Bach(LB 1.00 ~0.872), Felix Mendelssohn(LB 1.00 ~0.982), The Beatles(LB 1.00 ~0.013), Radiohead(LB 1.00 ~0.013), Pink Floyd(LB 1.00 ~0.024), David Bowie(LB 1.00 ~-0.004), Led Zeppelin(LB 1.00 ~-0.006), Coldplay(LB 1.00 ~0.010), Nirvana(LB 1.00 ~-0.019), Metallica(LB 1.00 ~-0.016), Red Hot Chili Peppers(LB 1.00 ~-0.025), U2(LB 1.00 ~-0.015), The Doors(LB 1.00 ~-0.009), Muse(LB 1.00 ~-0.019), The Rolling Stones(LB 1.00 ~-0.012), Bob Dylan(LB 1.00 ~0.028), Foo Fighters(LB 1.00 ~-0.017), Simon & Garfunkel(LB 1.00 ~0.030), Johnny Cash(LB 1.00 ~0.010), Nine Inch Nails(LB 1.00 ~-0.012), Björk(LB 1.00 ~-0.028), R.E.M.(LB 1.00 ~-0.014), Linkin Park(LB 1.00 ~-0.031), Ennio Morricone(LB 1.00 ~0.187), Moby(LB 1.00 ~0.003), Enya(LB 1.00 ~0.074)
+  -> Because you like Ludwig van Beethoven  |  People who listen to Ludwig van Beethoven also play these  (12 rows)
+     Richard Wagner — Die Walkure, Act III: Ride of the Valkyries   [late romantic era, pop 53, ~0.986]
+     Felix Mendelssohn — Capriccio brillant, Op. 22: Andante   [german romanticism, pop 58, ~0.982]
+     Johannes Brahms — Wiegenlied, Op. 49, No. 4 (Arr. for Cello and Piano) [Brahms Lullaby]   [classical, pop 62, ~0.982]
+     Franz Liszt — Liebestraume, S541/R211 : No. 3: Nocturne in A-Flat Major   [late romantic era, pop 62, ~0.978]
+     Johann Sebastian Bach — Cello Suite No. 1 in G Major, BWV 1007: I. Prélude   [early music, pop 69, ~0.872]
+     George Frideric Handel — Menuet in G Minor (trans. W. Kempff)   [english baroque, pop 55, ~0.856]
+     Richard Wagner — Lohengrin: Prelude   [late romantic era, pop 45, ~0.986]
+     Felix Mendelssohn — Lieder ohne Worte (Songs without Words), Book 2, Op. 30: No. 7 in E-Flat Major, Op. 30, No. 1   [german romanticism, pop 57, ~0.982]
+     Johannes Brahms — 21 Hungarian Dances, WoO 1 (version for orchestra): Hungarian Dance No. 5 (orch. Schmeling)   [classical, pop 58, ~0.982]
+     Franz Liszt — Ständchen in D Minor (After Schubert), S. 560   [late romantic era, pop 59, ~0.978]
+     Johann Sebastian Bach — Orchestral Suite No. 3 in D Major, BWV 1068: II. Air "on the G String"   [early music, pop 64, ~0.872]
+     George Frideric Handel — Handel: Suite No. 11 in D Minor, HWV 437: III. Sarabande - Remastered 2022   [english baroque, pop 55, ~0.856]
+
+=== Ludwig van Beethoven  [region DE]  liked-as "Ludwig van Beethoven"
+  seed in graph: Ludwig van Beethoven / DE / conf 0.94 / pop 26 / 1f9df192-a621-4f54-8850-2c5373b7eac9
+  seed sound: yes
+    NB	Ludwig van Beethoven	George Frideric Handel	LB	0.856	english baroque
+    NB	Ludwig van Beethoven	Hans Zimmer	LB	0.049	soundtrack
+    NB	Ludwig van Beethoven	Franz Liszt	LB	0.978	late romantic era
+    NB	Ludwig van Beethoven	Rammstein	LB	-0.026	neue deutsche harte
+    NB	Ludwig van Beethoven	Max Richter	LB	0.143	post-minimalism
+    NB	Ludwig van Beethoven	Scorpions	LB	-0.010	hard rock
+    NB	Ludwig van Beethoven	Johannes Brahms	LB	0.982	classical
+    NB	Ludwig van Beethoven	Richard Wagner	LB	0.986	late romantic era
+    NB	Ludwig van Beethoven	Johann Sebastian Bach	LB	0.872	early music
+    NB	Ludwig van Beethoven	Felix Mendelssohn	LB	0.982	german romanticism
+    NB	Ludwig van Beethoven	The Beatles	LB	0.013	classic rock
+    NB	Ludwig van Beethoven	Radiohead	LB	0.013	rock
+    NB	Ludwig van Beethoven	Pink Floyd	LB	0.024	art rock
+    NB	Ludwig van Beethoven	David Bowie	LB	-0.004	rock
+    NB	Ludwig van Beethoven	Led Zeppelin	LB	-0.006	rock
+    NB	Ludwig van Beethoven	Coldplay	LB	0.010	permanent wave
+    NB	Ludwig van Beethoven	Nirvana	LB	-0.019	permanent wave
+    NB	Ludwig van Beethoven	Metallica	LB	-0.016	hard rock
+    NB	Ludwig van Beethoven	Red Hot Chili Peppers	LB	-0.025	permanent wave
+    NB	Ludwig van Beethoven	U2	LB	-0.015	irish rock
+    NB	Ludwig van Beethoven	The Doors	LB	-0.009	rock
+    NB	Ludwig van Beethoven	Muse	LB	-0.019	permanent wave
+    NB	Ludwig van Beethoven	The Rolling Stones	LB	-0.012	rock
+    NB	Ludwig van Beethoven	Bob Dylan	LB	0.028	country rock
+    NB	Ludwig van Beethoven	Foo Fighters	LB	-0.017	permanent wave
+    NB	Ludwig van Beethoven	Simon & Garfunkel	LB	0.030	classic rock
+    NB	Ludwig van Beethoven	Johnny Cash	LB	0.010	outlaw country
+    NB	Ludwig van Beethoven	Nine Inch Nails	LB	-0.012	industrial
+    NB	Ludwig van Beethoven	Björk	LB	-0.028	art pop
+    NB	Ludwig van Beethoven	R.E.M.	LB	-0.014	athens indie
+    NB	Ludwig van Beethoven	Linkin Park	LB	-0.031	alternative metal
+    NB	Ludwig van Beethoven	Ennio Morricone	LB	0.187	italian soundtrack
+    NB	Ludwig van Beethoven	Moby	LB	0.003	electronica
+    NB	Ludwig van Beethoven	Enya	LB	0.074	middle earth
+  graph neighbours (34): George Frideric Handel(LB 1.00 ~0.856), Hans Zimmer(LB 1.00 ~0.049), Franz Liszt(LB 1.00 ~0.978), Rammstein(LB 1.00 ~-0.026), Max Richter(LB 1.00 ~0.143), Scorpions(LB 1.00 ~-0.010), Johannes Brahms(LB 1.00 ~0.982), Richard Wagner(LB 1.00 ~0.986), Johann Sebastian Bach(LB 1.00 ~0.872), Felix Mendelssohn(LB 1.00 ~0.982), The Beatles(LB 1.00 ~0.013), Radiohead(LB 1.00 ~0.013), Pink Floyd(LB 1.00 ~0.024), David Bowie(LB 1.00 ~-0.004), Led Zeppelin(LB 1.00 ~-0.006), Coldplay(LB 1.00 ~0.010), Nirvana(LB 1.00 ~-0.019), Metallica(LB 1.00 ~-0.016), Red Hot Chili Peppers(LB 1.00 ~-0.025), U2(LB 1.00 ~-0.015), The Doors(LB 1.00 ~-0.009), Muse(LB 1.00 ~-0.019), The Rolling Stones(LB 1.00 ~-0.012), Bob Dylan(LB 1.00 ~0.028), Foo Fighters(LB 1.00 ~-0.017), Simon & Garfunkel(LB 1.00 ~0.030), Johnny Cash(LB 1.00 ~0.010), Nine Inch Nails(LB 1.00 ~-0.012), Björk(LB 1.00 ~-0.028), R.E.M.(LB 1.00 ~-0.014), Linkin Park(LB 1.00 ~-0.031), Ennio Morricone(LB 1.00 ~0.187), Moby(LB 1.00 ~0.003), Enya(LB 1.00 ~0.074)
+  -> Because you like Ludwig van Beethoven  |  People who listen to Ludwig van Beethoven also play these  (12 rows)
+     Richard Wagner — Die Walkure, Act III: Ride of the Valkyries   [late romantic era, pop 53, ~0.986]
+     Felix Mendelssohn — Capriccio brillant, Op. 22: Andante   [german romanticism, pop 58, ~0.982]
+     Johannes Brahms — Wiegenlied, Op. 49, No. 4 (Arr. for Cello and Piano) [Brahms Lullaby]   [classical, pop 62, ~0.982]
+     Franz Liszt — Liebestraume, S541/R211 : No. 3: Nocturne in A-Flat Major   [late romantic era, pop 62, ~0.978]
+     Johann Sebastian Bach — Cello Suite No. 1 in G Major, BWV 1007: I. Prélude   [early music, pop 69, ~0.872]
+     George Frideric Handel — Menuet in G Minor (trans. W. Kempff)   [english baroque, pop 55, ~0.856]
+     Richard Wagner — Lohengrin: Prelude   [late romantic era, pop 45, ~0.986]
+     Felix Mendelssohn — Lieder ohne Worte (Songs without Words), Book 2, Op. 30: No. 7 in E-Flat Major, Op. 30, No. 1   [german romanticism, pop 57, ~0.982]
+     Johannes Brahms — 21 Hungarian Dances, WoO 1 (version for orchestra): Hungarian Dance No. 5 (orch. Schmeling)   [classical, pop 58, ~0.982]
+     Franz Liszt — Ständchen in D Minor (After Schubert), S. 560   [late romantic era, pop 59, ~0.978]
+     Johann Sebastian Bach — Orchestral Suite No. 3 in D Major, BWV 1068: II. Air "on the G String"   [early music, pop 64, ~0.872]
+     George Frideric Handel — Handel: Suite No. 11 in D Minor, HWV 437: III. Sarabande - Remastered 2022   [english baroque, pop 55, ~0.856]
+
+=== David Bowie  [region US]  liked-as "David Bowie"
+  seed in graph: David Bowie / US / conf 0.65 / pop 34 / 5441c29d-3602-4898-b1a1-b77fa23b8e50
+  seed sound: yes
+    NB	David Bowie	The Doors	LB	0.932	rock
+    NB	David Bowie	R.E.M.	LB	0.819	athens indie
+    NB	David Bowie	Simon & Garfunkel	LB	0.909	classic rock
+    NB	David Bowie	The Killers	LB	0.802	permanent wave
+    NB	David Bowie	The Black Keys	LB	0.683	rock
+    NB	David Bowie	Sonic Youth	LB	0.531	noise pop
+    NB	David Bowie	Marvin Gaye	LB	0.107	neo soul
+    NB	David Bowie	Guns N’ Roses	LB	0.850	hard rock
+    NB	David Bowie	Red Hot Chili Peppers	LB	0.792	permanent wave
+    NB	David Bowie	Metallica	LB	0.551	hard rock
+    NB	David Bowie	ZZ Top	LB	0.931	rock
+    NB	David Bowie	Michael Jackson	LB	0.122	soul
+    NB	David Bowie	Foo Fighters	LB	0.747	permanent wave
+    NB	David Bowie	Linkin Park	LB	0.557	alternative metal
+    NB	David Bowie	Kings of Leon	LB	0.749	rock
+    NB	David Bowie	Talking Heads	LB	0.808	permanent wave
+    NB	David Bowie	Bruce Springsteen	LB	0.966	rock
+    NB	David Bowie	Bob Marley & The Wailers	LB	0.067	roots reggae
+    NB	David Bowie	Ramones	LB	0.769	alternative rock
+    NB	David Bowie	Tom Petty and the Heartbreakers	LB	0.948	rock
+    NB	David Bowie	Lynyrd Skynyrd	LB	0.923	rock
+    NB	David Bowie	Billy Joel	LB	0.945	piano rock
+    NB	David Bowie	Pixies	LB	0.823	alternative rock
+    NB	David Bowie	Bon Jovi	LB	0.868	rock
+    NB	David Bowie	Radiohead	LB	0.861	rock
+    NB	David Bowie	The Who	LB	0.942	rock
+    NB	David Bowie	AC/DC	LB	0.939	australian rock
+    NB	David Bowie	Arctic Monkeys	LB	0.725	permanent wave
+    NB	David Bowie	Deep Purple	LB	0.889	album rock
+    NB	David Bowie	Björk	LB	0.435	art pop
+    NB	David Bowie	a‐ha	LB	0.818	new wave
+    NB	David Bowie	Fleetwood Mac	LB	0.953	rock
+    NB	David Bowie	Franz Ferdinand	LB	0.693	scottish rock
+    NB	David Bowie	Eric Clapton	LB	0.912	classic rock
+    NB	David Bowie	Eurythmics	LB	0.830	new wave pop
+  graph neighbours (35): The Doors(LB 1.00 ~0.932), R.E.M.(LB 1.00 ~0.819), Simon & Garfunkel(LB 1.00 ~0.909), The Killers(LB 1.00 ~0.802), The Black Keys(LB 1.00 ~0.683), Sonic Youth(LB 1.00 ~0.531), Marvin Gaye(LB 1.00 ~0.107), Guns N’ Roses(LB 1.00 ~0.850), Red Hot Chili Peppers(LB 1.00 ~0.792), Metallica(LB 1.00 ~0.551), ZZ Top(LB 1.00 ~0.931), Michael Jackson(LB 1.00 ~0.122), Foo Fighters(LB 1.00 ~0.747), Linkin Park(LB 1.00 ~0.557), Kings of Leon(LB 1.00 ~0.749), Talking Heads(LB 1.00 ~0.808), Bruce Springsteen(LB 1.00 ~0.966), Bob Marley & The Wailers(LB 1.00 ~0.067), Ramones(LB 1.00 ~0.769), Tom Petty and the Heartbreakers(LB 1.00 ~0.948), Lynyrd Skynyrd(LB 1.00 ~0.923), Billy Joel(LB 1.00 ~0.945), Pixies(LB 1.00 ~0.823), Bon Jovi(LB 1.00 ~0.868), Radiohead(LB 1.00 ~0.861), The Who(LB 1.00 ~0.942), AC/DC(LB 1.00 ~0.939), Arctic Monkeys(LB 1.00 ~0.725), Deep Purple(LB 1.00 ~0.889), Björk(LB 1.00 ~0.435), a‐ha(LB 1.00 ~0.818), Fleetwood Mac(LB 1.00 ~0.953), Franz Ferdinand(LB 1.00 ~0.693), Eric Clapton(LB 1.00 ~0.912), Eurythmics(LB 1.00 ~0.830)
+  -> Because you like David Bowie  |  People who listen to David Bowie also play these  (12 rows)
+     Bruce Springsteen — Dancing In the Dark   [rock, pop 84, ~0.966]
+     Fleetwood Mac — Dreams - 2004 Remaster   [rock, pop 88, ~0.953]
+     Tom Petty and the Heartbreakers — Mary Jane's Last Dance   [rock, pop 76, ~0.948]
+     Billy Joel — Vienna   [piano rock, pop 82, ~0.945]
+     The Who — Baba O'Riley   [rock, pop 76, ~0.942]
+     AC/DC — Thunderstruck   [australian rock, pop 86, ~0.939]
+     The Doors — Riders on the Storm   [rock, pop 75, ~0.932]
+     ZZ Top — La Grange (2005 Remaster)   [rock, pop 80, ~0.931]
+     Bruce Springsteen — I'm On Fire   [rock, pop 78, ~0.966]
+     Fleetwood Mac — The Chain - 2004 Remaster   [rock, pop 84, ~0.953]
+     Tom Petty and the Heartbreakers — Learning To Fly   [rock, pop 73, ~0.948]
+     Billy Joel — Uptown Girl   [piano rock, pop 82, ~0.945]
+
+=== David Bowie  [region GB]  liked-as "David Bowie"
+  seed in graph: David Bowie / US / conf 0.65 / pop 34 / 5441c29d-3602-4898-b1a1-b77fa23b8e50
+  seed sound: yes
+    NB	David Bowie	The Doors	LB	0.932	rock
+    NB	David Bowie	R.E.M.	LB	0.819	athens indie
+    NB	David Bowie	Simon & Garfunkel	LB	0.909	classic rock
+    NB	David Bowie	The Killers	LB	0.802	permanent wave
+    NB	David Bowie	The Black Keys	LB	0.683	rock
+    NB	David Bowie	Sonic Youth	LB	0.531	noise pop
+    NB	David Bowie	Marvin Gaye	LB	0.107	neo soul
+    NB	David Bowie	Guns N’ Roses	LB	0.850	hard rock
+    NB	David Bowie	Red Hot Chili Peppers	LB	0.792	permanent wave
+    NB	David Bowie	Metallica	LB	0.551	hard rock
+    NB	David Bowie	ZZ Top	LB	0.931	rock
+    NB	David Bowie	Michael Jackson	LB	0.122	soul
+    NB	David Bowie	Foo Fighters	LB	0.747	permanent wave
+    NB	David Bowie	Linkin Park	LB	0.557	alternative metal
+    NB	David Bowie	Kings of Leon	LB	0.749	rock
+    NB	David Bowie	Talking Heads	LB	0.808	permanent wave
+    NB	David Bowie	Bruce Springsteen	LB	0.966	rock
+    NB	David Bowie	Bob Marley & The Wailers	LB	0.067	roots reggae
+    NB	David Bowie	Ramones	LB	0.769	alternative rock
+    NB	David Bowie	Tom Petty and the Heartbreakers	LB	0.948	rock
+    NB	David Bowie	Lynyrd Skynyrd	LB	0.923	rock
+    NB	David Bowie	Billy Joel	LB	0.945	piano rock
+    NB	David Bowie	Pixies	LB	0.823	alternative rock
+    NB	David Bowie	Bon Jovi	LB	0.868	rock
+    NB	David Bowie	Radiohead	LB	0.861	rock
+    NB	David Bowie	The Who	LB	0.942	rock
+    NB	David Bowie	AC/DC	LB	0.939	australian rock
+    NB	David Bowie	Arctic Monkeys	LB	0.725	permanent wave
+    NB	David Bowie	Deep Purple	LB	0.889	album rock
+    NB	David Bowie	Björk	LB	0.435	art pop
+    NB	David Bowie	a‐ha	LB	0.818	new wave
+    NB	David Bowie	Fleetwood Mac	LB	0.953	rock
+    NB	David Bowie	Franz Ferdinand	LB	0.693	scottish rock
+    NB	David Bowie	Eric Clapton	LB	0.912	classic rock
+    NB	David Bowie	Eurythmics	LB	0.830	new wave pop
+  graph neighbours (35): The Doors(LB 1.00 ~0.932), R.E.M.(LB 1.00 ~0.819), Simon & Garfunkel(LB 1.00 ~0.909), The Killers(LB 1.00 ~0.802), The Black Keys(LB 1.00 ~0.683), Sonic Youth(LB 1.00 ~0.531), Marvin Gaye(LB 1.00 ~0.107), Guns N’ Roses(LB 1.00 ~0.850), Red Hot Chili Peppers(LB 1.00 ~0.792), Metallica(LB 1.00 ~0.551), ZZ Top(LB 1.00 ~0.931), Michael Jackson(LB 1.00 ~0.122), Foo Fighters(LB 1.00 ~0.747), Linkin Park(LB 1.00 ~0.557), Kings of Leon(LB 1.00 ~0.749), Talking Heads(LB 1.00 ~0.808), Bruce Springsteen(LB 1.00 ~0.966), Bob Marley & The Wailers(LB 1.00 ~0.067), Ramones(LB 1.00 ~0.769), Tom Petty and the Heartbreakers(LB 1.00 ~0.948), Lynyrd Skynyrd(LB 1.00 ~0.923), Billy Joel(LB 1.00 ~0.945), Pixies(LB 1.00 ~0.823), Bon Jovi(LB 1.00 ~0.868), Radiohead(LB 1.00 ~0.861), The Who(LB 1.00 ~0.942), AC/DC(LB 1.00 ~0.939), Arctic Monkeys(LB 1.00 ~0.725), Deep Purple(LB 1.00 ~0.889), Björk(LB 1.00 ~0.435), a‐ha(LB 1.00 ~0.818), Fleetwood Mac(LB 1.00 ~0.953), Franz Ferdinand(LB 1.00 ~0.693), Eric Clapton(LB 1.00 ~0.912), Eurythmics(LB 1.00 ~0.830)
+  -> Because you like David Bowie  |  People who listen to David Bowie also play these  (12 rows)
+     Bruce Springsteen — Dancing In the Dark   [rock, pop 84, ~0.966]
+     Fleetwood Mac — Dreams - 2004 Remaster   [rock, pop 88, ~0.953]
+     Tom Petty and the Heartbreakers — Mary Jane's Last Dance   [rock, pop 76, ~0.948]
+     Billy Joel — Vienna   [piano rock, pop 82, ~0.945]
+     The Who — Baba O'Riley   [rock, pop 76, ~0.942]
+     AC/DC — Thunderstruck   [australian rock, pop 86, ~0.939]
+     The Doors — Riders on the Storm   [rock, pop 75, ~0.932]
+     ZZ Top — La Grange (2005 Remaster)   [rock, pop 80, ~0.931]
+     Bruce Springsteen — I'm On Fire   [rock, pop 78, ~0.966]
+     Fleetwood Mac — The Chain - 2004 Remaster   [rock, pop 84, ~0.953]
+     Tom Petty and the Heartbreakers — Learning To Fly   [rock, pop 73, ~0.948]
+     Billy Joel — Uptown Girl   [piano rock, pop 82, ~0.945]
+
+=== Muse  [region US]  liked-as "Muse"
+  seed in graph: Muse / GB / conf 0.94 / pop 48 / 9c9f1380-2516-4fc9-a3e6-f9f61941d090
+  seed sound: yes
+    NB	Muse	Fleetwood Mac	LB	0.670	rock
+    NB	Muse	Radiohead	LB	0.927	rock
+    NB	Muse	Arctic Monkeys	LB	0.953	permanent wave
+    NB	Muse	Franz Ferdinand	LB	0.958	scottish rock
+    NB	Muse	The Rolling Stones	LB	0.661	rock
+    NB	Muse	Panic! at the Disco	LB	0.665	pop
+    NB	Muse	The Who	LB	0.671	rock
+    NB	Muse	Adele	LB	0.291	british soul
+    NB	Muse	Gorillaz	LB	0.826	rock
+    NB	Muse	The Police	LB	0.809	rock
+    NB	Muse	Amy Winehouse	LB	0.223	neo soul
+    NB	Muse	Elton John	LB	0.795	rock
+    NB	Muse	Blur	LB	0.938	permanent wave
+    NB	Muse	Iron Maiden	LB	0.619	hard rock
+    NB	Muse	PJ Harvey	LB	0.896	piano rock
+    NB	Muse	The Beatles	LB	0.584	classic rock
+    NB	Muse	Coldplay	LB	0.761	permanent wave
+    NB	Muse	New Order	LB	0.804	new wave
+    NB	Muse	Ed Sheeran	LB	0.285	uk pop
+    NB	Muse	Deep Purple	LB	0.670	album rock
+    NB	Muse	Bring Me the Horizon	LB	0.601	uk metalcore
+    NB	Muse	Marillion	LB	0.212	progressive rock
+    NB	Muse	Cradle of Filth	LB	0.116	symphonic black metal
+    NB	Muse	Eric Clapton	LB	0.619	classic rock
+    NB	Muse	Megadeth	LB	0.461	metal
+    NB	Muse	Nickelback	LB	0.658	canadian rock
+    NB	Muse	Slipknot	LB	0.656	alternative metal
+    NB	Muse	Scorpions	LB	0.583	hard rock
+    NB	Muse	Talking Heads	LB	0.870	permanent wave
+    NB	Muse	Ramones	LB	0.886	alternative rock
+    NB	Muse	Black Eyed Peas	LB	0.257	dance pop
+    NB	Muse	Lynyrd Skynyrd	LB	0.672	rock
+    NB	Muse	Linkin Park	LB	0.676	alternative metal
+    NB	Muse	The Black Keys	LB	0.884	rock
+    NB	Muse	U2	LB	0.926	irish rock
+    NB	Muse	R.E.M.	LB	0.954	athens indie
+    NB	Muse	Guns N’ Roses	LB	0.713	hard rock
+    NB	Muse	Evanescence	LB	0.551	alternative metal
+    NB	Muse	The Doors	LB	0.639	rock
+    NB	Muse	Michael Jackson	LB	0.117	soul
+    NB	Muse	Thirty Seconds to Mars	LB	0.822	modern rock
+  graph neighbours (41): Fleetwood Mac(LB 1.00 ~0.670), Radiohead(LB 1.00 ~0.927), Arctic Monkeys(LB 1.00 ~0.953), Franz Ferdinand(LB 1.00 ~0.958), The Rolling Stones(LB 1.00 ~0.661), Panic! at the Disco(LB 1.00 ~0.665), The Who(LB 1.00 ~0.671), Adele(LB 1.00 ~0.291), Gorillaz(LB 1.00 ~0.826), The Police(LB 1.00 ~0.809), Amy Winehouse(LB 1.00 ~0.223), Elton John(LB 1.00 ~0.795), Blur(LB 1.00 ~0.938), Iron Maiden(LB 1.00 ~0.619), PJ Harvey(LB 1.00 ~0.896), The Beatles(LB 1.00 ~0.584), Coldplay(LB 1.00 ~0.761), New Order(LB 1.00 ~0.804), Ed Sheeran(LB 1.00 ~0.285), Deep Purple(LB 1.00 ~0.670), Bring Me the Horizon(LB 1.00 ~0.601), Marillion(LB 1.00 ~0.212), Cradle of Filth(LB 1.00 ~0.116), Eric Clapton(LB 1.00 ~0.619), Megadeth(LB 1.00 ~0.461), Nickelback(LB 1.00 ~0.658), Slipknot(LB 1.00 ~0.656), Scorpions(LB 1.00 ~0.583), Talking Heads(LB 1.00 ~0.870), Ramones(LB 1.00 ~0.886), Black Eyed Peas(LB 1.00 ~0.257), Lynyrd Skynyrd(LB 1.00 ~0.672), Linkin Park(LB 1.00 ~0.676), The Black Keys(LB 1.00 ~0.884), U2(LB 1.00 ~0.926), R.E.M.(LB 1.00 ~0.954), Guns N’ Roses(LB 1.00 ~0.713), Evanescence(LB 1.00 ~0.551), The Doors(LB 1.00 ~0.639), Michael Jackson(LB 1.00 ~0.117), Thirty Seconds to Mars(LB 1.00 ~0.822)
+  -> Because you like Muse  |  People who listen to Muse also play these  (12 rows)
+     Franz Ferdinand — Take Me Out   [scottish rock, pop 83, ~0.958]
+     R.E.M. — Losing My Religion   [athens indie, pop 85, ~0.954]
+     Arctic Monkeys — I Wanna Be Yours   [permanent wave, pop 92, ~0.953]
+     Blur — Song 2 - 2012 Remaster   [permanent wave, pop 80, ~0.938]
+     Radiohead — Creep   [rock, pop 89, ~0.927]
+     U2 — With Or Without You   [irish rock, pop 81, ~0.926]
+     PJ Harvey — Down By The Water   [piano rock, pop 61, ~0.896]
+     Ramones — Blitzkrieg Bop - 2016 Remaster   [alternative rock, pop 72, ~0.886]
+     Franz Ferdinand — This fffire - New Version   [scottish rock, pop 67, ~0.958]
+     R.E.M. — Everybody Hurts   [athens indie, pop 75, ~0.954]
+     Arctic Monkeys — No. 1 Party Anthem   [permanent wave, pop 89, ~0.953]
+     Blur — Girls & Boys   [permanent wave, pop 71, ~0.938]
+
+=== Muse  [region GB]  liked-as "Muse"
+  seed in graph: Muse / GB / conf 0.94 / pop 48 / 9c9f1380-2516-4fc9-a3e6-f9f61941d090
+  seed sound: yes
+    NB	Muse	Fleetwood Mac	LB	0.670	rock
+    NB	Muse	Radiohead	LB	0.927	rock
+    NB	Muse	Arctic Monkeys	LB	0.953	permanent wave
+    NB	Muse	Franz Ferdinand	LB	0.958	scottish rock
+    NB	Muse	The Rolling Stones	LB	0.661	rock
+    NB	Muse	Panic! at the Disco	LB	0.665	pop
+    NB	Muse	The Who	LB	0.671	rock
+    NB	Muse	Adele	LB	0.291	british soul
+    NB	Muse	Gorillaz	LB	0.826	rock
+    NB	Muse	The Police	LB	0.809	rock
+    NB	Muse	Amy Winehouse	LB	0.223	neo soul
+    NB	Muse	Elton John	LB	0.795	rock
+    NB	Muse	Blur	LB	0.938	permanent wave
+    NB	Muse	Iron Maiden	LB	0.619	hard rock
+    NB	Muse	PJ Harvey	LB	0.896	piano rock
+    NB	Muse	The Beatles	LB	0.584	classic rock
+    NB	Muse	Coldplay	LB	0.761	permanent wave
+    NB	Muse	New Order	LB	0.804	new wave
+    NB	Muse	Ed Sheeran	LB	0.285	uk pop
+    NB	Muse	Deep Purple	LB	0.670	album rock
+    NB	Muse	Bring Me the Horizon	LB	0.601	uk metalcore
+    NB	Muse	Marillion	LB	0.212	progressive rock
+    NB	Muse	Cradle of Filth	LB	0.116	symphonic black metal
+    NB	Muse	Eric Clapton	LB	0.619	classic rock
+    NB	Muse	Megadeth	LB	0.461	metal
+    NB	Muse	Nickelback	LB	0.658	canadian rock
+    NB	Muse	Slipknot	LB	0.656	alternative metal
+    NB	Muse	Scorpions	LB	0.583	hard rock
+    NB	Muse	Talking Heads	LB	0.870	permanent wave
+    NB	Muse	Ramones	LB	0.886	alternative rock
+    NB	Muse	Black Eyed Peas	LB	0.257	dance pop
+    NB	Muse	Lynyrd Skynyrd	LB	0.672	rock
+    NB	Muse	Linkin Park	LB	0.676	alternative metal
+    NB	Muse	The Black Keys	LB	0.884	rock
+    NB	Muse	U2	LB	0.926	irish rock
+    NB	Muse	R.E.M.	LB	0.954	athens indie
+    NB	Muse	Guns N’ Roses	LB	0.713	hard rock
+    NB	Muse	Evanescence	LB	0.551	alternative metal
+    NB	Muse	The Doors	LB	0.639	rock
+    NB	Muse	Michael Jackson	LB	0.117	soul
+    NB	Muse	Thirty Seconds to Mars	LB	0.822	modern rock
+  graph neighbours (41): Fleetwood Mac(LB 1.00 ~0.670), Radiohead(LB 1.00 ~0.927), Arctic Monkeys(LB 1.00 ~0.953), Franz Ferdinand(LB 1.00 ~0.958), The Rolling Stones(LB 1.00 ~0.661), Panic! at the Disco(LB 1.00 ~0.665), The Who(LB 1.00 ~0.671), Adele(LB 1.00 ~0.291), Gorillaz(LB 1.00 ~0.826), The Police(LB 1.00 ~0.809), Amy Winehouse(LB 1.00 ~0.223), Elton John(LB 1.00 ~0.795), Blur(LB 1.00 ~0.938), Iron Maiden(LB 1.00 ~0.619), PJ Harvey(LB 1.00 ~0.896), The Beatles(LB 1.00 ~0.584), Coldplay(LB 1.00 ~0.761), New Order(LB 1.00 ~0.804), Ed Sheeran(LB 1.00 ~0.285), Deep Purple(LB 1.00 ~0.670), Bring Me the Horizon(LB 1.00 ~0.601), Marillion(LB 1.00 ~0.212), Cradle of Filth(LB 1.00 ~0.116), Eric Clapton(LB 1.00 ~0.619), Megadeth(LB 1.00 ~0.461), Nickelback(LB 1.00 ~0.658), Slipknot(LB 1.00 ~0.656), Scorpions(LB 1.00 ~0.583), Talking Heads(LB 1.00 ~0.870), Ramones(LB 1.00 ~0.886), Black Eyed Peas(LB 1.00 ~0.257), Lynyrd Skynyrd(LB 1.00 ~0.672), Linkin Park(LB 1.00 ~0.676), The Black Keys(LB 1.00 ~0.884), U2(LB 1.00 ~0.926), R.E.M.(LB 1.00 ~0.954), Guns N’ Roses(LB 1.00 ~0.713), Evanescence(LB 1.00 ~0.551), The Doors(LB 1.00 ~0.639), Michael Jackson(LB 1.00 ~0.117), Thirty Seconds to Mars(LB 1.00 ~0.822)
+  -> Because you like Muse  |  People who listen to Muse also play these  (12 rows)
+     Franz Ferdinand — Take Me Out   [scottish rock, pop 83, ~0.958]
+     R.E.M. — Losing My Religion   [athens indie, pop 85, ~0.954]
+     Arctic Monkeys — I Wanna Be Yours   [permanent wave, pop 92, ~0.953]
+     Blur — Song 2 - 2012 Remaster   [permanent wave, pop 80, ~0.938]
+     Radiohead — Creep   [rock, pop 89, ~0.927]
+     U2 — With Or Without You   [irish rock, pop 81, ~0.926]
+     PJ Harvey — Down By The Water   [piano rock, pop 61, ~0.896]
+     Ramones — Blitzkrieg Bop - 2016 Remaster   [alternative rock, pop 72, ~0.886]
+     Franz Ferdinand — This fffire - New Version   [scottish rock, pop 67, ~0.958]
+     R.E.M. — Everybody Hurts   [athens indie, pop 75, ~0.954]
+     Arctic Monkeys — No. 1 Party Anthem   [permanent wave, pop 89, ~0.953]
+     Blur — Girls & Boys   [permanent wave, pop 71, ~0.938]
+
+=== The Beatles  [region US]  liked-as "The Beatles"
+  seed in graph: The Beatles / GB / conf 0.94 / pop 86 / b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d
+  seed sound: yes
+    NB	The Beatles	Panic! at the Disco	LB	0.193	pop
+    NB	The Beatles	Belle and Sebastian	LB	0.393	twee pop
+    NB	The Beatles	Eurythmics	LB	0.627	new wave pop
+    NB	The Beatles	Yes	LB	0.945	rock
+    NB	The Beatles	Jethro Tull	LB	0.954	art rock
+    NB	The Beatles	Adele	LB	0.093	british soul
+    NB	The Beatles	Aphex Twin	LB	0.047	uk experimental electronic
+    NB	The Beatles	Amy Winehouse	LB	0.125	neo soul
+    NB	The Beatles	King Crimson	LB	0.792	art rock
+    NB	The Beatles	Iron Maiden	LB	0.560	hard rock
+    NB	The Beatles	PJ Harvey	LB	0.584	piano rock
+    NB	The Beatles	Fleetwood Mac	LB	0.960	rock
+    NB	The Beatles	Elton John	LB	0.913	rock
+    NB	The Beatles	Gorillaz	LB	0.518	rock
+    NB	The Beatles	Blur	LB	0.554	permanent wave
+    NB	The Beatles	Bee Gees	LB	0.838	soft rock
+    NB	The Beatles	Coldplay	LB	0.435	permanent wave
+    NB	The Beatles	New Order	LB	0.456	new wave
+    NB	The Beatles	Ed Sheeran	LB	0.064	uk pop
+    NB	The Beatles	Autechre	LB	0.042	intelligent dance music
+    NB	The Beatles	Marillion	LB	0.619	progressive rock
+    NB	The Beatles	The Prodigy	LB	0.100	rave
+    NB	The Beatles	Bauhaus	LB	0.305	uk post-punk
+    NB	The Beatles	Cradle of Filth	LB	0.081	symphonic black metal
+    NB	The Beatles	Nickelback	LB	0.290	canadian rock
+    NB	The Beatles	Evanescence	LB	0.280	alternative metal
+    NB	The Beatles	Scorpions	LB	0.732	hard rock
+    NB	The Beatles	Tom Petty and the Heartbreakers	LB	0.959	rock
+    NB	The Beatles	Black Eyed Peas	LB	0.089	dance pop
+    NB	The Beatles	Heart	LB	0.951	rock
+    NB	The Beatles	MGMT	LB	0.419	indie rock
+    NB	The Beatles	Lana Del Rey	LB	0.157	pop
+    NB	The Beatles	Incubus	LB	0.457	funk metal
+    NB	The Beatles	Garbage	LB	0.463	permanent wave
+    NB	The Beatles	Sigur Rós	LB	0.166	post-rock
+    NB	The Beatles	Air	LB	0.091	indietronica
+    NB	The Beatles	My Chemical Romance	LB	0.342	modern rock
+    NB	The Beatles	No Doubt	LB	0.563	pop rock
+    NB	The Beatles	Faith No More	LB	0.497	funk metal
+  graph neighbours (39): Panic! at the Disco(LB 1.00 ~0.193), Belle and Sebastian(LB 1.00 ~0.393), Eurythmics(LB 1.00 ~0.627), Yes(LB 1.00 ~0.945), Jethro Tull(LB 1.00 ~0.954), Adele(LB 1.00 ~0.093), Aphex Twin(LB 1.00 ~0.047), Amy Winehouse(LB 1.00 ~0.125), King Crimson(LB 1.00 ~0.792), Iron Maiden(LB 1.00 ~0.560), PJ Harvey(LB 1.00 ~0.584), Fleetwood Mac(LB 1.00 ~0.960), Elton John(LB 1.00 ~0.913), Gorillaz(LB 1.00 ~0.518), Blur(LB 1.00 ~0.554), Bee Gees(LB 1.00 ~0.838), Coldplay(LB 1.00 ~0.435), New Order(LB 1.00 ~0.456), Ed Sheeran(LB 1.00 ~0.064), Autechre(LB 1.00 ~0.042), Marillion(LB 1.00 ~0.619), The Prodigy(LB 1.00 ~0.100), Bauhaus(LB 1.00 ~0.305), Cradle of Filth(LB 1.00 ~0.081), Nickelback(LB 1.00 ~0.290), Evanescence(LB 1.00 ~0.280), Scorpions(LB 1.00 ~0.732), Tom Petty and the Heartbreakers(LB 1.00 ~0.959), Black Eyed Peas(LB 1.00 ~0.089), Heart(LB 1.00 ~0.951), MGMT(LB 1.00 ~0.419), Lana Del Rey(LB 1.00 ~0.157), Incubus(LB 1.00 ~0.457), Garbage(LB 1.00 ~0.463), Sigur Rós(LB 1.00 ~0.166), Air(LB 1.00 ~0.091), My Chemical Romance(LB 1.00 ~0.342), No Doubt(LB 1.00 ~0.563), Faith No More(LB 1.00 ~0.497)
+  -> Because you like The Beatles  |  People who listen to The Beatles also play these  (12 rows)
+     Fleetwood Mac — Dreams - 2004 Remaster   [rock, pop 88, ~0.960]
+     Tom Petty and the Heartbreakers — Mary Jane's Last Dance   [rock, pop 76, ~0.959]
+     Jethro Tull — Aqualung   [art rock, pop 62, ~0.954]
+     Heart — Alone   [rock, pop 76, ~0.951]
+     Yes — Owner of a Lonely Heart   [rock, pop 74, ~0.945]
+     Elton John — I'm Still Standing   [rock, pop 84, ~0.913]
+     Bee Gees — How Deep Is Your Love   [soft rock, pop 80, ~0.838]
+     King Crimson — 21st Century Schizoid Man - Including "Mirrors"   [art rock, pop 58, ~0.792]
+     Fleetwood Mac — The Chain - 2004 Remaster   [rock, pop 84, ~0.960]
+     Tom Petty and the Heartbreakers — Learning To Fly   [rock, pop 73, ~0.959]
+     Jethro Tull — Locomotive Breath   [art rock, pop 59, ~0.954]
+     Heart — Barracuda   [rock, pop 74, ~0.951]
+
+=== The Beatles  [region GB]  liked-as "The Beatles"
+  seed in graph: The Beatles / GB / conf 0.94 / pop 86 / b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d
+  seed sound: yes
+    NB	The Beatles	Panic! at the Disco	LB	0.193	pop
+    NB	The Beatles	Belle and Sebastian	LB	0.393	twee pop
+    NB	The Beatles	Eurythmics	LB	0.627	new wave pop
+    NB	The Beatles	Yes	LB	0.945	rock
+    NB	The Beatles	Jethro Tull	LB	0.954	art rock
+    NB	The Beatles	Adele	LB	0.093	british soul
+    NB	The Beatles	Aphex Twin	LB	0.047	uk experimental electronic
+    NB	The Beatles	Amy Winehouse	LB	0.125	neo soul
+    NB	The Beatles	King Crimson	LB	0.792	art rock
+    NB	The Beatles	Iron Maiden	LB	0.560	hard rock
+    NB	The Beatles	PJ Harvey	LB	0.584	piano rock
+    NB	The Beatles	Fleetwood Mac	LB	0.960	rock
+    NB	The Beatles	Elton John	LB	0.913	rock
+    NB	The Beatles	Gorillaz	LB	0.518	rock
+    NB	The Beatles	Blur	LB	0.554	permanent wave
+    NB	The Beatles	Bee Gees	LB	0.838	soft rock
+    NB	The Beatles	Coldplay	LB	0.435	permanent wave
+    NB	The Beatles	New Order	LB	0.456	new wave
+    NB	The Beatles	Ed Sheeran	LB	0.064	uk pop
+    NB	The Beatles	Autechre	LB	0.042	intelligent dance music
+    NB	The Beatles	Marillion	LB	0.619	progressive rock
+    NB	The Beatles	The Prodigy	LB	0.100	rave
+    NB	The Beatles	Bauhaus	LB	0.305	uk post-punk
+    NB	The Beatles	Cradle of Filth	LB	0.081	symphonic black metal
+    NB	The Beatles	Nickelback	LB	0.290	canadian rock
+    NB	The Beatles	Evanescence	LB	0.280	alternative metal
+    NB	The Beatles	Scorpions	LB	0.732	hard rock
+    NB	The Beatles	Tom Petty and the Heartbreakers	LB	0.959	rock
+    NB	The Beatles	Black Eyed Peas	LB	0.089	dance pop
+    NB	The Beatles	Heart	LB	0.951	rock
+    NB	The Beatles	MGMT	LB	0.419	indie rock
+    NB	The Beatles	Lana Del Rey	LB	0.157	pop
+    NB	The Beatles	Incubus	LB	0.457	funk metal
+    NB	The Beatles	Garbage	LB	0.463	permanent wave
+    NB	The Beatles	Sigur Rós	LB	0.166	post-rock
+    NB	The Beatles	Air	LB	0.091	indietronica
+    NB	The Beatles	My Chemical Romance	LB	0.342	modern rock
+    NB	The Beatles	No Doubt	LB	0.563	pop rock
+    NB	The Beatles	Faith No More	LB	0.497	funk metal
+  graph neighbours (39): Panic! at the Disco(LB 1.00 ~0.193), Belle and Sebastian(LB 1.00 ~0.393), Eurythmics(LB 1.00 ~0.627), Yes(LB 1.00 ~0.945), Jethro Tull(LB 1.00 ~0.954), Adele(LB 1.00 ~0.093), Aphex Twin(LB 1.00 ~0.047), Amy Winehouse(LB 1.00 ~0.125), King Crimson(LB 1.00 ~0.792), Iron Maiden(LB 1.00 ~0.560), PJ Harvey(LB 1.00 ~0.584), Fleetwood Mac(LB 1.00 ~0.960), Elton John(LB 1.00 ~0.913), Gorillaz(LB 1.00 ~0.518), Blur(LB 1.00 ~0.554), Bee Gees(LB 1.00 ~0.838), Coldplay(LB 1.00 ~0.435), New Order(LB 1.00 ~0.456), Ed Sheeran(LB 1.00 ~0.064), Autechre(LB 1.00 ~0.042), Marillion(LB 1.00 ~0.619), The Prodigy(LB 1.00 ~0.100), Bauhaus(LB 1.00 ~0.305), Cradle of Filth(LB 1.00 ~0.081), Nickelback(LB 1.00 ~0.290), Evanescence(LB 1.00 ~0.280), Scorpions(LB 1.00 ~0.732), Tom Petty and the Heartbreakers(LB 1.00 ~0.959), Black Eyed Peas(LB 1.00 ~0.089), Heart(LB 1.00 ~0.951), MGMT(LB 1.00 ~0.419), Lana Del Rey(LB 1.00 ~0.157), Incubus(LB 1.00 ~0.457), Garbage(LB 1.00 ~0.463), Sigur Rós(LB 1.00 ~0.166), Air(LB 1.00 ~0.091), My Chemical Romance(LB 1.00 ~0.342), No Doubt(LB 1.00 ~0.563), Faith No More(LB 1.00 ~0.497)
+  -> Because you like The Beatles  |  People who listen to The Beatles also play these  (12 rows)
+     Fleetwood Mac — Dreams - 2004 Remaster   [rock, pop 88, ~0.960]
+     Tom Petty and the Heartbreakers — Mary Jane's Last Dance   [rock, pop 76, ~0.959]
+     Jethro Tull — Aqualung   [art rock, pop 62, ~0.954]
+     Heart — Alone   [rock, pop 76, ~0.951]
+     Yes — Owner of a Lonely Heart   [rock, pop 74, ~0.945]
+     Elton John — I'm Still Standing   [rock, pop 84, ~0.913]
+     Bee Gees — How Deep Is Your Love   [soft rock, pop 80, ~0.838]
+     King Crimson — 21st Century Schizoid Man - Including "Mirrors"   [art rock, pop 58, ~0.792]
+     Fleetwood Mac — The Chain - 2004 Remaster   [rock, pop 84, ~0.960]
+     Tom Petty and the Heartbreakers — Learning To Fly   [rock, pop 73, ~0.959]
+     Jethro Tull — Locomotive Breath   [art rock, pop 59, ~0.954]
+     Heart — Barracuda   [rock, pop 74, ~0.951]
+
+=== Pink Floyd  [region US]  liked-as "Pink Floyd"
+  seed in graph: Pink Floyd / GB / conf 0.94 / pop 81 / 83d91898-7763-47d7-b03b-b92132375c47
+  seed sound: yes
+    NB	Pink Floyd	The Alan Parsons Project	LB	0.990	art rock
+    NB	Pink Floyd	Franz Ferdinand	LB	0.448	scottish rock
+    NB	Pink Floyd	Mogwai	LB	0.163	dream pop
+    NB	Pink Floyd	Aphex Twin	LB	0.074	uk experimental electronic
+    NB	Pink Floyd	Bee Gees	LB	0.760	soft rock
+    NB	Pink Floyd	PJ Harvey	LB	0.585	piano rock
+    NB	Pink Floyd	Peter Gabriel	LB	0.916	soft rock
+    NB	Pink Floyd	The Beatles	LB	0.944	classic rock
+    NB	Pink Floyd	Radiohead	LB	0.672	rock
+    NB	Pink Floyd	The Rolling Stones	LB	0.947	rock
+    NB	Pink Floyd	The Who	LB	0.945	rock
+    NB	Pink Floyd	Fleetwood Mac	LB	0.922	rock
+    NB	Pink Floyd	Muse	LB	0.573	permanent wave
+    NB	Pink Floyd	Coldplay	LB	0.424	permanent wave
+    NB	Pink Floyd	The Police	LB	0.895	rock
+    NB	Pink Floyd	The Clash	LB	0.583	alternative rock
+    NB	Pink Floyd	Gorillaz	LB	0.501	rock
+    NB	Pink Floyd	Elton John	LB	0.888	rock
+    NB	Pink Floyd	Depeche Mode	LB	0.627	new wave
+    NB	Pink Floyd	Arctic Monkeys	LB	0.517	permanent wave
+    NB	Pink Floyd	Iron Maiden	LB	0.562	hard rock
+    NB	Pink Floyd	Genesis	LB	0.978	rock
+    NB	Pink Floyd	Yes	LB	0.982	rock
+    NB	Pink Floyd	Jethro Tull	LB	0.989	art rock
+    NB	Pink Floyd	Megadeth	LB	0.384	metal
+    NB	Pink Floyd	Marvin Gaye	LB	0.082	neo soul
+    NB	Pink Floyd	Björk	LB	0.250	art pop
+    NB	Pink Floyd	Evanescence	LB	0.285	alternative metal
+    NB	Pink Floyd	The Black Keys	LB	0.535	rock
+    NB	Pink Floyd	Slipknot	LB	0.435	alternative metal
+    NB	Pink Floyd	Stone Temple Pilots	LB	0.638	alternative rock
+    NB	Pink Floyd	Bob Marley & The Wailers	LB	0.028	roots reggae
+    NB	Pink Floyd	Tom Petty and the Heartbreakers	LB	0.923	rock
+    NB	Pink Floyd	Heart	LB	0.920	rock
+    NB	Pink Floyd	Eminem	LB	0.036	hip hop
+    NB	Pink Floyd	MGMT	LB	0.411	indie rock
+    NB	Pink Floyd	Beastie Boys	LB	0.260	rap
+    NB	Pink Floyd	Incubus	LB	0.464	funk metal
+    NB	Pink Floyd	Garbage	LB	0.461	permanent wave
+    NB	Pink Floyd	Slayer	LB	0.360	old school thrash
+    NB	Pink Floyd	Sigur Rós	LB	0.195	post-rock
+    NB	Pink Floyd	Air	LB	0.110	indietronica
+    NB	Pink Floyd	Modest Mouse	LB	0.221	indie rock
+  graph neighbours (43): The Alan Parsons Project(LB 1.00 ~0.990), Franz Ferdinand(LB 1.00 ~0.448), Mogwai(LB 1.00 ~0.163), Aphex Twin(LB 1.00 ~0.074), Bee Gees(LB 1.00 ~0.760), PJ Harvey(LB 1.00 ~0.585), Peter Gabriel(LB 1.00 ~0.916), The Beatles(LB 1.00 ~0.944), Radiohead(LB 1.00 ~0.672), The Rolling Stones(LB 1.00 ~0.947), The Who(LB 1.00 ~0.945), Fleetwood Mac(LB 1.00 ~0.922), Muse(LB 1.00 ~0.573), Coldplay(LB 1.00 ~0.424), The Police(LB 1.00 ~0.895), The Clash(LB 1.00 ~0.583), Gorillaz(LB 1.00 ~0.501), Elton John(LB 1.00 ~0.888), Depeche Mode(LB 1.00 ~0.627), Arctic Monkeys(LB 1.00 ~0.517), Iron Maiden(LB 1.00 ~0.562), Genesis(LB 1.00 ~0.978), Yes(LB 1.00 ~0.982), Jethro Tull(LB 1.00 ~0.989), Megadeth(LB 1.00 ~0.384), Marvin Gaye(LB 1.00 ~0.082), Björk(LB 1.00 ~0.250), Evanescence(LB 1.00 ~0.285), The Black Keys(LB 1.00 ~0.535), Slipknot(LB 1.00 ~0.435), Stone Temple Pilots(LB 1.00 ~0.638), Bob Marley & The Wailers(LB 1.00 ~0.028), Tom Petty and the Heartbreakers(LB 1.00 ~0.923), Heart(LB 1.00 ~0.920), Eminem(LB 1.00 ~0.036), MGMT(LB 1.00 ~0.411), Beastie Boys(LB 1.00 ~0.260), Incubus(LB 1.00 ~0.464), Garbage(LB 1.00 ~0.461), Slayer(LB 1.00 ~0.360), Sigur Rós(LB 1.00 ~0.195), Air(LB 1.00 ~0.110), Modest Mouse(LB 1.00 ~0.221)
+  -> Because you like Pink Floyd  |  People who listen to Pink Floyd also play these  (12 rows)
+     The Alan Parsons Project — Eye In The Sky   [art rock, pop 74, ~0.990]
+     Jethro Tull — Aqualung   [art rock, pop 62, ~0.989]
+     Yes — Owner of a Lonely Heart   [rock, pop 74, ~0.982]
+     Genesis — Invisible Touch - 2007 Remaster   [rock, pop 72, ~0.978]
+     The Rolling Stones — Paint It, Black   [rock, pop 82, ~0.947]
+     The Who — Baba O'Riley   [rock, pop 76, ~0.945]
+     The Beatles — Here Comes The Sun - Remastered 2009   [classic rock, pop 84, ~0.944]
+     Tom Petty and the Heartbreakers — Mary Jane's Last Dance   [rock, pop 76, ~0.923]
+     The Alan Parsons Project — Sirius   [art rock, pop 66, ~0.990]
+     Jethro Tull — Locomotive Breath   [art rock, pop 59, ~0.989]
+     Yes — Roundabout - 2024 Remaster   [rock, pop 62, ~0.982]
+     Genesis — That's All - 2007 Remaster   [rock, pop 71, ~0.978]
+
+=== Pink Floyd  [region GB]  liked-as "Pink Floyd"
+  seed in graph: Pink Floyd / GB / conf 0.94 / pop 81 / 83d91898-7763-47d7-b03b-b92132375c47
+  seed sound: yes
+    NB	Pink Floyd	The Alan Parsons Project	LB	0.990	art rock
+    NB	Pink Floyd	Franz Ferdinand	LB	0.448	scottish rock
+    NB	Pink Floyd	Mogwai	LB	0.163	dream pop
+    NB	Pink Floyd	Aphex Twin	LB	0.074	uk experimental electronic
+    NB	Pink Floyd	Bee Gees	LB	0.760	soft rock
+    NB	Pink Floyd	PJ Harvey	LB	0.585	piano rock
+    NB	Pink Floyd	Peter Gabriel	LB	0.916	soft rock
+    NB	Pink Floyd	The Beatles	LB	0.944	classic rock
+    NB	Pink Floyd	Radiohead	LB	0.672	rock
+    NB	Pink Floyd	The Rolling Stones	LB	0.947	rock
+    NB	Pink Floyd	The Who	LB	0.945	rock
+    NB	Pink Floyd	Fleetwood Mac	LB	0.922	rock
+    NB	Pink Floyd	Muse	LB	0.573	permanent wave
+    NB	Pink Floyd	Coldplay	LB	0.424	permanent wave
+    NB	Pink Floyd	The Police	LB	0.895	rock
+    NB	Pink Floyd	The Clash	LB	0.583	alternative rock
+    NB	Pink Floyd	Gorillaz	LB	0.501	rock
+    NB	Pink Floyd	Elton John	LB	0.888	rock
+    NB	Pink Floyd	Depeche Mode	LB	0.627	new wave
+    NB	Pink Floyd	Arctic Monkeys	LB	0.517	permanent wave
+    NB	Pink Floyd	Iron Maiden	LB	0.562	hard rock
+    NB	Pink Floyd	Genesis	LB	0.978	rock
+    NB	Pink Floyd	Yes	LB	0.982	rock
+    NB	Pink Floyd	Jethro Tull	LB	0.989	art rock
+    NB	Pink Floyd	Megadeth	LB	0.384	metal
+    NB	Pink Floyd	Marvin Gaye	LB	0.082	neo soul
+    NB	Pink Floyd	Björk	LB	0.250	art pop
+    NB	Pink Floyd	Evanescence	LB	0.285	alternative metal
+    NB	Pink Floyd	The Black Keys	LB	0.535	rock
+    NB	Pink Floyd	Slipknot	LB	0.435	alternative metal
+    NB	Pink Floyd	Stone Temple Pilots	LB	0.638	alternative rock
+    NB	Pink Floyd	Bob Marley & The Wailers	LB	0.028	roots reggae
+    NB	Pink Floyd	Tom Petty and the Heartbreakers	LB	0.923	rock
+    NB	Pink Floyd	Heart	LB	0.920	rock
+    NB	Pink Floyd	Eminem	LB	0.036	hip hop
+    NB	Pink Floyd	MGMT	LB	0.411	indie rock
+    NB	Pink Floyd	Beastie Boys	LB	0.260	rap
+    NB	Pink Floyd	Incubus	LB	0.464	funk metal
+    NB	Pink Floyd	Garbage	LB	0.461	permanent wave
+    NB	Pink Floyd	Slayer	LB	0.360	old school thrash
+    NB	Pink Floyd	Sigur Rós	LB	0.195	post-rock
+    NB	Pink Floyd	Air	LB	0.110	indietronica
+    NB	Pink Floyd	Modest Mouse	LB	0.221	indie rock
+  graph neighbours (43): The Alan Parsons Project(LB 1.00 ~0.990), Franz Ferdinand(LB 1.00 ~0.448), Mogwai(LB 1.00 ~0.163), Aphex Twin(LB 1.00 ~0.074), Bee Gees(LB 1.00 ~0.760), PJ Harvey(LB 1.00 ~0.585), Peter Gabriel(LB 1.00 ~0.916), The Beatles(LB 1.00 ~0.944), Radiohead(LB 1.00 ~0.672), The Rolling Stones(LB 1.00 ~0.947), The Who(LB 1.00 ~0.945), Fleetwood Mac(LB 1.00 ~0.922), Muse(LB 1.00 ~0.573), Coldplay(LB 1.00 ~0.424), The Police(LB 1.00 ~0.895), The Clash(LB 1.00 ~0.583), Gorillaz(LB 1.00 ~0.501), Elton John(LB 1.00 ~0.888), Depeche Mode(LB 1.00 ~0.627), Arctic Monkeys(LB 1.00 ~0.517), Iron Maiden(LB 1.00 ~0.562), Genesis(LB 1.00 ~0.978), Yes(LB 1.00 ~0.982), Jethro Tull(LB 1.00 ~0.989), Megadeth(LB 1.00 ~0.384), Marvin Gaye(LB 1.00 ~0.082), Björk(LB 1.00 ~0.250), Evanescence(LB 1.00 ~0.285), The Black Keys(LB 1.00 ~0.535), Slipknot(LB 1.00 ~0.435), Stone Temple Pilots(LB 1.00 ~0.638), Bob Marley & The Wailers(LB 1.00 ~0.028), Tom Petty and the Heartbreakers(LB 1.00 ~0.923), Heart(LB 1.00 ~0.920), Eminem(LB 1.00 ~0.036), MGMT(LB 1.00 ~0.411), Beastie Boys(LB 1.00 ~0.260), Incubus(LB 1.00 ~0.464), Garbage(LB 1.00 ~0.461), Slayer(LB 1.00 ~0.360), Sigur Rós(LB 1.00 ~0.195), Air(LB 1.00 ~0.110), Modest Mouse(LB 1.00 ~0.221)
+  -> Because you like Pink Floyd  |  People who listen to Pink Floyd also play these  (12 rows)
+     The Alan Parsons Project — Eye In The Sky   [art rock, pop 74, ~0.990]
+     Jethro Tull — Aqualung   [art rock, pop 62, ~0.989]
+     Yes — Owner of a Lonely Heart   [rock, pop 74, ~0.982]
+     Genesis — Invisible Touch - 2007 Remaster   [rock, pop 72, ~0.978]
+     The Rolling Stones — Paint It, Black   [rock, pop 82, ~0.947]
+     The Who — Baba O'Riley   [rock, pop 76, ~0.945]
+     The Beatles — Here Comes The Sun - Remastered 2009   [classic rock, pop 84, ~0.944]
+     Tom Petty and the Heartbreakers — Mary Jane's Last Dance   [rock, pop 76, ~0.923]
+     The Alan Parsons Project — Sirius   [art rock, pop 66, ~0.990]
+     Jethro Tull — Locomotive Breath   [art rock, pop 59, ~0.989]
+     Yes — Roundabout - 2024 Remaster   [rock, pop 62, ~0.982]
+     Genesis — That's All - 2007 Remaster   [rock, pop 71, ~0.978]
+
+=== Vladimír Mišík  [region US]  liked-as "Vladimír Mišík"
+  seed in graph: Vladimír Mišík / CZ / conf 0.94 / pop 1 / b575d963-c135-47c0-b835-78a1274f28fb
+  seed sound: yes
+    NB	Vladimír Mišík	Flamengo	st	0.920	czech rock
+    NB	Vladimír Mišík	The Matadors	st	0.067	eastern bloc groove
+  graph neighbours (2): Flamengo(st 0.38 ~0.920), The Matadors(st 0.38 ~0.067)
+  -> Sounds like Vladimír Mišík  |  Artists whose sound sits closest to theirs  (12 rows)
+     Jablkoň — Bláznivá   [czech folk rock, pop 28, ~0.993]
+     Petr Novak — Náhrobní Kámen   [classic czech pop, pop 37, ~0.993]
+     Radůza — Dobrý lidi   [czech pop, pop 30, ~0.991]
+     Jan Spaleny — Věřím V Nás   [czech folk, pop 15, ~0.989]
+     Čechomor — Mezi horami   [czech folk rock, pop 44, ~0.988]
+     Petr Hapka — Bude mi lehka zem   [classic czech pop, pop 44, ~0.987]
+     Krausberry — Můstek   [czech folk, pop 32, ~0.983]
+     Buty — Nad Stadem Koni   [czech pop, pop 46, ~0.981]
+     Fleret — Zafúkané   [czech folk rock, pop 47, ~0.981]
+     Mnaga A Zdorp — Měsíc   [czech folk rock, pop 39, ~0.979]
+     Květy — My děti ze stanice Bullerbyn   [brno indie, pop 25, ~0.979]
+     Katapult — Hlupák váhá   [classic czech pop, pop 36, ~0.978]
+
+=== Vladimír Mišík  [region CZ]  liked-as "Vladimír Mišík"
+  seed in graph: Vladimír Mišík / CZ / conf 0.94 / pop 1 / b575d963-c135-47c0-b835-78a1274f28fb
+  seed sound: yes
+    NB	Vladimír Mišík	Flamengo	st	0.920	czech rock
+    NB	Vladimír Mišík	The Matadors	st	0.067	eastern bloc groove
+  graph neighbours (2): Flamengo(st 0.38 ~0.920), The Matadors(st 0.38 ~0.067)
+  -> Sounds like Vladimír Mišík  |  Artists whose sound sits closest to theirs  (12 rows)
+     Jablkoň — Bláznivá   [czech folk rock, pop 28, ~0.993]
+     Petr Novak — Náhrobní Kámen   [classic czech pop, pop 37, ~0.993]
+     Radůza — Dobrý lidi   [czech pop, pop 30, ~0.991]
+     Jan Spaleny — Věřím V Nás   [czech folk, pop 15, ~0.989]
+     Čechomor — Mezi horami   [czech folk rock, pop 44, ~0.988]
+     Petr Hapka — Bude mi lehka zem   [classic czech pop, pop 44, ~0.987]
+     Krausberry — Můstek   [czech folk, pop 32, ~0.983]
+     Buty — Nad Stadem Koni   [czech pop, pop 46, ~0.981]
+     Fleret — Zafúkané   [czech folk rock, pop 47, ~0.981]
+     Mnaga A Zdorp — Měsíc   [czech folk rock, pop 39, ~0.979]
+     Květy — My děti ze stanice Bullerbyn   [brno indie, pop 25, ~0.979]
+     Katapult — Hlupák váhá   [classic czech pop, pop 36, ~0.978]
+
+=== Flamengo  [region US]  liked-as "Flamengo"
+  seed in graph: Flamengo / CZ / conf 0.94 / pop 2 / 7d686004-dd68-444f-a240-422a4259dfd0
+  seed sound: yes
+    NB	Flamengo	Vladimír Mišík	st	0.920	czech folk rock
+  graph neighbours (1): Vladimír Mišík(st 0.38 ~0.920)
+  -> Sounds like Flamengo  |  Artists whose sound sits closest to theirs  (12 rows)
+     Orlik — My Proti Nam   [czech rock, pop 40, ~0.998]
+     Turbo — Krásným Dívkám   [czech rock, pop 37, ~0.997]
+     Keks — Proč Holky Pláčou   [czech rock, pop 38, ~0.997]
+     Ales Brichta — Barák Na Vodstřel   [czech rock, pop 50, ~0.996]
+     Xiii. Stoleti — Můj bratře můj   [czech rock, pop 27, ~0.996]
+     Wanastowi Vjecy — Ty Jsi Tak Hezká   [czech rock, pop 42, ~0.996]
+     Citron — Už Couvám   [czech rock, pop 39, ~0.995]
+     Traktor — Láskožrouti   [czech rock, pop 46, ~0.995]
+     Oceán — Noc je jako...   [czech rock, pop 22, ~0.995]
+     Doga — Nejsi Nevinná   [czech rock, pop 42, ~0.995]
+     Protheus — Cesta   [czech rock, pop 40, ~0.994]
+     Jamaron — Přísahám   [czech rock, pop 39, ~0.994]
+
+=== Flamengo  [region CZ]  liked-as "Flamengo"
+  seed in graph: Flamengo / CZ / conf 0.94 / pop 2 / 7d686004-dd68-444f-a240-422a4259dfd0
+  seed sound: yes
+    NB	Flamengo	Vladimír Mišík	st	0.920	czech folk rock
+  graph neighbours (1): Vladimír Mišík(st 0.38 ~0.920)
+  -> Sounds like Flamengo  |  Artists whose sound sits closest to theirs  (12 rows)
+     Orlik — My Proti Nam   [czech rock, pop 40, ~0.998]
+     Turbo — Krásným Dívkám   [czech rock, pop 37, ~0.997]
+     Keks — Proč Holky Pláčou   [czech rock, pop 38, ~0.997]
+     Ales Brichta — Barák Na Vodstřel   [czech rock, pop 50, ~0.996]
+     Xiii. Stoleti — Můj bratře můj   [czech rock, pop 27, ~0.996]
+     Wanastowi Vjecy — Ty Jsi Tak Hezká   [czech rock, pop 42, ~0.996]
+     Citron — Už Couvám   [czech rock, pop 39, ~0.995]
+     Traktor — Láskožrouti   [czech rock, pop 46, ~0.995]
+     Oceán — Noc je jako...   [czech rock, pop 22, ~0.995]
+     Doga — Nejsi Nevinná   [czech rock, pop 42, ~0.995]
+     Protheus — Cesta   [czech rock, pop 40, ~0.994]
+     Jamaron — Přísahám   [czech rock, pop 39, ~0.994]
+
+=== The Matadors  [region US]  liked-as "The Matadors"
+  seed in graph: The Matadors / CZ / conf 0.9 / pop 0 / 81fb42fb-1a7c-42c6-8be5-b0e6c0ce1437
+  seed sound: yes
+    NB	The Matadors	Vladimír Mišík	st	0.195	czech folk rock
+  graph neighbours (1): Vladimír Mišík(st 0.38 ~0.195)
+  -> Sounds like The Matadors  |  Artists whose sound sits closest to theirs  (12 rows)
+     Gutter Demons — Till' the End   [canadian rockabilly, pop 32, ~0.928]
+     The Creepshow — Run for Your Life   [psychobilly, pop 31, ~0.896]
+     The Brains — I'm Your Nightmare   [psychobilly, pop 30, ~0.885]
+     The Epileptic Hillbilly's — I'll Never Love Again   [deep psychobilly, pop 27, ~0.880]
+     Milwaukee Wildmen — In My Blood   [deep psychobilly, pop 25, ~0.879]
+     Hillbilly Casino — Debt With the Devil   [deep psychobilly, pop 27, ~0.876]
+     The Hellbound Hepcats — Country Girls   [canadian rockabilly, pop 29, ~0.875]
+     Reckless Ones — Dead and Gone   [deep psychobilly, pop 29, ~0.873]
+     The Hillbilly Moon Explosion — My Love for Evermore   [psychobilly, pop 43, ~0.872]
+     Batmobile — Kiss me now   [psychobilly, pop 36, ~0.871]
+     Southern Culture on the Skids — Camel Walk   [psychobilly, pop 39, ~0.868]
+     The Go Getters — Welcome to My Hell   [deep psychobilly, pop 35, ~0.861]
+
+=== The Matadors  [region CZ]  liked-as "The Matadors"
+  seed in graph: The Matadors / CZ / conf 0.9 / pop 0 / 81fb42fb-1a7c-42c6-8be5-b0e6c0ce1437
+  seed sound: yes
+    NB	The Matadors	Vladimír Mišík	st	0.195	czech folk rock
+  graph neighbours (1): Vladimír Mišík(st 0.38 ~0.195)
+  -> Sounds like The Matadors  |  Artists whose sound sits closest to theirs  (12 rows)
+     Gutter Demons — Till' the End   [canadian rockabilly, pop 32, ~0.928]
+     The Creepshow — Run for Your Life   [psychobilly, pop 31, ~0.896]
+     The Brains — I'm Your Nightmare   [psychobilly, pop 30, ~0.885]
+     The Epileptic Hillbilly's — I'll Never Love Again   [deep psychobilly, pop 27, ~0.880]
+     Milwaukee Wildmen — In My Blood   [deep psychobilly, pop 25, ~0.879]
+     Hillbilly Casino — Debt With the Devil   [deep psychobilly, pop 27, ~0.876]
+     The Hellbound Hepcats — Country Girls   [canadian rockabilly, pop 29, ~0.875]
+     Reckless Ones — Dead and Gone   [deep psychobilly, pop 29, ~0.873]
+     The Hillbilly Moon Explosion — My Love for Evermore   [psychobilly, pop 43, ~0.872]
+     Batmobile — Kiss me now   [psychobilly, pop 36, ~0.871]
+     Southern Culture on the Skids — Camel Walk   [psychobilly, pop 39, ~0.868]
+     The Go Getters — Welcome to My Hell   [deep psychobilly, pop 35, ~0.861]
+
+=== Clawfinger  [region US]  liked-as "Clawfinger"
+  seed in graph: Clawfinger / SE / conf 0.94 / pop 3 / f16d25c6-556f-42f9-b648-5f48a8f96ec2
+  seed sound: yes
+  graph neighbours (1): DJ Sleepy(st 0.38 ~-nocat)
+  -> Sounds like Clawfinger  |  Artists whose sound sits closest to theirs  (12 rows)
+     P.O.D. — Satellite   [rap metal, pop 55, ~0.993]
+     Powerman 5000 — Bombshell   [rap metal, pop 40, ~0.987]
+     One Minute Silence — South Central   [rap metal, pop 25, ~0.986]
+     Alien Ant Farm — Glow   [nu metal, pop 44, ~0.985]
+     CKY — Disengage the Simulator   [nu metal, pop 45, ~0.985]
+     Serj Tankian — Empty Walls   [alternative metal, pop 62, ~0.983]
+     Kid Rock — Born Free   [nu metal, pop 57, ~0.982]
+     (Hed) P.E. — Raise Hell   [rap metal, pop 48, ~0.982]
+     Coal Chamber — Shock the Monkey   [rap metal, pop 44, ~0.981]
+     Drowning Pool — Step Up   [nu metal, pop 55, ~0.981]
+     Papa Roach — Even If It Kills Me   [rap metal, pop 70, ~0.980]
+     Godsmack — Bulletproof   [nu metal, pop 65, ~0.979]
+
+=== Clawfinger  [region SE]  liked-as "Clawfinger"
+  seed in graph: Clawfinger / SE / conf 0.94 / pop 3 / f16d25c6-556f-42f9-b648-5f48a8f96ec2
+  seed sound: yes
+  graph neighbours (1): DJ Sleepy(st 0.38 ~-nocat)
+  -> Sounds like Clawfinger  |  Artists whose sound sits closest to theirs  (12 rows)
+     P.O.D. — Satellite   [rap metal, pop 55, ~0.993]
+     Powerman 5000 — Bombshell   [rap metal, pop 40, ~0.987]
+     One Minute Silence — South Central   [rap metal, pop 25, ~0.986]
+     Alien Ant Farm — Glow   [nu metal, pop 44, ~0.985]
+     CKY — Disengage the Simulator   [nu metal, pop 45, ~0.985]
+     Serj Tankian — Empty Walls   [alternative metal, pop 62, ~0.983]
+     Kid Rock — Born Free   [nu metal, pop 57, ~0.982]
+     (Hed) P.E. — Raise Hell   [rap metal, pop 48, ~0.982]
+     Coal Chamber — Shock the Monkey   [rap metal, pop 44, ~0.981]
+     Drowning Pool — Step Up   [nu metal, pop 55, ~0.981]
+     Papa Roach — Even If It Kills Me   [rap metal, pop 70, ~0.980]
+     Godsmack — Bulletproof   [nu metal, pop 65, ~0.979]
+
+=== Gustavo Cerati  [region US]  liked-as "Gustavo Cerati"
+  seed in graph: Gustavo Cerati / AR / conf 0.98 / pop 3 / 979d01bc-a4da-4c80-8cc1-be40bd35cd5e
+  seed sound: yes
+    NB	Gustavo Cerati	Soda Stereo	st	0.990	post-punk argentina
+  graph neighbours (1): Soda Stereo(st 0.38 ~0.990)
+  -> Sounds like Gustavo Cerati  |  Artists whose sound sits closest to theirs  (12 rows)
+     Vicentico — Solo un Momento   [latin alternative, pop 58, ~0.996]
+     Fobia — Hipnotízame   [latin rock, pop 52, ~0.996]
+     Fito Paez — Tumbas de la gloria   [latin alternative, pop 59, ~0.996]
+     El Tri — Pobre soñador   [mexican rock, pop 64, ~0.993]
+     Bunbury — Lady Blue   [latin rock, pop 64, ~0.993]
+     Divididos — El Arriero   [ska argentino, pop 51, ~0.993]
+     Miguel Mateos - Zas — Tirá para Arriba   [latin rock, pop 47, ~0.993]
+     La Gusana Ciega — Tu Volverás   [rock en espanol, pop 59, ~0.992]
+     Los Daniels — Te Deseo lo Mejor   [latin rock, pop 41, ~0.992]
+     Rata Blanca — Talismán   [argentine rock, pop 59, ~0.992]
+     Chetes — Poco A Poco   [rock en espanol, pop 36, ~0.992]
+     Soda Stereo — Entre Caníbales - Remasterizado 2007   [post-punk argentina, pop 67, ~0.991]
+
+=== Gustavo Cerati  [region AR]  liked-as "Gustavo Cerati"
+  seed in graph: Gustavo Cerati / AR / conf 0.98 / pop 3 / 979d01bc-a4da-4c80-8cc1-be40bd35cd5e
+  seed sound: yes
+    NB	Gustavo Cerati	Soda Stereo	st	0.990	post-punk argentina
+  graph neighbours (1): Soda Stereo(st 0.38 ~0.990)
+  -> Sounds like Gustavo Cerati  |  Artists whose sound sits closest to theirs  (12 rows)
+     Vicentico — Solo un Momento   [latin alternative, pop 58, ~0.996]
+     Fobia — Hipnotízame   [latin rock, pop 52, ~0.996]
+     Fito Paez — Tumbas de la gloria   [latin alternative, pop 59, ~0.996]
+     El Tri — Pobre soñador   [mexican rock, pop 64, ~0.993]
+     Bunbury — Lady Blue   [latin rock, pop 64, ~0.993]
+     Divididos — El Arriero   [ska argentino, pop 51, ~0.993]
+     Miguel Mateos - Zas — Tirá para Arriba   [latin rock, pop 47, ~0.993]
+     La Gusana Ciega — Tu Volverás   [rock en espanol, pop 59, ~0.992]
+     Los Daniels — Te Deseo lo Mejor   [latin rock, pop 41, ~0.992]
+     Rata Blanca — Talismán   [argentine rock, pop 59, ~0.992]
+     Chetes — Poco A Poco   [rock en espanol, pop 36, ~0.992]
+     Soda Stereo — Entre Caníbales - Remasterizado 2007   [post-punk argentina, pop 67, ~0.991]
+
+=== Soda Stereo  [region US]  liked-as "Soda Stereo"
+  seed in graph: Soda Stereo / AR / conf 0.98 / pop 5 / 3f8a5e5b-c24b-4068-9f1c-afad8829e06b
+  seed sound: yes
+    NB	Soda Stereo	Gustavo Cerati	st	0.990	latin alternative
+  graph neighbours (1): Gustavo Cerati(st 0.38 ~0.990)
+  -> Sounds like Soda Stereo  |  Artists whose sound sits closest to theirs  (12 rows)
+     Los Auténticos Decadentes — El Murguero   [latin alternative, pop 55, ~0.995]
+     Bersuit Vergarabat — El Baile De La Gambeta   [latin alternative, pop 58, ~0.995]
+     Las Pelotas — Ya Lo Sabés   [rock en espanol, pop 47, ~0.994]
+     Gustavo Cerati — Lago en el Cielo   [latin alternative, pop 66, ~0.994]
+     Genitallica — Ya Nada Es Igual   [rock en espanol, pop 51, ~0.993]
+     Miranda! — Tu Misterioso Alguien   [rock en espanol, pop 65, ~0.993]
+     Los Caligaris — Tus Besos   [latin alternative, pop 55, ~0.993]
+     Volován — No Quieres Venir   [rock en espanol, pop 37, ~0.993]
+     Fidel Nadal — Te Robaste Mi Corazón   [latin alternative, pop 47, ~0.993]
+     Attaque 77 — Arrancacorazones   [argentine rock, pop 65, ~0.992]
+     El Tri — Pobre soñador   [mexican rock, pop 64, ~0.992]
+     Kapanga — Desearia   [ska argentino, pop 45, ~0.992]
+
+=== Soda Stereo  [region AR]  liked-as "Soda Stereo"
+  seed in graph: Soda Stereo / AR / conf 0.98 / pop 5 / 3f8a5e5b-c24b-4068-9f1c-afad8829e06b
+  seed sound: yes
+    NB	Soda Stereo	Gustavo Cerati	st	0.990	latin alternative
+  graph neighbours (1): Gustavo Cerati(st 0.38 ~0.990)
+  -> Sounds like Soda Stereo  |  Artists whose sound sits closest to theirs  (12 rows)
+     Los Auténticos Decadentes — El Murguero   [latin alternative, pop 55, ~0.995]
+     Bersuit Vergarabat — El Baile De La Gambeta   [latin alternative, pop 58, ~0.995]
+     Las Pelotas — Ya Lo Sabés   [rock en espanol, pop 47, ~0.994]
+     Gustavo Cerati — Lago en el Cielo   [latin alternative, pop 66, ~0.994]
+     Genitallica — Ya Nada Es Igual   [rock en espanol, pop 51, ~0.993]
+     Miranda! — Tu Misterioso Alguien   [rock en espanol, pop 65, ~0.993]
+     Los Caligaris — Tus Besos   [latin alternative, pop 55, ~0.993]
+     Volován — No Quieres Venir   [rock en espanol, pop 37, ~0.993]
+     Fidel Nadal — Te Robaste Mi Corazón   [latin alternative, pop 47, ~0.993]
+     Attaque 77 — Arrancacorazones   [argentine rock, pop 65, ~0.992]
+     El Tri — Pobre soñador   [mexican rock, pop 64, ~0.992]
+     Kapanga — Desearia   [ska argentino, pop 45, ~0.992]
+
+=== Nightwish  [region US]  liked-as "Nightwish"
+  seed in graph: Nightwish / FI / conf 0.94 / pop 29 / 00a9f935-ba93-4fc8-a33a-993abe9c936b
+  seed sound: yes
+    NB	Nightwish	Sonata Arctica	LB	0.960	symphonic metal
+    NB	Nightwish	Tarja	LB	0.990	gothic metal
+    NB	Nightwish	Children of Bodom	LB	0.831	melodic death metal
+    NB	Nightwish	Stratovarius	LB	0.913	neo classical metal
+    NB	Nightwish	HIM	LB	0.874	finnish alternative rock
+    NB	Nightwish	Korpiklaani	LB	0.949	folk metal
+    NB	Nightwish	Amorphis	LB	0.941	viking metal
+    NB	Nightwish	Ensiferum	LB	0.945	folk metal
+    NB	Nightwish	Apocalyptica	LB	0.737	cello
+    NB	Nightwish	Metallica	LB	0.446	hard rock
+    NB	Nightwish	Evanescence	LB	0.242	alternative metal
+    NB	Nightwish	Linkin Park	LB	0.176	alternative metal
+    NB	Nightwish	Nirvana	LB	0.086	permanent wave
+    NB	Nightwish	In Flames	LB	0.643	gothenburg metal
+    NB	Nightwish	Muse	LB	0.085	permanent wave
+    NB	Nightwish	Queen	LB	0.071	rock
+    NB	Nightwish	Slipknot	LB	0.191	alternative metal
+    NB	Nightwish	Red Hot Chili Peppers	LB	0.099	permanent wave
+    NB	Nightwish	Pink Floyd	LB	0.058	art rock
+    NB	Nightwish	Green Day	LB	0.080	permanent wave
+    NB	Nightwish	Black Sabbath	LB	0.342	hard rock
+    NB	Nightwish	Blind Guardian	LB	0.917	symphonic metal
+    NB	Nightwish	Megadeth	LB	0.463	metal
+    NB	Nightwish	The Offspring	LB	0.113	skate punk
+    NB	Nightwish	Guns N’ Roses	LB	0.254	hard rock
+    NB	Nightwish	AC/DC	LB	0.167	australian rock
+    NB	Nightwish	Foo Fighters	LB	0.120	permanent wave
+    NB	Nightwish	Led Zeppelin	LB	0.125	rock
+    NB	Nightwish	Dream Theater	LB	0.650	metal
+    NB	Nightwish	Judas Priest	LB	0.374	hard rock
+    NB	Nightwish	Arch Enemy	LB	0.766	swedish metal
+    NB	Nightwish	The Beatles	LB	0.060	classic rock
+    NB	Nightwish	Daft Punk	LB	0.060	filter house
+  graph neighbours (33): Sonata Arctica(LB 1.00 ~0.960), Tarja(LB 1.00 ~0.990), Children of Bodom(LB 1.00 ~0.831), Stratovarius(LB 1.00 ~0.913), HIM(LB 1.00 ~0.874), Korpiklaani(LB 1.00 ~0.949), Amorphis(LB 1.00 ~0.941), Ensiferum(LB 1.00 ~0.945), Apocalyptica(LB 1.00 ~0.737), Metallica(LB 1.00 ~0.446), Evanescence(LB 1.00 ~0.242), Linkin Park(LB 1.00 ~0.176), Nirvana(LB 1.00 ~0.086), In Flames(LB 1.00 ~0.643), Muse(LB 1.00 ~0.085), Queen(LB 1.00 ~0.071), Slipknot(LB 1.00 ~0.191), Red Hot Chili Peppers(LB 1.00 ~0.099), Pink Floyd(LB 1.00 ~0.058), Green Day(LB 1.00 ~0.080), Black Sabbath(LB 1.00 ~0.342), Blind Guardian(LB 1.00 ~0.917), Megadeth(LB 1.00 ~0.463), The Offspring(LB 1.00 ~0.113), Guns N’ Roses(LB 1.00 ~0.254), AC/DC(LB 1.00 ~0.167), Foo Fighters(LB 1.00 ~0.120), Led Zeppelin(LB 1.00 ~0.125), Dream Theater(LB 1.00 ~0.650), Judas Priest(LB 1.00 ~0.374), Arch Enemy(LB 1.00 ~0.766), The Beatles(LB 1.00 ~0.060), Daft Punk(LB 1.00 ~0.060)
+  -> Because you like Nightwish  |  People who listen to Nightwish also play these  (12 rows)
+     Tarja — I Walk Alone   [gothic metal, pop 46, ~0.990]
+     Sonata Arctica — FullMoon   [symphonic metal, pop 50, ~0.960]
+     Korpiklaani — Vodka   [folk metal, pop 56, ~0.949]
+     Ensiferum — In My Sword I Trust   [folk metal, pop 47, ~0.945]
+     Amorphis — The Bee   [viking metal, pop 47, ~0.941]
+     Blind Guardian — The Bard's Song - In the Forest - Remastered 2007   [symphonic metal, pop 57, ~0.917]
+     Stratovarius — Hunting High and Low   [neo classical metal, pop 58, ~0.913]
+     HIM — Wicked Game   [finnish alternative rock, pop 62, ~0.874]
+     Tarja — Until My Last Breath   [gothic metal, pop 43, ~0.990]
+     Sonata Arctica — Tallulah   [symphonic metal, pop 49, ~0.960]
+     Korpiklaani — A Man with a Plan   [folk metal, pop 54, ~0.949]
+     Ensiferum — Andromeda   [folk metal, pop 44, ~0.945]
+
+=== Nightwish  [region FI]  liked-as "Nightwish"
+  seed in graph: Nightwish / FI / conf 0.94 / pop 29 / 00a9f935-ba93-4fc8-a33a-993abe9c936b
+  seed sound: yes
+    NB	Nightwish	Sonata Arctica	LB	0.960	symphonic metal
+    NB	Nightwish	Tarja	LB	0.990	gothic metal
+    NB	Nightwish	Children of Bodom	LB	0.831	melodic death metal
+    NB	Nightwish	Stratovarius	LB	0.913	neo classical metal
+    NB	Nightwish	HIM	LB	0.874	finnish alternative rock
+    NB	Nightwish	Korpiklaani	LB	0.949	folk metal
+    NB	Nightwish	Amorphis	LB	0.941	viking metal
+    NB	Nightwish	Ensiferum	LB	0.945	folk metal
+    NB	Nightwish	Apocalyptica	LB	0.737	cello
+    NB	Nightwish	Metallica	LB	0.446	hard rock
+    NB	Nightwish	Evanescence	LB	0.242	alternative metal
+    NB	Nightwish	Linkin Park	LB	0.176	alternative metal
+    NB	Nightwish	Nirvana	LB	0.086	permanent wave
+    NB	Nightwish	In Flames	LB	0.643	gothenburg metal
+    NB	Nightwish	Muse	LB	0.085	permanent wave
+    NB	Nightwish	Queen	LB	0.071	rock
+    NB	Nightwish	Slipknot	LB	0.191	alternative metal
+    NB	Nightwish	Red Hot Chili Peppers	LB	0.099	permanent wave
+    NB	Nightwish	Pink Floyd	LB	0.058	art rock
+    NB	Nightwish	Green Day	LB	0.080	permanent wave
+    NB	Nightwish	Black Sabbath	LB	0.342	hard rock
+    NB	Nightwish	Blind Guardian	LB	0.917	symphonic metal
+    NB	Nightwish	Megadeth	LB	0.463	metal
+    NB	Nightwish	The Offspring	LB	0.113	skate punk
+    NB	Nightwish	Guns N’ Roses	LB	0.254	hard rock
+    NB	Nightwish	AC/DC	LB	0.167	australian rock
+    NB	Nightwish	Foo Fighters	LB	0.120	permanent wave
+    NB	Nightwish	Led Zeppelin	LB	0.125	rock
+    NB	Nightwish	Dream Theater	LB	0.650	metal
+    NB	Nightwish	Judas Priest	LB	0.374	hard rock
+    NB	Nightwish	Arch Enemy	LB	0.766	swedish metal
+    NB	Nightwish	The Beatles	LB	0.060	classic rock
+    NB	Nightwish	Daft Punk	LB	0.060	filter house
+  graph neighbours (33): Sonata Arctica(LB 1.00 ~0.960), Tarja(LB 1.00 ~0.990), Children of Bodom(LB 1.00 ~0.831), Stratovarius(LB 1.00 ~0.913), HIM(LB 1.00 ~0.874), Korpiklaani(LB 1.00 ~0.949), Amorphis(LB 1.00 ~0.941), Ensiferum(LB 1.00 ~0.945), Apocalyptica(LB 1.00 ~0.737), Metallica(LB 1.00 ~0.446), Evanescence(LB 1.00 ~0.242), Linkin Park(LB 1.00 ~0.176), Nirvana(LB 1.00 ~0.086), In Flames(LB 1.00 ~0.643), Muse(LB 1.00 ~0.085), Queen(LB 1.00 ~0.071), Slipknot(LB 1.00 ~0.191), Red Hot Chili Peppers(LB 1.00 ~0.099), Pink Floyd(LB 1.00 ~0.058), Green Day(LB 1.00 ~0.080), Black Sabbath(LB 1.00 ~0.342), Blind Guardian(LB 1.00 ~0.917), Megadeth(LB 1.00 ~0.463), The Offspring(LB 1.00 ~0.113), Guns N’ Roses(LB 1.00 ~0.254), AC/DC(LB 1.00 ~0.167), Foo Fighters(LB 1.00 ~0.120), Led Zeppelin(LB 1.00 ~0.125), Dream Theater(LB 1.00 ~0.650), Judas Priest(LB 1.00 ~0.374), Arch Enemy(LB 1.00 ~0.766), The Beatles(LB 1.00 ~0.060), Daft Punk(LB 1.00 ~0.060)
+  -> Because you like Nightwish  |  People who listen to Nightwish also play these  (12 rows)
+     Tarja — I Walk Alone   [gothic metal, pop 46, ~0.990]
+     Sonata Arctica — FullMoon   [symphonic metal, pop 50, ~0.960]
+     Korpiklaani — Vodka   [folk metal, pop 56, ~0.949]
+     Ensiferum — In My Sword I Trust   [folk metal, pop 47, ~0.945]
+     Amorphis — The Bee   [viking metal, pop 47, ~0.941]
+     Blind Guardian — The Bard's Song - In the Forest - Remastered 2007   [symphonic metal, pop 57, ~0.917]
+     Stratovarius — Hunting High and Low   [neo classical metal, pop 58, ~0.913]
+     HIM — Wicked Game   [finnish alternative rock, pop 62, ~0.874]
+     Tarja — Until My Last Breath   [gothic metal, pop 43, ~0.990]
+     Sonata Arctica — Tallulah   [symphonic metal, pop 49, ~0.960]
+     Korpiklaani — A Man with a Plan   [folk metal, pop 54, ~0.949]
+     Ensiferum — Andromeda   [folk metal, pop 44, ~0.945]
+
+=== Enya  [region US]  liked-as "Enya"
+  seed in graph: Enya / IE / conf 0.94 / pop 15 / 4967c0a1-b9f3-465e-8440-4598fd9fc33c
+  seed sound: yes
+    NB	Enya	U2	LB	0.299	irish rock
+    NB	Enya	The Cranberries	LB	0.328	irish rock
+    NB	Enya	Clannad	LB	0.873	new age
+    NB	Enya	The Corrs	LB	0.509	pop rock
+    NB	Enya	Coldplay	LB	0.147	permanent wave
+    NB	Enya	The Beatles	LB	0.109	classic rock
+    NB	Enya	Radiohead	LB	0.164	rock
+    NB	Enya	Pink Floyd	LB	0.137	art rock
+    NB	Enya	Moby	LB	0.032	electronica
+    NB	Enya	Depeche Mode	LB	0.163	new wave
+    NB	Enya	David Bowie	LB	0.130	rock
+    NB	Enya	Madonna	LB	0.089	pop
+    NB	Enya	R.E.M.	LB	0.024	athens indie
+    NB	Enya	Red Hot Chili Peppers	LB	0.068	permanent wave
+    NB	Enya	Vangelis	LB	0.252	synthesizer
+    NB	Enya	Nirvana	LB	0.036	permanent wave
+    NB	Enya	Linkin Park	LB	-0.006	alternative metal
+    NB	Enya	Metallica	LB	0.072	hard rock
+    NB	Enya	Elton John	LB	0.127	rock
+    NB	Enya	Muse	LB	0.065	permanent wave
+    NB	Enya	The Rolling Stones	LB	0.092	rock
+    NB	Enya	Michael Jackson	LB	0.067	soul
+    NB	Enya	Led Zeppelin	LB	0.086	rock
+    NB	Enya	Simon & Garfunkel	LB	0.167	classic rock
+    NB	Enya	The Cure	LB	0.122	uk post-punk
+    NB	Enya	Evanescence	LB	0.005	alternative metal
+  graph neighbours (26): U2(LB 1.00 ~0.299), The Cranberries(LB 1.00 ~0.328), Clannad(LB 1.00 ~0.873), The Corrs(LB 1.00 ~0.509), Coldplay(LB 1.00 ~0.147), The Beatles(LB 1.00 ~0.109), Radiohead(LB 1.00 ~0.164), Pink Floyd(LB 1.00 ~0.137), Moby(LB 1.00 ~0.032), Depeche Mode(LB 1.00 ~0.163), David Bowie(LB 1.00 ~0.130), Madonna(LB 1.00 ~0.089), R.E.M.(LB 1.00 ~0.024), Red Hot Chili Peppers(LB 1.00 ~0.068), Vangelis(LB 1.00 ~0.252), Nirvana(LB 1.00 ~0.036), Linkin Park(LB 1.00 ~-0.006), Metallica(LB 1.00 ~0.072), Elton John(LB 1.00 ~0.127), Muse(LB 1.00 ~0.065), The Rolling Stones(LB 1.00 ~0.092), Michael Jackson(LB 1.00 ~0.067), Led Zeppelin(LB 1.00 ~0.086), Simon & Garfunkel(LB 1.00 ~0.167), The Cure(LB 1.00 ~0.122), Evanescence(LB 1.00 ~0.005)
+  -> Because you like Enya  |  People who listen to Enya also play these  (4 rows)
+     Clannad — Theme from Harry's Game   [new age, pop 57, ~0.873]
+     The Corrs — Breathless   [pop rock, pop 71, ~0.509]
+     Clannad — I Will Find You (Theme from "The Last of the Mohicans")   [new age, pop 50, ~0.873]
+     The Corrs — Runaway   [pop rock, pop 64, ~0.509]
+
+=== Enya  [region IE]  liked-as "Enya"
+  seed in graph: Enya / IE / conf 0.94 / pop 15 / 4967c0a1-b9f3-465e-8440-4598fd9fc33c
+  seed sound: yes
+    NB	Enya	U2	LB	0.299	irish rock
+    NB	Enya	The Cranberries	LB	0.328	irish rock
+    NB	Enya	Clannad	LB	0.873	new age
+    NB	Enya	The Corrs	LB	0.509	pop rock
+    NB	Enya	Coldplay	LB	0.147	permanent wave
+    NB	Enya	The Beatles	LB	0.109	classic rock
+    NB	Enya	Radiohead	LB	0.164	rock
+    NB	Enya	Pink Floyd	LB	0.137	art rock
+    NB	Enya	Moby	LB	0.032	electronica
+    NB	Enya	Depeche Mode	LB	0.163	new wave
+    NB	Enya	David Bowie	LB	0.130	rock
+    NB	Enya	Madonna	LB	0.089	pop
+    NB	Enya	R.E.M.	LB	0.024	athens indie
+    NB	Enya	Red Hot Chili Peppers	LB	0.068	permanent wave
+    NB	Enya	Vangelis	LB	0.252	synthesizer
+    NB	Enya	Nirvana	LB	0.036	permanent wave
+    NB	Enya	Linkin Park	LB	-0.006	alternative metal
+    NB	Enya	Metallica	LB	0.072	hard rock
+    NB	Enya	Elton John	LB	0.127	rock
+    NB	Enya	Muse	LB	0.065	permanent wave
+    NB	Enya	The Rolling Stones	LB	0.092	rock
+    NB	Enya	Michael Jackson	LB	0.067	soul
+    NB	Enya	Led Zeppelin	LB	0.086	rock
+    NB	Enya	Simon & Garfunkel	LB	0.167	classic rock
+    NB	Enya	The Cure	LB	0.122	uk post-punk
+    NB	Enya	Evanescence	LB	0.005	alternative metal
+  graph neighbours (26): U2(LB 1.00 ~0.299), The Cranberries(LB 1.00 ~0.328), Clannad(LB 1.00 ~0.873), The Corrs(LB 1.00 ~0.509), Coldplay(LB 1.00 ~0.147), The Beatles(LB 1.00 ~0.109), Radiohead(LB 1.00 ~0.164), Pink Floyd(LB 1.00 ~0.137), Moby(LB 1.00 ~0.032), Depeche Mode(LB 1.00 ~0.163), David Bowie(LB 1.00 ~0.130), Madonna(LB 1.00 ~0.089), R.E.M.(LB 1.00 ~0.024), Red Hot Chili Peppers(LB 1.00 ~0.068), Vangelis(LB 1.00 ~0.252), Nirvana(LB 1.00 ~0.036), Linkin Park(LB 1.00 ~-0.006), Metallica(LB 1.00 ~0.072), Elton John(LB 1.00 ~0.127), Muse(LB 1.00 ~0.065), The Rolling Stones(LB 1.00 ~0.092), Michael Jackson(LB 1.00 ~0.067), Led Zeppelin(LB 1.00 ~0.086), Simon & Garfunkel(LB 1.00 ~0.167), The Cure(LB 1.00 ~0.122), Evanescence(LB 1.00 ~0.005)
+  -> Because you like Enya  |  People who listen to Enya also play these  (4 rows)
+     Clannad — Theme from Harry's Game   [new age, pop 57, ~0.873]
+     The Corrs — Breathless   [pop rock, pop 71, ~0.509]
+     Clannad — I Will Find You (Theme from "The Last of the Mohicans")   [new age, pop 50, ~0.873]
+     The Corrs — Runaway   [pop rock, pop 64, ~0.509]
+
+=== cache check: findArtist(name, own country) on the US-warmed graph vs a graph that only saw that country
+
+SUMMARY (US pass): graph 7, sounds-like 6, none 0, seed-in-own-shelf rows 0, duplicate rows 0

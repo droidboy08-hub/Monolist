@@ -1,0 +1,746 @@
+{
+    "classes": [
+        {
+            "className": "Library",
+            "lineNumber": 20,
+            "methods": [
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "key",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "fallback",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 8,
+                    "isConst": true,
+                    "lineNumber": 65,
+                    "name": "settingValue",
+                    "returnType": "QString"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "key",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 9,
+                    "isCloned": true,
+                    "isConst": true,
+                    "lineNumber": 65,
+                    "name": "settingValue",
+                    "returnType": "QString"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "key",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "value",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 10,
+                    "lineNumber": 66,
+                    "name": "setSetting",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "name",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 11,
+                    "lineNumber": 71,
+                    "name": "createPlaylist",
+                    "returnType": "int"
+                },
+                {
+                    "access": "public",
+                    "index": 12,
+                    "isCloned": true,
+                    "lineNumber": 71,
+                    "name": "createPlaylist",
+                    "returnType": "int"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "playlistId",
+                            "type": "int"
+                        },
+                        {
+                            "name": "name",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 13,
+                    "lineNumber": 72,
+                    "name": "renamePlaylist",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "playlistId",
+                            "type": "int"
+                        }
+                    ],
+                    "index": 14,
+                    "lineNumber": 73,
+                    "name": "deletePlaylist",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "playlistId",
+                            "type": "int"
+                        },
+                        {
+                            "name": "track",
+                            "type": "QVariantMap"
+                        }
+                    ],
+                    "index": 15,
+                    "lineNumber": 76,
+                    "name": "addToPlaylist",
+                    "returnType": "bool"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "playlistId",
+                            "type": "int"
+                        },
+                        {
+                            "name": "tracks",
+                            "type": "QVariantList"
+                        }
+                    ],
+                    "index": 16,
+                    "lineNumber": 77,
+                    "name": "addAllToPlaylist",
+                    "returnType": "int"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "playlistId",
+                            "type": "int"
+                        },
+                        {
+                            "name": "entryId",
+                            "type": "int"
+                        }
+                    ],
+                    "index": 17,
+                    "lineNumber": 78,
+                    "name": "removeFromPlaylist",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "playlistId",
+                            "type": "int"
+                        },
+                        {
+                            "name": "entryId",
+                            "type": "int"
+                        },
+                        {
+                            "name": "toIndex",
+                            "type": "int"
+                        }
+                    ],
+                    "index": 18,
+                    "lineNumber": 81,
+                    "name": "movePlaylistEntry",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "playlistId",
+                            "type": "int"
+                        }
+                    ],
+                    "index": 19,
+                    "lineNumber": 82,
+                    "name": "openPlaylist",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "playlistId",
+                            "type": "int"
+                        }
+                    ],
+                    "index": 20,
+                    "isConst": true,
+                    "lineNumber": 83,
+                    "name": "playlistName",
+                    "returnType": "QString"
+                },
+                {
+                    "access": "public",
+                    "index": 21,
+                    "isConst": true,
+                    "lineNumber": 84,
+                    "name": "playlistTrackList",
+                    "returnType": "QVariantList"
+                },
+                {
+                    "access": "public",
+                    "index": 22,
+                    "isConst": true,
+                    "lineNumber": 85,
+                    "name": "likedTrackList",
+                    "returnType": "QVariantList"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "playlistId",
+                            "type": "int"
+                        }
+                    ],
+                    "index": 23,
+                    "isConst": true,
+                    "lineNumber": 87,
+                    "name": "playlistTracksFor",
+                    "returnType": "QVariantList"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "videoId",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 24,
+                    "isConst": true,
+                    "lineNumber": 90,
+                    "name": "isLiked",
+                    "returnType": "bool"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "track",
+                            "type": "QVariantMap"
+                        },
+                        {
+                            "name": "liked",
+                            "type": "bool"
+                        }
+                    ],
+                    "index": 25,
+                    "lineNumber": 91,
+                    "name": "setLiked",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "videoId",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 26,
+                    "isConst": true,
+                    "lineNumber": 96,
+                    "name": "isInLibrary",
+                    "returnType": "bool"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "track",
+                            "type": "QVariantMap"
+                        }
+                    ],
+                    "index": 27,
+                    "lineNumber": 98,
+                    "name": "removeFromLibrary",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "url",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 28,
+                    "lineNumber": 100,
+                    "name": "copyLink",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "browseId",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 29,
+                    "isConst": true,
+                    "lineNumber": 103,
+                    "name": "isSaved",
+                    "returnType": "bool"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "page",
+                            "type": "QVariantMap"
+                        },
+                        {
+                            "name": "saved",
+                            "type": "bool"
+                        }
+                    ],
+                    "index": 30,
+                    "lineNumber": 105,
+                    "name": "setSaved",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 31,
+                    "lineNumber": 108,
+                    "name": "reloadHistory",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 32,
+                    "lineNumber": 109,
+                    "name": "clearHistory",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "videoId",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 33,
+                    "lineNumber": 111,
+                    "name": "removeFromHistory",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "name",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 34,
+                    "lineNumber": 114,
+                    "name": "setUserName",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 35,
+                    "isConst": true,
+                    "lineNumber": 124,
+                    "name": "countries",
+                    "returnType": "QVariantList"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "code",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 36,
+                    "isConst": true,
+                    "lineNumber": 125,
+                    "name": "countryName",
+                    "returnType": "QString"
+                }
+            ],
+            "object": true,
+            "properties": [
+                {
+                    "constant": true,
+                    "designable": true,
+                    "final": false,
+                    "index": 0,
+                    "lineNumber": 23,
+                    "name": "playlists",
+                    "override": false,
+                    "read": "playlists",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "PlaylistModel*",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": true,
+                    "designable": true,
+                    "final": false,
+                    "index": 1,
+                    "lineNumber": 25,
+                    "name": "albums",
+                    "override": false,
+                    "read": "albums",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "AlbumModel*",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": true,
+                    "designable": true,
+                    "final": false,
+                    "index": 2,
+                    "lineNumber": 26,
+                    "name": "savedPlaylists",
+                    "override": false,
+                    "read": "savedPlaylists",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "AlbumModel*",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": true,
+                    "designable": true,
+                    "final": false,
+                    "index": 3,
+                    "lineNumber": 27,
+                    "name": "tracks",
+                    "override": false,
+                    "read": "tracks",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "TrackModel*",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": true,
+                    "designable": true,
+                    "final": false,
+                    "index": 4,
+                    "lineNumber": 29,
+                    "name": "liked",
+                    "override": false,
+                    "read": "liked",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "SearchResultModel*",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": true,
+                    "designable": true,
+                    "final": false,
+                    "index": 5,
+                    "lineNumber": 31,
+                    "name": "history",
+                    "override": false,
+                    "read": "history",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "SearchResultModel*",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 6,
+                    "lineNumber": 33,
+                    "name": "playlist",
+                    "notify": "playlistChanged",
+                    "override": false,
+                    "read": "playlist",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QVariantMap",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": true,
+                    "designable": true,
+                    "final": false,
+                    "index": 7,
+                    "lineNumber": 34,
+                    "name": "playlistTracks",
+                    "override": false,
+                    "read": "playlistTracks",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "SearchResultModel*",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 8,
+                    "lineNumber": 37,
+                    "name": "revision",
+                    "notify": "revisionChanged",
+                    "override": false,
+                    "read": "revision",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "int",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 9,
+                    "lineNumber": 38,
+                    "name": "userName",
+                    "notify": "userChanged",
+                    "override": false,
+                    "read": "userName",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 10,
+                    "lineNumber": 39,
+                    "name": "userInitials",
+                    "notify": "userChanged",
+                    "override": false,
+                    "read": "userInitials",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 11,
+                    "lineNumber": 41,
+                    "name": "region",
+                    "notify": "regionChanged",
+                    "override": false,
+                    "read": "region",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false,
+                    "virtual": false,
+                    "write": "setRegion"
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 12,
+                    "lineNumber": 42,
+                    "name": "regionInUse",
+                    "notify": "regionChanged",
+                    "override": false,
+                    "read": "regionInUse",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 13,
+                    "lineNumber": 43,
+                    "name": "regionInUseName",
+                    "notify": "regionChanged",
+                    "override": false,
+                    "read": "regionInUseName",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": true,
+                    "designable": true,
+                    "final": false,
+                    "index": 14,
+                    "lineNumber": 44,
+                    "name": "systemRegionName",
+                    "override": false,
+                    "read": "systemRegionName",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": false,
+                    "designable": true,
+                    "final": false,
+                    "index": 15,
+                    "lineNumber": 46,
+                    "name": "videoQuality",
+                    "notify": "videoQualityChanged",
+                    "override": false,
+                    "read": "videoQuality",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "int",
+                    "user": false,
+                    "virtual": false,
+                    "write": "setVideoQuality"
+                }
+            ],
+            "qualifiedClassName": "Library",
+            "signals": [
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "text",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 0,
+                    "lineNumber": 131,
+                    "name": "notice",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 1,
+                    "lineNumber": 132,
+                    "name": "likesChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 2,
+                    "lineNumber": 133,
+                    "name": "revisionChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 3,
+                    "lineNumber": 134,
+                    "name": "playlistChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 4,
+                    "lineNumber": 136,
+                    "name": "historyChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 5,
+                    "lineNumber": 137,
+                    "name": "userChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 6,
+                    "lineNumber": 138,
+                    "name": "regionChanged",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "index": 7,
+                    "lineNumber": 139,
+                    "name": "videoQualityChanged",
+                    "returnType": "void"
+                }
+            ],
+            "superClasses": [
+                {
+                    "access": "public",
+                    "name": "QObject"
+                }
+            ]
+        }
+    ],
+    "inputFile": "library.h",
+    "outputRevision": 69
+}

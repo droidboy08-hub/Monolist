@@ -1,0 +1,695 @@
+﻿=== U2  [region US]  liked-as "U2"
+  seed in graph: U2 / IE / conf 0.94 / pop 34 / a3cb23fc-acd3-4ce0-8f36-1e5aa6a18432
+  graph neighbours (15): The Cranberries(LB 1.00), Enya(LB 1.00), Bono(st 0.38), Marvin Gaye(LB 1.00), Nickelback(LB 1.00), Evanescence(LB 1.00), ZZ Top(LB 1.00), Eurythmics(LB 1.00), Scorpions(LB 1.00), Bob Marley & The Wailers(LB 1.00), Ramones(LB 1.00), Tom Petty and the Heartbreakers(LB 1.00), P!nk(LB 1.00), Black Eyed Peas(LB 1.00), Simple Minds(LB 1.00)
+  -> Because you like U2  |  People who listen to U2 also play these  (12 rows)
+     The Cranberries — Linger   [irish rock, pop 85]
+     Enya — Only Time   [middle earth, pop 73]
+     Bono — Marrëzisht   [albanian hip hop, pop 37]
+     Marvin Gaye — Ain't No Mountain High Enough   [neo soul, pop 83]
+     Nickelback — How You Remind Me   [canadian rock, pop 86]
+     Evanescence — Bring Me To Life   [alternative metal, pop 86]
+     ZZ Top — La Grange (2005 Remaster)   [rock, pop 80]
+     Eurythmics — Sexcrime (Nineteen Eighty-Four)   [new wave pop, pop 44]
+     The Cranberries — Zombie   [irish rock, pop 85]
+     Enya — Caribbean Blue - 2009 Remaster   [middle earth, pop 69]
+     Bono — 24/7   [albanian hip hop, pop 34]
+     Marvin Gaye — Sexual Healing   [neo soul, pop 76]
+=== Girls' Generation  [region US]  liked-as "Girls' Generation"
+  seed in graph: NOT FOUND
+  -> Sounds like Girls' Generation  |  Artists whose sound sits closest to theirs  (12 rows)
+     gugudan — Not That Type   [k-pop, pop 40]
+     IZ*ONE — La Vie en Rose   [k-pop, pop 64]
+     Apink — Dumhdurum   [k-pop, pop 54]
+     OH MY GIRL — Dun Dun Dance   [k-pop, pop 55]
+     IZ*ONE — Violeta   [k-pop, pop 58]
+     NATURE — Girls   [k-pop, pop 43]
+     WJSN — I Wish   [k-pop, pop 42]
+     LABOUM — 체온 Between Us   [k-pop, pop 36]
+     LOOΠΔ 1/3 — Love & Live   [k-pop, pop 36]
+     Apink — LUV   [k-pop, pop 50]
+     Red Velvet — Peek-A-Boo   [k-pop girl group, pop 63]
+     Girl's Day — 여자 대통령   [k-pop, pop 42]
+=== BIGBANG  [region US]  liked-as "BIGBANG"
+  seed in graph: BIGBANG / KR / conf 0.94 / pop 8 / ec2bcb77-b9a1-49e2-bfe7-419586bbef48
+  graph neighbours (19): MAMAMOO(LB 1.00), SISTAR(LB 1.00), BTS(LB 1.00), BLACKPINK(LB 1.00), 2NE1(LB 1.00), G‐DRAGON(LB 1.00), EXO(LB 1.00), Red Velvet(LB 1.00), SHINee(LB 1.00), f(x)(LB 1.00), TWICE(LB 1.00), TAEYANG(LB 1.00), Ariana Grande(LB 1.00), Linkin Park(LB 1.00), Billie Eilish(LB 1.00), Michael Jackson(LB 1.00), 東方神起(LB 1.00 -nocat), Perfume(LB 1.00), Girls’ Generation(LB 1.00)
+  -> Because you like BIGBANG  |  People who listen to BIGBANG also play these  (12 rows)
+     MAMAMOO — HIP   [k-pop, pop 65]
+     SISTAR — Touch my body   [k-pop, pop 58]
+     BTS — Dynamite   [pop, pop 80]
+     BLACKPINK — As If It's Your Last   [pop, pop 75]
+     2NE1 — I Am The Best   [dance pop, pop 65]
+     G-DRAGON — HOME SWEET HOME (feat. TAEYANG & DAESUNG)   [k-pop, pop 75]
+     EXO — Love Shot   [k-pop, pop 70]
+     Red Velvet — Psycho   [k-pop girl group, pop 70]
+     MAMAMOO — Egotistic   [k-pop, pop 60]
+     SISTAR — Give it to me   [k-pop, pop 55]
+     BTS — FAKE LOVE   [pop, pop 79]
+     BLACKPINK — BOOMBAYAH   [pop, pop 74]
+=== Camila  [region US]  liked-as "Camila"
+  seed in graph: Camila / MX / conf 0.8 / pop 2 / 6100e9f6-4316-4553-8f23-80466e253fc5
+  graph neighbours (1): Samo(st 0.38)
+  -> Sounds like Camila  |  Artists whose sound sits closest to theirs  (12 rows)
+     Matisse — Todavía   [mexican pop, pop 54]
+     Jesse & Joy — ¡Corre!   [mexican pop, pop 74]
+     Ha*Ash — Te Dejo en Libertad   [mexican pop, pop 72]
+     Belinda — Acariciame, El Gato Y Yo, Acariciame (feat. Regina Blandón)   [mexican pop, pop 73]
+     Alejandra Guzman — Hacer El Amor Con Otro   [mexican pop, pop 65]
+     Matisse — Acuérdate de Mí   [mexican pop, pop 58]
+     Alejandra Guzman — Llama Por Favor   [mexican pop, pop 67]
+     Alexander Acha — Te amo   [mexican pop, pop 64]
+     Alexander Acha — Te amo   [mexican pop, pop 49]   <<DUPTITLE,DUPKEY
+     Belinda — Amiga Mía, Ese hombre No Se Toca   [mexican pop, pop 77]
+     Franco De Vita — Solo Importas Tu   [latin arena pop, pop 56]
+     Yahir — Antes De Renunciar   [mexican pop, pop 47]
+=== SB19  [region US]  liked-as "SB19"
+  seed in graph: SB19 / PH / conf 0.94 / pop 1354 / 9252ca18-015c-484c-ae59-5670784887d3
+  graph neighbours (5): Felip(st 0.38), Stell(st 0.38 -nocat), justin(st 0.38), PABLO(st 0.38), Josh Cullen(st 0.38 -nocat)
+  -> Because you like SB19  |  Artists MusicBrainz connects with SB19  (6 rows)
+     Felip — Moving Closer - From the Cafe   [p-pop, pop 56]
+     Justin — Shake Me   [jawaiian, pop 27]
+     Pablo — Tomara - Ao Vivo   [forro, pop 68]
+     Felip — ID feat. RYOKI (BE:FIRST), RYUKI (MAZZEL), JIMMY (PSYCHIC FEVER), FELIP   [p-pop, pop 56]
+     Justin — Leaving On A Jet Plane   [jawaiian, pop 25]
+     Pablo — Mega Sena - Ao Vivo   [forro, pop 63]
+=== Can  [region US]  liked-as "Can"
+  seed in graph: Can / DE / conf 0.94 / pop 8 / 13501c7d-d181-45ba-af52-5f101d8516a0
+  graph neighbours (4): Kraftwerk(LB 1.00), Tangerine Dream(LB 1.00), Popol Vuh(LB 1.00), Nico(LB 1.00)
+  -> Because you like Can  |  People who listen to Can also play these  (8 rows)
+     Kraftwerk — The Model - 2009 Remaster   [early synthpop, pop 58]
+     Tangerine Dream — Love On A Real Train - From 'Risky Business' Original Motion Picture Soundtrack   [synthesizer, pop 49]
+     Popol Vuh — Morgengruss II   [space rock, pop 34]
+     Nico & Vinz — Am I Wrong   [afrobeats, pop 77]
+     Kraftwerk — Das Model   [early synthpop, pop 53]
+     Tangerine Dream — The Stargate [Tablet II]   [synthesizer, pop 46]
+     Popol Vuh — Morgengruß   [space rock, pop 32]
+     Nico — These Days   [experimental, pop 66]
+=== Popol Vuh  [region US]  liked-as "Popol Vuh"
+  seed in graph: Popol Vuh / DE / conf 0.94 / pop 3 / 2f4bf325-2bbb-4d5f-8681-b0fef130bff0
+  graph neighbours (2): Tangerine Dream(LB 1.00), Can(LB 1.00)
+  -> Because you like Popol Vuh  |  People who listen to Popol Vuh also play these  (4 rows)
+     Tangerine Dream — Love On A Real Train - From 'Risky Business' Original Motion Picture Soundtrack   [synthesizer, pop 49]
+     CAN — Vitamin C   [experimental rock, pop 54]
+     Tangerine Dream — The Stargate [Tablet II]   [synthesizer, pop 46]
+     CAN — Vitamin C - 2004 Remastered Version   [experimental rock, pop 50]   <<DUPTITLE,DUPKEY
+=== Boris  [region US]  liked-as "Boris"
+  seed in graph: Boris / JP / conf 0.94 / pop 5 / 57652bf8-cfe8-42e7-b9a7-5572a7080d8d
+  graph neighbours (1): MONO(LB 1.00)
+  -> Sounds like Boris  |  Artists whose sound sits closest to theirs  (12 rows)
+     Earth — High Command   [gaian doom, pop 27]
+     Earth — Omens And Portents 1: The Driver   [gaian doom, pop 34]
+     The Body — At Death's Door   [sludge metal, pop 26]
+     Ghost — Piper   [japanese psychedelic rock, pop 8]
+     Kylesa — Scapegoat - 2022 Remaster   [stoner metal, pop 36]
+     The Body — The Riderless Mount   [sludge metal, pop 26]
+     Ghost — Hypnotic Underground Pt. 2: Escaped And Lost Down In Medina   [japanese psychedelic rock, pop 8]
+     Kylesa — Unspoken   [stoner metal, pop 35]
+     King Woman — Morning Star   [gaian doom, pop 36]
+     Whores — Fake Life   [post-metal, pop 37]
+     King Woman — Psychic Wound   [gaian doom, pop 37]
+     Chat Pile — Masc   [post-doom metal, pop 43]
+=== Neurosis  [region US]  liked-as "Neurosis"
+  seed in graph: Neurosis / US / conf 0.94 / pop 12 / a9416fb3-4d28-4575-abae-f0d160be83ed
+  graph neighbours (18): Nine Inch Nails(LB 1.00), Slayer(LB 1.00), Faith No More(LB 1.00), Death(LB 1.00), System of a Down(LB 1.00), The Smashing Pumpkins(LB 1.00), Pixies(LB 1.00), Korn(LB 1.00), Anthrax(LB 1.00), Ramones(LB 1.00), Mastodon(LB 1.00), Agalloch(LB 1.00), Opeth(LB 1.00), Mogwai(LB 1.00), Iron Maiden(LB 1.00), Amorphis(LB 1.00), Rammstein(LB 1.00), The Beatles(LB 1.00)
+  -> Because you like Neurosis  |  People who listen to Neurosis also play these  (12 rows)
+     Nine Inch Nails — Closer   [industrial, pop 74]
+     Slayer — Raining Blood   [old school thrash, pop 70]
+     Faith No More — Epic   [funk metal, pop 68]
+     Death — Voice of the Soul   [technical death metal, pop 58]
+     System Of A Down — Toxicity   [alternative metal, pop 85]
+     The Smashing Pumpkins — 1979 - Remastered 2012   [alternative rock, pop 79]
+     Pixies — Where Is My Mind? - 2007 Remaster   [alternative rock, pop 78]
+     Korn — Freak On a Leash   [funk metal, pop 80]
+     Nine Inch Nails — The Hand That Feeds   [industrial, pop 65]
+     Slayer — Delusions of Saviour   [old school thrash, pop 68]
+     Faith No More — Easy   [funk metal, pop 64]
+     Death — Symbolic   [technical death metal, pop 55]
+=== Mogwai  [region US]  liked-as "Mogwai"
+  seed in graph: Mogwai / GB / conf 0.94 / pop 10 / d700b3f5-45af-4d02-95ed-57d301bda93e
+  graph neighbours (19): Gorillaz(LB 1.00), Belle and Sebastian(LB 1.00), Brian Eno(LB 1.00), Aphex Twin(LB 1.00), PJ Harvey(LB 1.00), Autechre(LB 1.00), Anathema(LB 1.00), Elbow(LB 1.00), Ladytron(LB 1.00), Radiohead(LB 1.00), 65daysofstatic(LB 1.00), Boards of Canada(LB 1.00), Hans Zimmer(LB 1.00), R.E.M.(LB 1.00), TV on the Radio(LB 1.00), MONO(LB 1.00), Sigur Rós(LB 1.00), King Gizzard & the Lizard Wizard(LB 1.00), DJ Shadow(LB 1.00)
+  -> Because you like Mogwai  |  People who listen to Mogwai also play these  (12 rows)
+     Gorillaz — Feel Good Inc.   [rock, pop 88]
+     Belle and Sebastian — The Boy With the Arab Strap   [twee pop, pop 57]
+     Brian Eno — An Ending (Ascent) - Remastered 2005   [experimental, pop 57]
+     Aphex Twin — QKThr   [uk experimental electronic, pop 67]
+     PJ Harvey — Down By The Water   [piano rock, pop 61]
+     Autechre — Altibzz   [intelligent dance music, pop 47]
+     Anathema — Flying - Remastered   [progressive metal, pop 53]
+     Elbow — One Day Like This   [britpop, pop 61]
+     Gorillaz — On Melancholy Hill   [rock, pop 83]
+     Belle and Sebastian — Get Me Away from Here, I'm Dying   [twee pop, pop 52]
+     Brian Eno — Emerald and Stone   [experimental, pop 52]
+     Aphex Twin — Xtal   [uk experimental electronic, pop 66]
+=== Godspeed You! Black Emperor  [region US]  liked-as "Godspeed You! Black Emperor"
+  seed in graph: Godspeed You! Black Emperor / CA / conf 0.94 / pop 12 / 3648db01-b29d-4ab9-835c-83f6a5068fe4
+  graph neighbours (14): A Silver Mt. Zion(LB 1.00 -nocat), Arcade Fire(LB 1.00), Tim Hecker(LB 1.00), Radiohead(LB 1.00), Boards of Canada(LB 1.00), Pink Floyd(LB 1.00), Aphex Twin(LB 1.00), Nine Inch Nails(LB 1.00), David Bowie(LB 1.00), The Beatles(LB 1.00), Björk(LB 1.00), Portishead(LB 1.00), Joy Division(LB 1.00), Nirvana(LB 1.00)
+  -> Because you like Godspeed You! Black Emperor  |  People who listen to Godspeed You! Black Emperor also play these  (12 rows)
+     Arcade Fire — The Suburbs   [canadian indie, pop 64]
+     Tim Hecker — Heaven Will Come   [canadian experimental, pop 46]
+     Radiohead — Creep   [rock, pop 89]
+     Boards of Canada — Olson   [scottish electronic, pop 57]
+     Pink Floyd — Another Brick in the Wall, Pt. 2   [art rock, pop 82]
+     Aphex Twin — QKThr   [uk experimental electronic, pop 67]
+     Nine Inch Nails — Closer   [industrial, pop 74]
+     David Bowie — Starman - 2012 Remaster   [rock, pop 77]
+     Arcade Fire — Wake Up   [canadian indie, pop 64]
+     Tim Hecker — Trade Winds, White Heat   [canadian experimental, pop 44]
+     Radiohead — No Surprises   [rock, pop 84]
+     Boards of Canada — Roygbiv   [scottish electronic, pop 57]
+=== Tool  [region US]  liked-as "Tool"
+  seed in graph: Tool / US / conf 0.94 / pop 35 / 66fc5bf8-daa4-4241-b378-9bc9077939d2
+  graph neighbours (16): Red Hot Chili Peppers(LB 1.00), The Smashing Pumpkins(LB 1.00), Foo Fighters(LB 1.00), Slipknot(LB 1.00), Linkin Park(LB 1.00), Incubus(LB 1.00), Stone Temple Pilots(LB 1.00), Weezer(LB 1.00), Guns N’ Roses(LB 1.00), The Doors(LB 1.00), Mastodon(LB 1.00), Megadeth(LB 1.00), Radiohead(LB 1.00), Muse(LB 1.00), Led Zeppelin(LB 1.00), The Beatles(LB 1.00)
+  -> Because you like Tool  |  People who listen to Tool also play these  (12 rows)
+     Red Hot Chili Peppers — Can't Stop   [permanent wave, pop 86]
+     The Smashing Pumpkins — 1979 - Remastered 2012   [alternative rock, pop 79]
+     Foo Fighters — Everlong   [permanent wave, pop 84]
+     Slipknot — Duality   [alternative metal, pop 83]
+     Linkin Park — Numb   [alternative metal, pop 88]
+     Incubus — Drive   [funk metal, pop 79]
+     Stone Temple Pilots — Interstate Love Song - 2019 Remaster   [alternative rock, pop 76]
+     Weezer — Island In The Sun   [permanent wave, pop 80]
+     Red Hot Chili Peppers — Under the Bridge   [permanent wave, pop 84]
+     The Smashing Pumpkins — Bullet With Butterfly Wings - Remastered 2012   [alternative rock, pop 78]
+     Foo Fighters — The Pretender   [permanent wave, pop 79]
+     Slipknot — Psychosocial   [alternative metal, pop 79]
+=== Deftones  [region US]  liked-as "Deftones"
+  seed in graph: Deftones / US / conf 0.94 / pop 10 / 7527f6c2-d762-4b88-b5e2-9244f1e34c46
+  graph neighbours (17): Thirty Seconds to Mars(LB 1.00), Linkin Park(LB 1.00), The Smashing Pumpkins(LB 1.00), Slipknot(LB 1.00), Red Hot Chili Peppers(LB 1.00), Incubus(LB 1.00), Stone Temple Pilots(LB 1.00), Mastodon(LB 1.00), Pixies(LB 1.00), Beastie Boys(LB 1.00), Evanescence(LB 1.00), Breaking Benjamin(LB 1.00), Mogwai(LB 1.00), Apocalyptica(LB 1.00), Radiohead(LB 1.00), Muse(LB 1.00), Pink Floyd(LB 1.00)
+  -> Because you like Deftones  |  People who listen to Deftones also play these  (12 rows)
+     Thirty Seconds To Mars — The Kill   [modern rock, pop 79]
+     Linkin Park — Numb   [alternative metal, pop 88]
+     The Smashing Pumpkins — 1979 - Remastered 2012   [alternative rock, pop 79]
+     Slipknot — Duality   [alternative metal, pop 83]
+     Red Hot Chili Peppers — Can't Stop   [permanent wave, pop 86]
+     Incubus — Drive   [funk metal, pop 79]
+     Stone Temple Pilots — Interstate Love Song - 2019 Remaster   [alternative rock, pop 76]
+     Mastodon — Blood and Thunder   [metal, pop 63]
+     Thirty Seconds To Mars — This Is War   [modern rock, pop 67]
+     Linkin Park — In the End   [alternative metal, pop 88]
+     The Smashing Pumpkins — Bullet With Butterfly Wings - Remastered 2012   [alternative rock, pop 78]
+     Slipknot — Psychosocial   [alternative metal, pop 79]
+=== Ennio Morricone  [region US]  liked-as "Ennio Morricone"
+  seed in graph: Ennio Morricone / IT / conf 0.98 / pop 12 / a16e47f5-aa54-47fe-87e4-bb8af91a9fdd
+  graph neighbours (14): Ludovico Einaudi(LB 1.00), Dario Marianelli(LB 1.00), Hans Zimmer(LB 1.00), Johnny Cash(LB 1.00), The Beatles(LB 1.00), Radiohead(LB 1.00), The Rolling Stones(LB 1.00), Coldplay(LB 1.00), U2(LB 1.00), Gorillaz(LB 1.00), Nine Inch Nails(LB 1.00), R.E.M.(LB 1.00), The Beach Boys(LB 1.00), Air(LB 1.00)
+  -> Because you like Ennio Morricone  |  People who listen to Ennio Morricone also play these  (12 rows)
+     Ludovico Einaudi — Experience   [compositional ambient, pop 78]
+     Dario Marianelli — Someone Loves Us   [soundtrack, pop 49]
+     Hans Zimmer — Cornfield Chase   [soundtrack, pop 78]
+     Johnny Cash — Hurt   [outlaw country, pop 74]
+     The Beatles — Here Comes The Sun - Remastered 2009   [classic rock, pop 84]
+     Radiohead — Creep   [rock, pop 89]
+     The Rolling Stones — Paint It, Black   [rock, pop 82]
+     Coldplay — Yellow   [permanent wave, pop 91]
+     Ludovico Einaudi — Nuvole Bianche   [compositional ambient, pop 73]
+     Dario Marianelli — A Letter From Prison   [soundtrack, pop 45]
+     Hans Zimmer — Time   [soundtrack, pop 74]
+     Johnny Cash — Ring of Fire   [outlaw country, pop 70]
+=== Vangelis  [region US]  liked-as "Vangelis"
+  seed in graph: Vangelis / FR / conf 0.65 / pop 9 / 57fca0e2-f9ad-4ae6-af9d-6a6f50cbcd5f
+  graph neighbours (17): Air(LB 1.00), M83(LB 1.00), Jean‐Michel Jarre(LB 1.00), Yann Tiersen(LB 1.00), Mylène Farmer(LB 1.00), Aphrodite’s Child(st 0.38), Pink Floyd(LB 1.00), Hans Zimmer(LB 1.00), The Beatles(LB 1.00), Radiohead(LB 1.00), Moby(LB 1.00), Boards of Canada(LB 1.00), Depeche Mode(LB 1.00), Aphex Twin(LB 1.00), U2(LB 1.00), The Cure(LB 1.00), Coldplay(LB 1.00)
+  -> Because you like Vangelis  |  People who listen to Vangelis also play these  (12 rows)
+     Air — Playground Love   [indietronica, pop 68]
+     M83 — Midnight City   [metropopolis, pop 80]
+     Jean-Michel Jarre — Oxygène, Pt. 4   [vintage french electronic, pop 59]
+     Yann Tiersen — Comptine d'un autre été, l'après-midi   [french soundtrack, pop 75]
+     Mylène Farmer — Désenchantée   [french pop, pop 62]
+     Aphrodite's Child — The Four Horsemen   [progressive rock, pop 47]
+     Pink Floyd — Another Brick in the Wall, Pt. 2   [art rock, pop 82]
+     Hans Zimmer — Cornfield Chase   [soundtrack, pop 78]
+     Air — All I Need (feat. Beth Hirsch)   [indietronica, pop 68]
+     M83 — Outro   [metropopolis, pop 74]
+     Jean-Michel Jarre — Oxygène, Pt. 2   [vintage french electronic, pop 53]
+     Yann Tiersen — La Valse d'Amélie - Version piano   [french soundtrack, pop 64]
+=== Hans Zimmer  [region US]  liked-as "Hans Zimmer"
+  seed in graph: Hans Zimmer / US / conf 0.8 / pop 16 / e6de1f3b-6484-491c-88dd-6d619f142abc
+  graph neighbours (17): Linkin Park(LB 1.00), Michael Jackson(LB 1.00), R.E.M.(LB 1.00), Evanescence(LB 1.00), Guns N’ Roses(LB 1.00), The Beach Boys(LB 1.00), System of a Down(LB 1.00), Johnny Cash(LB 1.00), Inon Zur(LB 1.00), 宇多田ヒカル(LB 1.00 -nocat), Yolanda Adams(LB 0.13), Sigur Rós(LB 1.00), Aphex Twin(LB 1.00), Brian Eno(LB 1.00), Infected Mushroom(LB 1.00), Coldplay(LB 1.00), Elton John(LB 1.00)
+  -> Because you like Hans Zimmer  |  People who listen to Hans Zimmer also play these  (12 rows)
+     Linkin Park — Numb   [alternative metal, pop 88]
+     Michael Jackson — Billie Jean   [soul, pop 83]
+     R.E.M. — Losing My Religion   [athens indie, pop 85]
+     Evanescence — Bring Me To Life   [alternative metal, pop 86]
+     Guns N' Roses — Sweet Child O' Mine   [hard rock, pop 87]
+     The Beach Boys — Good Vibrations - Remastered 2001   [classic rock, pop 72]
+     System Of A Down — Toxicity   [alternative metal, pop 85]
+     Johnny Cash — Hurt   [outlaw country, pop 74]
+     Linkin Park — In the End   [alternative metal, pop 88]
+     Michael Jackson — Beat It   [soul, pop 80]
+     R.E.M. — Everybody Hurts   [athens indie, pop 75]
+     Evanescence — Going Under   [alternative metal, pop 78]
+=== Praga Khan  [region US]  liked-as "Praga Khan"
+  seed in graph: Praga Khan / BE / conf 0.94 / pop 2 / 56cf82d2-fecc-4bc4-876d-aea841f74e77
+  graph neighbours (1): Lords of Acid(st 0.38)
+  -> Sounds like Praga Khan  |  Artists whose sound sits closest to theirs  (12 rows)
+     Human Resource — Dominator   [happy hardcore, pop 36]
+     Lords Of Acid — Let's Get High   [hardcore techno, pop 35]
+     Lords Of Acid — I Sit on Acid   [hardcore techno, pop 44]
+     Urban Hype — A Trip To Trumpton   [bleep techno, pop 34]
+     Technotronic — Pump Up The Jam - Edit   [new beat, pop 70]
+     The Time Frequency — The Ultimate High   [hardcore techno, pop 37]
+     The Time Frequency — New Emotion   [hardcore techno, pop 39]
+     Technotronic — Get Up (Before The Night Is Over)   [new beat, pop 60]
+     Urban Hype — A Trip to Trumpton   [bleep techno, pop 33]   <<DUPTITLE,DUPKEY
+     Atari Teenage Riot — Sex   [cyberpunk, pop 30]
+     Darren Styles — Switch   [hardcore techno, pop 54]
+     Rachel Wallace — Tell Me Why - M&M Full Vocal   [hardcore techno, pop 39]
+=== Technotronic  [region US]  liked-as "Technotronic"
+  seed in graph: Technotronic / BE / conf 0.94 / pop 1 / 62173ce5-37ef-41b1-86cd-45401a8955fc
+  graph neighbours (1): Ya Kid K(st 0.38 -nocat)
+  -> Sounds like Technotronic  |  Artists whose sound sits closest to theirs  (12 rows)
+     Praga Khan — Injected with a Poison   [hardcore techno, pop 39]
+     Human Resource — Dominator   [happy hardcore, pop 36]
+     Praga Khan — The Power of the Flower   [hardcore techno, pop 21]
+     S'Express — Theme from S-Express   [hip house, pop 36]
+     S'Express — Theme from S'Express - 12" Version   [hip house, pop 36]   <<DUPTITLE,DUPKEY
+     Reel 2 Real — I Like to Move It - Radio Mix   [hip house, pop 38]
+     2 Eivissa — Oh La La La - Extended Version   [hip house, pop 46]
+     The Outhere Brothers — Boom Boom Boom   [hip house, pop 38]
+     N-Trance — Stayin' Alive - Extended Mix   [eurodance, pop 45]
+     Le Click — Tonight Is The Night - Dance Mix   [hip house, pop 45]
+     Le Click — Tonight Is The Night - Fluid Mix   [hip house, pop 38]
+     Leila K — Got to Get (feat. Leila K)   [hip house, pop 47]
+=== Mayhem  [region US]  liked-as "Mayhem"
+  seed in graph: Mayhem / NO / conf 0.94 / pop 5 / c5f9e699-7b0d-4030-86dd-7acc8250d147
+  graph neighbours (4): Darkthrone(LB 1.00), Ulver(LB 1.00), Burzum(LB 1.00), Dimmu Borgir(LB 1.00)
+  -> Because you like Mayhem  |  People who listen to Mayhem also play these  (8 rows)
+     Darkthrone — Transilvanian Hunger - Studio   [norwegian death metal, pop 46]
+     Ulver — I Troldskog Faren Vild   [post-metal, pop 40]
+     Burzum — Dunkelheit   [black metal, pop 54]
+     Dimmu Borgir — Puritania   [symphonic black metal, pop 50]
+     Darkthrone — Quintessence   [norwegian death metal, pop 45]
+     Ulver — So Falls the World   [post-metal, pop 37]
+     Burzum — Jesus' Tod   [black metal, pop 48]
+     Dimmu Borgir — Progenies of the Great Apocalypse   [symphonic black metal, pop 50]
+=== Darkthrone  [region US]  liked-as "Darkthrone"
+  seed in graph: Darkthrone / NO / conf 0.94 / pop 9 / af8fd97c-db72-4e30-b2aa-30ebd0c4f1a0
+  graph neighbours (24): Mayhem(LB 1.00), Immortal(LB 1.00), Emperor(LB 1.00), Satyricon(LB 1.00), Gorgoroth(LB 1.00), Enslaved(LB 1.00), 1349(LB 1.00), Taake(LB 1.00), Borknagar(LB 1.00), Arcturus(LB 1.00), Windir(LB 1.00), Ulver(LB 1.00), Death(LB 1.00), Slayer(LB 1.00), Iron Maiden(LB 1.00), Opeth(LB 1.00), Amorphis(LB 1.00), Arch Enemy(LB 1.00), Rammstein(LB 1.00), Anthrax(LB 1.00), System of a Down(LB 1.00), Mastodon(LB 1.00), Dio(LB 1.00), Nine Inch Nails(LB 1.00)
+  -> Because you like Darkthrone  |  People who listen to Darkthrone also play these  (12 rows)
+     Mayhem — Freezing Moon   [black metal, pop 55]
+     Immortal — Tyrants   [black metal, pop 45]
+     Emperor — I Am The Black Wizards   [norwegian metal, pop 45]
+     Satyricon — K.I.N.G   [black 'n' roll, pop 49]
+     Gorgoroth — Radix Malorum   [norwegian metal, pop 40]
+     Enslaved — What Else Is There - Bonus Version   [progressive black metal, pop 41]
+     1349 — I Am Abomination   [black metal, pop 32]
+     Taake — Myr   [black metal, pop 35]
+     Mayhem — Chainsaw Gutsfuck   [black metal, pop 51]
+     Immortal — One by One   [black metal, pop 44]
+     Emperor — Still   [liquid funk, pop 41]
+     Satyricon — Black Crow on a Tombstone   [black 'n' roll, pop 44]
+=== Emperor  [region US]  liked-as "Emperor"
+  seed in graph: Emperor / NO / conf 0.94 / pop 6 / d9951785-7906-4daf-9a60-21753bf64aa9
+  graph neighbours (5): Darkthrone(LB 1.00), Ulver(LB 1.00), Burzum(LB 1.00), Dimmu Borgir(LB 1.00), Ildjarn(st 0.38)
+  -> Because you like Emperor  |  People who listen to Emperor also play these  (10 rows)
+     Darkthrone — Transilvanian Hunger - Studio   [norwegian death metal, pop 46]
+     Ulver — I Troldskog Faren Vild   [post-metal, pop 40]
+     Burzum — Dunkelheit   [black metal, pop 54]
+     Dimmu Borgir — Puritania   [symphonic black metal, pop 50]
+     Ildjarn — Amber Lake   [black metal, pop 17]
+     Darkthrone — Quintessence   [norwegian death metal, pop 45]
+     Ulver — So Falls the World   [post-metal, pop 37]
+     Burzum — Jesus' Tod   [black metal, pop 48]
+     Dimmu Borgir — Progenies of the Great Apocalypse   [symphonic black metal, pop 50]
+     Ildjarn — Mørklagt Sti   [black metal, pop 15]
+=== Tashi Dorji  [region US]  liked-as "Tashi Dorji"
+  seed in graph: Tashi Dorji / US / conf 0.8 / pop 0 / b4a635d1-f5b3-49fb-9b46-224295ce0b55
+  graph neighbours (1): 𝔪𝔬𝔲𝔫𝔱(st 0.38)
+  -> Sounds like Tashi Dorji  |  Artists whose sound sits closest to theirs  (12 rows)
+     Ugay — Bum Jarim   [bhutanese pop, pop 38]
+     Dedrik Penjore — Semkha   [bhutanese pop, pop 29]
+     Kenny Lhendup — Doen Dayra   [bhutanese pop, pop 30]
+     TheLungten — Ngada Yoepda   [bhutanese pop, pop 30]
+     Chogo — Under My Skin   [bhutanese pop, pop 29]
+     TheLungten — Mo   [bhutanese pop, pop 31]
+     Ugay — Hey Love   [bhutanese pop, pop 29]
+     Dedrik Penjore — Dochula   [bhutanese pop, pop 29]
+     Chogo — 21 Again   [bhutanese pop, pop 31]
+     PEEW — HEYMA   [bhutanese pop, pop 33]
+     Dean McPhee — Sky Burial   [drone folk, pop 35]
+     Six Organs Of Admittance — Home   [american primitive, pop 38]
+=== 이달의 소녀  [region US]  liked-as "이달의 소녀"
+  seed in graph: 이달의 소녀 / KR / conf 0.98 / pop 5 / de4feabc-cd21-4568-a09c-2086bfebe2f4
+  graph neighbours (5): Girls’ Generation(LB 1.00), ODD EYE CIRCLE(st 0.38 -nocat), 이달의 소녀 1/3(st 0.38 -nocat), Yves(st 0.38), ViVi(st 0.38 -nocat)
+  -> Because you like 이달의 소녀  |  People who listen to 이달의 소녀 also play these  (4 rows)
+     Girls' Generation — Gee   [k-pop, pop 67]
+     Yves & Yvan — Dyab ka fache   [haitian gospel, pop 26]
+     Girls' Generation — Into the New World   [k-pop, pop 63]
+     Yves & Yvan — Tout bagay byen - Live   [haitian gospel, pop 25]
+=== Mohammad Muneem  [region US]  liked-as "Mohammad Muneem"
+  seed in graph: Mohammad Muneem / IN / conf 0.94 / pop 0 / ff92f242-5a71-409b-9e00-b5bde8ace7a2
+  graph neighbours (1): Alif(st 0.38)
+  -> Sounds like Mohammad Muneem  |  Artists whose sound sits closest to theirs  (12 rows)
+     Murali Gopy — Varika Varika   [mollywood, pop 35]
+     Arun Alat — Innaleyum   [mollywood, pop 40]
+     B.K. Harinarayanan — Neeyilla Neram Duet   [mollywood, pop 40]
+     Nikhil mathew — Ore Nila Ore Veyil   [mollywood, pop 52]
+     Shreya Jayadeep — Krusil Kandunjaan - Female Version   [malayalam worship, pop 19]
+     Sony Mohan — Oru Nokku Kanuvan - Reprise   [mollywood, pop 30]
+     Alif — Ride Home   [kashmiri pop, pop 30]
+     Ajit Kale — Tere Sath Mein   [desi pop, pop 43]
+     Anupam Roy — Tumi Jake Bhalobaso - Female Version   [indian singer-songwriter, pop 49]
+     Frizzell D'souza — Diana   [bangalore indie, pop 16]
+     Kausar Munir — Naina (From "The Diplomat")   [modern bollywood, pop 55]
+     thiarajxtt — Stardust   [punjabi pop, pop 41]
+=== Gayle San  [region US]  liked-as "Gayle San"
+  seed in graph: Gayle San / SG / conf 0.9 / pop 0 / d670d256-98ec-44e0-b986-d3b5a9248307
+  graph neighbours (1): Naga(st 0.38)
+  -> Sounds like Gayle San  |  Artists whose sound sits closest to theirs  (12 rows)
+     Felix Kröcher — Exploration   [schranz, pop 37]
+     Felix Kröcher — Affection - Radio Edit   [schranz, pop 39]
+     Thomas P. Heckmann — Himmel & Hoelle   [dark minimal techno, pop 27]
+     Thomas P. Heckmann — Tanzmaschine   [dark minimal techno, pop 26]
+     Pleasurekraft — Non-Human Animal   [dark techno, pop 37]
+     Marco Bailey — Sweet Irony   [techno, pop 20]
+     Marco Bailey — Dominance - Original Mix   [techno, pop 20]
+     Mees Salomé — Rose (ASOT 1217)   [deep techno, pop 38]
+     Sam Paganini — Rave - Speed Up 2025 Mix   [italian techno, pop 38]
+     Sam Paganini — Dusty   [italian techno, pop 40]
+     Victor Ruiz — Become   [brazilian techno, pop 48]
+     Ramon Tapia — Superstition   [deep minimal techno, pop 38]
+=== Kenshi Yonezu  [region US]  liked-as "Kenshi Yonezu"
+  seed in graph: NOT FOUND
+  -> Sounds like Kenshi Yonezu  |  Artists whose sound sits closest to theirs  (12 rows)
+     Yoko Takahashi — 残酷な天使のテーゼ (Directors Edit Version)   [anime, pop 61]
+     内田彩 — Explosive Heart   [seiyu, pop 37]
+     Ketsumeishi — 友よ 〜 この先もずっと・・・   [j-pop, pop 61]
+     SHISHAMO — 僕に彼女ができたんだ   [j-pop, pop 54]
+     ClariS — irony   [j-pop girl group, pop 47]
+     J SOUL BROTHERS III — STARS   [j-division, pop 47]
+     EXILE — 銀河鉄道999 - EXILE CATCHY BEST   [j-pop boy group, pop 49]
+     Hitomi Shimatani — ANGELUS-アンジェラス-   [j-pop, pop 41]
+     lol — power of the dream   [j-idol, pop 38]
+     Mr.Children — 名もなき詩   [j-pop, pop 61]
+     YUKI — ランデヴー   [j-pop, pop 37]
+     Yoko Takahashi — 魂のルフラン   [anime, pop 48]
+=== Zemfira  [region US]  liked-as "Zemfira"
+  seed in graph: NOT FOUND
+  -> Sounds like Zemfira  |  Artists whose sound sits closest to theirs  (12 rows)
+     Agatha Christie — Как на войне   [russian rock, pop 57]
+     7B — Некрещёная луна   [russian rock, pop 41]
+     Naik Borzov — Verkhom na zvezde   [russian rock, pop 42]
+     Nochnye Snaipery — катастрофически   [russian rock, pop 48]
+     Zveri — Напитки покрепче   [russian rock, pop 42]
+     Кожаный Олень — Снегири И Суперклей   [russian punk, pop 29]
+     Zheka — 1000 дорог   [russian chanson, pop 39]
+     Mikhail Krug — Купола   [russian chanson, pop 43]
+     Sergey Shnurov — Свобода [Из к/ф "Бумер. Фильм второй"]   [russian rock, pop 50]
+     Pornofilmy — Прости. Прощай. Привет   [russian punk, pop 41]
+     Animal Jazz — Целую   [russian rock, pop 36]
+     Владимир Захаров — Встречи   [russian chanson, pop 37]
+=== Kino  [region US]  liked-as "Kino"
+  seed in graph: NOT FOUND
+  -> Sounds like Kino  |  Artists whose sound sits closest to theirs  (12 rows)
+     кис-кис — мальчик   [russian alt pop, pop 42]
+     кис-кис — мальчик   [russian alt pop, pop 60]   <<DUPTITLE,DUPKEY
+     Agatha Christie — Чёрная луна   [russian rock, pop 45]
+     Samoe Bolshoe Prostoe Chislo — Злой   [russian alt pop, pop 38]
+     [Би-2] — Компромисс   [belarusian rock, pop 46]
+     Mashina Vremeni — Костёр   [classic russian rock, pop 37]
+     Total — Бьёт по глазам   [russian rock, pop 38]
+     Zveri — Для тебя   [russian rock, pop 44]
+     Agatha Christie — Опиум для никого   [russian rock, pop 47]
+     Moralny Kodex — Первый снег   [russian rock, pop 39]
+     Leningrad — Ч.П.Х.   [russian rock, pop 43]
+     Mumiy Troll — С чистого листа   [russian rock, pop 43]
+=== Agoraphobic Nosebleed  [region US]  liked-as "Agoraphobic Nosebleed"
+  seed in graph: NOT FOUND
+  -> Sounds like Agoraphobic Nosebleed  |  Artists whose sound sits closest to theirs  (12 rows)
+     Anal Cunt — I Went Back In TIme And Voted For Hitler   [noisecore, pop 28]
+     Discordance Axis — Angel Present   [technical grindcore, pop 23]
+     Discordance Axis — Castration Rite   [technical grindcore, pop 25]
+     Tower of Rome — Girls That Smoke Gross Me Out To The Max   [mathgrind, pop 26]
+     Burnt By The Sun — Dracula With Glasses   [technical grindcore, pop 21]
+     Magrudergrind — The Protocols Of Anti-Sound   [american grindcore, pop 30]
+     Magrudergrind — Pulverizing Hate Mongers   [american grindcore, pop 31]
+     Destroyer Destroyer — Void   [technical grindcore, pop 24]
+     Anal Cunt — Beating Up N$%&$gers That Sell Fake Crack   [noisecore, pop 27]
+     Tower of Rome — This Is A Film About A Ghost   [mathgrind, pop 22]
+     Deterioration — Blast Damage   [goregrind, pop 18]
+     Endless Swarm — Split Brain   [edinburgh metal, pop 22]
+=== Napalm Death  [region US]  liked-as "Napalm Death"
+  seed in graph: NOT FOUND
+  -> Sounds like Napalm Death  |  Artists whose sound sits closest to theirs  (12 rows)
+     Benediction — Unfound Mortality   [technical death metal, pop 36]
+     Benediction — A Carrion Harvest   [technical death metal, pop 37]
+     Carcass — Corporal Jigsore Quandary   [death 'n' roll, pop 43]
+     Dying Fetus — Wrong One to Fuck With   [technical death metal, pop 42]
+     Carcass — Heartwork   [death 'n' roll, pop 46]
+     Revocation — The Grip Tightens   [boston metal, pop 35]
+     Dying Fetus — The Blood of Power   [technical death metal, pop 39]
+     Revocation — Diabolical Majesty   [boston metal, pop 34]
+     Immolation — The Distorting Light   [death metal, pop 35]
+     Bolt Thrower — Anti-Tank (Dead Armour)   [technical death metal, pop 42]
+     Immolation — Fostering the Divide   [death metal, pop 34]
+     Bolt Thrower — Remembrance   [technical death metal, pop 40]
+=== Pig Destroyer  [region US]  liked-as "Pig Destroyer"
+  seed in graph: NOT FOUND
+  -> Sounds like Pig Destroyer  |  Artists whose sound sits closest to theirs  (12 rows)
+     WVRM — Grave Bloom   [deathgrind, pop 15]
+     Caustic Wound — Human Shield   [grindcore, pop 27]
+     Caustic Wound — Blackout   [grindcore, pop 32]
+     Gatecreeper — Caught in the Treads   [deathgrind, pop 39]
+     Gatecreeper — Superstitious Vision   [deathgrind, pop 32]
+     Terrorizer — After World Obliteration   [deathgrind, pop 35]
+     Napalm Death — Nazi Punks Fuck Off   [death metal, pop 43]
+     Nasum — Scoop   [swedish grindcore, pop 25]
+     Terrorizer — Fear Of Napalm   [deathgrind, pop 42]
+     Nasum — I Hate People   [swedish grindcore, pop 21]
+     Napalm Death — When All Is Said and Done   [death metal, pop 36]
+     Magrudergrind — Heretics   [american grindcore, pop 27]
+=== Cannibal Corpse  [region US]  liked-as "Cannibal Corpse"
+  seed in graph: NOT FOUND
+  -> Sounds like Cannibal Corpse  |  Artists whose sound sits closest to theirs  (12 rows)
+     Decapitated — Cancer Culture   [metal, pop 42]
+     Nile — Annihilation of the Wicked   [south carolina metal, pop 36]
+     Nile — Permitting the Noble Dead to Descend to the Underworld   [south carolina metal, pop 42]
+     Dying Fetus — Wrong One to Fuck With   [technical death metal, pop 42]
+     Decapitated — Just A Cigarette   [metal, pop 40]
+     Dying Fetus — Grotesque Impalement   [technical death metal, pop 47]
+     Morbid Angel — Chapel of Ghouls   [brutal death metal, pop 42]
+     Obituary — Chopped in Half   [death metal, pop 47]
+     Cryptopsy — Slit Your Guts   [quebec death metal, pop 42]
+     Cryptopsy — Our Great Deception   [quebec death metal, pop 42]
+     Deicide — In the Minds of Evil   [technical death metal, pop 45]
+     Pestilence — The Secrecies of Horror   [dutch death metal, pop 25]
+=== Mortician  [region US]  liked-as "Mortician"
+  seed in graph: NOT FOUND
+  -> Sounds like Mortician  |  Artists whose sound sits closest to theirs  (12 rows)
+     Amputated — Skullfuck Lobotomy   [brutal death metal, pop 40]
+     Aborted — The Pain, will be Exquisite   [brutal death metal, pop 42]
+     Aborted — Condemned To Rot   [brutal death metal, pop 36]
+     Gorgasm — Deadfuck   [technical death metal, pop 29]
+     Putrid Pile — The Gorebox   [brutal death metal, pop 26]
+     Cattle Decapitation — Finish Them   [brutal death metal, pop 41]
+     Brutal Truth — Birth of Ignorance   [deathgrind, pop 35]
+     Putrid Pile — Held Captive for Torture   [brutal death metal, pop 32]
+     Defeated Sanity — The Odour Of Sanctity   [brutal death metal, pop 28]
+     Cattle Decapitation — Forced Gender Reassignment   [brutal death metal, pop 44]
+     Regurgitate — Bullous Impetigo   [brutal death metal, pop 16]
+     Cephalic Carnage — Ohrwurm   [brutal death metal, pop 21]
+=== Devourment  [region US]  liked-as "Devourment"
+  seed in graph: NOT FOUND
+  -> Sounds like Devourment  |  Artists whose sound sits closest to theirs  (12 rows)
+     Defeated Sanity — The Odour Of Sanctity   [brutal death metal, pop 28]
+     Defeated Sanity — Into The Soil   [brutal death metal, pop 31]
+     Aborted — Meticulous Invagination   [brutal death metal, pop 34]
+     Cattle Decapitation — Bring Back the Plague   [brutal death metal, pop 46]
+     Aborted — The Pain, will be Exquisite   [brutal death metal, pop 42]
+     Frozen Soul — Crypt of Ice   [texas death metal, pop 35]
+     Cattle Decapitation — Forced Gender Reassignment   [brutal death metal, pop 44]
+     Gorgasm — Deadfuck   [technical death metal, pop 29]
+     Frozen Soul — Death and Glory   [texas death metal, pop 31]
+     Terrorizer — Fear Of Napalm   [deathgrind, pop 42]
+     Immolation — The Distorting Light   [death metal, pop 35]
+     Mortician — Witches Coven   [deathgrind, pop 36]
+=== Carcass  [region US]  liked-as "Carcass"
+  seed in graph: NOT FOUND
+  -> Sounds like Carcass  |  Artists whose sound sits closest to theirs  (12 rows)
+     Gorefest — The Glorious Dead   [death 'n' roll, pop 31]
+     Dying Fetus — Wrong One to Fuck With   [technical death metal, pop 42]
+     Benediction — Unfound Mortality   [technical death metal, pop 36]
+     Bolt Thrower — Anti-Tank (Dead Armour)   [technical death metal, pop 42]
+     Dying Fetus — The Blood of Power   [technical death metal, pop 39]
+     Benediction — Scriptures in Scarlet   [technical death metal, pop 38]
+     Bolt Thrower — The Killchain   [technical death metal, pop 46]
+     Pestilence — The Secrecies of Horror   [dutch death metal, pop 25]
+     Asphyx — It Came From the Skies   [dutch death metal, pop 30]
+     Decapitated — Just A Cigarette   [metal, pop 40]
+     Entombed — Left Hand Path   [death 'n' roll, pop 46]
+     Pestilence — Out of the Body   [dutch death metal, pop 29]
+=== Gutalax  [region US]  liked-as "Gutalax"
+  seed in graph: NOT FOUND
+  -> Sounds like Gutalax  |  Artists whose sound sits closest to theirs  (12 rows)
+     Phyllomedusa — I Eat The Bug   [pornogrind, pop 36]
+     Brutal Sphincter — Make Goregrind Great Again   [pornogrind, pop 26]
+     Phyllomedusa — Your Heart Stops Here   [pornogrind, pop 36]
+     Brutal Sphincter — Tony Hawk's Pro-Choice 2022   [pornogrind, pop 26]
+     Razorrape — Castration By Children   [necrogrind, pop 16]
+     Gorepot — The Flying Camel   [animegrind, pop 24]
+     Razorrape — Clitoris Cheese Slicer   [necrogrind, pop 18]
+     GUT — Hooker Ballett   [pornogrind, pop 17]
+     GUT — Corroded In Bestialized And Gorefying Wormjizz   [pornogrind, pop 15]
+     Gorepot — Asian Girth Warriors   [animegrind, pop 24]
+     Putridity — Prenatal Obituary   [brutal death metal, pop 27]
+     The Dark Prison Massacre — Illusion of Withering   [slam death metal, pop 33]
+=== Wardruna  [region US]  liked-as "Wardruna"
+  seed in graph: Wardruna / NO / conf 0.94 / pop 3 / 91136bf7-3b12-4ae5-b93b-eddb9e561dfb
+  graph neighbours (0): 
+  -> Sounds like Wardruna  |  Artists whose sound sits closest to theirs  (12 rows)
+     Valravn — Kraka   [viking folk, pop 33]
+     Valravn — Kroppar   [viking folk, pop 37]
+     SKÁLD — Ó Valhalla   [viking folk, pop 49]
+     Nemuer — Yggdrasil Trembles   [viking folk, pop 36]
+     A Tergo Lupi — Hunt or be hunted   [viking folk, pop 48]
+     SKÁLD — Ódinn   [viking folk, pop 48]
+     Heldom — Skalla   [viking folk, pop 38]
+     Kveld — Dansegaldr   [viking folk, pop 37]
+     Rúnfell — Halfdan   [viking folk, pop 41]
+     Bjorth — Aesir   [viking folk, pop 41]
+     Rúnfell — Aelles Fate   [viking folk, pop 39]
+     Kveld — Tuwa   [viking folk, pop 41]
+=== Heilung  [region US]  liked-as "Heilung"
+  seed in graph: Heilung / DK / conf 0.8 / pop 2 / e52c3c7a-1ded-49e0-91d3-f627658b3d8a
+  graph neighbours (0): 
+  -> Sounds like Heilung  |  Artists whose sound sits closest to theirs  (12 rows)
+     Sowulo — Wulfwiga   [rune folk, pop 46]
+     Danheim — Atgeir   [viking folk, pop 49]
+     Danheim — Ivar's Revenge (Danish Viking Music)   [viking folk, pop 53]
+     Nytt Land — Valhalla Rising   [rune folk, pop 44]
+     Osi And The Jupiter — Baldur   [viking folk, pop 41]
+     Ivar Bjørnson & Einar Selvik — Hugsja   [rune folk, pop 44]
+     Forndom — Finnmarken   [rune folk, pop 40]
+     Bjorth — Vidar   [viking folk, pop 41]
+     Anilah — Medicine Chant   [rune folk, pop 37]
+     Bjorth — Drengr   [viking folk, pop 42]
+     Peter Gundry — Salem's Secret   [rune folk, pop 47]
+     Kveld — Dansegaldr   [viking folk, pop 37]
+=== Current 93  [region US]  liked-as "Current 93"
+  seed in graph: NOT FOUND
+  -> NO ARTIST SHELF  (shelves: popular)
+=== Dead Can Dance  [region US]  liked-as "Dead Can Dance"
+  seed in graph: Dead Can Dance / AU / conf 0.94 / pop 11 / ccda046a-2674-4f7d-97e6-f23d6c156432
+  graph neighbours (13): Lisa Gerrard(LB 1.00), Sigur Rós(LB 1.00), PJ Harvey(LB 1.00), Aphex Twin(LB 1.00), R.E.M.(LB 1.00), Brian Eno(LB 1.00), New Order(LB 1.00), Johnny Cash(LB 1.00), Mogwai(LB 1.00), Gorillaz(LB 1.00), Hans Zimmer(LB 1.00), Ramones(LB 1.00), Garbage(LB 1.00)
+  -> Because you like Dead Can Dance  |  People who listen to Dead Can Dance also play these  (12 rows)
+     Lisa Gerrard — Gortoz A Ran - From "Black Hawk Down"   [oceania soundtrack, pop 50]
+     Sigur Rós — Svefn-g-englar   [post-rock, pop 58]
+     PJ Harvey — Down By The Water   [piano rock, pop 61]
+     Aphex Twin — QKThr   [uk experimental electronic, pop 67]
+     R.E.M. — Losing My Religion   [athens indie, pop 85]
+     Brian Eno — An Ending (Ascent) - Remastered 2005   [experimental, pop 57]
+     New Order — Blue Monday   [new wave, pop 72]
+     Johnny Cash — Hurt   [outlaw country, pop 74]
+     Lisa Gerrard — Good Morning Indian Country   [oceania soundtrack, pop 49]
+     Sigur Rós — Hoppípolla   [post-rock, pop 56]
+     PJ Harvey — The Wind   [piano rock, pop 54]
+     Aphex Twin — Xtal   [uk experimental electronic, pop 66]
+=== NF  [region US]  liked-as "NF"
+  seed in graph: NOT FOUND
+  -> Sounds like NF  |  Artists whose sound sits closest to theirs  (12 rows)
+     Jay Rock — Shit Real (feat. Tee Grizzley)   [hip hop, pop 45]
+     Kid Cudi — Pursuit Of Happiness (Nightmare)   [rap, pop 72]
+     Kid Cudi — Pursuit Of Happiness (Nightmare)   [rap, pop 71]   <<DUPTITLE,DUPKEY
+     Childish Gambino — Bed Peace   [rap, pop 73]
+     JAY-Z — Suit & Tie (feat. JAY-Z)   [gangster rap, pop 68]
+     JID — Stars (feat. Yasiin Bey)   [hip hop, pop 61]
+     Joyner Lucas — I'm Sorry   [hip hop, pop 55]
+     50 Cent — Hate It Or Love It   [hip hop, pop 80]
+     Chance the Rapper — All Night (feat. Knox Fortune)   [hip hop, pop 62]
+     G-Eazy — Rock n Roll   [rap, pop 65]
+     Jay Rock — Tity and Dolla (feat. Hugh Augustine & Jay Rock)   [hip hop, pop 56]
+     Cassidy — Get No Better (feat. Mashonda)   [trap, pop 48]
+=== Jelly Roll  [region US]  liked-as "Jelly Roll"
+  seed in graph: NOT FOUND
+  -> Sounds like Jelly Roll  |  Artists whose sound sits closest to theirs  (12 rows)
+     Rittz — Crown Royal   [atl hip hop, pop 45]
+     Rittz — Like I Am   [atl hip hop, pop 41]
+     Lil Wyte — Acid   [dirty south rap, pop 36]
+     Bubba Sparxxx — Country to the City (feat. Jg Made Um Look)   [atl hip hop, pop 47]
+     Lil Wyte — Oxy Cotton   [dirty south rap, pop 56]
+     Bubba Sparxxx — Heat It Up   [atl hip hop, pop 45]
+     Haystak — Live For The Moment   [military rap, pop 48]
+     Nate Rose — Action   [nashville hip hop, pop 46]
+     Nate Rose — I Do This a Lot   [nashville hip hop, pop 39]
+     Haystak — Bonnie and Clyde   [military rap, pop 41]
+     Kevo Muney — Leave Some Day   [memphis hip hop, pop 54]
+     Kevo Muney — Leave Some Day   [memphis hip hop, pop 51]   <<DUPTITLE,DUPKEY
+=== Hopsin  [region US]  liked-as "Hopsin"
+  seed in graph: NOT FOUND
+  -> Sounds like Hopsin  |  Artists whose sound sits closest to theirs  (12 rows)
+     Dizzy Wright — Fly High   [underground hip hop, pop 37]
+     7L & Esoteric — Watch Me   [conscious hip hop, pop 37]
+     Dizzy Wright — Killem with Kindness   [underground hip hop, pop 52]
+     Flawless Real Talk — Monster   [rhode island rap, pop 40]
+     Cam Meekins — Slow Down   [indie pop rap, pop 43]
+     Token — Code Red   [boston hip hop, pop 48]
+     Madchild — Deep End   [canadian old school hip hop, pop 39]
+     Millyz — Passion   [boston hip hop, pop 39]
+     Cam Meekins — Better Days   [indie pop rap, pop 39]
+     Common — GO!   [conscious hip hop, pop 58]
+     Token — Household Name   [boston hip hop, pop 43]
+     Mos Def — UMI Says   [east coast hip hop, pop 55]
+=== Upchurch  [region US]  liked-as "Upchurch"
+  seed in graph: NOT FOUND
+  -> Sounds like Upchurch  |  Artists whose sound sits closest to theirs  (12 rows)
+     Brabo Gator — By MySelf   [redneck, pop 38]
+     Charlie Farley — Fire   [redneck, pop 45]
+     Big Matt — Long Road   [redneck, pop 47]
+     Chris Hosier — My Pain   [redneck, pop 42]
+     FJ Outlaw — Old Me   [redneck, pop 39]
+     Tennessee Shine — Usa   [redneck, pop 40]
+     Overtime — Hunger in My Stomach   [redneck, pop 54]
+     Overtime — County Line   [redneck, pop 47]
+     Lenny Cooper — Dirty Girl   [redneck, pop 42]
+     Charlie Farley — I Am What I Ain't   [redneck, pop 43]
+     Jawga Boyz — Ridin High   [redneck, pop 58]
+     Chris Hosier — Country Boy Style (feat. Marquiese McClendon)   [redneck, pop 44]
+=== Sham 69  [region US]  liked-as "Sham 69"
+  seed in graph: NOT FOUND
+  -> NO ARTIST SHELF  (shelves: popular)
+=== Cock Sparrer  [region US]  liked-as "Cock Sparrer"
+  seed in graph: NOT FOUND
+  -> Sounds like Cock Sparrer  |  Artists whose sound sits closest to theirs  (12 rows)
+     Cockney Rejects — Oi! Oi! Oi!   [oi, pop 42]
+     The Adicts — Joker In the Pack   [oi, pop 39]
+     U.S. Bombs — Yer Country   [punk, pop 40]
+     Peter and the Test Tube Babies — In Yer Face   [hardcore punk, pop 27]
+     Descendents — Good Good Things   [punk, pop 53]
+     Peter and the Test Tube Babies — The Jinx   [hardcore punk, pop 34]
+     U.K. Subs — Riot   [oi, pop 36]
+     The Exploited — Alternative   [uk82, pop 36]
+     The Vandals — My Girlfriend's Dead   [ska punk, pop 46]
+     The Vandals — Euro-Barge   [ska punk, pop 44]
+     The Casualties — We Are All We Have   [punk, pop 47]
+     Legal Weapon — Daddy's Gone Mad   [deep hardcore punk, pop 17]
+=== Dropkick Murphys  [region US]  liked-as "Dropkick Murphys"
+  seed in graph: NOT FOUND
+  -> Sounds like Dropkick Murphys  |  Artists whose sound sits closest to theirs  (12 rows)
+     The Pogues — If I Should Fall from Grace with God   [celtic rock, pop 52]
+     The Pogues — Sally MacLennane   [celtic rock, pop 57]
+     Flogging Molly — Float   [punk, pop 50]
+     Flogging Molly — If I Ever Leave This World Alive   [punk, pop 59]
+     The Tossers — Siobhan   [celtic rock, pop 36]
+     The Tossers — The Rocky Road To Dublin   [celtic rock, pop 45]
+     Street Dogs — You Alone   [punk, pop 38]
+     Street Dogs — In Defense of Dorchester   [punk, pop 37]
+     Stiff Little Fingers — Alternative Ulster   [irish punk, pop 51]
+     Stiff Little Fingers — Johnny Was   [irish punk, pop 35]
+     The Mighty Mighty Bosstones — Mr. Moran   [punk, pop 42]
+     The Queers — See You Later Fuckface   [punk, pop 44]
+=== Broilers  [region US]  liked-as "Broilers"
+  seed in graph: NOT FOUND
+  -> Sounds like Broilers  |  Artists whose sound sits closest to theirs  (12 rows)
+     Sondaschule — Schöne Grüße vom Meer   [german ska, pop 40]
+     Sondaschule — Auf einen neuen Tag   [german ska, pop 45]
+     Dritte Wahl — Der Himmel über uns   [german ska, pop 38]
+     Dritte Wahl — Fliegen   [german ska, pop 37]
+     Goitzsche Front — Männer aus Stahl   [german oi, pop 38]
+     BRDIGUNG — Ikarus oder Peter Pan   [deutschrock, pop 42]
+     Ampex — Scheiße passiert   [deutschrock, pop 39]
+     ENGST — Geschichte schreiben   [deutschrock, pop 41]
+     Goitzsche Front — Mein Leben   [german oi, pop 43]
+     Feine Sahne Fischfilet — Endlich auf Reise   [antideutsche, pop 52]
+     Philipp Burger — Weckt die Punks, weckt die Skins   [deutschrock, pop 37]
+     Rantanplan — Revolution (Emma G.)   [german ska, pop 40]
+cache check: findArtist(name, own country) on the US-warmed graph vs a graph that only saw that country
+
+SUMMARY (US pass): graph 18, sounds-like 28, none 2, seed-in-own-shelf rows 0, duplicate rows 7
+

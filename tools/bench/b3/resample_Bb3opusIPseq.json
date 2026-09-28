@@ -1,0 +1,14 @@
+{
+    "pattern":  "B_b3opusIP_seq_*",
+    "files":  2,
+    "opens":  4,
+    "openedWithAudio":  4,
+    "byItag":  "251=4",
+    "byCodecRate":  "opus@48000=4",
+    "resampled":  0,
+    "resampledIds":  "",
+    "opusOfferedButAac":  0,
+    "choseLines":  2,
+    "choseByItag":  "251=2",
+    "choseNon251":  ""
+}

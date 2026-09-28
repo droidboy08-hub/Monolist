@@ -1,0 +1,167 @@
+=== LISA artistId 518
+  1154	LiSA	ReawakeR (feat. Felix of Stray Kids)	anime rock	pop 80	cos-to-first 1.000
+  1923	LISA	Rockstar	k-pop	pop 78	cos-to-first 0.123
+  2330	LISA	New Woman (feat. ROSALÍA)	k-pop	pop 77	cos-to-first 0.121
+  2687	LISA	Lifestyle	k-pop	pop 76	cos-to-first 0.121
+  2744	LISA	FXCK UP THE WORLD (Vixi Solo Version)	k-pop	pop 76	cos-to-first 0.127
+  2920	LISA	Chill	k-pop	pop 75	cos-to-first 0.117
+  3362	LISA	Rapunzel (feat. Megan Thee Stallion)	k-pop	pop 74	cos-to-first 0.117
+  3432	LiSA	紅蓮華	anime rock	pop 74	cos-to-first 0.996
+  3727	LISA	When I'm With You (feat. Tyla)	k-pop	pop 74	cos-to-first 0.113
+  3862	LISA	Rockstar	k-pop	pop 74	cos-to-first 0.123
+  8129	LiSA	crossing field	anime rock	pop 69	cos-to-first 0.967
+  19537	LiSA	ADAMAS	anime rock	pop 63	cos-to-first 0.983
+  22794	LiSA	炎	anime rock	pop 61	cos-to-first 0.989
+  22832	LiSA	QUEEN	anime rock	pop 61	cos-to-first 0.996
+  23437	LiSA	残酷な夜に輝け - Shine in the Cruel Night	anime rock	pop 61	cos-to-first 0.971
+  27692	LiSA	再会 (produced by Ayase)	anime rock	pop 60	cos-to-first 0.976
+  333143	lisa	tears	mecha	pop 33	cos-to-first 0.922
+  378150	lisa	TIME IS ON MY SIDE	mecha	pop 15	cos-to-first 0.923
+  379130	lisa	Lisa	mecha	pop 15	cos-to-first 0.956
+  388924	lisa	tears - full version	mecha	pop 6	cos-to-first 0.927
+  390092	lisa	tears - full version	mecha	pop 6	cos-to-first 0.927
+  393722	lisa	Puok Ami Ami	mecha	pop 3	cos-to-first 0.949
+=== Bono artistId 73236
+  292845	Bono	Marrëzisht	albanian hip hop	pop 37	cos-to-first 1.000
+  332134	Bono	24/7	albanian hip hop	pop 34	cos-to-first 0.979
+  342336	Bono	BONOLAND	albanian hip hop	pop 31	cos-to-first 0.952
+  344845	Bono	JackWeed	albanian hip hop	pop 30	cos-to-first 0.932
+  352910	Bono	Coco	albanian hip hop	pop 27	cos-to-first 0.994
+  354151	Bono	Beast	albanian hip hop	pop 27	cos-to-first 0.939
+  360549	Bono	PORTOFINO	albanian hip hop	pop 24	cos-to-first 0.952
+  364355	Bono	Columbiana	albanian hip hop	pop 22	cos-to-first 0.980
+=== Nico artistId 892
+  12516	Nico	These Days	experimental	pop 66	cos-to-first -0.014
+  84488	Nico	The Fairest Of The Seasons	experimental	pop 50	cos-to-first 0.002
+  130523	Nico	I'll Keep It With Mine	experimental	pop 46	cos-to-first 0.007
+  163370	Nico	Singur Pe Strada	classic romanian pop	pop 43	cos-to-first 0.044
+  293831	Nico	Nu Pot Sa Mai Suport	classic romanian pop	pop 37	cos-to-first 0.042
+  320269	Nico	Chelsea Girls	experimental	pop 36	cos-to-first -0.004
+  325047	Nico	Little Sister	experimental	pop 36	cos-to-first -0.022
+  326956	Nico	Wrap Your Troubles In Dreams	experimental	pop 35	cos-to-first -0.015
+  329635	Nico	Winter Song	experimental	pop 34	cos-to-first 0.000
+  331405	Nico	Afraid	experimental	pop 34	cos-to-first -0.003
+  341931	Nico	Frate Pentru Frate	classic romanian pop	pop 31	cos-to-first 0.035
+  377876	Nico	Love Mail	classic romanian pop	pop 15	cos-to-first 0.049
+  379694	Nico	Pas cu pas	classic romanian pop	pop 14	cos-to-first 0.051
+  380124	Nico	Cere Si Ti Se Va Da	classic romanian pop	pop 14	cos-to-first 0.046
+  382755	Nico	Old Swing Jazz	talentkonkurrence	pop 12	cos-to-first 0.033
+  383250	Nico	Pe-O Margine De Lume	classic romanian pop	pop 12	cos-to-first 0.018
+  384733	Nico	112	classic romanian pop	pop 11	cos-to-first 0.048
+  392325	Nico	Bropoun Phlech Bdei Phlet ft. Reth Souzana	cambodian pop	pop 4	cos-to-first 0.499
+  393504	Nico	Dicen Que Estoy Loco	talentkonkurrence	pop 3	cos-to-first 0.055
+  395971	Nico	Kohok Bong Ban Te	cambodian pop	pop 2	cos-to-first 0.468
+  397639	Nico	Min Ach Tha Min Srolanh Oun	cambodian pop	pop 1	cos-to-first 0.476
+  398454	Nico	Crazy	talentkonkurrence	pop 1	cos-to-first 0.079
+  398758	Nico	Tak Toung	cambodian pop	pop 1	cos-to-first 0.488
+  399026	Nico	Kein Problem	talentkonkurrence	pop 1	cos-to-first 0.075
+=== MONO artistId 4009
+  10863	MONO	Chăm Hoa	v-pop	pop 67	cos-to-first 1.000
+  28265	MONO	Em Xinh	v-pop	pop 60	cos-to-first 0.932
+  45359	MONO	Em Là	v-pop	pop 56	cos-to-first 0.939
+  56953	MONO	Waiting For You	v-pop	pop 54	cos-to-first 0.979
+  67040	mono._	Starry Night	lo-fi sleep	pop 52	cos-to-first -0.022
+  99966	MONO	Ôm Em Thật Lâu	v-pop	pop 48	cos-to-first 0.988
+  130327	mono._	tranquil	lo-fi sleep	pop 46	cos-to-first -0.029
+  167246	mono._	snowflake	lo-fi sleep	pop 43	cos-to-first -0.022
+  247584	mono._	away	lo-fi sleep	pop 39	cos-to-first -0.017
+  300119	MONO	Silent Flight, Sleeping Dawn - Remastered	japanese post-rock	pop 36	cos-to-first 0.028
+  304140	mono._	blue hour	lo-fi sleep	pop 36	cos-to-first -0.039
+  305632	mono._	overcome	lo-fi sleep	pop 36	cos-to-first -0.013
+  306611	MONO	Anh Không Thể	v-pop	pop 36	cos-to-first 0.973
+  326684	MONO	Dream Odyssey	japanese post-rock	pop 35	cos-to-first 0.041
+  327320	MONO	Quên Anh Đi	v-pop	pop 35	cos-to-first 0.929
+  328834	mono._	snowy days - lofi version	lo-fi sleep	pop 35	cos-to-first 0.028
+  328920	MONO	Ashes in the Snow - Remastered	japanese post-rock	pop 35	cos-to-first 0.043
+  331245	mono._	angel	lo-fi sleep	pop 34	cos-to-first -0.035
+  332430	MONO	Young	v-pop	pop 34	cos-to-first 0.987
+  339779	MONO	Exit in Darkness	japanese post-rock	pop 32	cos-to-first 0.079
+  342373	MONO	Are You There?	japanese post-rock	pop 31	cos-to-first 0.019
+  345418	MONO	Oath	japanese post-rock	pop 30	cos-to-first 0.061
+  345547	MONO	Pure as Snow (Trails of the Winter Storm) - Remastered	japanese post-rock	pop 30	cos-to-first 0.072
+  349264	MONO	Us, Then	japanese post-rock	pop 28	cos-to-first 0.020
+=== justin artistId 87379
+  353468	Justin	Shake Me	jawaiian	pop 27	cos-to-first 1.000
+  357921	Justin	Leaving On A Jet Plane	jawaiian	pop 25	cos-to-first 0.933
+  363274	Justin	Never Forget Where I’m From	jawaiian	pop 23	cos-to-first 0.961
+  376801	Justin	Never Forget Where I’m From	jawaiian	pop 16	cos-to-first 0.955
+  377721	Justin	Crazy Love	jawaiian	pop 15	cos-to-first 0.933
+  378696	Justin	More Than Words	jawaiian	pop 15	cos-to-first 0.994
+  383436	Justin	One Last Cry	jawaiian	pop 12	cos-to-first 0.960
+  383783	Justin	Local Boy	jawaiian	pop 11	cos-to-first 0.948
+=== Mayhem artistId 15465
+  49349	Mayhem	Freezing Moon	black metal	pop 55	cos-to-first 1.000
+  72599	Mayhem	Chainsaw Gutsfuck	black metal	pop 51	cos-to-first 0.985
+  96625	Mayhem	Deathcrush	black metal	pop 49	cos-to-first 0.985
+  125356	Mayhem	Funeral Fog	black metal	pop 46	cos-to-first 0.956
+  147956	Mayhem	Necrolust	black metal	pop 44	cos-to-first 0.994
+  154141	Mayhem	De Mysteriis Dom Sathanas	black metal	pop 44	cos-to-first 0.913
+  156197	Mayhem	Life Eternal	black metal	pop 44	cos-to-first 0.954
+  164788	Mayhem	Pagan Fears	black metal	pop 43	cos-to-first 0.961
+  383357	Mayhem	The Chase	uk drill	pop 12	cos-to-first -0.020
+  385837	Mayhem	The Chase	uk drill	pop 10	cos-to-first -0.019
+  385971	Mayhem	Justin Bieber (feat. Grizzy)	uk drill	pop 9	cos-to-first -0.023
+  386519	Mayhem	Bossman (Brottsmann 2025)	russelater	pop 9	cos-to-first 0.018
+  388049	Mayhem	The Roads	uk drill	pop 7	cos-to-first -0.031
+  388304	Mayhem	Justin Bieber (feat. Grizzy)	uk drill	pop 7	cos-to-first -0.023
+  389378	Mayhem	ImJustBait	uk drill	pop 6	cos-to-first -0.026
+  390428	Mayhem	Migraine Skank	uk drill	pop 5	cos-to-first -0.032
+  391158	Mayhem	IF	uk drill	pop 5	cos-to-first -0.030
+  392537	Mayhem	Numerous Times	russelater	pop 4	cos-to-first 0.010
+  394683	Mayhem	No Role Modelz 2018	russelater	pop 3	cos-to-first 0.061
+  396894	Mayhem	Brixton Hill 2020	russelater	pop 2	cos-to-first 0.055
+  396906	Mayhem	Ransom 2018 (feat. Fredde Blæsted, Hil, Skrt Nilsen & Tomaserati)	russelater	pop 2	cos-to-first 0.019
+=== Emperor artistId 39412
+  141561	Emperor	I Am The Black Wizards	norwegian metal	pop 45	cos-to-first 1.000
+  206070	Emperor	Still	liquid funk	pop 41	cos-to-first 0.055
+  223133	Emperor	Inno A Satana	norwegian metal	pop 40	cos-to-first 0.973
+  279871	Emperor	Jealousy	liquid funk	pop 37	cos-to-first 0.050
+  286016	Emperor	Into The Infinity Of Thoughts	norwegian metal	pop 37	cos-to-first 0.995
+  291754	Emperor	Ye Entrancemperium	norwegian metal	pop 37	cos-to-first 0.987
+  310193	Emperor	Cosmic Keys To My Creations And Times	norwegian metal	pop 36	cos-to-first 0.963
+  331204	Emperor	A Fine Day To Die	norwegian metal	pop 34	cos-to-first 0.994
+  331454	Emperor	The Burning Shadows Of Silence	norwegian metal	pop 34	cos-to-first 0.999
+  332062	Emperor	Towards The Pantheon	norwegian metal	pop 34	cos-to-first 0.992
+  344872	Emperor	These Days	liquid funk	pop 30	cos-to-first 0.044
+  352059	Emperor	Saved Me	liquid funk	pop 27	cos-to-first 0.064
+  352815	Emperor	Bangin'	liquid funk	pop 27	cos-to-first 0.046
+  360856	Emperor	Pay The Price - Scurrow Remix	liquid funk	pop 24	cos-to-first 0.010
+  362731	Emperor	All I Ever Wanted	liquid funk	pop 23	cos-to-first 0.061
+  365265	Emperor	Pranged Out	liquid funk	pop 22	cos-to-first 0.052
+=== Vangelis artistId 5957
+  16923	Vangelis	Conquest of Paradise	synthesizer	pop 64	cos-to-first 1.000
+  23574	Vangelis	La petite fille de la mer - Remastered	synthesizer	pop 61	cos-to-first 0.989
+  24008	Vangelis	La petite fille de la mer - Remastered	synthesizer	pop 61	cos-to-first 0.989
+  54464	Vangelis	Titles	synthesizer	pop 54	cos-to-first 0.944
+  56200	Vangelis	Rachel's Song	synthesizer	pop 54	cos-to-first 0.992
+  60550	Vangelis	Love Theme	synthesizer	pop 53	cos-to-first 0.979
+  77702	Vangelis	Blade Runner Blues	synthesizer	pop 51	cos-to-first 0.967
+  81514	Vangelis	Monastery of La Rabida	synthesizer	pop 50	cos-to-first 0.991
+=== ROSÉ artistId 49
+  100	ROSÉ	toxic till the end	k-pop	pop 88	cos-to-first 1.000
+  675	ROSÉ	number one girl	k-pop	pop 82	cos-to-first 0.993
+  1187	ROSÉ	drinks or coffee	k-pop	pop 80	cos-to-first 0.982
+  1969	ROSÉ	number one girl	k-pop	pop 77	cos-to-first 0.993
+  2221	ROSÉ	stay a little longer	k-pop	pop 77	cos-to-first 0.906
+  2775	ROSÉ	gameboy	k-pop	pop 76	cos-to-first 0.912
+  3103	ROSÉ	3am	k-pop	pop 75	cos-to-first 0.991
+  3123	ROSÉ	two years	k-pop	pop 75	cos-to-first 0.992
+  72590	Rose	La liste	nouvelle chanson francaise	pop 51	cos-to-first -0.043
+  94742	Rose	Je m'ennuie	nouvelle chanson francaise	pop 49	cos-to-first -0.064
+  105233	Rose	J'ai 18 Ans	nouvelle chanson francaise	pop 48	cos-to-first -0.097
+  286447	Rose	Sombre con	nouvelle chanson francaise	pop 37	cos-to-first -0.064
+  327874	Rose	Ciao bella	nouvelle chanson francaise	pop 35	cos-to-first -0.051
+  328738	Rose	Une bière, un croissant	nouvelle chanson francaise	pop 35	cos-to-first -0.035
+  332396	Rose	La (nouvelle) liste	nouvelle chanson francaise	pop 34	cos-to-first -0.041
+  340671	Rosé	No Practice	strut	pop 31	cos-to-first 0.600
+  348982	Rose	Rose	nouvelle chanson francaise	pop 29	cos-to-first -0.056
+  361168	Rosé	Overqualified	strut	pop 24	cos-to-first 0.570
+  364150	Rosé	The Devil in the Details	strut	pop 23	cos-to-first 0.635
+  367143	Rosé	Maybe I Can Change	strut	pop 21	cos-to-first 0.645
+  369266	Rosé	Gimme What I Want	strut	pop 20	cos-to-first 0.601
+  370145	Rosé	Calm in the Chaos	strut	pop 20	cos-to-first 0.621
+  370528	Rosé	I Drove All Night	strut	pop 19	cos-to-first 0.655
+  371848	Rosé	No Practice	strut	pop 19	cos-to-first 0.600
+  389528	Rose	Ngoma Vadinolo	malagasy pop	pop 6	cos-to-first 0.133
+  395069	Rosé	Wagwan	swedish dancehall	pop 3	cos-to-first 0.129
+  399380	Rose	Мысли	malagasy pop	pop 1	cos-to-first 0.082

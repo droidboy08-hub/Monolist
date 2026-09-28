@@ -1,0 +1,22 @@
+﻿[
+    {
+        "run":  1,
+        "client":  "web_safari",
+        "exit":  0,
+        "ms":  6079,
+        "playerJsDownloaded":  1,
+        "denoRuns":  1,
+        "cacheLines":  "[debug] Command-line config: [\u0027--ignore-config\u0027, \u0027--encoding\u0027, \u0027utf-8\u0027, \u0027--socket-timeout\u0027, \u002715\u0027, \u0027--retries\u0027, \u00272\u0027, \u0027--extractor-retries\u0027, \u00271\u0027, \u0027--js-runtimes\u0027, \u0027deno:C:\\\\dev\\\\monolist-build\\\\release\\\\tools\\\\deno.exe\u0027, \u0027--ffmpeg-location\u0027, \u0027C:\\\\dev\\\\monolist-build\\\\release\\\\tools\u0027, \u0027--cache-dir\u0027, \u0027C:\\\\Users\\\\droid\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\--psf-Home-Desktop-Multiplatform-Music-player\\\\04bbb583-faaf-4a88-9a62-5827ef684e67\\\\scratchpad\\\\bench\\\\skeptic_c1_24\\\\ytdlp-cache-forced\u0027, \u0027-v\u0027, \u0027--extractor-args\u0027, \u0027youtube:player_client=web_safari\u0027, \u0027https://www.youtube.com/watch?v=LrM_Y39Gmhk\u0027, \u0027--dump-single-json\u0027, \u0027--no-playlist\u0027, \u0027-f\u0027, \u0027bestaudio/best\u0027] || [debug] [youtube] [pot] PO Token Cache Providers: memory || [debug] [youtube] [pot] PO Token Cache Spec Providers: webpo || [debug] [youtube] [jsc:deno] Running deno: \u0027C:\\dev\\monolist-build\\release\\tools\\deno.exe\u0027 run --ext=js --no-code-cache --no-prompt --no-remote --no-lock --node-modules-dir=none --no-config --no-npm --cached-only - || [debug] Saving youtube-sigfuncs.7460dd14-main-113 to cache",
+        "cacheFiles":  "\\youtube-sigfuncs\\7460dd14-main-113.json"
+    },
+    {
+        "run":  2,
+        "client":  "web_safari",
+        "exit":  1,
+        "ms":  4061,
+        "playerJsDownloaded":  0,
+        "denoRuns":  0,
+        "cacheLines":  "[debug] Command-line config: [\u0027--ignore-config\u0027, \u0027--encoding\u0027, \u0027utf-8\u0027, \u0027--socket-timeout\u0027, \u002715\u0027, \u0027--retries\u0027, \u00272\u0027, \u0027--extractor-retries\u0027, \u00271\u0027, \u0027--js-runtimes\u0027, \u0027deno:C:\\\\dev\\\\monolist-build\\\\release\\\\tools\\\\deno.exe\u0027, \u0027--ffmpeg-location\u0027, \u0027C:\\\\dev\\\\monolist-build\\\\release\\\\tools\u0027, \u0027--cache-dir\u0027, \u0027C:\\\\Users\\\\droid\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\--psf-Home-Desktop-Multiplatform-Music-player\\\\04bbb583-faaf-4a88-9a62-5827ef684e67\\\\scratchpad\\\\bench\\\\skeptic_c1_24\\\\ytdlp-cache-forced\u0027, \u0027-v\u0027, \u0027--extractor-args\u0027, \u0027youtube:player_client=web_safari\u0027, \u0027https://www.youtube.com/watch?v=LrM_Y39Gmhk\u0027, \u0027--dump-single-json\u0027, \u0027--no-playlist\u0027, \u0027-f\u0027, \u0027bestaudio/best\u0027] || [debug] [youtube] [pot] PO Token Cache Providers: memory || [debug] [youtube] [pot] PO Token Cache Spec Providers: webpo",
+        "cacheFiles":  "\\youtube-sigfuncs\\7460dd14-main-113.json"
+    }
+]

@@ -1,0 +1,607 @@
+diff --git a/src/innertube.cpp b/src/innertube.cpp
+index 10fbac2..1001f3f 100644
+--- a/src/innertube.cpp	
++++ b/src/innertube.cpp
+@@ -1,4 +1,5 @@
+ #include "innertube.h"
++#include "benchlog.h"
+ 
+ #include <QCoreApplication>
+ #include <QDate>
+@@ -400,12 +401,16 @@ void fetchVisitorFrom(bool homePage)
+     clock.start();
+     QNetworkAccessManager *network = visitorNetwork();
+     QNetworkReply *reply = network->get(request);
++    benchMark(QStringLiteral("visitorData fetch start source=%1").arg(homePage ? QStringLiteral("home") : QStringLiteral("sw")));
+     QObject::connect(reply, &QNetworkReply::finished, network, [reply, homePage, generation, clock]() {
+         reply->deleteLater();
+         if (g_visitor.generation != generation)
+             return;   // started afresh meanwhile (a new store)
+         const bool ok = reply->error() == QNetworkReply::NoError;
+         const QByteArray body = ok ? reply->readAll() : QByteArray();
++        benchMark(QStringLiteral("visitorData fetch done source=%1 ms=%2 error=%3 bytes=%4")
++                      .arg(homePage ? QStringLiteral("home") : QStringLiteral("sw")).arg(clock.elapsed())
++                      .arg(int(reply->error())).arg(body.size()));
+         const QString id = homePage ? visitorFromHomePage(body) : visitorFromSwJsData(body);
+         const QString why = !ok ? reply->errorString()
+                           : reply->url().host().startsWith(QLatin1String("consent."))
+@@ -1543,6 +1548,9 @@ void InnerTube::player(const QString &videoId,
+     ask->videoId = videoId;
+     ask->done = std::move(done);
+     ask->clock.start();
++    benchMark(QStringLiteral("player call %1 obj=%2 visitor=%3 pending=%4")
++                  .arg(videoId).arg(quintptr(this), 0, 16)
++                  .arg(g_visitor.anonymous.isEmpty() ? 0 : 1).arg(g_visitor.pending ? 1 : 0));
+     const PlayerClients clients = playerClients();
+     ask->fallbackLeft = clients == PlayerClients::Both;
+     askPlayer(clients == PlayerClients::Second ? Client::PlayerFallback : Client::Player, ask);
+@@ -1551,6 +1559,9 @@ void InnerTube::player(const QString &videoId,
+ void InnerTube::askPlayer(Client client, std::shared_ptr<PlayerAsk> ask)
+ {
+     withVisitorData([this, client, ask]() {
++        const qint64 waited = ask->clock.elapsed();
++        benchMark(QStringLiteral("player visitor-ready %1 waited=%2 visitor=%3")
++                      .arg(ask->videoId).arg(waited).arg(g_visitor.anonymous.isEmpty() ? 0 : 1));
+         // The id post() puts on this call: afterwards it tells whether the
+         // call went with the stored id, and whether a newer one has come.
+         const QString visitor = g_visitor.anonymous;
+@@ -1566,8 +1577,11 @@ void InnerTube::askPlayer(Client client, std::shared_ptr<PlayerAsk> ask)
+         const bool second = !ask->refusals.isEmpty();
+         send(client, QStringLiteral("player"), body, second ? kPlayerFallbackTimeoutMs : kPlayerTimeoutMs,
+              /*slot=*/nullptr,
+-             [this, client, visitor, ask](const QJsonObject &root, const QString &error) {
++             [this, client, visitor, ask, waited](const QJsonObject &root, const QString &error) {
+                  const QString &videoId = ask->videoId;
++                 benchMark(QStringLiteral("player answered %1 post=%2 total=%3 status=%4 error=%5")
++                               .arg(videoId).arg(ask->clock.elapsed() - waited).arg(ask->clock.elapsed())
++                               .arg(dig(root, { "playabilityStatus", "status" }).toString(), error));
+                  if (!error.isEmpty()) {
+                      // No answer at all: not asked of the other client, which
+                      // would only wait on the same server again.
+@@ -1643,6 +1657,9 @@ void InnerTube::askPlayer(Client client, std::shared_ptr<PlayerAsk> ask)
+                      qInfo("innertube: %s answered as %s in %lld ms%s", qPrintable(videoId),
+                            qPrintable(playerClientName(client)), (long long)ask->clock.elapsed(), qPrintable(after));
+                  }
++                 benchMark(QStringLiteral("player picked %1 itag=%2 bitrate=%3 audioFormats=%4")
++                               .arg(videoId).arg(choice.chosen.itag).arg(choice.chosen.peakBitrate)
++                               .arg(choice.offered.size()));
+                  ask->done(choice.chosen.url, choice.chosen.itag, QString());
+              },
+              /*retries=*/second ? 0 : 1);
+diff --git a/src/main.cpp b/src/main.cpp
+index 8fc43cb..5d1e25d 100644
+--- a/src/main.cpp	
++++ b/src/main.cpp
+@@ -14,9 +14,11 @@
+ #include <QSqlQuery>
+ #include <QTimeZone>
+ #include <QTimer>
++#include <QUrlQuery>
+ #include <QWindow>
+ 
+ #include "appdatabase.h"
++#include "benchlog.h"
+ #include "artistlinks.h"
+ #include "artistselftest.h"
+ #include "artworkcache.h"
+@@ -248,6 +250,14 @@ int main(int argc, char *argv[])
+     MpvEngine engine;
+     if (!engine.isValid())
+         qWarning("Monolist: %s", qPrintable(engine.lastError()));
++    // BENCH: every benchMark line also goes into mpv's log, on mpv's clock.
++    // Unhooked before the engine goes (the guard is destroyed first).
++    if (engine.isValid())
++        benchMarker() = [&engine](const QByteArray &text) { engine.benchPrint(text); };
++    struct BenchMarkerGuard {
++        ~BenchMarkerGuard() { benchMarker() = nullptr; }
++    } benchMarkerGuard;
++    benchMark(QStringLiteral("engine ready"));
+ 
+     StreamResolver resolver;
+     // Instance lists are stored in settings so a dead host can be swapped out
+@@ -536,6 +546,185 @@ int main(int argc, char *argv[])
+         });
+     }
+ 
++    // BENCH: --bench seq|skip|play|resolve --ids a,b,c [--listen <s>] [--settle <ms>]
++    //        [--total <s>] [--again] [--tiers 0,1,2] [--sample-ms <ms>]
++    //  seq     autoplay off; playSource() each id in turn (a new track, link not cached),
++    //          moving on once `listen` seconds of it have played; --again then plays the
++    //          same ids once more (link-cache hits).
++    //  skip    autoplay off; playTracks(all ids), and Next each time `listen` seconds of
++    //          the current one have played (the next row's link was prefetched).
++    //  play    autoplay off; playTracks(all ids) and let it play for `total` seconds.
++    //  resolve no playback; for each id and each tier: invalidate, resolveVia({tier}).
++    const int benchFlag = args.indexOf(QStringLiteral("--bench"));
++    if (benchFlag >= 0 && benchFlag + 1 < args.size()) {
++        const QString mode = args.at(benchFlag + 1);
++        const auto intArg = [args](const char *name, int fallback) {
++            const int i = args.indexOf(QLatin1String(name));
++            return i >= 0 && i + 1 < args.size() ? args.at(i + 1).toInt() : fallback;
++        };
++        const auto listArg = [args](const char *name, const QString &fallback) {
++            const int i = args.indexOf(QLatin1String(name));
++            return (i >= 0 && i + 1 < args.size() ? args.at(i + 1) : fallback)
++                .split(QLatin1Char(','), Qt::SkipEmptyParts);
++        };
++        const QStringList ids = listArg("--ids", QString());
++        const qint64 listenMs = qint64(intArg("--listen", 8)) * 1000;
++        const int settleMs = intArg("--settle", 500);
++        const int totalS = intArg("--total", 660);
++        const bool againPass = args.contains(QStringLiteral("--again"));
++        const QStringList tierArgs = listArg("--tiers", QStringLiteral("0,1,2"));
++
++        const auto quitSoon = []() {
++            benchMark(QStringLiteral("bench done"));
++            QTimer::singleShot(500, qApp, []() { QCoreApplication::quit(); });
++        };
++        // Polls until `ready` holds, or `limitMs` passes, then carries on.
++        const auto waitFor = [](std::function<bool()> ready, int limitMs, std::function<void()> then) {
++            auto *poll = new QTimer(qApp);
++            auto waited = std::make_shared<QElapsedTimer>();
++            waited->start();
++            QObject::connect(poll, &QTimer::timeout, qApp, [poll, waited, ready, limitMs, then]() {
++                if (!ready() && waited->elapsed() < limitMs)
++                    return;
++                if (waited->elapsed() >= limitMs)
++                    benchMark(QStringLiteral("wait timed out"));
++                poll->stop();
++                poll->deleteLater();
++                then();
++            });
++            poll->start(50);
++        };
++
++        auto *sampler = new QTimer(&app);
++        sampler->setInterval(intArg("--sample-ms", 250));
++        QObject::connect(sampler, &QTimer::timeout, &app, [&engine]() {
++            qInfo("bench-sample: %s", qPrintable(engine.benchCacheSample()));
++        });
++        QObject::connect(&player, &PlaybackController::statusChanged, &app, [&player]() {
++            benchMark(QStringLiteral("status \"%1\" source=%2").arg(player.statusText(), player.sourceLabel()));
++        });
++        QObject::connect(&player, &PlaybackController::playbackError, &app, [](const QString &reason) {
++            benchMark(QStringLiteral("playback error: %1").arg(reason));
++        });
++
++        benchMark(QStringLiteral("bench start mode=%1 ids=%2 listen=%3 settle=%4").arg(mode, ids.join(QLatin1Char(',')))
++                      .arg(listenMs).arg(settleMs));
++        QTimer::singleShot(2400 * 1000, &app, []() {
++            benchMark(QStringLiteral("bench timed out"));
++            QCoreApplication::exit(2);
++        });
++
++        const auto trackList = [ids]() {
++            QVariantList tracks;
++            for (int i = 0; i < ids.size(); ++i) {
++                tracks.append(QVariantMap{ { QStringLiteral("sourceId"), ids.at(i) },
++                                           { QStringLiteral("title"), QStringLiteral("Bench %1").arg(i + 1) },
++                                           { QStringLiteral("artist"), QStringLiteral("Bench") } });
++            }
++            return tracks;
++        };
++
++        if (mode == QLatin1String("seq")) {
++            auto order = std::make_shared<QStringList>(ids);
++            if (againPass)
++                *order += ids;
++            auto index = std::make_shared<int>(-1);
++            auto step = std::make_shared<std::function<void()>>();
++            *step = [&player, order, index, step, listenMs, waitFor, quitSoon, count = ids.size()]() {
++                ++*index;
++                if (*index >= order->size()) {
++                    quitSoon();
++                    return;
++                }
++                const QString id = order->at(*index);
++                benchMark(QStringLiteral("PLAY %1 n=%2 pass=%3").arg(id).arg(*index)
++                              .arg(*index >= count ? QStringLiteral("again") : QStringLiteral("first")));
++                player.playSource(id, QStringLiteral("Bench %1").arg(*index), QStringLiteral("Bench"));
++                waitFor([&player, listenMs]() { return player.position() >= listenMs; }, 60000, *step);
++            };
++            QTimer::singleShot(settleMs, &app, [&player, sampler, step]() {
++                player.setAutoplay(false);
++                sampler->start();
++                (*step)();
++            });
++        } else if (mode == QLatin1String("skip")) {
++            auto step = std::make_shared<std::function<void()>>();
++            *step = [&player, step, listenMs, waitFor, quitSoon]() {
++                waitFor([&player, listenMs]() { return player.position() >= listenMs; }, 60000, [&player, step, quitSoon]() {
++                    const int row = player.currentIndex();
++                    if (row + 1 >= player.queue()->rowCount()) {
++                        quitSoon();
++                        return;
++                    }
++                    benchMark(QStringLiteral("NEXT from row %1 to %2 (%3)").arg(row).arg(row + 1)
++                                  .arg(player.queue()->get(row + 1).value(QStringLiteral("sourceId")).toString()));
++                    player.next();
++                    (*step)();
++                });
++            };
++            QTimer::singleShot(settleMs, &app, [&player, sampler, step, trackList, ids]() {
++                player.setAutoplay(false);
++                sampler->start();
++                benchMark(QStringLiteral("PLAYQUEUE %1").arg(ids.value(0)));
++                player.playTracks(trackList(), 0);
++                (*step)();
++            });
++        } else if (mode == QLatin1String("play")) {
++            QTimer::singleShot(settleMs, &app, [&player, sampler, trackList, ids, totalS, quitSoon]() {
++                player.setAutoplay(false);
++                sampler->start();
++                benchMark(QStringLiteral("PLAYQUEUE %1").arg(ids.value(0)));
++                player.playTracks(trackList(), 0);
++                QTimer::singleShot(totalS * 1000, qApp, [&player, quitSoon]() {
++                    benchMark(QStringLiteral("played for the total; row %1 at %2 ms").arg(player.currentIndex())
++                                  .arg(player.position()));
++                    quitSoon();
++                });
++            });
++        } else if (mode == QLatin1String("resolve")) {
++            struct Step { QString id; int tier; };
++            auto steps = std::make_shared<QList<Step>>();
++            for (const QString &id : ids)
++                for (const QString &tier : tierArgs)
++                    steps->append({ id, tier.toInt() });
++            auto index = std::make_shared<int>(-1);
++            auto clock = std::make_shared<QElapsedTimer>();
++            auto step = std::make_shared<std::function<void()>>();
++            *step = [&resolver, steps, index, clock, quitSoon]() {
++                ++*index;
++                if (*index >= steps->size()) {
++                    quitSoon();
++                    return;
++                }
++                const Step s = steps->at(*index);
++                resolver.invalidate(s.id);
++                benchMark(QStringLiteral("RESOLVE %1 tier=%2").arg(s.id).arg(s.tier));
++                clock->start();
++                resolver.resolveVia(s.id, { s.tier });
++            };
++            const auto finished = [steps, index, clock, step](const QString &id, bool ok, const QString &detail) {
++                if (*index < 0 || *index >= steps->size() || steps->at(*index).id != id)
++                    return;
++                benchMark(QStringLiteral("RESOLVED %1 tier=%2 ok=%3 ms=%4 %5").arg(id).arg(steps->at(*index).tier)
++                              .arg(ok ? 1 : 0).arg(clock->elapsed()).arg(detail.left(200)));
++                QTimer::singleShot(300, qApp, [step]() { (*step)(); });
++            };
++            QObject::connect(&resolver, &StreamResolver::resolved, &app,
++                             [finished](const QString &id, const QString &url, int tier, bool fromCache) {
++                                 finished(id, true, QStringLiteral("tier=%1 fromCache=%2 itag=%3 clen=%4")
++                                                        .arg(tier).arg(fromCache ? 1 : 0)
++                                                        .arg(QUrlQuery(QUrl(url)).queryItemValue(QStringLiteral("itag")),
++                                                             QUrlQuery(QUrl(url)).queryItemValue(QStringLiteral("clen"))));
++                             });
++            QObject::connect(&resolver, &StreamResolver::failed, &app,
++                             [finished](const QString &id, const QString &reason) { finished(id, false, reason); });
++            QTimer::singleShot(settleMs, &app, [step]() { (*step)(); });
++        } else {
++            benchMark(QStringLiteral("unknown bench mode"));
++            QCoreApplication::exit(3);
++        }
++    }
++
+     // --queue-test <videoId> [<videoId> ...]
+     //
+     // The queue driven the way a listener drives it after a launch: the first
+diff --git a/src/mpvengine.cpp b/src/mpvengine.cpp
+index ce1f440..87ec9c6 100644
+--- a/src/mpvengine.cpp	
++++ b/src/mpvengine.cpp
+@@ -1,4 +1,5 @@
+ #include "mpvengine.h"
++#include "benchlog.h"
+ 
+ #include <QMetaObject>
+ #include <QtGlobal>
+@@ -163,6 +164,14 @@ void MpvEngine::applyBaseOptions()
+     // Keep libmpv from writing to the app's stderr; errors surface as signals.
+     setOption("terminal", "no");
+     setOption("msg-level", "all=no");
++
++    // BENCH: mpv's own log-file, every line stamped on mpv's clock by mpv.
++    const QByteArray benchLogFile = qgetenv("MONOLIST_MPV_LOGFILE");
++    if (!benchLogFile.isEmpty()) {
++        setOption("log-file", benchLogFile.constData());
++        const QByteArray level = qgetenv("MONOLIST_MPV_MSGLEVEL");
++        setOption("msg-level", level.isEmpty() ? "all=v" : level.constData());
++    }
+ }
+ 
+ void MpvEngine::observeProperties()
+@@ -218,9 +227,15 @@ void MpvEngine::drainEvents()
+                 break;
+ 
+             switch (event->reply_userdata) {
+-            case PropTimePos:
+-                Q_EMIT positionChanged(qint64(*static_cast<double *>(prop->data) * 1000.0));
++            case PropTimePos: {
++                const double pos = *static_cast<double *>(prop->data);
++                if (!m_benchFirstPos && pos > 0.0) {
++                    m_benchFirstPos = true;
++                    benchMark(QStringLiteral("mpv-event first time-pos %1").arg(pos, 0, 'f', 3));
++                }
++                Q_EMIT positionChanged(qint64(pos * 1000.0));
+                 break;
++            }
+             case PropDuration: {
+                 const qint64 ms = qint64(*static_cast<double *>(prop->data) * 1000.0);
+                 if (ms != m_duration) {
+@@ -241,6 +256,7 @@ void MpvEngine::drainEvents()
+                 const bool buffering = *static_cast<int *>(prop->data) != 0;
+                 if (buffering != m_buffering) {
+                     m_buffering = buffering;
++                    benchMark(QStringLiteral("mpv-event paused-for-cache %1").arg(buffering ? 1 : 0));
+                     Q_EMIT bufferingChanged(buffering);
+                 }
+                 break;
+@@ -308,8 +324,18 @@ void MpvEngine::drainEvents()
+             break;
+         }
+ 
++        case MPV_EVENT_FILE_LOADED:
++            benchMark(QStringLiteral("mpv-event FILE_LOADED"));
++            break;
++
++        case MPV_EVENT_PLAYBACK_RESTART:
++            benchMark(QStringLiteral("mpv-event PLAYBACK_RESTART"));
++            break;
++
+         case MPV_EVENT_END_FILE: {
+             auto *end = static_cast<mpv_event_end_file *>(event->data);
++            benchMark(QStringLiteral("mpv-event END_FILE reason=%1 error=%2 entry=%3 current=%4")
++                          .arg(int(end->reason)).arg(end->error).arg(end->playlist_entry_id).arg(m_currentEntry));
+             // The end of a file that has since been replaced or stopped. Its
+             // natural end would skip the track that took its place, and its
+             // error would be blamed on it.
+@@ -394,6 +420,8 @@ void MpvEngine::load(const QString &urlOrPath, bool startPlaying, const QString
+     // still reports goes nowhere.
+     ++m_loadRequest;
+     m_currentEntry = 0;
++    m_benchFirstPos = false;
++    benchMark(QStringLiteral("mpv loadfile %1").arg(urlOrPath.left(60)));
+     const char *args[] = { "loadfile", target.constData(), "replace", nullptr };
+     const int rc = mpv_command_async(m_mpv, m_loadRequest, args);
+     if (rc < 0) {
+@@ -416,6 +444,7 @@ void MpvEngine::stop()
+         m_videoSize = QSize();
+         Q_EMIT videoSizeChanged(m_videoSize);
+     }
++    benchMark(QStringLiteral("mpv stop"));
+     const char *args[] = { "stop", nullptr };
+     mpv_command_async(m_mpv, 0, args);
+ }
+@@ -483,6 +512,56 @@ void MpvEngine::setReplayGainEnabled(bool enabled)
+     setOption("replaygain", enabled ? "track" : "no");
+ }
+ 
++void MpvEngine::benchPrint(const QByteArray &text)
++{
++    if (!m_mpv)
++        return;
++    const QByteArray line = "BENCH " + text;
++    const char *args[] = { "print-text", line.constData(), nullptr };
++    mpv_command(m_mpv, args);
++}
++
++QString MpvEngine::benchCacheSample()
++{
++    if (!m_mpv)
++        return {};
++    int64_t speed = -1;
++    mpv_get_property(m_mpv, "cache-speed", MPV_FORMAT_INT64, &speed);
++    double timePos = -1;
++    mpv_get_property(m_mpv, "time-pos", MPV_FORMAT_DOUBLE, &timePos);
++    int pausedForCache = -1;
++    mpv_get_property(m_mpv, "paused-for-cache", MPV_FORMAT_FLAG, &pausedForCache);
++    double cacheDuration = -1;
++    mpv_get_property(m_mpv, "demuxer-cache-duration", MPV_FORMAT_DOUBLE, &cacheDuration);
++    int64_t fileSize = -1;
++    mpv_get_property(m_mpv, "file-size", MPV_FORMAT_INT64, &fileSize);
++    int64_t fwBytes = -1;
++    int64_t rawRate = -1;
++    int64_t totalBytes = -1;
++    int eof = -1;
++    mpv_node node;
++    if (mpv_get_property(m_mpv, "demuxer-cache-state", MPV_FORMAT_NODE, &node) >= 0) {
++        if (node.format == MPV_FORMAT_NODE_MAP && node.u.list) {
++            for (int i = 0; i < node.u.list->num; ++i) {
++                const char *key = node.u.list->keys[i];
++                const mpv_node &value = node.u.list->values[i];
++                if (qstrcmp(key, "fw-bytes") == 0 && value.format == MPV_FORMAT_INT64)
++                    fwBytes = value.u.int64;
++                else if (qstrcmp(key, "raw-input-rate") == 0 && value.format == MPV_FORMAT_INT64)
++                    rawRate = value.u.int64;
++                else if (qstrcmp(key, "total-bytes") == 0 && value.format == MPV_FORMAT_INT64)
++                    totalBytes = value.u.int64;
++                else if (qstrcmp(key, "eof") == 0 && value.format == MPV_FORMAT_FLAG)
++                    eof = value.u.flag;
++            }
++        }
++        mpv_free_node_contents(&node);
++    }
++    return QStringLiteral("pos=%1 pfc=%2 speed=%3 rawRate=%4 fwBytes=%5 totalBytes=%6 cacheDur=%7 eof=%8 fileSize=%9")
++        .arg(timePos, 0, 'f', 3).arg(pausedForCache).arg(qint64(speed)).arg(qint64(rawRate))
++        .arg(qint64(fwBytes)).arg(qint64(totalBytes)).arg(cacheDuration, 0, 'f', 1).arg(eof).arg(qint64(fileSize));
++}
++
+ // Asked without waiting for the answer: during a song, mpv reopens the sound
+ // output on the new device before it answers, which is long enough to be
+ // felt if the interface stood still for it.
+diff --git a/src/mpvengine.h b/src/mpvengine.h
+index 2fe06d1..4901591 100644
+--- a/src/mpvengine.h	
++++ b/src/mpvengine.h
+@@ -76,6 +76,12 @@ public:
+     QSize videoSize() const { return m_videoSize; }
+     mpv_handle *handle() const { return m_mpv; }
+ 
++    // BENCH: prints `text` into mpv's own log (and log-file) through
++    // print-text, synchronously, so it carries mpv's timestamp.
++    void benchPrint(const QByteArray &text);
++    // BENCH: one line of mpv's cache state (cache-speed, demuxer-cache-state).
++    QString benchCacheSample();
++
+ Q_SIGNALS:
+     void positionChanged(qint64 ms);
+     void durationChanged(qint64 ms);
+@@ -117,4 +123,5 @@ private:
+     QSize m_videoSize;
+     qint64 m_duration = 0;
+     QVariantList m_audioDevices;
++    bool m_benchFirstPos = false;   // BENCH: first time-pos > 0 of the latest load logged
+ };
+diff --git a/src/playbackcontroller.cpp b/src/playbackcontroller.cpp
+index 7c5f4d1..c54472f 100644
+--- a/src/playbackcontroller.cpp	
++++ b/src/playbackcontroller.cpp
+@@ -1,4 +1,5 @@
+ #include "playbackcontroller.h"
++#include "benchlog.h"
+ #include "appdatabase.h"
+ #include "downloadmanager.h"
+ #include "library.h"
+@@ -766,6 +767,7 @@ void PlaybackController::prefetchUpcoming()
+         return;
+     if (m_downloads && !m_downloads->localPathFor(upcoming->videoId).isEmpty())
+         return;
++    benchMark(QStringLiteral("prefetchUpcoming %1").arg(upcoming->videoId));
+     m_resolver->prefetch(upcoming->videoId);
+ }
+ 
+@@ -926,6 +928,8 @@ void PlaybackController::closePlayEvent(bool restarting)
+ // class only cares that something is playing.
+ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
+ {
++    benchMark(QStringLiteral("beginTrack %1 autoPlay=%2")
++                  .arg(track.value(QStringLiteral("sourceId")).toString()).arg(autoPlay ? 1 : 0));
+     // First, while m_position still belongs to the track being left: how much
+     // of it was heard is the single most useful thing the recommender gets,
+     // and it exists only in this instant.
+@@ -1039,6 +1043,7 @@ void PlaybackController::handleResolved(const QString &videoId, const QString &u
+     if (videoId != m_pendingVideoId)
+         return;                       // a later track superseded this one
+     m_pendingVideoId.clear();
++    benchMark(QStringLiteral("handleResolved %1 tier=%2 fromCache=%3").arg(videoId).arg(tier).arg(fromCache ? 1 : 0));
+ 
+     setStatus(QStringLiteral("Streaming"), tierLabel(tier), false);
+     m_consecutiveFailures = 0;
+@@ -1049,6 +1054,7 @@ void PlaybackController::handleResolved(const QString &videoId, const QString &u
+     // only — a stream refreshed or re-resolved mid-song arrives here again.)
+     if (m_autoPlayAfterResolve)
+         startListening();
++    benchMark(QStringLiteral("handleResolved %1 listening recorded, loading").arg(videoId));
+     // A link some tiers only serve to the client that asked for it (the muxed
+     // stream's) comes with the headers to ask as.
+     if (m_engine)
+@@ -1161,6 +1167,7 @@ bool PlaybackController::abandonVideo(const QString &reason)
+ 
+ void PlaybackController::handleEndOfFile()
+ {
++    benchMark(QStringLiteral("handleEndOfFile position=%1 duration=%2").arg(m_position).arg(m_duration));
+     // A video that stopped before it ever showed a frame did not finish the
+     // song; it failed. The queue must not move on.
+     if (abandonVideo(QStringLiteral("This video would not play — back to audio")))
+diff --git a/src/streamresolver.cpp b/src/streamresolver.cpp
+index 81baf06..038203d 100644
+--- a/src/streamresolver.cpp	
++++ b/src/streamresolver.cpp
+@@ -1,5 +1,34 @@
+ #include "streamresolver.h"
+ #include "ytdlp.h"
++#include "benchlog.h"
++
++#include <QElapsedTimer>
++#include <QHash>
++
++namespace {
++// BENCH: when each job's current tier started, by video id.
++QHash<QString, QElapsedTimer> &benchTierClocks()
++{
++    static QHash<QString, QElapsedTimer> clocks;
++    return clocks;
++}
++QHash<QString, QElapsedTimer> &benchJobClocks()
++{
++    static QHash<QString, QElapsedTimer> clocks;
++    return clocks;
++}
++const char *benchTierName(int tier)
++{
++    switch (tier) {
++    case 0: return "InnerTube";
++    case 1: return "yt-dlp";
++    case 2: return "muxed";
++    case 3: return "Piped";
++    case 4: return "Invidious";
++    default: return "exhausted";
++    }
++}
++}
+ 
+ #include <QJsonArray>
+ #include <QJsonDocument>
+@@ -109,6 +138,7 @@ void StreamResolver::resolve(const QString &videoId, int firstTier)
+         const auto cached = m_cache.constFind(videoId);
+         if (cached != m_cache.constEnd() && cached->expires > QDateTime::currentDateTimeUtc()) {
+             const CacheEntry entry = *cached;
++            benchMark(QStringLiteral("resolve %1 cache-hit tier=%2").arg(videoId, QLatin1String(benchTierName(entry.tier))));
+             QMetaObject::invokeMethod(this, [this, videoId, entry]() {
+                 Q_EMIT resolved(videoId, entry.url, entry.tier, /*fromCache=*/true);
+             }, Qt::QueuedConnection);
+@@ -117,6 +147,7 @@ void StreamResolver::resolve(const QString &videoId, int firstTier)
+         // A prefetch already on its way: let it finish, and report this time.
+         if (Job *running = m_jobs.value(videoId); running && running->prefetch) {
+             running->prefetch = false;
++            benchMark(QStringLiteral("resolve %1 takes-over-prefetch").arg(videoId));
+             return;
+         }
+     }
+@@ -280,6 +311,11 @@ void StreamResolver::startTier(Job *job, int tier)
+ {
+     job->tier = tier;
+     ++job->generation;
++    if (!benchJobClocks().contains(job->videoId))
++        benchJobClocks()[job->videoId].start();
++    benchTierClocks()[job->videoId].start();
++    benchMark(QStringLiteral("tier start %1 tier=%2 prefetch=%3")
++                  .arg(job->videoId, QLatin1String(benchTierName(tier))).arg(job->prefetch ? 1 : 0));
+     Q_EMIT tierChanged(job->videoId, tier);
+ 
+     switch (tier) {
+@@ -565,6 +601,13 @@ void StreamResolver::succeed(Job *job, const QString &url, const QVariantMap &he
+     const QString videoId = job->videoId;
+     const int tier = job->tier;
+     const bool silent = job->prefetch;
++    benchMark(QStringLiteral("tier ok %1 tier=%2 tierMs=%3 jobMs=%4 prefetch=%5 clen=%6")
++                  .arg(videoId, QLatin1String(benchTierName(tier)))
++                  .arg(benchTierClocks().value(videoId).elapsed()).arg(benchJobClocks().value(videoId).elapsed())
++                  .arg(silent ? 1 : 0)
++                  .arg(QUrlQuery(QUrl(url)).queryItemValue(QStringLiteral("clen"))));
++    benchTierClocks().remove(videoId);
++    benchJobClocks().remove(videoId);
+     m_cache.insert(videoId, { url, tier, expiryOf(url), headers });
+ 
+     abortPending(job);
+@@ -578,6 +621,9 @@ void StreamResolver::tierExhausted(Job *job, const QString &reason)
+ {
+     if (job->settled)
+         return;
++    benchMark(QStringLiteral("tier fail %1 tier=%2 tierMs=%3 reason=%4")
++                  .arg(job->videoId, QLatin1String(benchTierName(job->tier)))
++                  .arg(benchTierClocks().value(job->videoId).elapsed()).arg(reason.left(160)));
+     job->errors.append(reason);
+     abortPending(job);
+     startTier(job, job->next.isEmpty() ? int(TierExhausted) : job->next.takeFirst());
+@@ -613,6 +659,10 @@ void StreamResolver::cancel(const QString &videoId)
+     Job *job = m_jobs.value(videoId);
+     if (!job)
+         return;
++    benchMark(QStringLiteral("resolve %1 cancelled tier=%2 prefetch=%3")
++                  .arg(videoId, QLatin1String(benchTierName(job->tier))).arg(job->prefetch ? 1 : 0));
++    benchTierClocks().remove(videoId);
++    benchJobClocks().remove(videoId);
+     job->settled = true;
+     abortPending(job);
+     discard(job);

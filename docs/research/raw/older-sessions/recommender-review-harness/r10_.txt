@@ -1,0 +1,2692 @@
+loaded yes
+
+=== Miles Davis  [region US]  liked-as "Miles Davis"
+  seed in graph: Miles Davis / US / conf 0.98 / pop 21 / 561d854a-6a28-4aa7-8c99-323e6ce46c2a
+  seed sound: yes
+    NB	Miles Davis	Charles Mingus	LB	0.928	jazz double bass	people 1
+    NB	Miles Davis	Bob Dylan	LB	0.126	country rock	people 1
+    NB	Miles Davis	The Doors	LB	0.093	rock	people 1
+    NB	Miles Davis	Nirvana	LB	0.042	permanent wave	people 1
+    NB	Miles Davis	Red Hot Chili Peppers	LB	0.106	permanent wave	people 1
+    NB	Miles Davis	Johnny Cash	LB	0.068	outlaw country	people 1
+    NB	Miles Davis	R.E.M.	LB	0.047	athens indie	people 1
+    NB	Miles Davis	The Beach Boys	LB	0.133	classic rock	people 1
+    NB	Miles Davis	Metallica	LB	0.043	hard rock	people 1
+    NB	Miles Davis	Beastie Boys	LB	0.035	rap	people 1
+    NB	Miles Davis	Michael Jackson	LB	0.323	soul	people 2
+    NB	Miles Davis	The Velvet Underground	LB	0.071	protopunk	people 1
+    NB	Miles Davis	Simon & Garfunkel	LB	0.143	classic rock	people 1
+    NB	Miles Davis	The Smashing Pumpkins	LB	0.039	alternative rock	people 1
+    NB	Miles Davis	Pearl Jam	LB	0.047	alternative rock	people 1
+    NB	Miles Davis	Nine Inch Nails	LB	0.021	industrial	people 1
+    NB	Miles Davis	Marvin Gaye	LB	0.356	neo soul	people 1
+    NB	Miles Davis	Pixies	LB	0.042	alternative rock	people 1
+    NB	Miles Davis	Moby	LB	0.029	electronica	people 1
+    NB	Miles Davis	Foo Fighters	LB	0.030	permanent wave	people 1
+    NB	Miles Davis	John Coltrane	LB	0.971	jazz saxophone	people 1
+    NB	Miles Davis	Leonard Cohen	LB	0.089	canadian singer-songwriter	people 1
+    NB	Miles Davis	Tom Waits	LB	0.116	singer-songwriter	people 1
+    NB	Miles Davis	Frank Zappa	LB	0.250	psychedelic rock	people 1
+    NB	Miles Davis	Radiohead	LB	0.071	rock	people 1
+    NB	Miles Davis	The Beatles	LB	0.166	classic rock	people 1
+    NB	Miles Davis	Pink Floyd	LB	0.135	art rock	people 1
+    NB	Miles Davis	Led Zeppelin	LB	0.095	rock	people 1
+    NB	Miles Davis	The Rolling Stones	LB	0.114	rock	people 1
+    NB	Miles Davis	Björk	LB	0.039	art pop	people 1
+    NB	Miles Davis	Neil Young	LB	0.108	mellow gold	people 1
+    NB	Miles Davis	U2	LB	0.044	irish rock	people 1
+    NB	Miles Davis	The Cure	LB	0.038	uk post-punk	people 1
+    NB	Miles Davis	The Clash	LB	0.022	alternative rock	people 1
+    NB	Miles Davis	The Who	LB	0.112	rock	people 1
+    NB	Miles Davis	Portishead	LB	0.086	art pop	people 1
+    NB	Miles Davis	Gorillaz	LB	0.025	rock	people 1
+    NB	Miles Davis	Coldplay	LB	0.068	permanent wave	people 1
+    NB	Miles Davis	Boards of Canada	LB	0.050	scottish electronic	people 1
+  graph neighbours (39): Charles Mingus(LB 1.00 ~0.928), Bob Dylan(LB 1.00 ~0.126), The Doors(LB 1.00 ~0.093), Nirvana(LB 1.00 ~0.042), Red Hot Chili Peppers(LB 1.00 ~0.106), Johnny Cash(LB 1.00 ~0.068), R.E.M.(LB 1.00 ~0.047), The Beach Boys(LB 1.00 ~0.133), Metallica(LB 1.00 ~0.043), Beastie Boys(LB 1.00 ~0.035), Michael Jackson(LB 1.00 ~0.323), The Velvet Underground(LB 1.00 ~0.071), Simon & Garfunkel(LB 1.00 ~0.143), The Smashing Pumpkins(LB 1.00 ~0.039), Pearl Jam(LB 1.00 ~0.047), Nine Inch Nails(LB 1.00 ~0.021), Marvin Gaye(LB 1.00 ~0.356), Pixies(LB 1.00 ~0.042), Moby(LB 1.00 ~0.029), Foo Fighters(LB 1.00 ~0.030), John Coltrane(LB 1.00 ~0.971), Leonard Cohen(LB 1.00 ~0.089), Tom Waits(LB 1.00 ~0.116), Frank Zappa(LB 1.00 ~0.250), Radiohead(LB 1.00 ~0.071), The Beatles(LB 1.00 ~0.166), Pink Floyd(LB 1.00 ~0.135), Led Zeppelin(LB 1.00 ~0.095), The Rolling Stones(LB 1.00 ~0.114), Björk(LB 1.00 ~0.039), Neil Young(LB 1.00 ~0.108), U2(LB 1.00 ~0.044), The Cure(LB 1.00 ~0.038), The Clash(LB 1.00 ~0.022), The Who(LB 1.00 ~0.112), Portishead(LB 1.00 ~0.086), Gorillaz(LB 1.00 ~0.025), Coldplay(LB 1.00 ~0.068), Boards of Canada(LB 1.00 ~0.050)
+  -> Because you like Miles Davis  |  People who listen to Miles Davis also play these  (4 rows)
+     John Coltrane — In A Sentimental Mood   [jazz saxophone, pop 66, ~0.971]
+     Charles Mingus — Goodbye Pork Pie Hat   [jazz double bass, pop 54, ~0.928]
+     John Coltrane — Blue in Green (feat. John Coltrane & Bill Evans)   [jazz saxophone, pop 65, ~0.971]
+     Charles Mingus — Mood Indigo   [jazz double bass, pop 49, ~0.928]
+
+=== John Coltrane  [region US]  liked-as "John Coltrane"
+  seed in graph: John Coltrane / US / conf 0.98 / pop 9 / b625448e-bf4a-41c3-a421-72ad46cdb831
+  seed sound: yes
+    NB	John Coltrane	Charles Mingus	LB	0.970	jazz double bass	people 1
+    NB	John Coltrane	Tom Waits	LB	0.071	singer-songwriter	people 1
+    NB	John Coltrane	Johnny Cash	LB	0.056	outlaw country	people 1
+    NB	John Coltrane	The Beach Boys	LB	0.076	classic rock	people 1
+    NB	John Coltrane	R.E.M.	LB	0.043	athens indie	people 1
+    NB	John Coltrane	Pixies	LB	0.035	alternative rock	people 1
+    NB	John Coltrane	Nine Inch Nails	LB	0.030	industrial	people 1
+    NB	John Coltrane	The Smashing Pumpkins	LB	0.018	alternative rock	people 1
+    NB	John Coltrane	Frank Zappa	LB	0.206	psychedelic rock	people 1
+    NB	John Coltrane	Miles Davis	LB	0.971	hard bop	people 1
+    NB	John Coltrane	Frank Sinatra	LB	0.532	lounge	people 1
+    NB	John Coltrane	Aphex Twin	LB	0.035	uk experimental electronic	people 1
+    NB	John Coltrane	Gorillaz	LB	0.015	rock	people 1
+    NB	John Coltrane	Coldplay	LB	0.064	permanent wave	people 1
+    NB	John Coltrane	Amy Winehouse	LB	0.210	neo soul	people 1
+    NB	John Coltrane	Sigur Rós	LB	0.040	post-rock	people 1
+    NB	John Coltrane	Fleetwood Mac	LB	0.088	rock	people 1
+    NB	John Coltrane	King Crimson	LB	0.134	art rock	people 1
+    NB	John Coltrane	Gustav Mahler	LB	0.085	post-romantic era	people 1
+  graph neighbours (20): Charles Mingus(LB 1.00 ~0.970), Tom Waits(LB 1.00 ~0.071), Johnny Cash(LB 1.00 ~0.056), The Beach Boys(LB 1.00 ~0.076), R.E.M.(LB 1.00 ~0.043), Pixies(LB 1.00 ~0.035), Nine Inch Nails(LB 1.00 ~0.030), The Smashing Pumpkins(LB 1.00 ~0.018), Frank Zappa(LB 1.00 ~0.206), Miles Davis(LB 1.00 ~0.971), Frank Sinatra(LB 1.00 ~0.532), Aphex Twin(LB 1.00 ~0.035), Gorillaz(LB 1.00 ~0.015), Coldplay(LB 1.00 ~0.064), Amy Winehouse(LB 1.00 ~0.210), Sigur Rós(LB 1.00 ~0.040), Fleetwood Mac(LB 1.00 ~0.088), King Crimson(LB 1.00 ~0.134), Пётр Ильич Чайковский(LB 0.50 ~-nocat), Gustav Mahler(LB 0.17 ~0.085)
+  -> Because you like John Coltrane  |  People who listen to John Coltrane also play these  (6 rows)
+     Miles Davis — Générique - Bande originale du film "Ascenseur pour l'échafaud"   [hard bop, pop 59, ~0.971]
+     Charles Mingus — Goodbye Pork Pie Hat   [jazz double bass, pop 54, ~0.970]
+     Frank Sinatra — Somethin' Stupid   [lounge, pop 78, ~0.532]
+     Miles Davis — Florence sur les Champs-Élysées - Bande originale du film "Ascenseur pour l'échafaud"   [hard bop, pop 52, ~0.971]
+     Charles Mingus — Mood Indigo   [jazz double bass, pop 49, ~0.970]
+     Frank Sinatra — My Way   [lounge, pop 75, ~0.532]
+
+=== Kamasi Washington  [region US]  liked-as "Kamasi Washington"
+  seed in graph: NOT FOUND
+  -> Sounds like Kamasi Washington  |  Artists whose sound sits closest to theirs  (12 rows)
+     Robert Glasper — Going Home   [neo soul, pop 45, ~0.953]
+     BADBADNOTGOOD — Running Away   [canadian modern jazz, pop 63, ~0.936]
+     Yussef Dayes — Woman's Touch (feat. Jamilah Barry)   [british jazz, pop 54, ~0.922]
+     Alfa Mist — Anthem   [british jazz, pop 46, ~0.922]
+     Theo Croker — 6 Feet Down   [jazz brass, pop 40, ~0.921]
+     corto.alto — Interlude   [scottish jazz, pop 34, ~0.921]
+     Mansur Brown — It's My Time   [british jazz, pop 38, ~0.921]
+     Ezra Collective — Space is the Place   [british jazz, pop 46, ~0.920]
+     Alice Coltrane — Blue Nile   [spiritual jazz, pop 40, ~0.920]
+     Kokoroko — Abusey Junction   [british jazz, pop 60, ~0.919]
+     Sons Of Kemet — To Never Forget The Source   [british jazz, pop 40, ~0.919]
+     Nubya Garcia — Set It Free   [british jazz, pop 40, ~0.918]
+
+=== Ludovico Einaudi  [region US]  liked-as "Ludovico Einaudi"
+  seed in graph: Ludovico Einaudi / IT / conf 0.94 / pop 2 / fa34b363-79df-434f-a5b8-be4e6898543f
+  seed sound: yes
+    NB	Ludovico Einaudi	Antonio Vivaldi	LB	0.096	early music	people 1
+    NB	Ludovico Einaudi	Ennio Morricone	LB	0.568	italian soundtrack	people 1
+    NB	Ludovico Einaudi	Richard Wagner	LB	0.154	late romantic era	people 1
+  graph neighbours (3): Antonio Vivaldi(LB 1.00 ~0.096), Ennio Morricone(LB 1.00 ~0.568), Richard Wagner(LB 1.00 ~0.154)
+  -> Sounds like Ludovico Einaudi  |  Artists whose sound sits closest to theirs  (12 rows)
+     Hania Rani — Glass   [compositional ambient, pop 53, ~0.999]
+     Sophie Hutchings — By Night   [compositional ambient, pop 46, ~0.999]
+     Illuminine — Dear, Dolores - Rework   [compositional ambient, pop 49, ~0.999]
+     Erland Cooper — Kittick - Simeon Walker Rework   [compositional ambient, pop 44, ~0.998]
+     Dirk Maassen — La Mer   [compositional ambient, pop 38, ~0.998]
+     Sebastian Plano — Soul I (Avow)   [compositional ambient, pop 45, ~0.997]
+     Jim Perkins — Footsteps   [compositional ambient, pop 39, ~0.997]
+     Joep Beving — Losar   [compositional ambient, pop 55, ~0.995]
+     Bruno Sanfilippo — The Poet   [compositional ambient, pop 41, ~0.995]
+     Snorri Hallgrímsson — Sandlóa   [compositional ambient, pop 36, ~0.994]
+     Stefano Guzzetti — Reaching Out   [compositional ambient, pop 36, ~0.993]
+     Niklas Paschburg — Spark   [compositional ambient, pop 49, ~0.993]
+
+=== Ludovico Einaudi  [region IT]  liked-as "Ludovico Einaudi"
+  seed in graph: Ludovico Einaudi / IT / conf 0.94 / pop 2 / fa34b363-79df-434f-a5b8-be4e6898543f
+  seed sound: yes
+    NB	Ludovico Einaudi	Antonio Vivaldi	LB	0.096	early music	people 1
+    NB	Ludovico Einaudi	Ennio Morricone	LB	0.568	italian soundtrack	people 1
+    NB	Ludovico Einaudi	Richard Wagner	LB	0.154	late romantic era	people 1
+  graph neighbours (3): Antonio Vivaldi(LB 1.00 ~0.096), Ennio Morricone(LB 1.00 ~0.568), Richard Wagner(LB 1.00 ~0.154)
+  -> Sounds like Ludovico Einaudi  |  Artists whose sound sits closest to theirs  (12 rows)
+     Hania Rani — Glass   [compositional ambient, pop 53, ~0.999]
+     Sophie Hutchings — By Night   [compositional ambient, pop 46, ~0.999]
+     Illuminine — Dear, Dolores - Rework   [compositional ambient, pop 49, ~0.999]
+     Erland Cooper — Kittick - Simeon Walker Rework   [compositional ambient, pop 44, ~0.998]
+     Dirk Maassen — La Mer   [compositional ambient, pop 38, ~0.998]
+     Sebastian Plano — Soul I (Avow)   [compositional ambient, pop 45, ~0.997]
+     Jim Perkins — Footsteps   [compositional ambient, pop 39, ~0.997]
+     Joep Beving — Losar   [compositional ambient, pop 55, ~0.995]
+     Bruno Sanfilippo — The Poet   [compositional ambient, pop 41, ~0.995]
+     Snorri Hallgrímsson — Sandlóa   [compositional ambient, pop 36, ~0.994]
+     Stefano Guzzetti — Reaching Out   [compositional ambient, pop 36, ~0.993]
+     Niklas Paschburg — Spark   [compositional ambient, pop 49, ~0.993]
+
+=== Johann Sebastian Bach  [region US]  liked-as "Johann Sebastian Bach"
+  seed in graph: Johann Sebastian Bach / DE / conf 0.98 / pop 32 / 24f1766e-9635-4d58-a4d4-9413f9f98a4c
+  seed sound: yes
+    NB	Johann Sebastian Bach	George Frideric Handel	LB	0.987	english baroque	people 1
+    NB	Johann Sebastian Bach	Max Richter	LB	0.094	post-minimalism	people 1
+    NB	Johann Sebastian Bach	Hans Zimmer	LB	0.020	soundtrack	people 1
+    NB	Johann Sebastian Bach	Johannes Brahms	LB	0.845	classical	people 1
+    NB	Johann Sebastian Bach	Rammstein	LB	-0.025	neue deutsche harte	people 1
+    NB	Johann Sebastian Bach	Franz Liszt	LB	0.859	late romantic era	people 1
+    NB	Johann Sebastian Bach	Ludwig van Beethoven	LB	0.872	early romantic era	people 1
+    NB	Johann Sebastian Bach	Felix Mendelssohn	LB	0.853	german romanticism	people 1
+    NB	Johann Sebastian Bach	Wolfgang Amadeus Mozart	LB	0.919	classical era	people 1
+    NB	Johann Sebastian Bach	The Beatles	LB	0.013	classic rock	people 1
+    NB	Johann Sebastian Bach	Antonio Vivaldi	LB	0.992	early music	people 1
+    NB	Johann Sebastian Bach	Pink Floyd	LB	0.025	art rock	people 1
+    NB	Johann Sebastian Bach	David Bowie	LB	-0.005	rock	people 1
+    NB	Johann Sebastian Bach	Radiohead	LB	0.012	rock	people 1
+    NB	Johann Sebastian Bach	Led Zeppelin	LB	-0.002	rock	people 1
+    NB	Johann Sebastian Bach	Red Hot Chili Peppers	LB	-0.024	permanent wave	people 1
+    NB	Johann Sebastian Bach	Nirvana	LB	-0.016	permanent wave	people 1
+    NB	Johann Sebastian Bach	Metallica	LB	-0.014	hard rock	people 1
+    NB	Johann Sebastian Bach	The Rolling Stones	LB	-0.012	rock	people 1
+    NB	Johann Sebastian Bach	U2	LB	-0.022	irish rock	people 1
+    NB	Johann Sebastian Bach	Coldplay	LB	0.012	permanent wave	people 1
+    NB	Johann Sebastian Bach	Bob Dylan	LB	0.025	country rock	people 1
+    NB	Johann Sebastian Bach	Ennio Morricone	LB	0.088	italian soundtrack	people 1
+    NB	Johann Sebastian Bach	The Doors	LB	-0.007	rock	people 1
+    NB	Johann Sebastian Bach	The Cure	LB	-0.011	uk post-punk	people 1
+    NB	Johann Sebastian Bach	Miles Davis	LB	0.063	hard bop	people 1
+    NB	Johann Sebastian Bach	System of a Down	LB	-0.028	alternative metal	people 1
+    NB	Johann Sebastian Bach	Franz Schubert	LB	0.885	early romantic era	people 1
+    NB	Johann Sebastian Bach	Iron Maiden	LB	-0.024	hard rock	people 1
+    NB	Johann Sebastian Bach	The Beach Boys	LB	0.002	classic rock	people 1
+  graph neighbours (31): George Frideric Handel(LB 1.00 ~0.987), Max Richter(LB 1.00 ~0.094), Hans Zimmer(LB 1.00 ~0.020), Johannes Brahms(LB 1.00 ~0.845), Rammstein(LB 1.00 ~-0.025), Franz Liszt(LB 1.00 ~0.859), Ludwig van Beethoven(LB 1.00 ~0.872), Felix Mendelssohn(LB 1.00 ~0.853), Wolfgang Amadeus Mozart(LB 1.00 ~0.919), The Beatles(LB 1.00 ~0.013), Antonio Vivaldi(LB 1.00 ~0.992), Pink Floyd(LB 1.00 ~0.025), David Bowie(LB 1.00 ~-0.005), Radiohead(LB 1.00 ~0.012), Led Zeppelin(LB 1.00 ~-0.002), Red Hot Chili Peppers(LB 1.00 ~-0.024), Nirvana(LB 1.00 ~-0.016), Metallica(LB 1.00 ~-0.014), The Rolling Stones(LB 1.00 ~-0.012), U2(LB 1.00 ~-0.022), Coldplay(LB 1.00 ~0.012), Bob Dylan(LB 1.00 ~0.025), Ennio Morricone(LB 1.00 ~0.088), The Doors(LB 1.00 ~-0.007), Пётр Ильич Чайковский(LB 1.00 ~-nocat), The Cure(LB 1.00 ~-0.011), Miles Davis(LB 1.00 ~0.063), System of a Down(LB 1.00 ~-0.028), Franz Schubert(LB 1.00 ~0.885), Iron Maiden(LB 1.00 ~-0.024), The Beach Boys(LB 1.00 ~0.002)
+  -> Because you like Johann Sebastian Bach  |  People who listen to Johann Sebastian Bach also play these  (12 rows)
+     Antonio Vivaldi — Vivaldi Variation (Arr. for Piano from Concerto for Strings in G Minor, RV 156 by F. Christl)   [early music, pop 67, ~0.992]
+     George Frideric Handel — Menuet in G Minor (trans. W. Kempff)   [english baroque, pop 55, ~0.987]
+     Wolfgang Amadeus Mozart — Piano Concerto No. 21 in C Major, K. 467: II. Andante   [classical era, pop 65, ~0.919]
+     Franz Schubert — Ständchen, S. 560 (Trans. from Schwanengesang No. 4, D. 957)   [early romantic era, pop 59, ~0.885]
+     Ludwig van Beethoven — Sonata No. 14 "Moonlight" in C-Sharp Minor", Op. 27 No. 2: I. Adagio sostenuto   [early romantic era, pop 70, ~0.872]
+     Franz Liszt — Liebestraume, S541/R211 : No. 3: Nocturne in A-Flat Major   [late romantic era, pop 62, ~0.859]
+     Felix Mendelssohn — Capriccio brillant, Op. 22: Andante   [german romanticism, pop 58, ~0.853]
+     Johannes Brahms — Wiegenlied, Op. 49, No. 4 (Arr. for Cello and Piano) [Brahms Lullaby]   [classical, pop 62, ~0.845]
+     Antonio Vivaldi — The Four Seasons: Concerto No. 4 in F Minor, RV 297 "L'inverno" (winter): I. Allegro non molto   [early music, pop 64, ~0.992]
+     George Frideric Handel — Handel: Suite No. 11 in D Minor, HWV 437: III. Sarabande - Remastered 2022   [english baroque, pop 55, ~0.987]
+     Wolfgang Amadeus Mozart — Requiem in D Minor, K. 626: Sequence: VI. Lacrimosa dies illa   [classical era, pop 62, ~0.919]
+     Franz Schubert — Minuet in A major, D. 334   [early romantic era, pop 58, ~0.885]
+
+=== Johann Sebastian Bach  [region DE]  liked-as "Johann Sebastian Bach"
+  seed in graph: Johann Sebastian Bach / DE / conf 0.98 / pop 32 / 24f1766e-9635-4d58-a4d4-9413f9f98a4c
+  seed sound: yes
+    NB	Johann Sebastian Bach	George Frideric Handel	LB	0.987	english baroque	people 1
+    NB	Johann Sebastian Bach	Max Richter	LB	0.094	post-minimalism	people 1
+    NB	Johann Sebastian Bach	Hans Zimmer	LB	0.020	soundtrack	people 1
+    NB	Johann Sebastian Bach	Johannes Brahms	LB	0.845	classical	people 1
+    NB	Johann Sebastian Bach	Rammstein	LB	-0.025	neue deutsche harte	people 1
+    NB	Johann Sebastian Bach	Franz Liszt	LB	0.859	late romantic era	people 1
+    NB	Johann Sebastian Bach	Ludwig van Beethoven	LB	0.872	early romantic era	people 1
+    NB	Johann Sebastian Bach	Felix Mendelssohn	LB	0.853	german romanticism	people 1
+    NB	Johann Sebastian Bach	Wolfgang Amadeus Mozart	LB	0.919	classical era	people 1
+    NB	Johann Sebastian Bach	The Beatles	LB	0.013	classic rock	people 1
+    NB	Johann Sebastian Bach	Antonio Vivaldi	LB	0.992	early music	people 1
+    NB	Johann Sebastian Bach	Pink Floyd	LB	0.025	art rock	people 1
+    NB	Johann Sebastian Bach	David Bowie	LB	-0.005	rock	people 1
+    NB	Johann Sebastian Bach	Radiohead	LB	0.012	rock	people 1
+    NB	Johann Sebastian Bach	Led Zeppelin	LB	-0.002	rock	people 1
+    NB	Johann Sebastian Bach	Red Hot Chili Peppers	LB	-0.024	permanent wave	people 1
+    NB	Johann Sebastian Bach	Nirvana	LB	-0.016	permanent wave	people 1
+    NB	Johann Sebastian Bach	Metallica	LB	-0.014	hard rock	people 1
+    NB	Johann Sebastian Bach	The Rolling Stones	LB	-0.012	rock	people 1
+    NB	Johann Sebastian Bach	U2	LB	-0.022	irish rock	people 1
+    NB	Johann Sebastian Bach	Coldplay	LB	0.012	permanent wave	people 1
+    NB	Johann Sebastian Bach	Bob Dylan	LB	0.025	country rock	people 1
+    NB	Johann Sebastian Bach	Ennio Morricone	LB	0.088	italian soundtrack	people 1
+    NB	Johann Sebastian Bach	The Doors	LB	-0.007	rock	people 1
+    NB	Johann Sebastian Bach	The Cure	LB	-0.011	uk post-punk	people 1
+    NB	Johann Sebastian Bach	Miles Davis	LB	0.063	hard bop	people 1
+    NB	Johann Sebastian Bach	System of a Down	LB	-0.028	alternative metal	people 1
+    NB	Johann Sebastian Bach	Franz Schubert	LB	0.885	early romantic era	people 1
+    NB	Johann Sebastian Bach	Iron Maiden	LB	-0.024	hard rock	people 1
+    NB	Johann Sebastian Bach	The Beach Boys	LB	0.002	classic rock	people 1
+  graph neighbours (31): George Frideric Handel(LB 1.00 ~0.987), Max Richter(LB 1.00 ~0.094), Hans Zimmer(LB 1.00 ~0.020), Johannes Brahms(LB 1.00 ~0.845), Rammstein(LB 1.00 ~-0.025), Franz Liszt(LB 1.00 ~0.859), Ludwig van Beethoven(LB 1.00 ~0.872), Felix Mendelssohn(LB 1.00 ~0.853), Wolfgang Amadeus Mozart(LB 1.00 ~0.919), The Beatles(LB 1.00 ~0.013), Antonio Vivaldi(LB 1.00 ~0.992), Pink Floyd(LB 1.00 ~0.025), David Bowie(LB 1.00 ~-0.005), Radiohead(LB 1.00 ~0.012), Led Zeppelin(LB 1.00 ~-0.002), Red Hot Chili Peppers(LB 1.00 ~-0.024), Nirvana(LB 1.00 ~-0.016), Metallica(LB 1.00 ~-0.014), The Rolling Stones(LB 1.00 ~-0.012), U2(LB 1.00 ~-0.022), Coldplay(LB 1.00 ~0.012), Bob Dylan(LB 1.00 ~0.025), Ennio Morricone(LB 1.00 ~0.088), The Doors(LB 1.00 ~-0.007), Пётр Ильич Чайковский(LB 1.00 ~-nocat), The Cure(LB 1.00 ~-0.011), Miles Davis(LB 1.00 ~0.063), System of a Down(LB 1.00 ~-0.028), Franz Schubert(LB 1.00 ~0.885), Iron Maiden(LB 1.00 ~-0.024), The Beach Boys(LB 1.00 ~0.002)
+  -> Because you like Johann Sebastian Bach  |  People who listen to Johann Sebastian Bach also play these  (12 rows)
+     Antonio Vivaldi — Vivaldi Variation (Arr. for Piano from Concerto for Strings in G Minor, RV 156 by F. Christl)   [early music, pop 67, ~0.992]
+     George Frideric Handel — Menuet in G Minor (trans. W. Kempff)   [english baroque, pop 55, ~0.987]
+     Wolfgang Amadeus Mozart — Piano Concerto No. 21 in C Major, K. 467: II. Andante   [classical era, pop 65, ~0.919]
+     Franz Schubert — Ständchen, S. 560 (Trans. from Schwanengesang No. 4, D. 957)   [early romantic era, pop 59, ~0.885]
+     Ludwig van Beethoven — Sonata No. 14 "Moonlight" in C-Sharp Minor", Op. 27 No. 2: I. Adagio sostenuto   [early romantic era, pop 70, ~0.872]
+     Franz Liszt — Liebestraume, S541/R211 : No. 3: Nocturne in A-Flat Major   [late romantic era, pop 62, ~0.859]
+     Felix Mendelssohn — Capriccio brillant, Op. 22: Andante   [german romanticism, pop 58, ~0.853]
+     Johannes Brahms — Wiegenlied, Op. 49, No. 4 (Arr. for Cello and Piano) [Brahms Lullaby]   [classical, pop 62, ~0.845]
+     Antonio Vivaldi — The Four Seasons: Concerto No. 4 in F Minor, RV 297 "L'inverno" (winter): I. Allegro non molto   [early music, pop 64, ~0.992]
+     George Frideric Handel — Handel: Suite No. 11 in D Minor, HWV 437: III. Sarabande - Remastered 2022   [english baroque, pop 55, ~0.987]
+     Wolfgang Amadeus Mozart — Requiem in D Minor, K. 626: Sequence: VI. Lacrimosa dies illa   [classical era, pop 62, ~0.919]
+     Franz Schubert — Minuet in A major, D. 334   [early romantic era, pop 58, ~0.885]
+
+=== Morgan Wallen  [region US]  liked-as "Morgan Wallen"
+  seed in graph: NOT FOUND
+  -> Sounds like Morgan Wallen  |  Artists whose sound sits closest to theirs  (12 rows)
+     Logan Mize — I Know What You Did Last Summer   [country pop, pop 40, ~0.998]
+     Riley Green — you look like you love me (feat. Riley Green)   [contemporary country, pop 75, ~0.998]
+     Gabby Barrett — Build a Boat (feat. Gabby Barrett)   [contemporary country, pop 53, ~0.997]
+     Jason Aldean — Dirt Road Anthem   [country road, pop 75, ~0.997]
+     Jordan Davis — What My World Spins Around   [contemporary country, pop 73, ~0.996]
+     Russell Dickerson — Yours   [contemporary country, pop 64, ~0.996]
+     Love and Theft — Runaway   [contemporary country, pop 39, ~0.996]
+     Frankie Ballard — Helluva Life   [contemporary country, pop 51, ~0.995]
+     Carly Pearce — What He Didn't Do   [country road, pop 68, ~0.995]
+     Dierks Bentley — Black   [country road, pop 61, ~0.995]
+     LANCO — Greatest Love Story   [contemporary country, pop 67, ~0.995]
+     Chris Lane — Find Another Bar   [country road, pop 43, ~0.995]
+
+=== Dolly Parton  [region US]  liked-as "Dolly Parton"
+  seed in graph: NOT FOUND
+  -> Sounds like Dolly Parton  |  Artists whose sound sits closest to theirs  (12 rows)
+     Johnny Lee — Country Party   [country, pop 45, ~0.995]
+     Highway 101 — (Do You Love Me) Just Say Yes   [country, pop 39, ~0.993]
+     Toby Keith — Should've Been A Cowboy   [country, pop 74, ~0.992]
+     Ashley McBryde — A Little Dive Bar in Dahlonega   [country, pop 50, ~0.992]
+     Alan Jackson — Country Boy   [country, pop 66, ~0.992]
+     Suzy Bogguss — Aces   [country, pop 39, ~0.991]
+     Dan + Shay — Bigger Houses   [country road, pop 61, ~0.991]
+     Doug Stone — Why Didn't I Think Of That   [country, pop 51, ~0.991]
+     Lorrie Morgan — Watch Me   [country dawn, pop 40, ~0.991]
+     John Conlee — Common Man   [country, pop 55, ~0.991]
+     John Michael Montgomery — Life's a Dance   [country road, pop 59, ~0.991]
+     Collin Raye — That's My Story   [country, pop 51, ~0.990]
+
+=== Brooks & Dunn  [region US]  liked-as "Brooks"
+  seed in graph: NOT FOUND
+  -> Sounds like Brooks & Dunn  |  Artists whose sound sits closest to theirs  (12 rows)
+     Rhett Akins — That Ain't My Truck   [country road, pop 62, ~0.999]
+     Rodney Atkins — Farmer's Daughter   [country road, pop 69, ~0.999]
+     Jason Aldean — Burnin' It Down   [country road, pop 70, ~0.999]
+     Clay Walker — Live Until I Die   [country road, pop 57, ~0.999]
+     John Michael Montgomery — Life's a Dance   [country road, pop 60, ~0.999]
+     Little Texas — God Blessed Texas   [country road, pop 40, ~0.999]
+     Lonestar — What About Now   [country road, pop 52, ~0.998]
+     Phil Vassar — Little Red Rodeo   [country road, pop 45, ~0.998]
+     Diamond Rio — How Your Love Makes Me Feel   [country road, pop 48, ~0.998]
+     Chris Lane — Find Another Bar   [country road, pop 43, ~0.998]
+     George Strait — Here For A Good Time   [country road, pop 68, ~0.998]
+     Joe Diffie — Prop Me Up Beside the Jukebox (If I Die)   [country, pop 54, ~0.998]
+
+=== Slipknot  [region US]  liked-as "Slipknot"
+  seed in graph: Slipknot / US / conf 0.94 / pop 16 / a466c2a2-6517-42fb-a160-1087c3bafd9f
+  seed sound: yes
+    NB	Slipknot	Megadeth	LB	0.820	metal	people 1
+    NB	Slipknot	Seether	LB	0.936	nu metal	people 1
+    NB	Slipknot	Evanescence	LB	0.972	alternative metal	people 1
+    NB	Slipknot	The Smashing Pumpkins	LB	0.760	alternative rock	people 1
+    NB	Slipknot	Mastodon	LB	0.664	metal	people 1
+    NB	Slipknot	Eminem	LB	0.110	hip hop	people 1
+    NB	Slipknot	Serj Tankian	LB	0.968	alternative metal	people 1
+    NB	Slipknot	Guns N’ Roses	LB	0.800	hard rock	people 1
+    NB	Slipknot	Death	LB	0.585	technical death metal	people 3
+    NB	Slipknot	Thirty Seconds to Mars	LB	0.765	modern rock	people 1
+    NB	Slipknot	Linkin Park	LB	0.990	alternative metal	people 1
+    NB	Slipknot	Skrillex	LB	0.102	brostep	people 1
+    NB	Slipknot	Incubus	LB	0.956	funk metal	people 1
+    NB	Slipknot	Dio	LB	0.854	hard rock	people 2
+    NB	Slipknot	Slayer	LB	0.802	old school thrash	people 1
+    NB	Slipknot	System of a Down	LB	0.998	alternative metal	people 1
+    NB	Slipknot	My Chemical Romance	LB	0.546	modern rock	people 1
+    NB	Slipknot	NOFX	LB	0.448	skate punk	people 1
+    NB	Slipknot	Nine Inch Nails	LB	0.847	industrial	people 1
+    NB	Slipknot	10 Years	LB	0.969	nu metal	people 1
+    NB	Slipknot	Faith No More	LB	0.972	funk metal	people 1
+    NB	Slipknot	Anthrax	LB	0.900	glam metal	people 2
+    NB	Slipknot	KISS	LB	0.704	glam rock	people 1
+    NB	Slipknot	Korn	LB	0.990	funk metal	people 1
+    NB	Slipknot	Radiohead	LB	0.539	rock	people 1
+    NB	Slipknot	Nickelback	LB	0.895	canadian rock	people 1
+    NB	Slipknot	Gorillaz	LB	0.644	rock	people 1
+    NB	Slipknot	Arctic Monkeys	LB	0.575	permanent wave	people 1
+    NB	Slipknot	Coldplay	LB	0.418	permanent wave	people 1
+    NB	Slipknot	The Beatles	LB	0.436	classic rock	people 1
+    NB	Slipknot	The Rolling Stones	LB	0.525	rock	people 1
+    NB	Slipknot	Scorpions	LB	0.682	hard rock	people 1
+    NB	Slipknot	Arch Enemy	LB	0.516	swedish metal	people 1
+    NB	Slipknot	DragonForce	LB	0.408	power metal	people 1
+  graph neighbours (34): Megadeth(LB 1.00 ~0.820), Seether(LB 1.00 ~0.936), Evanescence(LB 1.00 ~0.972), The Smashing Pumpkins(LB 1.00 ~0.760), Mastodon(LB 1.00 ~0.664), Eminem(LB 1.00 ~0.110), Serj Tankian(LB 1.00 ~0.968), Guns N’ Roses(LB 1.00 ~0.800), Death(LB 1.00 ~0.585), Thirty Seconds to Mars(LB 1.00 ~0.765), Linkin Park(LB 1.00 ~0.990), Skrillex(LB 1.00 ~0.102), Incubus(LB 1.00 ~0.956), Dio(LB 1.00 ~0.854), Slayer(LB 1.00 ~0.802), System of a Down(LB 1.00 ~0.998), My Chemical Romance(LB 1.00 ~0.546), NOFX(LB 1.00 ~0.448), Nine Inch Nails(LB 1.00 ~0.847), 10 Years(LB 1.00 ~0.969), Faith No More(LB 1.00 ~0.972), Anthrax(LB 1.00 ~0.900), KISS(LB 1.00 ~0.704), Korn(LB 1.00 ~0.990), Radiohead(LB 1.00 ~0.539), Nickelback(LB 1.00 ~0.895), Gorillaz(LB 1.00 ~0.644), Arctic Monkeys(LB 1.00 ~0.575), Coldplay(LB 1.00 ~0.418), The Beatles(LB 1.00 ~0.436), The Rolling Stones(LB 1.00 ~0.525), Scorpions(LB 1.00 ~0.682), Arch Enemy(LB 1.00 ~0.516), DragonForce(LB 1.00 ~0.408)
+  -> Because you like Slipknot  |  People who listen to Slipknot also play these  (12 rows)
+     System Of A Down — Toxicity   [alternative metal, pop 85, ~0.998]
+     Linkin Park — Numb   [alternative metal, pop 88, ~0.990]
+     Korn — Freak On a Leash   [funk metal, pop 80, ~0.990]
+     Evanescence — Bring Me To Life   [alternative metal, pop 86, ~0.972]
+     Faith No More — Epic   [funk metal, pop 68, ~0.972]
+     10 Years — Wasteland   [nu metal, pop 67, ~0.969]
+     Serj Tankian — Empty Walls   [alternative metal, pop 62, ~0.968]
+     Incubus — Drive   [funk metal, pop 79, ~0.956]
+     System Of A Down — Chop Suey!   [alternative metal, pop 85, ~0.998]
+     Linkin Park — In the End   [alternative metal, pop 88, ~0.990]
+     Korn — Coming Undone   [funk metal, pop 77, ~0.990]
+     Evanescence — Going Under   [alternative metal, pop 78, ~0.972]
+
+=== Iron Maiden  [region US]  liked-as "Iron Maiden"
+  seed in graph: Iron Maiden / GB / conf 0.94 / pop 41 / ca891d65-d9b0-4258-89f7-e6ba29d83767
+  seed sound: yes
+    NB	Iron Maiden	Uriah Heep	LB	0.630	symphonic rock	people 1
+    NB	Iron Maiden	The Alan Parsons Project	LB	0.526	art rock	people 1
+    NB	Iron Maiden	Jethro Tull	LB	0.592	art rock	people 1
+    NB	Iron Maiden	DragonForce	LB	0.646	power metal	people 1
+    NB	Iron Maiden	Coldplay	LB	0.386	permanent wave	people 1
+    NB	Iron Maiden	Gorillaz	LB	0.595	rock	people 1
+    NB	Iron Maiden	Marillion	LB	0.317	progressive rock	people 1
+    NB	Iron Maiden	The Prodigy	LB	0.145	rave	people 1
+    NB	Iron Maiden	Cradle of Filth	LB	0.485	symphonic black metal	people 1
+    NB	Iron Maiden	Eric Clapton	LB	0.571	classic rock	people 1
+    NB	Iron Maiden	Emerson, Lake & Palmer	LB	0.566	art rock	people 1
+    NB	Iron Maiden	Anathema	LB	0.451	progressive metal	people 1
+    NB	Iron Maiden	Yes	LB	0.649	rock	people 4
+    NB	Iron Maiden	Billy Idol	LB	0.649	soft rock	people 1
+    NB	Iron Maiden	Genesis	LB	0.636	rock	people 1
+    NB	Iron Maiden	Mike Oldfield	LB	0.384	progressive rock	people 1
+    NB	Iron Maiden	King Crimson	LB	0.418	art rock	people 1
+    NB	Iron Maiden	Black Sabbath	LB	0.928	hard rock	people 1
+    NB	Iron Maiden	Judas Priest	LB	0.978	hard rock	people 1
+    NB	Iron Maiden	Ozzy Osbourne	LB	0.953	hard rock	people 1
+    NB	Iron Maiden	Motörhead	LB	0.992	hard rock	people 1
+    NB	Iron Maiden	Led Zeppelin	LB	0.750	rock	people 1
+    NB	Iron Maiden	Amorphis	LB	0.446	viking metal	people 1
+    NB	Iron Maiden	Death	LB	0.756	technical death metal	people 3
+    NB	Iron Maiden	Thirty Seconds to Mars	LB	0.616	modern rock	people 1
+    NB	Iron Maiden	Arch Enemy	LB	0.716	swedish metal	people 1
+    NB	Iron Maiden	NOFX	LB	0.332	skate punk	people 1
+    NB	Iron Maiden	Europe	LB	0.872	glam metal	people 1
+    NB	Iron Maiden	Guns N’ Roses	LB	0.907	hard rock	people 1
+    NB	Iron Maiden	System of a Down	LB	0.892	alternative metal	people 1
+    NB	Iron Maiden	Linkin Park	LB	0.868	alternative metal	people 1
+    NB	Iron Maiden	R.E.M.	LB	0.576	athens indie	people 1
+    NB	Iron Maiden	Ramones	LB	0.557	alternative rock	people 1
+    NB	Iron Maiden	Johnny Cash	LB	0.422	outlaw country	people 1
+    NB	Iron Maiden	Michael Jackson	LB	0.067	soul	people 2
+    NB	Iron Maiden	Evanescence	LB	0.855	alternative metal	people 1
+    NB	Iron Maiden	Within Temptation	LB	0.411	gothic metal	people 1
+    NB	Iron Maiden	KISS	LB	0.802	glam rock	people 1
+    NB	Iron Maiden	Eagles	LB	0.603	rock	people 2
+    NB	Iron Maiden	Frank Zappa	LB	0.430	psychedelic rock	people 1
+  graph neighbours (42): Uriah Heep(LB 1.00 ~0.630), The Alan Parsons Project(LB 1.00 ~0.526), Jethro Tull(LB 1.00 ~0.592), DragonForce(LB 1.00 ~0.646), Coldplay(LB 1.00 ~0.386), Gorillaz(LB 1.00 ~0.595), Marillion(LB 1.00 ~0.317), The Prodigy(LB 1.00 ~0.145), Cradle of Filth(LB 1.00 ~0.485), Eric Clapton(LB 1.00 ~0.571), Emerson, Lake & Palmer(LB 1.00 ~0.566), Anathema(LB 1.00 ~0.451), Yes(LB 1.00 ~0.649), Billy Idol(LB 1.00 ~0.649), Genesis(LB 1.00 ~0.636), The Jimi Hendrix Experience(LB 1.00 ~-nocat), The Sisters of Mercy(LB 1.00 ~-nocat), Mike Oldfield(LB 1.00 ~0.384), King Crimson(LB 1.00 ~0.418), Black Sabbath(LB 1.00 ~0.928), Judas Priest(LB 1.00 ~0.978), Ozzy Osbourne(LB 1.00 ~0.953), Motörhead(LB 1.00 ~0.992), Led Zeppelin(LB 1.00 ~0.750), Amorphis(LB 1.00 ~0.446), Death(LB 1.00 ~0.756), Thirty Seconds to Mars(LB 1.00 ~0.616), Arch Enemy(LB 1.00 ~0.716), NOFX(LB 1.00 ~0.332), Europe(LB 1.00 ~0.872), Guns N’ Roses(LB 1.00 ~0.907), System of a Down(LB 1.00 ~0.892), Linkin Park(LB 1.00 ~0.868), R.E.M.(LB 1.00 ~0.576), Ramones(LB 1.00 ~0.557), Johnny Cash(LB 1.00 ~0.422), Michael Jackson(LB 1.00 ~0.067), Evanescence(LB 1.00 ~0.855), Within Temptation(LB 1.00 ~0.411), KISS(LB 1.00 ~0.802), Eagles(LB 1.00 ~0.603), Frank Zappa(LB 1.00 ~0.430)
+  -> Because you like Iron Maiden  |  People who listen to Iron Maiden also play these  (12 rows)
+     Motörhead — Ace of Spades   [hard rock, pop 73, ~0.992]
+     Judas Priest — Breaking the Law   [hard rock, pop 70, ~0.978]
+     Ozzy Osbourne — Crazy Train   [hard rock, pop 78, ~0.953]
+     Black Sabbath — Paranoid - 2009 Remaster   [hard rock, pop 79, ~0.928]
+     Guns N' Roses — Sweet Child O' Mine   [hard rock, pop 87, ~0.907]
+     System Of A Down — Toxicity   [alternative metal, pop 85, ~0.892]
+     Europe — The Final Countdown   [glam metal, pop 77, ~0.872]
+     Linkin Park — Numb   [alternative metal, pop 88, ~0.868]
+     Motörhead — Overkill   [hard rock, pop 59, ~0.992]
+     Judas Priest — Painkiller   [hard rock, pop 67, ~0.978]
+     Ozzy Osbourne — No More Tears   [hard rock, pop 74, ~0.953]
+     Black Sabbath — Iron Man - 2009 Remaster   [hard rock, pop 71, ~0.928]
+
+=== Iron Maiden  [region GB]  liked-as "Iron Maiden"
+  seed in graph: Iron Maiden / GB / conf 0.94 / pop 41 / ca891d65-d9b0-4258-89f7-e6ba29d83767
+  seed sound: yes
+    NB	Iron Maiden	Uriah Heep	LB	0.630	symphonic rock	people 1
+    NB	Iron Maiden	The Alan Parsons Project	LB	0.526	art rock	people 1
+    NB	Iron Maiden	Jethro Tull	LB	0.592	art rock	people 1
+    NB	Iron Maiden	DragonForce	LB	0.646	power metal	people 1
+    NB	Iron Maiden	Coldplay	LB	0.386	permanent wave	people 1
+    NB	Iron Maiden	Gorillaz	LB	0.595	rock	people 1
+    NB	Iron Maiden	Marillion	LB	0.317	progressive rock	people 1
+    NB	Iron Maiden	The Prodigy	LB	0.145	rave	people 1
+    NB	Iron Maiden	Cradle of Filth	LB	0.485	symphonic black metal	people 1
+    NB	Iron Maiden	Eric Clapton	LB	0.571	classic rock	people 1
+    NB	Iron Maiden	Emerson, Lake & Palmer	LB	0.566	art rock	people 1
+    NB	Iron Maiden	Anathema	LB	0.451	progressive metal	people 1
+    NB	Iron Maiden	Yes	LB	0.649	rock	people 4
+    NB	Iron Maiden	Billy Idol	LB	0.649	soft rock	people 1
+    NB	Iron Maiden	Genesis	LB	0.636	rock	people 1
+    NB	Iron Maiden	Mike Oldfield	LB	0.384	progressive rock	people 1
+    NB	Iron Maiden	King Crimson	LB	0.418	art rock	people 1
+    NB	Iron Maiden	Black Sabbath	LB	0.928	hard rock	people 1
+    NB	Iron Maiden	Judas Priest	LB	0.978	hard rock	people 1
+    NB	Iron Maiden	Ozzy Osbourne	LB	0.953	hard rock	people 1
+    NB	Iron Maiden	Motörhead	LB	0.992	hard rock	people 1
+    NB	Iron Maiden	Led Zeppelin	LB	0.750	rock	people 1
+    NB	Iron Maiden	Amorphis	LB	0.446	viking metal	people 1
+    NB	Iron Maiden	Death	LB	0.756	technical death metal	people 3
+    NB	Iron Maiden	Thirty Seconds to Mars	LB	0.616	modern rock	people 1
+    NB	Iron Maiden	Arch Enemy	LB	0.716	swedish metal	people 1
+    NB	Iron Maiden	NOFX	LB	0.332	skate punk	people 1
+    NB	Iron Maiden	Europe	LB	0.872	glam metal	people 1
+    NB	Iron Maiden	Guns N’ Roses	LB	0.907	hard rock	people 1
+    NB	Iron Maiden	System of a Down	LB	0.892	alternative metal	people 1
+    NB	Iron Maiden	Linkin Park	LB	0.868	alternative metal	people 1
+    NB	Iron Maiden	R.E.M.	LB	0.576	athens indie	people 1
+    NB	Iron Maiden	Ramones	LB	0.557	alternative rock	people 1
+    NB	Iron Maiden	Johnny Cash	LB	0.422	outlaw country	people 1
+    NB	Iron Maiden	Michael Jackson	LB	0.067	soul	people 2
+    NB	Iron Maiden	Evanescence	LB	0.855	alternative metal	people 1
+    NB	Iron Maiden	Within Temptation	LB	0.411	gothic metal	people 1
+    NB	Iron Maiden	KISS	LB	0.802	glam rock	people 1
+    NB	Iron Maiden	Eagles	LB	0.603	rock	people 2
+    NB	Iron Maiden	Frank Zappa	LB	0.430	psychedelic rock	people 1
+  graph neighbours (42): Uriah Heep(LB 1.00 ~0.630), The Alan Parsons Project(LB 1.00 ~0.526), Jethro Tull(LB 1.00 ~0.592), DragonForce(LB 1.00 ~0.646), Coldplay(LB 1.00 ~0.386), Gorillaz(LB 1.00 ~0.595), Marillion(LB 1.00 ~0.317), The Prodigy(LB 1.00 ~0.145), Cradle of Filth(LB 1.00 ~0.485), Eric Clapton(LB 1.00 ~0.571), Emerson, Lake & Palmer(LB 1.00 ~0.566), Anathema(LB 1.00 ~0.451), Yes(LB 1.00 ~0.649), Billy Idol(LB 1.00 ~0.649), Genesis(LB 1.00 ~0.636), The Jimi Hendrix Experience(LB 1.00 ~-nocat), The Sisters of Mercy(LB 1.00 ~-nocat), Mike Oldfield(LB 1.00 ~0.384), King Crimson(LB 1.00 ~0.418), Black Sabbath(LB 1.00 ~0.928), Judas Priest(LB 1.00 ~0.978), Ozzy Osbourne(LB 1.00 ~0.953), Motörhead(LB 1.00 ~0.992), Led Zeppelin(LB 1.00 ~0.750), Amorphis(LB 1.00 ~0.446), Death(LB 1.00 ~0.756), Thirty Seconds to Mars(LB 1.00 ~0.616), Arch Enemy(LB 1.00 ~0.716), NOFX(LB 1.00 ~0.332), Europe(LB 1.00 ~0.872), Guns N’ Roses(LB 1.00 ~0.907), System of a Down(LB 1.00 ~0.892), Linkin Park(LB 1.00 ~0.868), R.E.M.(LB 1.00 ~0.576), Ramones(LB 1.00 ~0.557), Johnny Cash(LB 1.00 ~0.422), Michael Jackson(LB 1.00 ~0.067), Evanescence(LB 1.00 ~0.855), Within Temptation(LB 1.00 ~0.411), KISS(LB 1.00 ~0.802), Eagles(LB 1.00 ~0.603), Frank Zappa(LB 1.00 ~0.430)
+  -> Because you like Iron Maiden  |  People who listen to Iron Maiden also play these  (12 rows)
+     Motörhead — Ace of Spades   [hard rock, pop 73, ~0.992]
+     Judas Priest — Breaking the Law   [hard rock, pop 70, ~0.978]
+     Ozzy Osbourne — Crazy Train   [hard rock, pop 78, ~0.953]
+     Black Sabbath — Paranoid - 2009 Remaster   [hard rock, pop 79, ~0.928]
+     Guns N' Roses — Sweet Child O' Mine   [hard rock, pop 87, ~0.907]
+     System Of A Down — Toxicity   [alternative metal, pop 85, ~0.892]
+     Europe — The Final Countdown   [glam metal, pop 77, ~0.872]
+     Linkin Park — Numb   [alternative metal, pop 88, ~0.868]
+     Motörhead — Overkill   [hard rock, pop 59, ~0.992]
+     Judas Priest — Painkiller   [hard rock, pop 67, ~0.978]
+     Ozzy Osbourne — No More Tears   [hard rock, pop 74, ~0.953]
+     Black Sabbath — Iron Man - 2009 Remaster   [hard rock, pop 71, ~0.928]
+
+=== Sabaton  [region US]  liked-as "Sabaton"
+  seed in graph: Sabaton / SE / conf 0.94 / pop 13 / 39a31de6-763d-48b6-a45c-f7cfad58ffd8
+  seed sound: yes
+    NB	Sabaton	HammerFall	LB	0.989	gothenburg metal	people 1
+    NB	Sabaton	Arch Enemy	LB	0.873	swedish metal	people 1
+    NB	Sabaton	Opeth	LB	0.847	progressive metal	people 1
+    NB	Sabaton	Therion	LB	0.936	symphonic death metal	people 1
+    NB	Sabaton	Amon Amarth	LB	0.886	swedish metal	people 1
+    NB	Sabaton	Dark Tranquillity	LB	0.858	swedish metal	people 1
+    NB	Sabaton	Machinae Supremacy	LB	0.770	swedish power metal	people 1
+    NB	Sabaton	In Flames	LB	0.762	gothenburg metal	people 1
+    NB	Sabaton	Ghost	LB	0.706	hard rock	people 5
+    NB	Sabaton	Iron Maiden	LB	0.578	hard rock	people 1
+    NB	Sabaton	Metallica	LB	0.636	hard rock	people 1
+    NB	Sabaton	Blind Guardian	LB	0.966	symphonic metal	people 1
+    NB	Sabaton	System of a Down	LB	0.346	alternative metal	people 1
+    NB	Sabaton	Judas Priest	LB	0.513	hard rock	people 1
+    NB	Sabaton	Slipknot	LB	0.349	alternative metal	people 1
+    NB	Sabaton	Megadeth	LB	0.657	metal	people 1
+    NB	Sabaton	Black Sabbath	LB	0.452	hard rock	people 1
+    NB	Sabaton	Slayer	LB	0.664	old school thrash	people 1
+    NB	Sabaton	Linkin Park	LB	0.315	alternative metal	people 1
+    NB	Sabaton	Pantera	LB	0.554	groove metal	people 1
+    NB	Sabaton	AC/DC	LB	0.243	australian rock	people 1
+    NB	Sabaton	Motörhead	LB	0.642	hard rock	people 1
+    NB	Sabaton	Korn	LB	0.346	funk metal	people 1
+    NB	Sabaton	Ozzy Osbourne	LB	0.468	hard rock	people 1
+    NB	Sabaton	Amorphis	LB	0.903	viking metal	people 1
+    NB	Sabaton	Accept	LB	0.869	speed metal	people 1
+    NB	Sabaton	Marilyn Manson	LB	0.304	industrial	people 1
+    NB	Sabaton	Guns N’ Roses	LB	0.376	hard rock	people 1
+    NB	Sabaton	Scorpions	LB	0.502	hard rock	people 1
+    NB	Sabaton	Mastodon	LB	0.501	metal	people 1
+    NB	Sabaton	Red Hot Chili Peppers	LB	0.200	permanent wave	people 1
+  graph neighbours (31): HammerFall(LB 1.00 ~0.989), Arch Enemy(LB 1.00 ~0.873), Opeth(LB 1.00 ~0.847), Therion(LB 1.00 ~0.936), Amon Amarth(LB 1.00 ~0.886), Dark Tranquillity(LB 1.00 ~0.858), Machinae Supremacy(LB 1.00 ~0.770), In Flames(LB 1.00 ~0.762), Ghost(LB 1.00 ~0.706), Iron Maiden(LB 1.00 ~0.578), Metallica(LB 1.00 ~0.636), Blind Guardian(LB 1.00 ~0.966), System of a Down(LB 1.00 ~0.346), Judas Priest(LB 1.00 ~0.513), Slipknot(LB 1.00 ~0.349), Megadeth(LB 1.00 ~0.657), Black Sabbath(LB 1.00 ~0.452), Slayer(LB 1.00 ~0.664), Linkin Park(LB 1.00 ~0.315), Pantera(LB 1.00 ~0.554), AC/DC(LB 1.00 ~0.243), Motörhead(LB 1.00 ~0.642), Korn(LB 1.00 ~0.346), Ozzy Osbourne(LB 1.00 ~0.468), Amorphis(LB 1.00 ~0.903), Accept(LB 1.00 ~0.869), Marilyn Manson(LB 1.00 ~0.304), Guns N’ Roses(LB 1.00 ~0.376), Scorpions(LB 1.00 ~0.502), Mastodon(LB 1.00 ~0.501), Red Hot Chili Peppers(LB 1.00 ~0.200)
+  -> Because you like Sabaton  |  People who listen to Sabaton also play these  (12 rows)
+     HammerFall — Hearts on Fire   [gothenburg metal, pop 62, ~0.989]
+     Blind Guardian — The Bard's Song - In the Forest - Remastered 2007   [symphonic metal, pop 57, ~0.966]
+     Therion — The Rise of Sodom and Gomorrah   [symphonic death metal, pop 45, ~0.936]
+     Amorphis — The Bee   [viking metal, pop 47, ~0.903]
+     Amon Amarth — Twilight Of The Thunder God   [swedish metal, pop 60, ~0.886]
+     Arch Enemy — War Eternal   [swedish metal, pop 59, ~0.873]
+     Accept — Balls to the Wall   [speed metal, pop 59, ~0.869]
+     Dark Tranquillity — Atoma   [swedish metal, pop 51, ~0.858]
+     HammerFall — Last Man Standing   [gothenburg metal, pop 59, ~0.989]
+     Blind Guardian — Mirror Mirror - Remastered 2007   [symphonic metal, pop 52, ~0.966]
+     Therion — Birth of Venus Illegitima   [symphonic death metal, pop 44, ~0.936]
+     Amorphis — House of Sleep   [viking metal, pop 46, ~0.903]
+
+=== Sabaton  [region SE]  liked-as "Sabaton"
+  seed in graph: Sabaton / SE / conf 0.94 / pop 13 / 39a31de6-763d-48b6-a45c-f7cfad58ffd8
+  seed sound: yes
+    NB	Sabaton	HammerFall	LB	0.989	gothenburg metal	people 1
+    NB	Sabaton	Arch Enemy	LB	0.873	swedish metal	people 1
+    NB	Sabaton	Opeth	LB	0.847	progressive metal	people 1
+    NB	Sabaton	Therion	LB	0.936	symphonic death metal	people 1
+    NB	Sabaton	Amon Amarth	LB	0.886	swedish metal	people 1
+    NB	Sabaton	Dark Tranquillity	LB	0.858	swedish metal	people 1
+    NB	Sabaton	Machinae Supremacy	LB	0.770	swedish power metal	people 1
+    NB	Sabaton	In Flames	LB	0.762	gothenburg metal	people 1
+    NB	Sabaton	Ghost	LB	0.706	hard rock	people 5
+    NB	Sabaton	Iron Maiden	LB	0.578	hard rock	people 1
+    NB	Sabaton	Metallica	LB	0.636	hard rock	people 1
+    NB	Sabaton	Blind Guardian	LB	0.966	symphonic metal	people 1
+    NB	Sabaton	System of a Down	LB	0.346	alternative metal	people 1
+    NB	Sabaton	Judas Priest	LB	0.513	hard rock	people 1
+    NB	Sabaton	Slipknot	LB	0.349	alternative metal	people 1
+    NB	Sabaton	Megadeth	LB	0.657	metal	people 1
+    NB	Sabaton	Black Sabbath	LB	0.452	hard rock	people 1
+    NB	Sabaton	Slayer	LB	0.664	old school thrash	people 1
+    NB	Sabaton	Linkin Park	LB	0.315	alternative metal	people 1
+    NB	Sabaton	Pantera	LB	0.554	groove metal	people 1
+    NB	Sabaton	AC/DC	LB	0.243	australian rock	people 1
+    NB	Sabaton	Motörhead	LB	0.642	hard rock	people 1
+    NB	Sabaton	Korn	LB	0.346	funk metal	people 1
+    NB	Sabaton	Ozzy Osbourne	LB	0.468	hard rock	people 1
+    NB	Sabaton	Amorphis	LB	0.903	viking metal	people 1
+    NB	Sabaton	Accept	LB	0.869	speed metal	people 1
+    NB	Sabaton	Marilyn Manson	LB	0.304	industrial	people 1
+    NB	Sabaton	Guns N’ Roses	LB	0.376	hard rock	people 1
+    NB	Sabaton	Scorpions	LB	0.502	hard rock	people 1
+    NB	Sabaton	Mastodon	LB	0.501	metal	people 1
+    NB	Sabaton	Red Hot Chili Peppers	LB	0.200	permanent wave	people 1
+  graph neighbours (31): HammerFall(LB 1.00 ~0.989), Arch Enemy(LB 1.00 ~0.873), Opeth(LB 1.00 ~0.847), Therion(LB 1.00 ~0.936), Amon Amarth(LB 1.00 ~0.886), Dark Tranquillity(LB 1.00 ~0.858), Machinae Supremacy(LB 1.00 ~0.770), In Flames(LB 1.00 ~0.762), Ghost(LB 1.00 ~0.706), Iron Maiden(LB 1.00 ~0.578), Metallica(LB 1.00 ~0.636), Blind Guardian(LB 1.00 ~0.966), System of a Down(LB 1.00 ~0.346), Judas Priest(LB 1.00 ~0.513), Slipknot(LB 1.00 ~0.349), Megadeth(LB 1.00 ~0.657), Black Sabbath(LB 1.00 ~0.452), Slayer(LB 1.00 ~0.664), Linkin Park(LB 1.00 ~0.315), Pantera(LB 1.00 ~0.554), AC/DC(LB 1.00 ~0.243), Motörhead(LB 1.00 ~0.642), Korn(LB 1.00 ~0.346), Ozzy Osbourne(LB 1.00 ~0.468), Amorphis(LB 1.00 ~0.903), Accept(LB 1.00 ~0.869), Marilyn Manson(LB 1.00 ~0.304), Guns N’ Roses(LB 1.00 ~0.376), Scorpions(LB 1.00 ~0.502), Mastodon(LB 1.00 ~0.501), Red Hot Chili Peppers(LB 1.00 ~0.200)
+  -> Because you like Sabaton  |  People who listen to Sabaton also play these  (12 rows)
+     HammerFall — Hearts on Fire   [gothenburg metal, pop 62, ~0.989]
+     Blind Guardian — The Bard's Song - In the Forest - Remastered 2007   [symphonic metal, pop 57, ~0.966]
+     Therion — The Rise of Sodom and Gomorrah   [symphonic death metal, pop 45, ~0.936]
+     Amorphis — The Bee   [viking metal, pop 47, ~0.903]
+     Amon Amarth — Twilight Of The Thunder God   [swedish metal, pop 60, ~0.886]
+     Arch Enemy — War Eternal   [swedish metal, pop 59, ~0.873]
+     Accept — Balls to the Wall   [speed metal, pop 59, ~0.869]
+     Dark Tranquillity — Atoma   [swedish metal, pop 51, ~0.858]
+     HammerFall — Last Man Standing   [gothenburg metal, pop 59, ~0.989]
+     Blind Guardian — Mirror Mirror - Remastered 2007   [symphonic metal, pop 52, ~0.966]
+     Therion — Birth of Venus Illegitima   [symphonic death metal, pop 44, ~0.936]
+     Amorphis — House of Sleep   [viking metal, pop 46, ~0.903]
+
+=== Gojira  [region US]  liked-as "Gojira"
+  seed in graph: Gojira / FR / conf 0.94 / pop 7 / 1c5efd53-d6b6-4d63-9d22-a15025cf5f07
+  seed sound: yes
+    NB	Gojira	Alcest	LB	0.346	blackgaze	people 1
+  graph neighbours (1): Alcest(LB 1.00 ~0.346)
+  -> Sounds like Gojira  |  Artists whose sound sits closest to theirs  (12 rows)
+     Meshuggah — Born in Dissonance   [progressive groove metal, pop 49, ~0.983]
+     Nailbomb — Wasting Away   [groove metal, pop 46, ~0.960]
+     Voivod — Panorama   [canadian metal, pop 27, ~0.959]
+     Strapping Young Lad — Love?   [progressive metal, pop 47, ~0.957]
+     Cavalera Conspiracy — Sanctuary   [groove metal, pop 39, ~0.955]
+     Lamb of God — Omertá   [groove metal, pop 59, ~0.943]
+     Annihilator — Alison Hell   [metal, pop 51, ~0.943]
+     Testament — Down for Life   [groove metal, pop 58, ~0.942]
+     Soilwork — Distance   [melodic metalcore, pop 44, ~0.941]
+     King Diamond — Spider Lilly   [metal, pop 42, ~0.940]
+     Slayer — Repentless   [old school thrash, pop 63, ~0.939]
+     Mercyful Fate — Black Funeral   [metal, pop 36, ~0.939]
+
+=== Gojira  [region FR]  liked-as "Gojira"
+  seed in graph: Gojira / FR / conf 0.94 / pop 7 / 1c5efd53-d6b6-4d63-9d22-a15025cf5f07
+  seed sound: yes
+    NB	Gojira	Alcest	LB	0.346	blackgaze	people 1
+  graph neighbours (1): Alcest(LB 1.00 ~0.346)
+  -> Sounds like Gojira  |  Artists whose sound sits closest to theirs  (12 rows)
+     Meshuggah — Born in Dissonance   [progressive groove metal, pop 49, ~0.983]
+     Nailbomb — Wasting Away   [groove metal, pop 46, ~0.960]
+     Voivod — Panorama   [canadian metal, pop 27, ~0.959]
+     Strapping Young Lad — Love?   [progressive metal, pop 47, ~0.957]
+     Cavalera Conspiracy — Sanctuary   [groove metal, pop 39, ~0.955]
+     Lamb of God — Omertá   [groove metal, pop 59, ~0.943]
+     Annihilator — Alison Hell   [metal, pop 51, ~0.943]
+     Testament — Down for Life   [groove metal, pop 58, ~0.942]
+     Soilwork — Distance   [melodic metalcore, pop 44, ~0.941]
+     King Diamond — Spider Lilly   [metal, pop 42, ~0.940]
+     Slayer — Repentless   [old school thrash, pop 63, ~0.939]
+     Mercyful Fate — Black Funeral   [metal, pop 36, ~0.939]
+
+=== Drake  [region US]  liked-as "Drake"
+  seed in graph: Drake / CA / conf 0.94 / pop 12 / 9fff2f8a-21e6-47de-a2b8-7f449929d43f
+  seed sound: yes
+    NB	Drake	The Weeknd	LB	0.608	canadian contemporary r&b	people 1
+    NB	Drake	Justin Bieber	LB	0.558	pop	people 1
+    NB	Drake	Grimes	LB	0.177	indietronica	people 1
+    NB	Drake	Panic! at the Disco	LB	0.410	pop	people 1
+    NB	Drake	Death Grips	LB	0.603	industrial hip hop	people 1
+    NB	Drake	Coldplay	LB	0.440	permanent wave	people 1
+    NB	Drake	Michael Jackson	LB	0.584	soul	people 2
+    NB	Drake	Radiohead	LB	0.151	rock	people 1
+    NB	Drake	T.I.	LB	0.958	trap	people 2
+    NB	Drake	Arctic Monkeys	LB	0.143	permanent wave	people 1
+    NB	Drake	Lil Wayne	LB	0.952	rap	people 2
+    NB	Drake	P!nk	LB	0.662	pop	people 1
+    NB	Drake	Black Eyed Peas	LB	0.838	dance pop	people 1
+    NB	Drake	Eminem	LB	0.950	hip hop	people 1
+    NB	Drake	Lana Del Rey	LB	0.427	pop	people 1
+    NB	Drake	Adele	LB	0.449	british soul	people 2
+    NB	Drake	Shakira	LB	0.489	pop	people 1
+    NB	Drake	Ariana Grande	LB	0.556	pop	people 1
+    NB	Drake	Billie Eilish	LB	0.424	pop	people 1
+    NB	Drake	Ed Sheeran	LB	0.417	uk pop	people 1
+    NB	Drake	BTS	LB	0.457	pop	people 1
+    NB	Drake	Sia	LB	0.389	pop	people 1
+    NB	Drake	Imagine Dragons	LB	0.361	modern rock	people 1
+    NB	Drake	Dr. Dre	LB	0.944	gangster rap	people 1
+  graph neighbours (25): The Weeknd(LB 1.00 ~0.608), Justin Bieber(LB 1.00 ~0.558), Grimes(LB 1.00 ~0.177), Panic! at the Disco(LB 1.00 ~0.410), Death Grips(LB 1.00 ~0.603), Coldplay(LB 1.00 ~0.440), Michael Jackson(LB 1.00 ~0.584), Radiohead(LB 1.00 ~0.151), T.I.(LB 1.00 ~0.958), Arctic Monkeys(LB 1.00 ~0.143), Lil Wayne(LB 1.00 ~0.952), P!nk(LB 1.00 ~0.662), Black Eyed Peas(LB 1.00 ~0.838), Eminem(LB 1.00 ~0.950), Lana Del Rey(LB 1.00 ~0.427), Adele(LB 1.00 ~0.449), Shakira(LB 1.00 ~0.489), Ariana Grande(LB 1.00 ~0.556), Billie Eilish(LB 1.00 ~0.424), Ed Sheeran(LB 1.00 ~0.417), BTS(LB 1.00 ~0.457), Ye(LB 1.00 ~-nocat), Sia(LB 1.00 ~0.389), Imagine Dragons(LB 1.00 ~0.361), Dr. Dre(LB 1.00 ~0.944)
+  -> Because you like Drake  |  People who listen to Drake also play these  (12 rows)
+     T.I. — Whatever You Like   [trap, pop 77, ~0.958]
+     Lil Wayne — You   [rap, pop 80, ~0.952]
+     Eminem — Without Me   [hip hop, pop 88, ~0.950]
+     Dr. Dre — California Love - Original Version   [gangster rap, pop 82, ~0.944]
+     Black Eyed Peas — I Gotta Feeling   [dance pop, pop 83, ~0.838]
+     P!nk — Just Give Me a Reason (feat. Nate Ruess)   [pop, pop 85, ~0.662]
+     The Weeknd — Timeless (feat Playboi Carti)   [canadian contemporary r&b, pop 93, ~0.608]
+     Death Grips — I've Seen Footage   [industrial hip hop, pop 58, ~0.603]
+     T.I. — What You Know   [trap, pop 67, ~0.958]
+     Lil Wayne — Down   [rap, pop 80, ~0.952]
+     Eminem — Mockingbird   [hip hop, pop 87, ~0.950]
+     Dr. Dre — No Diggity   [gangster rap, pop 79, ~0.944]
+
+=== Drake  [region CA]  liked-as "Drake"
+  seed in graph: Drake / CA / conf 0.94 / pop 12 / 9fff2f8a-21e6-47de-a2b8-7f449929d43f
+  seed sound: yes
+    NB	Drake	The Weeknd	LB	0.608	canadian contemporary r&b	people 1
+    NB	Drake	Justin Bieber	LB	0.558	pop	people 1
+    NB	Drake	Grimes	LB	0.177	indietronica	people 1
+    NB	Drake	Panic! at the Disco	LB	0.410	pop	people 1
+    NB	Drake	Death Grips	LB	0.603	industrial hip hop	people 1
+    NB	Drake	Coldplay	LB	0.440	permanent wave	people 1
+    NB	Drake	Michael Jackson	LB	0.584	soul	people 2
+    NB	Drake	Radiohead	LB	0.151	rock	people 1
+    NB	Drake	T.I.	LB	0.958	trap	people 2
+    NB	Drake	Arctic Monkeys	LB	0.143	permanent wave	people 1
+    NB	Drake	Lil Wayne	LB	0.952	rap	people 2
+    NB	Drake	P!nk	LB	0.662	pop	people 1
+    NB	Drake	Black Eyed Peas	LB	0.838	dance pop	people 1
+    NB	Drake	Eminem	LB	0.950	hip hop	people 1
+    NB	Drake	Lana Del Rey	LB	0.427	pop	people 1
+    NB	Drake	Adele	LB	0.449	british soul	people 2
+    NB	Drake	Shakira	LB	0.489	pop	people 1
+    NB	Drake	Ariana Grande	LB	0.556	pop	people 1
+    NB	Drake	Billie Eilish	LB	0.424	pop	people 1
+    NB	Drake	Ed Sheeran	LB	0.417	uk pop	people 1
+    NB	Drake	BTS	LB	0.457	pop	people 1
+    NB	Drake	Sia	LB	0.389	pop	people 1
+    NB	Drake	Imagine Dragons	LB	0.361	modern rock	people 1
+    NB	Drake	Dr. Dre	LB	0.944	gangster rap	people 1
+  graph neighbours (25): The Weeknd(LB 1.00 ~0.608), Justin Bieber(LB 1.00 ~0.558), Grimes(LB 1.00 ~0.177), Panic! at the Disco(LB 1.00 ~0.410), Death Grips(LB 1.00 ~0.603), Coldplay(LB 1.00 ~0.440), Michael Jackson(LB 1.00 ~0.584), Radiohead(LB 1.00 ~0.151), T.I.(LB 1.00 ~0.958), Arctic Monkeys(LB 1.00 ~0.143), Lil Wayne(LB 1.00 ~0.952), P!nk(LB 1.00 ~0.662), Black Eyed Peas(LB 1.00 ~0.838), Eminem(LB 1.00 ~0.950), Lana Del Rey(LB 1.00 ~0.427), Adele(LB 1.00 ~0.449), Shakira(LB 1.00 ~0.489), Ariana Grande(LB 1.00 ~0.556), Billie Eilish(LB 1.00 ~0.424), Ed Sheeran(LB 1.00 ~0.417), BTS(LB 1.00 ~0.457), Ye(LB 1.00 ~-nocat), Sia(LB 1.00 ~0.389), Imagine Dragons(LB 1.00 ~0.361), Dr. Dre(LB 1.00 ~0.944)
+  -> Because you like Drake  |  People who listen to Drake also play these  (12 rows)
+     T.I. — Whatever You Like   [trap, pop 77, ~0.958]
+     Lil Wayne — You   [rap, pop 80, ~0.952]
+     Eminem — Without Me   [hip hop, pop 88, ~0.950]
+     Dr. Dre — California Love - Original Version   [gangster rap, pop 82, ~0.944]
+     Black Eyed Peas — I Gotta Feeling   [dance pop, pop 83, ~0.838]
+     P!nk — Just Give Me a Reason (feat. Nate Ruess)   [pop, pop 85, ~0.662]
+     The Weeknd — Timeless (feat Playboi Carti)   [canadian contemporary r&b, pop 93, ~0.608]
+     Death Grips — I've Seen Footage   [industrial hip hop, pop 58, ~0.603]
+     T.I. — What You Know   [trap, pop 67, ~0.958]
+     Lil Wayne — Down   [rap, pop 80, ~0.952]
+     Eminem — Mockingbird   [hip hop, pop 87, ~0.950]
+     Dr. Dre — No Diggity   [gangster rap, pop 79, ~0.944]
+
+=== Eminem  [region US]  liked-as "Eminem"
+  seed in graph: Eminem / US / conf 0.94 / pop 47 / b95ce3ff-3d05-4e87-9e01-c97b66af13d4
+  seed sound: yes
+    NB	Eminem	T.I.	LB	0.974	trap	people 2
+    NB	Eminem	Thirty Seconds to Mars	LB	0.089	modern rock	people 1
+    NB	Eminem	Bob Marley & The Wailers	LB	0.049	roots reggae	people 1
+    NB	Eminem	Linkin Park	LB	0.119	alternative metal	people 1
+    NB	Eminem	P!nk	LB	0.501	pop	people 1
+    NB	Eminem	Michael Jackson	LB	0.532	soul	people 2
+    NB	Eminem	Black Eyed Peas	LB	0.723	dance pop	people 1
+    NB	Eminem	Evanescence	LB	0.076	alternative metal	people 1
+    NB	Eminem	Guns N’ Roses	LB	0.073	hard rock	people 1
+    NB	Eminem	Johnny Cash	LB	0.043	outlaw country	people 1
+    NB	Eminem	System of a Down	LB	0.113	alternative metal	people 1
+    NB	Eminem	My Chemical Romance	LB	0.076	modern rock	people 1
+    NB	Eminem	No Doubt	LB	0.222	pop rock	people 1
+    NB	Eminem	Billie Eilish	LB	0.240	pop	people 1
+    NB	Eminem	Brand New	LB	0.059	emo	people 1
+    NB	Eminem	Panic! at the Disco	LB	0.251	pop	people 1
+    NB	Eminem	Slipknot	LB	0.110	alternative metal	people 1
+    NB	Eminem	Breaking Benjamin	LB	0.104	nu metal	people 1
+    NB	Eminem	Janet Jackson	LB	0.705	urban contemporary	people 1
+    NB	Eminem	Mariah Carey	LB	0.570	pop	people 1
+    NB	Eminem	Miley Cyrus	LB	0.368	pop	people 1
+    NB	Eminem	Bon Jovi	LB	0.083	rock	people 1
+    NB	Eminem	Avenged Sevenfold	LB	0.089	alternative metal	people 1
+    NB	Eminem	Nickelback	LB	0.094	canadian rock	people 1
+    NB	Eminem	Justin Bieber	LB	0.325	pop	people 1
+    NB	Eminem	Adele	LB	0.259	british soul	people 2
+    NB	Eminem	Gorillaz	LB	0.468	rock	people 1
+    NB	Eminem	Shakira	LB	0.353	pop	people 1
+    NB	Eminem	Pendulum	LB	0.086	australian dance	people 1
+    NB	Eminem	Amy Winehouse	LB	0.395	neo soul	people 1
+    NB	Eminem	Coldplay	LB	0.254	permanent wave	people 1
+    NB	Eminem	ABBA	LB	0.131	europop	people 1
+  graph neighbours (34): T.I.(LB 1.00 ~0.974), Thirty Seconds to Mars(LB 1.00 ~0.089), Bob Marley & The Wailers(LB 1.00 ~0.049), Linkin Park(LB 1.00 ~0.119), P!nk(LB 1.00 ~0.501), Michael Jackson(LB 1.00 ~0.532), Black Eyed Peas(LB 1.00 ~0.723), Evanescence(LB 1.00 ~0.076), Guns N’ Roses(LB 1.00 ~0.073), Johnny Cash(LB 1.00 ~0.043), System of a Down(LB 1.00 ~0.113), My Chemical Romance(LB 1.00 ~0.076), No Doubt(LB 1.00 ~0.222), Billie Eilish(LB 1.00 ~0.240), Brand New(LB 1.00 ~0.059), Panic! at the Disco(LB 1.00 ~0.251), Slipknot(LB 1.00 ~0.110), Breaking Benjamin(LB 1.00 ~0.104), Janet Jackson(LB 1.00 ~0.705), Mariah Carey(LB 1.00 ~0.570), Miley Cyrus(LB 1.00 ~0.368), 宇多田ヒカル(LB 1.00 ~-nocat), Bon Jovi(LB 1.00 ~0.083), Avenged Sevenfold(LB 1.00 ~0.089), Nickelback(LB 1.00 ~0.094), Justin Bieber(LB 1.00 ~0.325), Adele(LB 1.00 ~0.259), Gorillaz(LB 1.00 ~0.468), Shakira(LB 1.00 ~0.353), Pendulum(LB 1.00 ~0.086), Amy Winehouse(LB 1.00 ~0.395), Coldplay(LB 1.00 ~0.254), ABBA(LB 1.00 ~0.131), 植松伸夫(LB 1.00 ~-nocat)
+  -> Because you like Eminem  |  People who listen to Eminem also play these  (12 rows)
+     T.I. — Whatever You Like   [trap, pop 77, ~0.974]
+     Black Eyed Peas — I Gotta Feeling   [dance pop, pop 83, ~0.723]
+     Janet Jackson — Someone To Call My Lover   [urban contemporary, pop 70, ~0.705]
+     Mariah Carey — Obsessed   [pop, pop 78, ~0.570]
+     Michael Jackson — Billie Jean   [soul, pop 83, ~0.532]
+     P!nk — Just Give Me a Reason (feat. Nate Ruess)   [pop, pop 85, ~0.501]
+     Gorillaz — Feel Good Inc.   [rock, pop 88, ~0.468]
+     T.I. — What You Know   [trap, pop 67, ~0.974]
+     Black Eyed Peas — Where Is The Love?   [dance pop, pop 81, ~0.723]
+     Janet Jackson — That's The Way Love Goes   [urban contemporary, pop 67, ~0.705]
+     Mariah Carey — We Belong Together   [pop, pop 76, ~0.570]
+     Michael Jackson — Beat It   [soul, pop 80, ~0.532]
+
+=== Tyler, The Creator  [region US]  liked-as "Tyler"
+  seed in graph: NOT FOUND
+  -> Sounds like Tyler, The Creator  |  Artists whose sound sits closest to theirs  (12 rows)
+     JID — Stars (feat. Yasiin Bey)   [hip hop, pop 61, ~0.995]
+     NF — HOPE   [hip hop, pop 70, ~0.995]
+     Fat Joe — Twinz (feat. Fat Joe)   [hip hop, pop 67, ~0.994]
+     Kid Cudi — Pursuit Of Happiness (Nightmare)   [rap, pop 72, ~0.993]
+     Kanye West — Stronger   [hip hop, pop 82, ~0.992]
+     Cassidy — Get No Better (feat. Mashonda)   [trap, pop 48, ~0.992]
+     Will Smith — Prince Ali   [hip hop, pop 65, ~0.991]
+     Baby Keem — 16   [rap, pop 80, ~0.991]
+     JAY-Z — Suit & Tie (feat. JAY-Z)   [gangster rap, pop 68, ~0.991]
+     Snoop Dogg — Gin and Juice   [gangster rap, pop 74, ~0.991]
+     Lloyd Banks — On Fire   [hip hop, pop 57, ~0.991]
+     50 Cent — Just A Lil Bit   [hip hop, pop 79, ~0.991]
+
+=== Travis Scott  [region US]  liked-as "Travis Scott"
+  seed in graph: NOT FOUND
+  -> Sounds like Travis Scott  |  Artists whose sound sits closest to theirs  (12 rows)
+     SAINt JHN — I Heard You Got Too Litt Last Night   [melodic rap, pop 58, ~0.914]
+     Far East Movement — Turn Up The Love   [pop rap, pop 46, ~0.910]
+     Ja Rule — Life Ain't A Game   [rap, pop 53, ~0.905]
+     Dreamville — LamboTruck (with Cozz feat. REASON & Childish Major)   [rap, pop 49, ~0.904]
+     Diddy — Bad Boy for Life   [pop rap, pop 62, ~0.904]
+     Jaden — I'm Ready   [rap, pop 56, ~0.903]
+     Chance the Rapper — Cocoa Butter Kisses   [hip hop, pop 55, ~0.903]
+     Sik World — 7 Years (Remix)   [rap, pop 63, ~0.903]
+     Lil Uzi Vert — Money Longer   [rap, pop 74, ~0.902]
+     Will Smith — Arabian Nights (2019)   [hip hop, pop 67, ~0.902]
+     DaBaby — Hannah Montana (with NLE Choppa & DaBaby)   [hip hop, pop 71, ~0.902]
+     Childish Gambino — Heartbeat   [rap, pop 83, ~0.902]
+
+=== Avicii  [region US]  liked-as "Avicii"
+  seed in graph: Avicii / SE / conf 0.94 / pop 8 / c85cfd6b-b1e9-4a50-bd55-eb725f04f7d5
+  seed sound: yes
+    NB	Avicii	P!nk	LB	0.851	pop	people 1
+    NB	Avicii	Black Eyed Peas	LB	0.770	dance pop	people 1
+    NB	Avicii	Justin Bieber	LB	0.719	pop	people 1
+    NB	Avicii	Adele	LB	0.700	british soul	people 2
+    NB	Avicii	Ariana Grande	LB	0.832	pop	people 1
+    NB	Avicii	Coldplay	LB	0.645	permanent wave	people 1
+    NB	Avicii	Sia	LB	0.882	pop	people 1
+    NB	Avicii	Panic! at the Disco	LB	0.647	pop	people 1
+    NB	Avicii	Tiësto	LB	0.825	brostep	people 1
+    NB	Avicii	Imagine Dragons	LB	0.531	modern rock	people 1
+    NB	Avicii	Miley Cyrus	LB	0.835	pop	people 1
+    NB	Avicii	Taylor Swift	LB	0.832	pop	people 1
+    NB	Avicii	Armin van Buuren	LB	0.815	dutch trance	people 1
+    NB	Avicii	Lady Gaga	LB	0.772	pop	people 1
+    NB	Avicii	Fall Out Boy	LB	0.486	modern rock	people 1
+    NB	Avicii	Skrillex	LB	0.798	brostep	people 1
+    NB	Avicii	Katy Perry	LB	0.836	pop	people 1
+    NB	Avicii	Lana Del Rey	LB	0.630	pop	people 1
+    NB	Avicii	Shakira	LB	0.645	pop	people 1
+    NB	Avicii	Beyoncé	LB	0.743	pop	people 1
+    NB	Avicii	Nicki Minaj	LB	0.565	hip pop	people 1
+    NB	Avicii	Pendulum	LB	0.573	australian dance	people 1
+    NB	Avicii	Rihanna	LB	0.709	urban contemporary	people 1
+    NB	Avicii	Britney Spears	LB	0.848	pop	people 1
+  graph neighbours (25): Tim Bergling(st 0.38 ~-nocat), P!nk(LB 1.00 ~0.851), Black Eyed Peas(LB 1.00 ~0.770), Justin Bieber(LB 1.00 ~0.719), Adele(LB 1.00 ~0.700), Ariana Grande(LB 1.00 ~0.832), Coldplay(LB 1.00 ~0.645), Sia(LB 1.00 ~0.882), Panic! at the Disco(LB 1.00 ~0.647), Tiësto(LB 1.00 ~0.825), Imagine Dragons(LB 1.00 ~0.531), Miley Cyrus(LB 1.00 ~0.835), Taylor Swift(LB 1.00 ~0.832), Armin van Buuren(LB 1.00 ~0.815), Lady Gaga(LB 1.00 ~0.772), Fall Out Boy(LB 1.00 ~0.486), Skrillex(LB 1.00 ~0.798), Katy Perry(LB 1.00 ~0.836), Lana Del Rey(LB 1.00 ~0.630), Shakira(LB 1.00 ~0.645), Beyoncé(LB 1.00 ~0.743), Nicki Minaj(LB 1.00 ~0.565), Pendulum(LB 1.00 ~0.573), Rihanna(LB 1.00 ~0.709), Britney Spears(LB 1.00 ~0.848)
+  -> Because you like Avicii  |  People who listen to Avicii also play these  (12 rows)
+     Sia — Dusk Till Dawn (feat. Sia) - Radio Edit   [pop, pop 83, ~0.882]
+     P!nk — Just Give Me a Reason (feat. Nate Ruess)   [pop, pop 85, ~0.851]
+     Britney Spears — Toxic   [pop, pop 85, ~0.848]
+     Katy Perry — Dark Horse   [pop, pop 81, ~0.836]
+     Miley Cyrus — Flowers   [pop, pop 88, ~0.835]
+     Ariana Grande — we can't be friends (wait for your love)   [pop, pop 88, ~0.832]
+     Taylor Swift — Cruel Summer   [pop, pop 89, ~0.832]
+     Tiësto — Thank You (Not So Bad)   [brostep, pop 83, ~0.825]
+     Sia — Wild Ones (feat. Sia)   [pop, pop 82, ~0.882]
+     P!nk — Try   [pop, pop 84, ~0.851]
+     Britney Spears — Gimme More   [pop, pop 84, ~0.848]
+     Katy Perry — Roar   [pop, pop 80, ~0.836]
+
+=== Avicii  [region SE]  liked-as "Avicii"
+  seed in graph: Avicii / SE / conf 0.94 / pop 8 / c85cfd6b-b1e9-4a50-bd55-eb725f04f7d5
+  seed sound: yes
+    NB	Avicii	P!nk	LB	0.851	pop	people 1
+    NB	Avicii	Black Eyed Peas	LB	0.770	dance pop	people 1
+    NB	Avicii	Justin Bieber	LB	0.719	pop	people 1
+    NB	Avicii	Adele	LB	0.700	british soul	people 2
+    NB	Avicii	Ariana Grande	LB	0.832	pop	people 1
+    NB	Avicii	Coldplay	LB	0.645	permanent wave	people 1
+    NB	Avicii	Sia	LB	0.882	pop	people 1
+    NB	Avicii	Panic! at the Disco	LB	0.647	pop	people 1
+    NB	Avicii	Tiësto	LB	0.825	brostep	people 1
+    NB	Avicii	Imagine Dragons	LB	0.531	modern rock	people 1
+    NB	Avicii	Miley Cyrus	LB	0.835	pop	people 1
+    NB	Avicii	Taylor Swift	LB	0.832	pop	people 1
+    NB	Avicii	Armin van Buuren	LB	0.815	dutch trance	people 1
+    NB	Avicii	Lady Gaga	LB	0.772	pop	people 1
+    NB	Avicii	Fall Out Boy	LB	0.486	modern rock	people 1
+    NB	Avicii	Skrillex	LB	0.798	brostep	people 1
+    NB	Avicii	Katy Perry	LB	0.836	pop	people 1
+    NB	Avicii	Lana Del Rey	LB	0.630	pop	people 1
+    NB	Avicii	Shakira	LB	0.645	pop	people 1
+    NB	Avicii	Beyoncé	LB	0.743	pop	people 1
+    NB	Avicii	Nicki Minaj	LB	0.565	hip pop	people 1
+    NB	Avicii	Pendulum	LB	0.573	australian dance	people 1
+    NB	Avicii	Rihanna	LB	0.709	urban contemporary	people 1
+    NB	Avicii	Britney Spears	LB	0.848	pop	people 1
+  graph neighbours (25): Tim Bergling(st 0.38 ~-nocat), P!nk(LB 1.00 ~0.851), Black Eyed Peas(LB 1.00 ~0.770), Justin Bieber(LB 1.00 ~0.719), Adele(LB 1.00 ~0.700), Ariana Grande(LB 1.00 ~0.832), Coldplay(LB 1.00 ~0.645), Sia(LB 1.00 ~0.882), Panic! at the Disco(LB 1.00 ~0.647), Tiësto(LB 1.00 ~0.825), Imagine Dragons(LB 1.00 ~0.531), Miley Cyrus(LB 1.00 ~0.835), Taylor Swift(LB 1.00 ~0.832), Armin van Buuren(LB 1.00 ~0.815), Lady Gaga(LB 1.00 ~0.772), Fall Out Boy(LB 1.00 ~0.486), Skrillex(LB 1.00 ~0.798), Katy Perry(LB 1.00 ~0.836), Lana Del Rey(LB 1.00 ~0.630), Shakira(LB 1.00 ~0.645), Beyoncé(LB 1.00 ~0.743), Nicki Minaj(LB 1.00 ~0.565), Pendulum(LB 1.00 ~0.573), Rihanna(LB 1.00 ~0.709), Britney Spears(LB 1.00 ~0.848)
+  -> Because you like Avicii  |  People who listen to Avicii also play these  (12 rows)
+     Sia — Dusk Till Dawn (feat. Sia) - Radio Edit   [pop, pop 83, ~0.882]
+     P!nk — Just Give Me a Reason (feat. Nate Ruess)   [pop, pop 85, ~0.851]
+     Britney Spears — Toxic   [pop, pop 85, ~0.848]
+     Katy Perry — Dark Horse   [pop, pop 81, ~0.836]
+     Miley Cyrus — Flowers   [pop, pop 88, ~0.835]
+     Ariana Grande — we can't be friends (wait for your love)   [pop, pop 88, ~0.832]
+     Taylor Swift — Cruel Summer   [pop, pop 89, ~0.832]
+     Tiësto — Thank You (Not So Bad)   [brostep, pop 83, ~0.825]
+     Sia — Wild Ones (feat. Sia)   [pop, pop 82, ~0.882]
+     P!nk — Try   [pop, pop 84, ~0.851]
+     Britney Spears — Gimme More   [pop, pop 84, ~0.848]
+     Katy Perry — Roar   [pop, pop 80, ~0.836]
+
+=== David Guetta  [region US]  liked-as "David Guetta"
+  seed in graph: David Guetta / FR / conf 0.94 / pop 8 / 302bd7b9-d012-4360-897a-93b00c855680
+  seed sound: yes
+  graph neighbours (0): 
+  -> Sounds like David Guetta  |  Artists whose sound sits closest to theirs  (12 rows)
+     Alesso — I Wanna Know   [pop dance, pop 61, ~0.998]
+     Cheat Codes — Hold On (feat. Cheat Codes) - Radio Edit   [edm, pop 53, ~0.991]
+     Avicii — Hey Brother   [pop dance, pop 81, ~0.990]
+     Galantis — Runaway (U & I)   [dance pop, pop 77, ~0.989]
+     Major Lazer — Shake It To The Max (FLY) - Major Lazer Remix   [dance pop, pop 57, ~0.987]
+     DJ Snake — Middle   [electronic trap, pop 78, ~0.985]
+     Kygo — For Life (feat. Nile Rodgers)   [tropical house, pop 71, ~0.981]
+     Sigala — Melody   [dance pop, pop 61, ~0.981]
+     Miggy Dela Rosa — Into The Light   [dance pop, pop 38, ~0.980]
+     Brando — All Night   [dance pop, pop 50, ~0.979]
+     Cash Cash — Tell It To My Heart   [edm, pop 51, ~0.971]
+     Jonas Blue — Crying On The Dancefloor   [tropical house, pop 70, ~0.970]
+
+=== David Guetta  [region FR]  liked-as "David Guetta"
+  seed in graph: David Guetta / FR / conf 0.94 / pop 8 / 302bd7b9-d012-4360-897a-93b00c855680
+  seed sound: yes
+  graph neighbours (0): 
+  -> Sounds like David Guetta  |  Artists whose sound sits closest to theirs  (12 rows)
+     Alesso — I Wanna Know   [pop dance, pop 61, ~0.998]
+     Cheat Codes — Hold On (feat. Cheat Codes) - Radio Edit   [edm, pop 53, ~0.991]
+     Avicii — Hey Brother   [pop dance, pop 81, ~0.990]
+     Galantis — Runaway (U & I)   [dance pop, pop 77, ~0.989]
+     Major Lazer — Shake It To The Max (FLY) - Major Lazer Remix   [dance pop, pop 57, ~0.987]
+     DJ Snake — Middle   [electronic trap, pop 78, ~0.985]
+     Kygo — For Life (feat. Nile Rodgers)   [tropical house, pop 71, ~0.981]
+     Sigala — Melody   [dance pop, pop 61, ~0.981]
+     Miggy Dela Rosa — Into The Light   [dance pop, pop 38, ~0.980]
+     Brando — All Night   [dance pop, pop 50, ~0.979]
+     Cash Cash — Tell It To My Heart   [edm, pop 51, ~0.971]
+     Jonas Blue — Crying On The Dancefloor   [tropical house, pop 70, ~0.970]
+
+=== Skrillex  [region US]  liked-as "Skrillex"
+  seed in graph: Skrillex / US / conf 0.94 / pop 13 / ae002c5d-aac6-490b-a39a-30aa9e2edf2b
+  seed sound: yes
+    NB	Skrillex	Linkin Park	LB	0.107	alternative metal	people 1
+    NB	Skrillex	Eminem	LB	0.168	hip hop	people 1
+    NB	Skrillex	System of a Down	LB	0.103	alternative metal	people 1
+    NB	Skrillex	Lana Del Rey	LB	0.290	pop	people 1
+    NB	Skrillex	Nine Inch Nails	LB	0.157	industrial	people 1
+    NB	Skrillex	The Black Keys	LB	0.112	rock	people 1
+    NB	Skrillex	Black Eyed Peas	LB	0.363	dance pop	people 1
+    NB	Skrillex	MGMT	LB	0.138	indie rock	people 1
+    NB	Skrillex	Ariana Grande	LB	0.399	pop	people 1
+    NB	Skrillex	Panic! at the Disco	LB	0.281	pop	people 1
+    NB	Skrillex	Michael Jackson	LB	0.162	soul	people 2
+    NB	Skrillex	My Chemical Romance	LB	0.104	modern rock	people 1
+    NB	Skrillex	Ratatat	LB	0.227	indietronica	people 1
+    NB	Skrillex	Evanescence	LB	0.091	alternative metal	people 1
+    NB	Skrillex	The Doors	LB	0.089	rock	people 1
+    NB	Skrillex	Slipknot	LB	0.102	alternative metal	people 1
+    NB	Skrillex	Lil Wayne	LB	0.148	rap	people 2
+    NB	Skrillex	Korn	LB	0.102	funk metal	people 1
+    NB	Skrillex	Avicii	LB	0.798	pop dance	people 1
+    NB	Skrillex	Coldplay	LB	0.294	permanent wave	people 1
+    NB	Skrillex	Gorillaz	LB	0.172	rock	people 1
+    NB	Skrillex	Justin Bieber	LB	0.278	pop	people 1
+    NB	Skrillex	Ed Sheeran	LB	0.303	uk pop	people 1
+    NB	Skrillex	Crystal Castles	LB	0.256	bitpop	people 1
+    NB	Skrillex	The Beatles	LB	0.072	classic rock	people 1
+    NB	Skrillex	Rammstein	LB	0.136	neue deutsche harte	people 1
+    NB	Skrillex	Adele	LB	0.294	british soul	people 2
+    NB	Skrillex	Pendulum	LB	0.718	australian dance	people 1
+  graph neighbours (28): Linkin Park(LB 1.00 ~0.107), Eminem(LB 1.00 ~0.168), System of a Down(LB 1.00 ~0.103), Lana Del Rey(LB 1.00 ~0.290), Nine Inch Nails(LB 1.00 ~0.157), The Black Keys(LB 1.00 ~0.112), Black Eyed Peas(LB 1.00 ~0.363), MGMT(LB 1.00 ~0.138), Ariana Grande(LB 1.00 ~0.399), Panic! at the Disco(LB 1.00 ~0.281), Michael Jackson(LB 1.00 ~0.162), My Chemical Romance(LB 1.00 ~0.104), Ratatat(LB 1.00 ~0.227), Evanescence(LB 1.00 ~0.091), The Doors(LB 1.00 ~0.089), Slipknot(LB 1.00 ~0.102), Lil Wayne(LB 1.00 ~0.148), Korn(LB 1.00 ~0.102), Avicii(LB 1.00 ~0.798), Coldplay(LB 1.00 ~0.294), Gorillaz(LB 1.00 ~0.172), Justin Bieber(LB 1.00 ~0.278), Ed Sheeran(LB 1.00 ~0.303), Crystal Castles(LB 1.00 ~0.256), The Beatles(LB 1.00 ~0.072), Rammstein(LB 1.00 ~0.136), Adele(LB 1.00 ~0.294), Pendulum(LB 1.00 ~0.718)
+  -> Because you like Skrillex  |  People who listen to Skrillex also play these  (4 rows)
+     Avicii — Wake Me Up   [pop dance, pop 87, ~0.798]
+     Pendulum — Witchcraft   [australian dance, pop 61, ~0.718]
+     Avicii — The Nights   [pop dance, pop 85, ~0.798]
+     Pendulum — Tarantula - Original Mix   [australian dance, pop 60, ~0.718]
+
+=== Above & Beyond  [region US]  liked-as "Above"
+  seed in graph: NOT FOUND
+  -> Sounds like Above & Beyond  |  Artists whose sound sits closest to theirs  (12 rows)
+     Gabriel & Dresden — As The Rush Comes - Gabriel & Dresden Chillout Mix   [trance, pop 45, ~0.998]
+     Lange — Fireflies - Under The Moon Mix   [trance, pop 40, ~0.995]
+     Andrew Bayer — Midnight   [trance, pop 36, ~0.995]
+     Oliver Smith — Be The One (ABGT629) - Mixed   [uplifting trance, pop 38, ~0.995]
+     Spencer Brown — It's Me   [progressive trance, pop 44, ~0.994]
+     Ashley Wallbridge — Keep The Fire - Radio Edit   [trance, pop 36, ~0.994]
+     Ilan Bluestone — Paradise   [trance, pop 44, ~0.993]
+     Mark Sixma — The Raid   [progressive house, pop 45, ~0.993]
+     Eximinds — Sonata   [uplifting trance, pop 36, ~0.992]
+     Matt Fax — To The Ground   [progressive trance, pop 43, ~0.992]
+     Myon — Promises - Myon & Shane 54 Summer Of Love Radio Edit   [uplifting trance, pop 37, ~0.992]
+     RAM — For The One You Love   [trance, pop 35, ~0.992]
+
+=== Above & Beyond  [region GB]  liked-as "Above"
+  seed in graph: NOT FOUND
+  -> Sounds like Above & Beyond  |  Artists whose sound sits closest to theirs  (12 rows)
+     Gabriel & Dresden — As The Rush Comes - Gabriel & Dresden Chillout Mix   [trance, pop 45, ~0.998]
+     Lange — Fireflies - Under The Moon Mix   [trance, pop 40, ~0.995]
+     Andrew Bayer — Midnight   [trance, pop 36, ~0.995]
+     Oliver Smith — Be The One (ABGT629) - Mixed   [uplifting trance, pop 38, ~0.995]
+     Spencer Brown — It's Me   [progressive trance, pop 44, ~0.994]
+     Ashley Wallbridge — Keep The Fire - Radio Edit   [trance, pop 36, ~0.994]
+     Ilan Bluestone — Paradise   [trance, pop 44, ~0.993]
+     Mark Sixma — The Raid   [progressive house, pop 45, ~0.993]
+     Eximinds — Sonata   [uplifting trance, pop 36, ~0.992]
+     Matt Fax — To The Ground   [progressive trance, pop 43, ~0.992]
+     Myon — Promises - Myon & Shane 54 Summer Of Love Radio Edit   [uplifting trance, pop 37, ~0.992]
+     RAM — For The One You Love   [trance, pop 35, ~0.992]
+
+=== TWICE  [region US]  liked-as "TWICE"
+  seed in graph: TWICE / KR / conf 0.94 / pop 6 / 8da127cc-c432-418f-b356-ef36210d82ac
+  seed sound: yes
+    NB	TWICE	BIGBANG	LB	0.895	k-pop	people 2
+    NB	TWICE	Girls’ Generation	LB	0.975	k-pop	people 1
+    NB	TWICE	BTS	LB	0.964	pop	people 1
+  graph neighbours (4): BIGBANG(LB 1.00 ~0.895), Girls’ Generation(LB 1.00 ~0.975), BTS(LB 1.00 ~0.964), 東方神起(LB 1.00 ~-nocat)
+  -> Because you like TWICE  |  People who listen to TWICE also play these  (6 rows)
+     Girls' Generation — Gee   [k-pop, pop 67, ~0.975]
+     BTS — Dynamite   [pop, pop 80, ~0.964]
+     BIGBANG — BANG BANG BANG   [k-pop, pop 79, ~0.895]
+     Girls' Generation — Into the New World   [k-pop, pop 63, ~0.975]
+     BTS — FAKE LOVE   [pop, pop 79, ~0.964]
+     BIGBANG — Fantastic Baby   [k-pop, pop 73, ~0.895]
+
+=== TWICE  [region KR]  liked-as "TWICE"
+  seed in graph: TWICE / KR / conf 0.94 / pop 6 / 8da127cc-c432-418f-b356-ef36210d82ac
+  seed sound: yes
+    NB	TWICE	BIGBANG	LB	0.895	k-pop	people 2
+    NB	TWICE	Girls’ Generation	LB	0.975	k-pop	people 1
+    NB	TWICE	BTS	LB	0.964	pop	people 1
+  graph neighbours (4): BIGBANG(LB 1.00 ~0.895), Girls’ Generation(LB 1.00 ~0.975), BTS(LB 1.00 ~0.964), 東方神起(LB 1.00 ~-nocat)
+  -> Because you like TWICE  |  People who listen to TWICE also play these  (6 rows)
+     Girls' Generation — Gee   [k-pop, pop 67, ~0.975]
+     BTS — Dynamite   [pop, pop 80, ~0.964]
+     BIGBANG — BANG BANG BANG   [k-pop, pop 79, ~0.895]
+     Girls' Generation — Into the New World   [k-pop, pop 63, ~0.975]
+     BTS — FAKE LOVE   [pop, pop 79, ~0.964]
+     BIGBANG — Fantastic Baby   [k-pop, pop 73, ~0.895]
+
+=== IU  [region US]  liked-as "IU"
+  seed in graph: IU / KR / conf 0.94 / pop 2 / b9545342-1e6d-4dae-84ac-013374ad8d7c
+  seed sound: yes
+    NB	IU	BIGBANG	LB	0.919	k-pop	people 2
+    NB	IU	BTS	LB	0.982	pop	people 1
+    NB	IU	Girls’ Generation	LB	0.983	k-pop	people 1
+  graph neighbours (4): BIGBANG(LB 1.00 ~0.919), BTS(LB 1.00 ~0.982), 東方神起(LB 1.00 ~-nocat), Girls’ Generation(LB 1.00 ~0.983)
+  -> Because you like IU  |  People who listen to IU also play these  (6 rows)
+     Girls' Generation — Gee   [k-pop, pop 67, ~0.983]
+     BTS — Dynamite   [pop, pop 80, ~0.982]
+     BIGBANG — BANG BANG BANG   [k-pop, pop 79, ~0.919]
+     Girls' Generation — Into the New World   [k-pop, pop 63, ~0.983]
+     BTS — FAKE LOVE   [pop, pop 79, ~0.982]
+     BIGBANG — Fantastic Baby   [k-pop, pop 73, ~0.919]
+
+=== IU  [region KR]  liked-as "IU"
+  seed in graph: IU / KR / conf 0.94 / pop 2 / b9545342-1e6d-4dae-84ac-013374ad8d7c
+  seed sound: yes
+    NB	IU	BIGBANG	LB	0.919	k-pop	people 2
+    NB	IU	BTS	LB	0.982	pop	people 1
+    NB	IU	Girls’ Generation	LB	0.983	k-pop	people 1
+  graph neighbours (4): BIGBANG(LB 1.00 ~0.919), BTS(LB 1.00 ~0.982), 東方神起(LB 1.00 ~-nocat), Girls’ Generation(LB 1.00 ~0.983)
+  -> Because you like IU  |  People who listen to IU also play these  (6 rows)
+     Girls' Generation — Gee   [k-pop, pop 67, ~0.983]
+     BTS — Dynamite   [pop, pop 80, ~0.982]
+     BIGBANG — BANG BANG BANG   [k-pop, pop 79, ~0.919]
+     Girls' Generation — Into the New World   [k-pop, pop 63, ~0.983]
+     BTS — FAKE LOVE   [pop, pop 79, ~0.982]
+     BIGBANG — Fantastic Baby   [k-pop, pop 73, ~0.919]
+
+=== Stray Kids  [region US]  liked-as "Stray Kids"
+  seed in graph: NOT FOUND
+  -> Sounds like Stray Kids  |  Artists whose sound sits closest to theirs  (12 rows)
+     BTS — Permission to Dance   [pop, pop 74, ~0.998]
+     MOMOLAND — Ready Or Not   [k-pop, pop 38, ~0.985]
+     Brown Eyed Girls — Kill Bill   [k-pop, pop 45, ~0.985]
+     3YE — QUEEN   [k-pop, pop 23, ~0.985]
+     Brave Girls — Rollin'   [k-pop, pop 61, ~0.985]
+     LADIES' CODE — Hate You   [k-pop, pop 29, ~0.985]
+     AOA — Come See Me   [k-pop, pop 42, ~0.984]
+     Cherry Bullet — P.O.W! (Play On the World)   [k-pop, pop 39, ~0.984]
+     IU — Good day   [pop, pop 61, ~0.984]
+     NATURE — SOME (You'll Be Mine)   [k-pop, pop 24, ~0.984]
+     Orange Caramel — LIPSTICK   [k-pop, pop 45, ~0.984]
+     WJSN — La La Love   [k-pop, pop 39, ~0.984]
+
+=== Stray Kids  [region KR]  liked-as "Stray Kids"
+  seed in graph: NOT FOUND
+  -> Sounds like Stray Kids  |  Artists whose sound sits closest to theirs  (12 rows)
+     BTS — Permission to Dance   [pop, pop 74, ~0.998]
+     MOMOLAND — Ready Or Not   [k-pop, pop 38, ~0.985]
+     Brown Eyed Girls — Kill Bill   [k-pop, pop 45, ~0.985]
+     3YE — QUEEN   [k-pop, pop 23, ~0.985]
+     Brave Girls — Rollin'   [k-pop, pop 61, ~0.985]
+     LADIES' CODE — Hate You   [k-pop, pop 29, ~0.985]
+     AOA — Come See Me   [k-pop, pop 42, ~0.984]
+     Cherry Bullet — P.O.W! (Play On the World)   [k-pop, pop 39, ~0.984]
+     IU — Good day   [pop, pop 61, ~0.984]
+     NATURE — SOME (You'll Be Mine)   [k-pop, pop 24, ~0.984]
+     Orange Caramel — LIPSTICK   [k-pop, pop 45, ~0.984]
+     WJSN — La La Love   [k-pop, pop 39, ~0.984]
+
+=== YOASOBI  [region US]  liked-as "YOASOBI"
+  seed in graph: NOT FOUND
+  -> Sounds like YOASOBI  |  Artists whose sound sits closest to theirs  (12 rows)
+     Yoh kamiyama — 色香水   [japanese teen pop, pop 47, ~0.999]
+     和ぬか — 絶頂讃歌   [japanese teen pop, pop 49, ~0.999]
+     ARASHI — Love so sweet   [j-pop, pop 58, ~0.999]
+     Ado — Backlight   [j-pop, pop 67, ~0.999]
+     Sonar Pocket — GIRIGIRI   [j-pop, pop 36, ~0.999]
+     莉犬 — ハルトレイン   [japanese teen pop, pop 37, ~0.999]
+     Ryokuoushoku Shakai — Mela!   [j-pop, pop 68, ~0.998]
+     sumika — 10時の方角   [j-pop, pop 50, ~0.998]
+     Hazzie — 君と。   [j-pop, pop 46, ~0.998]
+     Shuchishin — 羞恥心   [j-pop boy group, pop 39, ~0.998]
+     Lilas — 百花繚乱   [j-pop, pop 75, ~0.998]
+     Yuuri — カーテンコール   [j-pop, pop 69, ~0.998]
+
+=== YOASOBI  [region JP]  liked-as "YOASOBI"
+  seed in graph: NOT FOUND
+  -> Sounds like YOASOBI  |  Artists whose sound sits closest to theirs  (12 rows)
+     Yoh kamiyama — 色香水   [japanese teen pop, pop 47, ~0.999]
+     和ぬか — 絶頂讃歌   [japanese teen pop, pop 49, ~0.999]
+     ARASHI — Love so sweet   [j-pop, pop 58, ~0.999]
+     Ado — Backlight   [j-pop, pop 67, ~0.999]
+     Sonar Pocket — GIRIGIRI   [j-pop, pop 36, ~0.999]
+     莉犬 — ハルトレイン   [japanese teen pop, pop 37, ~0.999]
+     Ryokuoushoku Shakai — Mela!   [j-pop, pop 68, ~0.998]
+     sumika — 10時の方角   [j-pop, pop 50, ~0.998]
+     Hazzie — 君と。   [j-pop, pop 46, ~0.998]
+     Shuchishin — 羞恥心   [j-pop boy group, pop 39, ~0.998]
+     Lilas — 百花繚乱   [j-pop, pop 75, ~0.998]
+     Yuuri — カーテンコール   [j-pop, pop 69, ~0.998]
+
+=== 米津玄師  [region US]  liked-as "米津玄師"
+  seed in graph: NOT FOUND
+  -> NO ARTIST SHELF  (shelves: popular)
+
+=== 米津玄師  [region JP]  liked-as "米津玄師"
+  seed in graph: NOT FOUND
+  -> NO ARTIST SHELF  (shelves: popular)
+
+=== X JAPAN  [region US]  liked-as "X JAPAN"
+  seed in graph: X JAPAN / JP / conf 0.94 / pop 9 / 3f77449d-48e4-4ceb-b869-69af48da877b
+  seed sound: NONE
+    NB	X JAPAN	L’Arc〜en〜Ciel	LB	-9.000	anime	people 1
+    NB	X JAPAN	DIR EN GREY	LB	-9.000	j-metal	people 1
+    NB	X JAPAN	the GazettE	LB	-9.000	j-metal	people 1
+    NB	X JAPAN	GACKT	LB	-9.000	okinawan pop	people 1
+    NB	X JAPAN	MIYAVI	LB	-9.000	visual kei	people 1
+    NB	X JAPAN	ONE OK ROCK	LB	-9.000	j-rock	people 1
+    NB	X JAPAN	the pillows	LB	-9.000	hokkaido indie	people 1
+    NB	X JAPAN	MUCC	LB	-9.000	visual kei	people 1
+    NB	X JAPAN	Do As Infinity	LB	-9.000	j-pop	people 1
+    NB	X JAPAN	Metallica	LB	-9.000	hard rock	people 1
+    NB	X JAPAN	Iron Maiden	LB	-9.000	hard rock	people 1
+    NB	X JAPAN	The Beatles	LB	-9.000	classic rock	people 1
+    NB	X JAPAN	Rammstein	LB	-9.000	neue deutsche harte	people 1
+    NB	X JAPAN	Guns N’ Roses	LB	-9.000	hard rock	people 1
+    NB	X JAPAN	System of a Down	LB	-9.000	alternative metal	people 1
+    NB	X JAPAN	Radiohead	LB	-9.000	rock	people 1
+    NB	X JAPAN	Pink Floyd	LB	-9.000	art rock	people 1
+    NB	X JAPAN	Linkin Park	LB	-9.000	alternative metal	people 1
+    NB	X JAPAN	Nirvana	LB	-9.000	permanent wave	people 1
+    NB	X JAPAN	Black Sabbath	LB	-9.000	hard rock	people 1
+    NB	X JAPAN	Motörhead	LB	-9.000	hard rock	people 1
+    NB	X JAPAN	Led Zeppelin	LB	-9.000	rock	people 1
+    NB	X JAPAN	David Bowie	LB	-9.000	rock	people 1
+    NB	X JAPAN	Deep Purple	LB	-9.000	album rock	people 1
+    NB	X JAPAN	Red Hot Chili Peppers	LB	-9.000	permanent wave	people 1
+    NB	X JAPAN	Muse	LB	-9.000	permanent wave	people 1
+    NB	X JAPAN	Judas Priest	LB	-9.000	hard rock	people 1
+    NB	X JAPAN	Helloween	LB	-9.000	speed metal	people 1
+    NB	X JAPAN	Nine Inch Nails	LB	-9.000	industrial	people 1
+    NB	X JAPAN	The Doors	LB	-9.000	rock	people 1
+    NB	X JAPAN	Scorpions	LB	-9.000	hard rock	people 1
+    NB	X JAPAN	Alice in Chains	LB	-9.000	alternative rock	people 1
+  graph neighbours (36): L’Arc〜en〜Ciel(LB 1.00 ~-9.000), DIR EN GREY(LB 1.00 ~-9.000), the GazettE(LB 1.00 ~-9.000), GACKT(LB 1.00 ~-9.000), MIYAVI(LB 1.00 ~-9.000), 宇多田ヒカル(LB 1.00 ~-nocat), 浜崎あゆみ(LB 1.00 ~-nocat), MALICE MIZER(LB 0.95 ~-nocat), ONE OK ROCK(LB 0.91 ~-9.000), the pillows(LB 0.74 ~-9.000), MUCC(LB 0.74 ~-9.000), Do As Infinity(LB 0.67 ~-9.000), TAIJI(st 0.38 ~-nocat), Metallica(LB 1.00 ~-9.000), Iron Maiden(LB 1.00 ~-9.000), The Beatles(LB 1.00 ~-9.000), Rammstein(LB 1.00 ~-9.000), Guns N’ Roses(LB 1.00 ~-9.000), System of a Down(LB 1.00 ~-9.000), Radiohead(LB 1.00 ~-9.000), Pink Floyd(LB 1.00 ~-9.000), Linkin Park(LB 1.00 ~-9.000), Nirvana(LB 1.00 ~-9.000), Black Sabbath(LB 1.00 ~-9.000), Motörhead(LB 1.00 ~-9.000), Led Zeppelin(LB 1.00 ~-9.000), David Bowie(LB 1.00 ~-9.000), Deep Purple(LB 1.00 ~-9.000), Red Hot Chili Peppers(LB 1.00 ~-9.000), Muse(LB 1.00 ~-9.000), Judas Priest(LB 1.00 ~-9.000), Helloween(LB 1.00 ~-9.000), Nine Inch Nails(LB 1.00 ~-9.000), The Doors(LB 1.00 ~-9.000), Scorpions(LB 1.00 ~-9.000), Alice in Chains(LB 1.00 ~-9.000)
+  -> Because you like X JAPAN  |  People who listen to X JAPAN also play these  (12 rows)
+     L'Arc-en-Ciel — Driver's High - Remastered 2022   [anime, pop 55, ~0.000]
+     DIR EN GREY — YOKAN   [j-metal, pop 38, ~0.000]
+     the GazettE — SHIVER   [j-metal, pop 48, ~0.000]
+     GACKT — U+K   [okinawan pop, pop 46, ~0.000]
+     MIYAVI — Flashback   [visual kei, pop 56, ~0.000]
+     ONE OK ROCK — Puppets Can’t Control You   [j-rock, pop 66, ~0.000]
+     the pillows — Thank you, my twilight   [hokkaido indie, pop 46, ~0.000]
+     MUCC — ニルヴァーナ   [visual kei, pop 41, ~0.000]
+     L'Arc-en-Ciel — READY STEADY GO - Remastered 2022   [anime, pop 54, ~0.000]
+     DIR EN GREY — Cage   [j-metal, pop 38, ~0.000]
+     the GazettE — Filth in the beauty   [j-metal, pop 41, ~0.000]
+     GACKT — Journey through the Decade   [okinawan pop, pop 45, ~0.000]
+
+=== X JAPAN  [region JP]  liked-as "X JAPAN"
+  seed in graph: X JAPAN / JP / conf 0.94 / pop 9 / 3f77449d-48e4-4ceb-b869-69af48da877b
+  seed sound: NONE
+    NB	X JAPAN	L’Arc〜en〜Ciel	LB	-9.000	anime	people 1
+    NB	X JAPAN	DIR EN GREY	LB	-9.000	j-metal	people 1
+    NB	X JAPAN	the GazettE	LB	-9.000	j-metal	people 1
+    NB	X JAPAN	GACKT	LB	-9.000	okinawan pop	people 1
+    NB	X JAPAN	MIYAVI	LB	-9.000	visual kei	people 1
+    NB	X JAPAN	ONE OK ROCK	LB	-9.000	j-rock	people 1
+    NB	X JAPAN	the pillows	LB	-9.000	hokkaido indie	people 1
+    NB	X JAPAN	MUCC	LB	-9.000	visual kei	people 1
+    NB	X JAPAN	Do As Infinity	LB	-9.000	j-pop	people 1
+    NB	X JAPAN	Metallica	LB	-9.000	hard rock	people 1
+    NB	X JAPAN	Iron Maiden	LB	-9.000	hard rock	people 1
+    NB	X JAPAN	The Beatles	LB	-9.000	classic rock	people 1
+    NB	X JAPAN	Rammstein	LB	-9.000	neue deutsche harte	people 1
+    NB	X JAPAN	Guns N’ Roses	LB	-9.000	hard rock	people 1
+    NB	X JAPAN	System of a Down	LB	-9.000	alternative metal	people 1
+    NB	X JAPAN	Radiohead	LB	-9.000	rock	people 1
+    NB	X JAPAN	Pink Floyd	LB	-9.000	art rock	people 1
+    NB	X JAPAN	Linkin Park	LB	-9.000	alternative metal	people 1
+    NB	X JAPAN	Nirvana	LB	-9.000	permanent wave	people 1
+    NB	X JAPAN	Black Sabbath	LB	-9.000	hard rock	people 1
+    NB	X JAPAN	Motörhead	LB	-9.000	hard rock	people 1
+    NB	X JAPAN	Led Zeppelin	LB	-9.000	rock	people 1
+    NB	X JAPAN	David Bowie	LB	-9.000	rock	people 1
+    NB	X JAPAN	Deep Purple	LB	-9.000	album rock	people 1
+    NB	X JAPAN	Red Hot Chili Peppers	LB	-9.000	permanent wave	people 1
+    NB	X JAPAN	Muse	LB	-9.000	permanent wave	people 1
+    NB	X JAPAN	Judas Priest	LB	-9.000	hard rock	people 1
+    NB	X JAPAN	Helloween	LB	-9.000	speed metal	people 1
+    NB	X JAPAN	Nine Inch Nails	LB	-9.000	industrial	people 1
+    NB	X JAPAN	The Doors	LB	-9.000	rock	people 1
+    NB	X JAPAN	Scorpions	LB	-9.000	hard rock	people 1
+    NB	X JAPAN	Alice in Chains	LB	-9.000	alternative rock	people 1
+  graph neighbours (36): L’Arc〜en〜Ciel(LB 1.00 ~-9.000), DIR EN GREY(LB 1.00 ~-9.000), the GazettE(LB 1.00 ~-9.000), GACKT(LB 1.00 ~-9.000), MIYAVI(LB 1.00 ~-9.000), 宇多田ヒカル(LB 1.00 ~-nocat), 浜崎あゆみ(LB 1.00 ~-nocat), MALICE MIZER(LB 0.95 ~-nocat), ONE OK ROCK(LB 0.91 ~-9.000), the pillows(LB 0.74 ~-9.000), MUCC(LB 0.74 ~-9.000), Do As Infinity(LB 0.67 ~-9.000), TAIJI(st 0.38 ~-nocat), Metallica(LB 1.00 ~-9.000), Iron Maiden(LB 1.00 ~-9.000), The Beatles(LB 1.00 ~-9.000), Rammstein(LB 1.00 ~-9.000), Guns N’ Roses(LB 1.00 ~-9.000), System of a Down(LB 1.00 ~-9.000), Radiohead(LB 1.00 ~-9.000), Pink Floyd(LB 1.00 ~-9.000), Linkin Park(LB 1.00 ~-9.000), Nirvana(LB 1.00 ~-9.000), Black Sabbath(LB 1.00 ~-9.000), Motörhead(LB 1.00 ~-9.000), Led Zeppelin(LB 1.00 ~-9.000), David Bowie(LB 1.00 ~-9.000), Deep Purple(LB 1.00 ~-9.000), Red Hot Chili Peppers(LB 1.00 ~-9.000), Muse(LB 1.00 ~-9.000), Judas Priest(LB 1.00 ~-9.000), Helloween(LB 1.00 ~-9.000), Nine Inch Nails(LB 1.00 ~-9.000), The Doors(LB 1.00 ~-9.000), Scorpions(LB 1.00 ~-9.000), Alice in Chains(LB 1.00 ~-9.000)
+  -> Because you like X JAPAN  |  People who listen to X JAPAN also play these  (12 rows)
+     L'Arc-en-Ciel — Driver's High - Remastered 2022   [anime, pop 55, ~0.000]
+     DIR EN GREY — YOKAN   [j-metal, pop 38, ~0.000]
+     the GazettE — SHIVER   [j-metal, pop 48, ~0.000]
+     GACKT — U+K   [okinawan pop, pop 46, ~0.000]
+     MIYAVI — Flashback   [visual kei, pop 56, ~0.000]
+     ONE OK ROCK — Puppets Can’t Control You   [j-rock, pop 66, ~0.000]
+     the pillows — Thank you, my twilight   [hokkaido indie, pop 46, ~0.000]
+     MUCC — ニルヴァーナ   [visual kei, pop 41, ~0.000]
+     L'Arc-en-Ciel — READY STEADY GO - Remastered 2022   [anime, pop 54, ~0.000]
+     DIR EN GREY — Cage   [j-metal, pop 38, ~0.000]
+     the GazettE — Filth in the beauty   [j-metal, pop 41, ~0.000]
+     GACKT — Journey through the Decade   [okinawan pop, pop 45, ~0.000]
+
+=== Shakira  [region US]  liked-as "Shakira"
+  seed in graph: Shakira / CO / conf 0.94 / pop 13 / bf24ca37-25f4-4e34-9aec-460b94364cfc
+  seed sound: yes
+    NB	Shakira	Maluma	LB	0.684	reggaeton colombiano	people 1
+    NB	Shakira	Juanes	LB	0.719	mexican pop	people 1
+    NB	Shakira	T.I.	LB	0.420	trap	people 2
+    NB	Shakira	Cher	LB	0.778	pop	people 2
+    NB	Shakira	Coldplay	LB	0.615	permanent wave	people 1
+    NB	Shakira	Black Eyed Peas	LB	0.740	dance pop	people 1
+    NB	Shakira	P!nk	LB	0.780	pop	people 1
+    NB	Shakira	Michael Jackson	LB	0.453	soul	people 2
+    NB	Shakira	Adele	LB	0.658	british soul	people 2
+    NB	Shakira	Ariana Grande	LB	0.769	pop	people 1
+    NB	Shakira	Linkin Park	LB	0.133	alternative metal	people 1
+    NB	Shakira	Justin Bieber	LB	0.717	pop	people 1
+    NB	Shakira	Avicii	LB	0.645	pop dance	people 1
+    NB	Shakira	Evanescence	LB	0.114	alternative metal	people 1
+    NB	Shakira	Gorillaz	LB	0.260	rock	people 1
+    NB	Shakira	No Doubt	LB	0.474	pop rock	people 1
+    NB	Shakira	R.E.M.	LB	0.182	athens indie	people 1
+    NB	Shakira	The Cranberries	LB	0.278	irish rock	people 1
+    NB	Shakira	System of a Down	LB	0.118	alternative metal	people 1
+    NB	Shakira	Amy Winehouse	LB	0.521	neo soul	people 1
+    NB	Shakira	ABBA	LB	0.487	europop	people 1
+    NB	Shakira	Tiësto	LB	0.292	brostep	people 1
+    NB	Shakira	Mylène Farmer	LB	0.039	french pop	people 1
+    NB	Shakira	Janet Jackson	LB	0.657	urban contemporary	people 1
+  graph neighbours (26): Maluma(LB 1.00 ~0.684), Juanes(LB 1.00 ~0.719), T.I.(LB 1.00 ~0.420), Cher(LB 1.00 ~0.778), Coldplay(LB 1.00 ~0.615), Black Eyed Peas(LB 1.00 ~0.740), P!nk(LB 1.00 ~0.780), Michael Jackson(LB 1.00 ~0.453), Adele(LB 1.00 ~0.658), Ariana Grande(LB 1.00 ~0.769), Linkin Park(LB 1.00 ~0.133), Justin Bieber(LB 1.00 ~0.717), Avicii(LB 1.00 ~0.645), Evanescence(LB 1.00 ~0.114), Gorillaz(LB 1.00 ~0.260), No Doubt(LB 1.00 ~0.474), R.E.M.(LB 1.00 ~0.182), The Cranberries(LB 1.00 ~0.278), System of a Down(LB 1.00 ~0.118), Amy Winehouse(LB 1.00 ~0.521), ABBA(LB 1.00 ~0.487), Alizée(LB 1.00 ~-nocat), Tiësto(LB 1.00 ~0.292), Mylène Farmer(LB 1.00 ~0.039), 浜崎あゆみ(LB 1.00 ~-nocat), Janet Jackson(LB 1.00 ~0.657)
+  -> Because you like Shakira  |  People who listen to Shakira also play these  (12 rows)
+     P!nk — Just Give Me a Reason (feat. Nate Ruess)   [pop, pop 85, ~0.780]
+     Cher — Believe   [pop, pop 82, ~0.778]
+     Ariana Grande — we can't be friends (wait for your love)   [pop, pop 88, ~0.769]
+     Black Eyed Peas — I Gotta Feeling   [dance pop, pop 83, ~0.740]
+     Juanes — Es Por Ti   [mexican pop, pop 80, ~0.719]
+     Justin Bieber — Let Me Love You   [pop, pop 86, ~0.717]
+     Maluma — Borro Cassette   [reggaeton colombiano, pop 83, ~0.684]
+     Adele — Skyfall   [british soul, pop 85, ~0.658]
+     P!nk — Try   [pop, pop 84, ~0.780]
+     Cher — If I Could Turn Back Time   [pop, pop 74, ~0.778]
+     Ariana Grande — One Last Time   [pop, pop 85, ~0.769]
+     Black Eyed Peas — Where Is The Love?   [dance pop, pop 81, ~0.740]
+
+=== Shakira  [region CO]  liked-as "Shakira"
+  seed in graph: Shakira / CO / conf 0.94 / pop 13 / bf24ca37-25f4-4e34-9aec-460b94364cfc
+  seed sound: yes
+    NB	Shakira	Maluma	LB	0.684	reggaeton colombiano	people 1
+    NB	Shakira	Juanes	LB	0.719	mexican pop	people 1
+    NB	Shakira	T.I.	LB	0.420	trap	people 2
+    NB	Shakira	Cher	LB	0.778	pop	people 2
+    NB	Shakira	Coldplay	LB	0.615	permanent wave	people 1
+    NB	Shakira	Black Eyed Peas	LB	0.740	dance pop	people 1
+    NB	Shakira	P!nk	LB	0.780	pop	people 1
+    NB	Shakira	Michael Jackson	LB	0.453	soul	people 2
+    NB	Shakira	Adele	LB	0.658	british soul	people 2
+    NB	Shakira	Ariana Grande	LB	0.769	pop	people 1
+    NB	Shakira	Linkin Park	LB	0.133	alternative metal	people 1
+    NB	Shakira	Justin Bieber	LB	0.717	pop	people 1
+    NB	Shakira	Avicii	LB	0.645	pop dance	people 1
+    NB	Shakira	Evanescence	LB	0.114	alternative metal	people 1
+    NB	Shakira	Gorillaz	LB	0.260	rock	people 1
+    NB	Shakira	No Doubt	LB	0.474	pop rock	people 1
+    NB	Shakira	R.E.M.	LB	0.182	athens indie	people 1
+    NB	Shakira	The Cranberries	LB	0.278	irish rock	people 1
+    NB	Shakira	System of a Down	LB	0.118	alternative metal	people 1
+    NB	Shakira	Amy Winehouse	LB	0.521	neo soul	people 1
+    NB	Shakira	ABBA	LB	0.487	europop	people 1
+    NB	Shakira	Tiësto	LB	0.292	brostep	people 1
+    NB	Shakira	Mylène Farmer	LB	0.039	french pop	people 1
+    NB	Shakira	Janet Jackson	LB	0.657	urban contemporary	people 1
+  graph neighbours (26): Maluma(LB 1.00 ~0.684), Juanes(LB 1.00 ~0.719), T.I.(LB 1.00 ~0.420), Cher(LB 1.00 ~0.778), Coldplay(LB 1.00 ~0.615), Black Eyed Peas(LB 1.00 ~0.740), P!nk(LB 1.00 ~0.780), Michael Jackson(LB 1.00 ~0.453), Adele(LB 1.00 ~0.658), Ariana Grande(LB 1.00 ~0.769), Linkin Park(LB 1.00 ~0.133), Justin Bieber(LB 1.00 ~0.717), Avicii(LB 1.00 ~0.645), Evanescence(LB 1.00 ~0.114), Gorillaz(LB 1.00 ~0.260), No Doubt(LB 1.00 ~0.474), R.E.M.(LB 1.00 ~0.182), The Cranberries(LB 1.00 ~0.278), System of a Down(LB 1.00 ~0.118), Amy Winehouse(LB 1.00 ~0.521), ABBA(LB 1.00 ~0.487), Alizée(LB 1.00 ~-nocat), Tiësto(LB 1.00 ~0.292), Mylène Farmer(LB 1.00 ~0.039), 浜崎あゆみ(LB 1.00 ~-nocat), Janet Jackson(LB 1.00 ~0.657)
+  -> Because you like Shakira  |  People who listen to Shakira also play these  (12 rows)
+     P!nk — Just Give Me a Reason (feat. Nate Ruess)   [pop, pop 85, ~0.780]
+     Cher — Believe   [pop, pop 82, ~0.778]
+     Ariana Grande — we can't be friends (wait for your love)   [pop, pop 88, ~0.769]
+     Black Eyed Peas — I Gotta Feeling   [dance pop, pop 83, ~0.740]
+     Juanes — Es Por Ti   [mexican pop, pop 80, ~0.719]
+     Justin Bieber — Let Me Love You   [pop, pop 86, ~0.717]
+     Maluma — Borro Cassette   [reggaeton colombiano, pop 83, ~0.684]
+     Adele — Skyfall   [british soul, pop 85, ~0.658]
+     P!nk — Try   [pop, pop 84, ~0.780]
+     Cher — If I Could Turn Back Time   [pop, pop 74, ~0.778]
+     Ariana Grande — One Last Time   [pop, pop 85, ~0.769]
+     Black Eyed Peas — Where Is The Love?   [dance pop, pop 81, ~0.740]
+
+=== Karol G  [region US]  liked-as "Karol G"
+  seed in graph: KAROL G / CO / conf 0.94 / pop 2 / de22adae-f8ac-414f-b653-b0162611bd60
+  seed sound: yes
+  graph neighbours (1): Kio DJ(st 0.38 ~-nocat)
+  -> Sounds like Karol G  |  Artists whose sound sits closest to theirs  (12 rows)
+     Beéle — sobelove   [urbano latino, pop 83, ~0.999]
+     Miky Woodz — 2 Way Player   [urbano latino, pop 50, ~0.999]
+     Casper Magico — Airforce Negras   [trap latino, pop 51, ~0.998]
+     Dalex — Apego Emocional   [trap latino, pop 49, ~0.998]
+     Farruko — Calma - Remix   [urbano latino, pop 73, ~0.997]
+     Myke Towers — Sigue Bailandome   [urbano latino, pop 76, ~0.997]
+     Keityn — Anoche   [urbano latino, pop 37, ~0.997]
+     Tempo — Me Quiero Perder   [urbano latino, pop 41, ~0.996]
+     Gonzy — MOJAITA   [urbano latino, pop 52, ~0.996]
+     ROBI — Café de Barcelona   [urbano latino, pop 37, ~0.996]
+     Blessd — POLOS OPUESTOS REMIX - BLESSD VERSION   [urbano latino, pop 77, ~0.996]
+     Jadiel el Incomparable — Alargame la Vida   [reggaeton, pop 40, ~0.996]
+
+=== Karol G  [region CO]  liked-as "Karol G"
+  seed in graph: KAROL G / CO / conf 0.94 / pop 2 / de22adae-f8ac-414f-b653-b0162611bd60
+  seed sound: yes
+  graph neighbours (1): Kio DJ(st 0.38 ~-nocat)
+  -> Sounds like Karol G  |  Artists whose sound sits closest to theirs  (12 rows)
+     Beéle — sobelove   [urbano latino, pop 83, ~0.999]
+     Miky Woodz — 2 Way Player   [urbano latino, pop 50, ~0.999]
+     Casper Magico — Airforce Negras   [trap latino, pop 51, ~0.998]
+     Dalex — Apego Emocional   [trap latino, pop 49, ~0.998]
+     Farruko — Calma - Remix   [urbano latino, pop 73, ~0.997]
+     Myke Towers — Sigue Bailandome   [urbano latino, pop 76, ~0.997]
+     Keityn — Anoche   [urbano latino, pop 37, ~0.997]
+     Tempo — Me Quiero Perder   [urbano latino, pop 41, ~0.996]
+     Gonzy — MOJAITA   [urbano latino, pop 52, ~0.996]
+     ROBI — Café de Barcelona   [urbano latino, pop 37, ~0.996]
+     Blessd — POLOS OPUESTOS REMIX - BLESSD VERSION   [urbano latino, pop 77, ~0.996]
+     Jadiel el Incomparable — Alargame la Vida   [reggaeton, pop 40, ~0.996]
+
+=== Wisin & Yandel  [region US]  liked-as "Wisin"
+  seed in graph: NOT FOUND
+  -> Sounds like Wisin & Yandel  |  Artists whose sound sits closest to theirs  (12 rows)
+     Fuego — Cancelo   [trap latino, pop 49, ~0.997]
+     Lito y Polaco — Maniatica Sexual   [reggaeton, pop 38, ~0.995]
+     Vico C — Tic Tac Toe   [reggaeton, pop 5, ~0.995]
+     Yomo — Corazon Callejero   [reggaeton, pop 40, ~0.995]
+     Trebol Clan — Báilame   [reggaeton, pop 46, ~0.995]
+     Wiso G — Medley   [reggaeton, pop 47, ~0.995]
+     Voltio — Bumper   [reggaeton, pop 38, ~0.994]
+     Tuny D — PECAS Y REZAS   [reggaeton mexicano, pop 37, ~0.994]
+     Angel Y Khriz — Ven Bailalo - Bachareggae   [reggaeton, pop 46, ~0.994]
+     Tito "El Bambino" — Siente El Boom   [reggaeton, pop 63, ~0.994]
+     Eddie Dee — La Locura Automática - Reggaeton   [reggaeton, pop 66, ~0.994]
+     Big Boy — Voz Sensual   [reggaeton, pop 46, ~0.994]
+
+=== Wisin & Yandel  [region PR]  liked-as "Wisin"
+  seed in graph: NOT FOUND
+  -> Sounds like Wisin & Yandel  |  Artists whose sound sits closest to theirs  (12 rows)
+     Fuego — Cancelo   [trap latino, pop 49, ~0.997]
+     Lito y Polaco — Maniatica Sexual   [reggaeton, pop 38, ~0.995]
+     Vico C — Tic Tac Toe   [reggaeton, pop 5, ~0.995]
+     Yomo — Corazon Callejero   [reggaeton, pop 40, ~0.995]
+     Trebol Clan — Báilame   [reggaeton, pop 46, ~0.995]
+     Wiso G — Medley   [reggaeton, pop 47, ~0.995]
+     Voltio — Bumper   [reggaeton, pop 38, ~0.994]
+     Tuny D — PECAS Y REZAS   [reggaeton mexicano, pop 37, ~0.994]
+     Angel Y Khriz — Ven Bailalo - Bachareggae   [reggaeton, pop 46, ~0.994]
+     Tito "El Bambino" — Siente El Boom   [reggaeton, pop 63, ~0.994]
+     Eddie Dee — La Locura Automática - Reggaeton   [reggaeton, pop 66, ~0.994]
+     Big Boy — Voz Sensual   [reggaeton, pop 46, ~0.994]
+
+=== Peso Pluma  [region US]  liked-as "Peso Pluma"
+  seed in graph: NOT FOUND
+  -> Sounds like Peso Pluma  |  Artists whose sound sits closest to theirs  (12 rows)
+     Ivan Orozco — Ni Triste, Ni Feliz   [corridos tumbados, pop 37, ~0.997]
+     miguel cornejo — QEP   [corrido, pop 46, ~0.997]
+     Tony Herrera — Llámale al Dealer   [sad sierreno, pop 39, ~0.996]
+     Ivan Cornejo — Atención   [sad sierreno, pop 78, ~0.996]
+     Conjunto Rienda Real — Labios Rotos   [sad sierreno, pop 52, ~0.995]
+     Xavi — La Diabla   [sad sierreno, pop 77, ~0.995]
+     Officialalex425 — Dame Amor   [sad sierreno, pop 72, ~0.994]
+     Cachas De Oro — Los Malaventurados No Lloran   [sad sierreno, pop 45, ~0.994]
+     Yahritza Y Su Esencia — Dejalo Ir   [sad sierreno, pop 45, ~0.994]
+     Los Pistones De Uriel Valdez — Popurri Rancheritas   [corridos tumbados, pop 40, ~0.994]
+     Jay Roxxx — u r my star   [sad sierreno, pop 41, ~0.994]
+     Los Aptos — La Nena   [sad sierreno, pop 38, ~0.994]
+
+=== Peso Pluma  [region MX]  liked-as "Peso Pluma"
+  seed in graph: NOT FOUND
+  -> Sounds like Peso Pluma  |  Artists whose sound sits closest to theirs  (12 rows)
+     Ivan Orozco — Ni Triste, Ni Feliz   [corridos tumbados, pop 37, ~0.997]
+     miguel cornejo — QEP   [corrido, pop 46, ~0.997]
+     Tony Herrera — Llámale al Dealer   [sad sierreno, pop 39, ~0.996]
+     Ivan Cornejo — Atención   [sad sierreno, pop 78, ~0.996]
+     Conjunto Rienda Real — Labios Rotos   [sad sierreno, pop 52, ~0.995]
+     Xavi — La Diabla   [sad sierreno, pop 77, ~0.995]
+     Officialalex425 — Dame Amor   [sad sierreno, pop 72, ~0.994]
+     Cachas De Oro — Los Malaventurados No Lloran   [sad sierreno, pop 45, ~0.994]
+     Yahritza Y Su Esencia — Dejalo Ir   [sad sierreno, pop 45, ~0.994]
+     Los Pistones De Uriel Valdez — Popurri Rancheritas   [corridos tumbados, pop 40, ~0.994]
+     Jay Roxxx — u r my star   [sad sierreno, pop 41, ~0.994]
+     Los Aptos — La Nena   [sad sierreno, pop 38, ~0.994]
+
+=== Wizkid  [region US]  liked-as "Wizkid"
+  seed in graph: Wizkid / NG / conf 0.94 / pop 2 / efc5d365-a448-4e2f-9b5f-4a7c84be725c
+  seed sound: yes
+  graph neighbours (0): 
+  -> Sounds like Wizkid  |  Artists whose sound sits closest to theirs  (12 rows)
+     Sean Tizzle — Pempe   [nigerian pop, pop 40, ~0.997]
+     Lil5ive — Omo Ologo   [nigerian hip hop, pop 37, ~0.997]
+     Olamide — Luvaluvah   [afrobeats, pop 67, ~0.997]
+     Jamopyper — Overdose   [afrobeats, pop 36, ~0.996]
+     Tekno — Jogodo   [nigerian pop, pop 49, ~0.996]
+     Oritse Femi — Double Wahala   [nigerian pop, pop 43, ~0.996]
+     Adekunle Gold — Antidote (feat. Adekunle Gold)   [alte, pop 52, ~0.996]
+     Falz — Round of Applause   [nigerian pop, pop 49, ~0.996]
+     Jeriq — Remember   [nigerian hip hop, pop 49, ~0.996]
+     P-Square — Positif   [nigerian pop, pop 57, ~0.996]
+     Aguero Banks — Akwa Ego   [igbo trap, pop 47, ~0.996]
+     Tiwa Savage — Koroba   [afrobeats, pop 61, ~0.996]
+
+=== Wizkid  [region NG]  liked-as "Wizkid"
+  seed in graph: Wizkid / NG / conf 0.94 / pop 2 / efc5d365-a448-4e2f-9b5f-4a7c84be725c
+  seed sound: yes
+  graph neighbours (0): 
+  -> Sounds like Wizkid  |  Artists whose sound sits closest to theirs  (12 rows)
+     Sean Tizzle — Pempe   [nigerian pop, pop 40, ~0.997]
+     Lil5ive — Omo Ologo   [nigerian hip hop, pop 37, ~0.997]
+     Olamide — Luvaluvah   [afrobeats, pop 67, ~0.997]
+     Jamopyper — Overdose   [afrobeats, pop 36, ~0.996]
+     Tekno — Jogodo   [nigerian pop, pop 49, ~0.996]
+     Oritse Femi — Double Wahala   [nigerian pop, pop 43, ~0.996]
+     Adekunle Gold — Antidote (feat. Adekunle Gold)   [alte, pop 52, ~0.996]
+     Falz — Round of Applause   [nigerian pop, pop 49, ~0.996]
+     Jeriq — Remember   [nigerian hip hop, pop 49, ~0.996]
+     P-Square — Positif   [nigerian pop, pop 57, ~0.996]
+     Aguero Banks — Akwa Ego   [igbo trap, pop 47, ~0.996]
+     Tiwa Savage — Koroba   [afrobeats, pop 61, ~0.996]
+
+=== Davido  [region US]  liked-as "Davido"
+  seed in graph: NOT FOUND
+  -> Sounds like Davido  |  Artists whose sound sits closest to theirs  (12 rows)
+     Reekado Banks — Ozumba Mbadiwe   [nigerian pop, pop 48, ~0.998]
+     Mayorkun — Would You? (feat. Olivetheboy)   [nigerian pop, pop 45, ~0.997]
+     Di'Ja — Awww   [nigerian pop, pop 47, ~0.997]
+     Tiwa Savage — All Over   [afrobeats, pop 48, ~0.997]
+     Patoranking — Celebrate Me   [nigerian pop, pop 42, ~0.997]
+     Joeboy — Nobody   [nigerian pop, pop 54, ~0.997]
+     Adekunle Gold — Obimo   [alte, pop 66, ~0.997]
+     Sean Tizzle — Pempe   [nigerian pop, pop 40, ~0.997]
+     Paul CleverLee — afroBHITS 2024   [cruise, pop 39, ~0.997]
+     Dotman — Akube   [nigerian pop, pop 38, ~0.997]
+     Teni — Case   [nigerian pop, pop 57, ~0.996]
+     Tekno — Jogodo   [nigerian pop, pop 49, ~0.996]
+
+=== Davido  [region NG]  liked-as "Davido"
+  seed in graph: NOT FOUND
+  -> Sounds like Davido  |  Artists whose sound sits closest to theirs  (12 rows)
+     Reekado Banks — Ozumba Mbadiwe   [nigerian pop, pop 48, ~0.998]
+     Mayorkun — Would You? (feat. Olivetheboy)   [nigerian pop, pop 45, ~0.997]
+     Di'Ja — Awww   [nigerian pop, pop 47, ~0.997]
+     Tiwa Savage — All Over   [afrobeats, pop 48, ~0.997]
+     Patoranking — Celebrate Me   [nigerian pop, pop 42, ~0.997]
+     Joeboy — Nobody   [nigerian pop, pop 54, ~0.997]
+     Adekunle Gold — Obimo   [alte, pop 66, ~0.997]
+     Sean Tizzle — Pempe   [nigerian pop, pop 40, ~0.997]
+     Paul CleverLee — afroBHITS 2024   [cruise, pop 39, ~0.997]
+     Dotman — Akube   [nigerian pop, pop 38, ~0.997]
+     Teni — Case   [nigerian pop, pop 57, ~0.996]
+     Tekno — Jogodo   [nigerian pop, pop 49, ~0.996]
+
+=== Fela Kuti  [region US]  liked-as "Fela Kuti"
+  seed in graph: Fela Kuti / NG / conf 0.98 / pop 2 / 6514cffa-fbe0-4965-ad88-e998ead8a82a
+  seed sound: yes
+  graph neighbours (2): Africa 70(st 0.38 ~-nocat), Koola Lobitos(st 0.38 ~-nocat)
+  -> Sounds like Fela Kuti  |  Artists whose sound sits closest to theirs  (12 rows)
+     Tony Allen — Never (Lagos Never Gonna Be the Same)   [afrobeat, pop 38, ~0.997]
+     Manu Dibango — Soul Makossa   [afropop, pop 52, ~0.996]
+     King Sunny Ade — Eni Nbinu Wa   [afrobeat, pop 36, ~0.991]
+     The Lijadu Sisters — Come On Home   [afrobeat, pop 55, ~0.989]
+     Francis Bebey — Sanza Tristesse   [west african jazz, pop 33, ~0.988]
+     T. P. Orchestre Poly-Rythmo — Ne Te Fache Pas   [afropop, pop 29, ~0.987]
+     Vaudou Game — Anniversaire   [afropop, pop 25, ~0.986]
+     The Hygrades — In The Jungle (Instrumental)   [classic afrobeat, pop 38, ~0.985]
+     Seun Kuti — Bwè Dlo   [afrobeat, pop 23, ~0.984]
+     William Onyeabor — Body and Soul   [afrobeat, pop 32, ~0.983]
+     Orlando Julius — Ololufe Mi   [afropop, pop 20, ~0.983]
+     Ebo Taylor — Atwer Abroba   [old school highlife, pop 42, ~0.983]
+
+=== Fela Kuti  [region NG]  liked-as "Fela Kuti"
+  seed in graph: Fela Kuti / NG / conf 0.98 / pop 2 / 6514cffa-fbe0-4965-ad88-e998ead8a82a
+  seed sound: yes
+  graph neighbours (2): Africa 70(st 0.38 ~-nocat), Koola Lobitos(st 0.38 ~-nocat)
+  -> Sounds like Fela Kuti  |  Artists whose sound sits closest to theirs  (12 rows)
+     Tony Allen — Never (Lagos Never Gonna Be the Same)   [afrobeat, pop 38, ~0.997]
+     Manu Dibango — Soul Makossa   [afropop, pop 52, ~0.996]
+     King Sunny Ade — Eni Nbinu Wa   [afrobeat, pop 36, ~0.991]
+     The Lijadu Sisters — Come On Home   [afrobeat, pop 55, ~0.989]
+     Francis Bebey — Sanza Tristesse   [west african jazz, pop 33, ~0.988]
+     T. P. Orchestre Poly-Rythmo — Ne Te Fache Pas   [afropop, pop 29, ~0.987]
+     Vaudou Game — Anniversaire   [afropop, pop 25, ~0.986]
+     The Hygrades — In The Jungle (Instrumental)   [classic afrobeat, pop 38, ~0.985]
+     Seun Kuti — Bwè Dlo   [afrobeat, pop 23, ~0.984]
+     William Onyeabor — Body and Soul   [afrobeat, pop 32, ~0.983]
+     Orlando Julius — Ololufe Mi   [afropop, pop 20, ~0.983]
+     Ebo Taylor — Atwer Abroba   [old school highlife, pop 42, ~0.983]
+
+=== Shreya Ghoshal  [region US]  liked-as "Shreya Ghoshal"
+  seed in graph: NOT FOUND
+  -> Sounds like Shreya Ghoshal  |  Artists whose sound sits closest to theirs  (12 rows)
+     Shweta Pandit — Tere Ho Ke Rahenge - Reprise   [filmi, pop 49, ~1.000]
+     Asees Kaur — Marjaawaan   [desi pop, pop 49, ~0.999]
+     Avadhoot Gupte — Bawara   [filmi, pop 41, ~0.999]
+     Yashita Sharma — Chaandaniya (From "2 States")   [modern bollywood, pop 52, ~0.999]
+     Sachin Sanghvi — Bhuli Gaya   [gujarati pop, pop 5, ~0.998]
+     Harshdeep Kaur — Jannat   [sufi, pop 45, ~0.998]
+     Saleel Kulkarni — He Gajavadan   [marathi pop, pop 29, ~0.998]
+     Milind Ingle — Chhui Mui Si Tum Lagti Ho   [marathi pop, pop 38, ~0.998]
+     Bharath B J — Hale Gujuri Hosa Battery   [sandalwood, pop 19, ~0.998]
+     Vidyasagar — Nilamalare   [filmi, pop 57, ~0.998]
+     Shabab Sabri — Chaap Tilak   [filmi, pop 39, ~0.998]
+     A.M. Turaz — Phool Gendwa Na Maaro   [modern bollywood, pop 42, ~0.998]
+
+=== Shreya Ghoshal  [region IN]  liked-as "Shreya Ghoshal"
+  seed in graph: NOT FOUND
+  -> Sounds like Shreya Ghoshal  |  Artists whose sound sits closest to theirs  (12 rows)
+     Shweta Pandit — Tere Ho Ke Rahenge - Reprise   [filmi, pop 49, ~1.000]
+     Asees Kaur — Marjaawaan   [desi pop, pop 49, ~0.999]
+     Avadhoot Gupte — Bawara   [filmi, pop 41, ~0.999]
+     Yashita Sharma — Chaandaniya (From "2 States")   [modern bollywood, pop 52, ~0.999]
+     Sachin Sanghvi — Bhuli Gaya   [gujarati pop, pop 5, ~0.998]
+     Harshdeep Kaur — Jannat   [sufi, pop 45, ~0.998]
+     Saleel Kulkarni — He Gajavadan   [marathi pop, pop 29, ~0.998]
+     Milind Ingle — Chhui Mui Si Tum Lagti Ho   [marathi pop, pop 38, ~0.998]
+     Bharath B J — Hale Gujuri Hosa Battery   [sandalwood, pop 19, ~0.998]
+     Vidyasagar — Nilamalare   [filmi, pop 57, ~0.998]
+     Shabab Sabri — Chaap Tilak   [filmi, pop 39, ~0.998]
+     A.M. Turaz — Phool Gendwa Na Maaro   [modern bollywood, pop 42, ~0.998]
+
+=== Lata Mangeshkar  [region US]  liked-as "Lata Mangeshkar"
+  seed in graph: Lata Mangeshkar / IN / conf 0.98 / pop 2 / aeb71bd8-447d-4415-8ea1-2b7d664f67e1
+  seed sound: yes
+    NB	Lata Mangeshkar	Geeta Dutt	LB	0.996	filmi	people 1
+    NB	Lata Mangeshkar	Mukesh	LB	0.995	filmi	people 1
+    NB	Lata Mangeshkar	Arijit Singh	LB	0.998	filmi	people 1
+    NB	Lata Mangeshkar	Jagjit Singh	LB	0.998	ghazal	people 1
+    NB	Lata Mangeshkar	A. R. Rahman	LB	0.991	filmi	people 1
+    NB	Lata Mangeshkar	Kishore Kumar	LB	0.999	classic bollywood	people 1
+    NB	Lata Mangeshkar	Asha Bhosle	LB	0.968	filmi	people 1
+    NB	Lata Mangeshkar	Manna Dey	LB	0.992	classic bollywood	people 1
+    NB	Lata Mangeshkar	Udit Narayan	LB	0.941	chutney	people 1
+    NB	Lata Mangeshkar	Mohammed Rafi	LB	0.995	classic bollywood	people 1
+    NB	Lata Mangeshkar	Sonu Nigam	LB	0.994	filmi	people 1
+    NB	Lata Mangeshkar	Alka Yagnik	LB	0.988	hare krishna	people 1
+    NB	Lata Mangeshkar	Kumar Sanu	LB	0.987	filmi	people 1
+    NB	Lata Mangeshkar	Amit Kumar	LB	0.994	filmi	people 1
+    NB	Lata Mangeshkar	KK	LB	0.989	filmi	people 3
+    NB	Lata Mangeshkar	Shankar Mahadevan	LB	0.989	filmi	people 1
+    NB	Lata Mangeshkar	Kavita Krishnamurthy	LB	0.995	classic bollywood	people 1
+    NB	Lata Mangeshkar	S. P. Balasubrahmanyam	LB	0.998	filmi	people 1
+    NB	Lata Mangeshkar	Mohit Chauhan	LB	0.996	filmi	people 1
+    NB	Lata Mangeshkar	Mahendra Kapoor	LB	0.998	filmi	people 1
+    NB	Lata Mangeshkar	Abhijeet	LB	0.990	filmi	people 1
+    NB	Lata Mangeshkar	Ravi Shankar	LB	0.970	hindustani classical	people 1
+  graph neighbours (24): Geeta Dutt(LB 1.00 ~0.996), Mukesh(LB 1.00 ~0.995), Arijit Singh(LB 1.00 ~0.998), Jagjit Singh(LB 1.00 ~0.998), A. R. Rahman(LB 1.00 ~0.991), Kishore Kumar(LB 1.00 ~0.999), Asha Bhosle(LB 1.00 ~0.968), Manna Dey(LB 1.00 ~0.992), Udit Narayan(LB 1.00 ~0.941), Hemanta Mukherjee(LB 1.00 ~-nocat), Mohammed Rafi(LB 1.00 ~0.995), Sonu Nigam(LB 1.00 ~0.994), Alka Yagnik(LB 1.00 ~0.988), Rahul Dev Burman(LB 1.00 ~-nocat), Kumar Sanu(LB 0.97 ~0.987), Amit Kumar(LB 0.90 ~0.994), KK(LB 0.81 ~0.989), Shankar Mahadevan(LB 0.72 ~0.989), Kavita Krishnamurthy(LB 0.68 ~0.995), S. P. Balasubrahmanyam(LB 0.67 ~0.998), Mohit Chauhan(LB 0.61 ~0.996), Mahendra Kapoor(LB 0.51 ~0.998), Abhijeet(LB 0.50 ~0.990), Ravi Shankar(LB 0.50 ~0.970)
+  -> Because you like Lata Mangeshkar  |  People who listen to Lata Mangeshkar also play these  (12 rows)
+     Kishore Kumar — Yeh Sham Mastani   [classic bollywood, pop 68, ~0.999]
+     S. P. Balasubrahmanyam — Ayyayo   [filmi, pop 68, ~0.998]
+     Mahendra Kapoor — Tum Agar Saath Dene Ka Vada Karo   [filmi, pop 53, ~0.998]
+     Arijit Singh — Tujhe Kitna Chahne Lage (From "Kabir Singh")   [filmi, pop 80, ~0.998]
+     Jagjit Singh — Hothon Se Chhu Lo Tum - From "Prem Geet"   [ghazal, pop 63, ~0.998]
+     Mohit Chauhan — Jab Tu Sajan (From "Aap Jaisa Koi")   [filmi, pop 71, ~0.996]
+     Geeta Dutt — Babuji Dheere Chalna   [filmi, pop 48, ~0.996]
+     Mukesh — Main Pal Do Pal Ka Shair Hoon   [filmi, pop 64, ~0.995]
+     Kishore Kumar — Neele Neele Ambar Par - Male Version   [classic bollywood, pop 67, ~0.999]
+     S. P. Balasubrahmanyam — Yamma Yamma   [filmi, pop 63, ~0.998]
+     Mahendra Kapoor — Chalo Ek Baar Phir Se   [filmi, pop 50, ~0.998]
+     Arijit Singh — Sajni (From "Laapataa Ladies")   [filmi, pop 80, ~0.998]
+
+=== Lata Mangeshkar  [region IN]  liked-as "Lata Mangeshkar"
+  seed in graph: Lata Mangeshkar / IN / conf 0.98 / pop 2 / aeb71bd8-447d-4415-8ea1-2b7d664f67e1
+  seed sound: yes
+    NB	Lata Mangeshkar	Geeta Dutt	LB	0.996	filmi	people 1
+    NB	Lata Mangeshkar	Mukesh	LB	0.995	filmi	people 1
+    NB	Lata Mangeshkar	Arijit Singh	LB	0.998	filmi	people 1
+    NB	Lata Mangeshkar	Jagjit Singh	LB	0.998	ghazal	people 1
+    NB	Lata Mangeshkar	A. R. Rahman	LB	0.991	filmi	people 1
+    NB	Lata Mangeshkar	Kishore Kumar	LB	0.999	classic bollywood	people 1
+    NB	Lata Mangeshkar	Asha Bhosle	LB	0.968	filmi	people 1
+    NB	Lata Mangeshkar	Manna Dey	LB	0.992	classic bollywood	people 1
+    NB	Lata Mangeshkar	Udit Narayan	LB	0.941	chutney	people 1
+    NB	Lata Mangeshkar	Mohammed Rafi	LB	0.995	classic bollywood	people 1
+    NB	Lata Mangeshkar	Sonu Nigam	LB	0.994	filmi	people 1
+    NB	Lata Mangeshkar	Alka Yagnik	LB	0.988	hare krishna	people 1
+    NB	Lata Mangeshkar	Kumar Sanu	LB	0.987	filmi	people 1
+    NB	Lata Mangeshkar	Amit Kumar	LB	0.994	filmi	people 1
+    NB	Lata Mangeshkar	KK	LB	0.989	filmi	people 3
+    NB	Lata Mangeshkar	Shankar Mahadevan	LB	0.989	filmi	people 1
+    NB	Lata Mangeshkar	Kavita Krishnamurthy	LB	0.995	classic bollywood	people 1
+    NB	Lata Mangeshkar	S. P. Balasubrahmanyam	LB	0.998	filmi	people 1
+    NB	Lata Mangeshkar	Mohit Chauhan	LB	0.996	filmi	people 1
+    NB	Lata Mangeshkar	Mahendra Kapoor	LB	0.998	filmi	people 1
+    NB	Lata Mangeshkar	Abhijeet	LB	0.990	filmi	people 1
+    NB	Lata Mangeshkar	Ravi Shankar	LB	0.970	hindustani classical	people 1
+  graph neighbours (24): Geeta Dutt(LB 1.00 ~0.996), Mukesh(LB 1.00 ~0.995), Arijit Singh(LB 1.00 ~0.998), Jagjit Singh(LB 1.00 ~0.998), A. R. Rahman(LB 1.00 ~0.991), Kishore Kumar(LB 1.00 ~0.999), Asha Bhosle(LB 1.00 ~0.968), Manna Dey(LB 1.00 ~0.992), Udit Narayan(LB 1.00 ~0.941), Hemanta Mukherjee(LB 1.00 ~-nocat), Mohammed Rafi(LB 1.00 ~0.995), Sonu Nigam(LB 1.00 ~0.994), Alka Yagnik(LB 1.00 ~0.988), Rahul Dev Burman(LB 1.00 ~-nocat), Kumar Sanu(LB 0.97 ~0.987), Amit Kumar(LB 0.90 ~0.994), KK(LB 0.81 ~0.989), Shankar Mahadevan(LB 0.72 ~0.989), Kavita Krishnamurthy(LB 0.68 ~0.995), S. P. Balasubrahmanyam(LB 0.67 ~0.998), Mohit Chauhan(LB 0.61 ~0.996), Mahendra Kapoor(LB 0.51 ~0.998), Abhijeet(LB 0.50 ~0.990), Ravi Shankar(LB 0.50 ~0.970)
+  -> Because you like Lata Mangeshkar  |  People who listen to Lata Mangeshkar also play these  (12 rows)
+     Kishore Kumar — Yeh Sham Mastani   [classic bollywood, pop 68, ~0.999]
+     S. P. Balasubrahmanyam — Ayyayo   [filmi, pop 68, ~0.998]
+     Mahendra Kapoor — Tum Agar Saath Dene Ka Vada Karo   [filmi, pop 53, ~0.998]
+     Arijit Singh — Tujhe Kitna Chahne Lage (From "Kabir Singh")   [filmi, pop 80, ~0.998]
+     Jagjit Singh — Hothon Se Chhu Lo Tum - From "Prem Geet"   [ghazal, pop 63, ~0.998]
+     Mohit Chauhan — Jab Tu Sajan (From "Aap Jaisa Koi")   [filmi, pop 71, ~0.996]
+     Geeta Dutt — Babuji Dheere Chalna   [filmi, pop 48, ~0.996]
+     Mukesh — Main Pal Do Pal Ka Shair Hoon   [filmi, pop 64, ~0.995]
+     Kishore Kumar — Neele Neele Ambar Par - Male Version   [classic bollywood, pop 67, ~0.999]
+     S. P. Balasubrahmanyam — Yamma Yamma   [filmi, pop 63, ~0.998]
+     Mahendra Kapoor — Chalo Ek Baar Phir Se   [filmi, pop 50, ~0.998]
+     Arijit Singh — Sajni (From "Laapataa Ladies")   [filmi, pop 80, ~0.998]
+
+=== Vishal–Shekhar  [region US]  liked-as "Vishal–Shekhar"
+  seed in graph: Vishal-Shekhar / IN / conf 0.8 / pop 1 / 2df4ce6a-87d6-49e5-b140-4e71066f996c
+  seed sound: yes
+    NB	Vishal–Shekhar	Arijit Singh	LB	0.993	filmi	people 1
+    NB	Vishal–Shekhar	Mohit Chauhan	LB	0.997	filmi	people 1
+    NB	Vishal–Shekhar	A. R. Rahman	LB	0.999	filmi	people 1
+    NB	Vishal–Shekhar	Sunidhi Chauhan	LB	0.996	filmi	people 1
+    NB	Vishal–Shekhar	Sonu Nigam	LB	0.998	filmi	people 1
+    NB	Vishal–Shekhar	Alka Yagnik	LB	0.994	hare krishna	people 1
+    NB	Vishal–Shekhar	Shaan	LB	0.994	filmi	people 2
+    NB	Vishal–Shekhar	Kishore Kumar	LB	0.993	classic bollywood	people 1
+    NB	Vishal–Shekhar	Udit Narayan	LB	0.944	chutney	people 1
+    NB	Vishal–Shekhar	Vishal Dadlani	st	0.994	filmi	people 1
+  graph neighbours (10): Arijit Singh(LB 1.00 ~0.993), Mohit Chauhan(LB 0.87 ~0.997), A. R. Rahman(LB 0.84 ~0.999), Sunidhi Chauhan(LB 0.60 ~0.996), Sonu Nigam(LB 0.49 ~0.998), Alka Yagnik(LB 0.41 ~0.994), Shaan(LB 0.27 ~0.994), Kishore Kumar(LB 0.23 ~0.993), Udit Narayan(LB 0.18 ~0.944), Vishal Dadlani(st 0.38 ~0.994)
+  -> Because you like Vishal-Shekhar  |  What listeners of Vishal-Shekhar play, and artists linked to them  (12 rows)
+     A.R. Rahman — Muththa Mazhai (Reprise)   [filmi, pop 77, ~0.999]
+     Sonu Nigam — Tumse Milke Dil Ka   [filmi, pop 69, ~0.998]
+     Mohit Chauhan — Jab Tu Sajan (From "Aap Jaisa Koi")   [filmi, pop 71, ~0.997]
+     Sunidhi Chauhan — AANKH   [filmi, pop 74, ~0.996]
+     Shaan — Chand Sifarish   [filmi, pop 71, ~0.994]
+     Alka Yagnik — Choli Ke Peeche (From "Crew")   [hare krishna, pop 70, ~0.994]
+     Vishal Dadlani — Jee Le Zaraa   [filmi, pop 68, ~0.994]
+     Arijit Singh — Tujhe Kitna Chahne Lage (From "Kabir Singh")   [filmi, pop 80, ~0.993]
+     A.R. Rahman — Tere Bina   [filmi, pop 74, ~0.999]
+     Sonu Nigam — Kal Ho Naa Ho   [filmi, pop 67, ~0.998]
+     Mohit Chauhan — Rang Lageya   [filmi, pop 70, ~0.997]
+     Sunidhi Chauhan — Halka Halka (From "Fanney Khan")   [filmi, pop 66, ~0.996]
+
+=== Vishal–Shekhar  [region IN]  liked-as "Vishal–Shekhar"
+  seed in graph: Vishal-Shekhar / IN / conf 0.8 / pop 1 / 2df4ce6a-87d6-49e5-b140-4e71066f996c
+  seed sound: yes
+    NB	Vishal–Shekhar	Arijit Singh	LB	0.993	filmi	people 1
+    NB	Vishal–Shekhar	Mohit Chauhan	LB	0.997	filmi	people 1
+    NB	Vishal–Shekhar	A. R. Rahman	LB	0.999	filmi	people 1
+    NB	Vishal–Shekhar	Sunidhi Chauhan	LB	0.996	filmi	people 1
+    NB	Vishal–Shekhar	Sonu Nigam	LB	0.998	filmi	people 1
+    NB	Vishal–Shekhar	Alka Yagnik	LB	0.994	hare krishna	people 1
+    NB	Vishal–Shekhar	Shaan	LB	0.994	filmi	people 2
+    NB	Vishal–Shekhar	Kishore Kumar	LB	0.993	classic bollywood	people 1
+    NB	Vishal–Shekhar	Udit Narayan	LB	0.944	chutney	people 1
+    NB	Vishal–Shekhar	Vishal Dadlani	st	0.994	filmi	people 1
+  graph neighbours (10): Arijit Singh(LB 1.00 ~0.993), Mohit Chauhan(LB 0.87 ~0.997), A. R. Rahman(LB 0.84 ~0.999), Sunidhi Chauhan(LB 0.60 ~0.996), Sonu Nigam(LB 0.49 ~0.998), Alka Yagnik(LB 0.41 ~0.994), Shaan(LB 0.27 ~0.994), Kishore Kumar(LB 0.23 ~0.993), Udit Narayan(LB 0.18 ~0.944), Vishal Dadlani(st 0.38 ~0.994)
+  -> Because you like Vishal-Shekhar  |  What listeners of Vishal-Shekhar play, and artists linked to them  (12 rows)
+     A.R. Rahman — Muththa Mazhai (Reprise)   [filmi, pop 77, ~0.999]
+     Sonu Nigam — Tumse Milke Dil Ka   [filmi, pop 69, ~0.998]
+     Mohit Chauhan — Jab Tu Sajan (From "Aap Jaisa Koi")   [filmi, pop 71, ~0.997]
+     Sunidhi Chauhan — AANKH   [filmi, pop 74, ~0.996]
+     Shaan — Chand Sifarish   [filmi, pop 71, ~0.994]
+     Alka Yagnik — Choli Ke Peeche (From "Crew")   [hare krishna, pop 70, ~0.994]
+     Vishal Dadlani — Jee Le Zaraa   [filmi, pop 68, ~0.994]
+     Arijit Singh — Tujhe Kitna Chahne Lage (From "Kabir Singh")   [filmi, pop 80, ~0.993]
+     A.R. Rahman — Tere Bina   [filmi, pop 74, ~0.999]
+     Sonu Nigam — Kal Ho Naa Ho   [filmi, pop 67, ~0.998]
+     Mohit Chauhan — Rang Lageya   [filmi, pop 70, ~0.997]
+     Sunidhi Chauhan — Halka Halka (From "Fanney Khan")   [filmi, pop 66, ~0.996]
+
+=== Sidhu Moose Wala  [region US]  liked-as "Sidhu Moose Wala"
+  seed in graph: Sidhu Moose Wala / IN-HR / conf 0.7 / pop 1 / 119a6864-622b-4e6c-8aab-a422080530c6
+  seed sound: yes
+    NB	Sidhu Moose Wala	Diljit Dosanjh	LB	0.993	punjabi pop	people 1
+    NB	Sidhu Moose Wala	Shubh	LB	0.994	punjabi hip hop	people 1
+    NB	Sidhu Moose Wala	Karan Aujla	LB	0.996	punjabi pop	people 1
+    NB	Sidhu Moose Wala	Gurinder Gill	LB	0.992	punjabi pop	people 1
+    NB	Sidhu Moose Wala	The Kidd	LB	0.988	punjabi pop	people 1
+    NB	Sidhu Moose Wala	Guru Randhawa	LB	0.990	filmi	people 1
+    NB	Sidhu Moose Wala	Arjan Dhillon	LB	0.996	punjabi pop	people 1
+    NB	Sidhu Moose Wala	Prem Dhillon	LB	0.992	punjabi pop	people 1
+    NB	Sidhu Moose Wala	Jass Manak	LB	0.993	punjabi pop	people 1
+    NB	Sidhu Moose Wala	Harnoor	LB	0.987	punjabi pop	people 1
+    NB	Sidhu Moose Wala	The Landers	LB	0.993	punjabi pop	people 1
+    NB	Sidhu Moose Wala	NseeB	LB	0.994	punjabi pop	people 1
+    NB	Sidhu Moose Wala	B Praak	LB	0.986	punjabi pop	people 1
+    NB	Sidhu Moose Wala	Harrdy Sandhu	LB	0.989	punjabi pop	people 1
+    NB	Sidhu Moose Wala	Amrinder Gill	LB	0.993	punjabi pop	people 1
+    NB	Sidhu Moose Wala	Maninder Buttar	LB	0.994	punjabi pop	people 1
+    NB	Sidhu Moose Wala	Nirvair Pannu	LB	0.989	punjabi pop	people 1
+    NB	Sidhu Moose Wala	Akhil	LB	0.987	punjabi pop	people 1
+    NB	Sidhu Moose Wala	Asees Kaur	LB	0.985	desi pop	people 1
+    NB	Sidhu Moose Wala	Ammy Virk	LB	0.986	punjabi pop	people 1
+    NB	Sidhu Moose Wala	Mickey Singh	LB	0.991	desi pop	people 1
+    NB	Sidhu Moose Wala	Gurnam Bhullar	LB	0.986	punjabi pop	people 1
+    NB	Sidhu Moose Wala	Arijit Singh	LB	0.973	filmi	people 1
+    NB	Sidhu Moose Wala	Neha Kakkar	LB	0.989	filmi	people 1
+    NB	Sidhu Moose Wala	Yo Yo Honey Singh	LB	0.991	modern bollywood	people 1
+    NB	Sidhu Moose Wala	Tarsem Jassar	LB	0.992	punjabi pop	people 1
+  graph neighbours (29): Diljit Dosanjh(LB 0.96 ~0.993), Shubh(LB 0.64 ~0.994), Karan Aujla(LB 0.50 ~0.996), Gurinder Gill(LB 0.39 ~0.992), The Kidd(LB 0.37 ~0.988), Guru Randhawa(LB 0.32 ~0.990), Arjan Dhillon(LB 0.29 ~0.996), Prem Dhillon(LB 0.28 ~0.992), Jass Manak(LB 0.27 ~0.993), Harnoor(LB 0.26 ~0.987), The Landers(LB 0.25 ~0.993), NseeB(LB 0.23 ~0.994), B Praak(LB 0.23 ~0.986), Harrdy Sandhu(LB 0.20 ~0.989), Shinda Kahlon(LB 0.17 ~-nocat), Amrinder Gill(LB 0.17 ~0.993), Maninder Buttar(LB 0.15 ~0.994), Nirvair Pannu(LB 0.15 ~0.989), Jassi Gill(LB 0.14 ~-nocat), Akhil(LB 0.13 ~0.987), Asees Kaur(LB 0.12 ~0.985), Ammy Virk(LB 0.12 ~0.986), Mickey Singh(LB 0.11 ~0.991), Gurnam Bhullar(LB 0.11 ~0.986), Arijit Singh(LB 0.21 ~0.973), Neha Kakkar(LB 0.11 ~0.989), Yo Yo Honey Singh(LB 0.11 ~0.991), MUSIC NK(st 0.38 ~-nocat), Tarsem Jassar(LB 0.11 ~0.992)
+  -> Because you like Sidhu Moose Wala  |  People who listen to Sidhu Moose Wala also play these  (12 rows)
+     Arjan Dhillon — Gears   [punjabi pop, pop 71, ~0.996]
+     Karan Aujla — Wavy   [punjabi pop, pop 80, ~0.996]
+     Shubh — Fell For You   [punjabi hip hop, pop 75, ~0.994]
+     Maninder Buttar — Sakhiyaan   [punjabi pop, pop 67, ~0.994]
+     NseeB — Supreme   [punjabi pop, pop 55, ~0.994]
+     Jass Manak — Prada   [punjabi pop, pop 62, ~0.993]
+     The Landers — Gustakhiyan   [punjabi pop, pop 55, ~0.993]
+     Diljit Dosanjh — Naina (From "Crew")   [punjabi pop, pop 76, ~0.993]
+     Arjan Dhillon — Ok Hoye Paye Haan   [punjabi pop, pop 71, ~0.996]
+     Karan Aujla — Softly   [punjabi pop, pop 77, ~0.996]
+     Shubh — Cheques   [punjabi hip hop, pop 75, ~0.994]
+     Maninder Buttar — Ik Tera   [punjabi pop, pop 66, ~0.994]
+
+=== Sidhu Moose Wala  [region IN]  liked-as "Sidhu Moose Wala"
+  seed in graph: Sidhu Moose Wala / IN-HR / conf 0.7 / pop 1 / 119a6864-622b-4e6c-8aab-a422080530c6
+  seed sound: yes
+    NB	Sidhu Moose Wala	Diljit Dosanjh	LB	0.993	punjabi pop	people 1
+    NB	Sidhu Moose Wala	Shubh	LB	0.994	punjabi hip hop	people 1
+    NB	Sidhu Moose Wala	Karan Aujla	LB	0.996	punjabi pop	people 1
+    NB	Sidhu Moose Wala	Gurinder Gill	LB	0.992	punjabi pop	people 1
+    NB	Sidhu Moose Wala	The Kidd	LB	0.988	punjabi pop	people 1
+    NB	Sidhu Moose Wala	Guru Randhawa	LB	0.990	filmi	people 1
+    NB	Sidhu Moose Wala	Arjan Dhillon	LB	0.996	punjabi pop	people 1
+    NB	Sidhu Moose Wala	Prem Dhillon	LB	0.992	punjabi pop	people 1
+    NB	Sidhu Moose Wala	Jass Manak	LB	0.993	punjabi pop	people 1
+    NB	Sidhu Moose Wala	Harnoor	LB	0.987	punjabi pop	people 1
+    NB	Sidhu Moose Wala	The Landers	LB	0.993	punjabi pop	people 1
+    NB	Sidhu Moose Wala	NseeB	LB	0.994	punjabi pop	people 1
+    NB	Sidhu Moose Wala	B Praak	LB	0.986	punjabi pop	people 1
+    NB	Sidhu Moose Wala	Harrdy Sandhu	LB	0.989	punjabi pop	people 1
+    NB	Sidhu Moose Wala	Amrinder Gill	LB	0.993	punjabi pop	people 1
+    NB	Sidhu Moose Wala	Maninder Buttar	LB	0.994	punjabi pop	people 1
+    NB	Sidhu Moose Wala	Nirvair Pannu	LB	0.989	punjabi pop	people 1
+    NB	Sidhu Moose Wala	Akhil	LB	0.987	punjabi pop	people 1
+    NB	Sidhu Moose Wala	Asees Kaur	LB	0.985	desi pop	people 1
+    NB	Sidhu Moose Wala	Ammy Virk	LB	0.986	punjabi pop	people 1
+    NB	Sidhu Moose Wala	Mickey Singh	LB	0.991	desi pop	people 1
+    NB	Sidhu Moose Wala	Gurnam Bhullar	LB	0.986	punjabi pop	people 1
+    NB	Sidhu Moose Wala	Arijit Singh	LB	0.973	filmi	people 1
+    NB	Sidhu Moose Wala	Neha Kakkar	LB	0.989	filmi	people 1
+    NB	Sidhu Moose Wala	Yo Yo Honey Singh	LB	0.991	modern bollywood	people 1
+    NB	Sidhu Moose Wala	Tarsem Jassar	LB	0.992	punjabi pop	people 1
+  graph neighbours (29): Diljit Dosanjh(LB 0.96 ~0.993), Shubh(LB 0.64 ~0.994), Karan Aujla(LB 0.50 ~0.996), Gurinder Gill(LB 0.39 ~0.992), The Kidd(LB 0.37 ~0.988), Guru Randhawa(LB 0.32 ~0.990), Arjan Dhillon(LB 0.29 ~0.996), Prem Dhillon(LB 0.28 ~0.992), Jass Manak(LB 0.27 ~0.993), Harnoor(LB 0.26 ~0.987), The Landers(LB 0.25 ~0.993), NseeB(LB 0.23 ~0.994), B Praak(LB 0.23 ~0.986), Harrdy Sandhu(LB 0.20 ~0.989), Shinda Kahlon(LB 0.17 ~-nocat), Amrinder Gill(LB 0.17 ~0.993), Maninder Buttar(LB 0.15 ~0.994), Nirvair Pannu(LB 0.15 ~0.989), Jassi Gill(LB 0.14 ~-nocat), Akhil(LB 0.13 ~0.987), Asees Kaur(LB 0.12 ~0.985), Ammy Virk(LB 0.12 ~0.986), Mickey Singh(LB 0.11 ~0.991), Gurnam Bhullar(LB 0.11 ~0.986), Arijit Singh(LB 0.21 ~0.973), Neha Kakkar(LB 0.11 ~0.989), Yo Yo Honey Singh(LB 0.11 ~0.991), MUSIC NK(st 0.38 ~-nocat), Tarsem Jassar(LB 0.11 ~0.992)
+  -> Because you like Sidhu Moose Wala  |  People who listen to Sidhu Moose Wala also play these  (12 rows)
+     Arjan Dhillon — Gears   [punjabi pop, pop 71, ~0.996]
+     Karan Aujla — Wavy   [punjabi pop, pop 80, ~0.996]
+     Shubh — Fell For You   [punjabi hip hop, pop 75, ~0.994]
+     Maninder Buttar — Sakhiyaan   [punjabi pop, pop 67, ~0.994]
+     NseeB — Supreme   [punjabi pop, pop 55, ~0.994]
+     Jass Manak — Prada   [punjabi pop, pop 62, ~0.993]
+     The Landers — Gustakhiyan   [punjabi pop, pop 55, ~0.993]
+     Diljit Dosanjh — Naina (From "Crew")   [punjabi pop, pop 76, ~0.993]
+     Arjan Dhillon — Ok Hoye Paye Haan   [punjabi pop, pop 71, ~0.996]
+     Karan Aujla — Softly   [punjabi pop, pop 77, ~0.996]
+     Shubh — Cheques   [punjabi hip hop, pop 75, ~0.994]
+     Maninder Buttar — Ik Tera   [punjabi pop, pop 66, ~0.994]
+
+=== Karan Aujla  [region US]  liked-as "Karan Aujla"
+  seed in graph: Karan Aujla / IN / conf 0.8 / pop 0 / 4a779683-5404-4b90-a0d7-242495158265
+  seed sound: yes
+    NB	Karan Aujla	Sidhu Moose Wala	LB	0.996	pakistani hip hop	people 1
+    NB	Karan Aujla	Arjan Dhillon	LB	0.997	punjabi pop	people 1
+  graph neighbours (2): Sidhu Moose Wala(LB 0.50 ~0.996), Arjan Dhillon(LB 0.31 ~0.997)
+  -> Because you like Karan Aujla  |  People who listen to Karan Aujla also play these  (4 rows)
+     Arjan Dhillon — Gears   [punjabi pop, pop 71, ~0.997]
+     Sidhu Moose Wala — 0008   [pakistani hip hop, pop 76, ~0.996]
+     Arjan Dhillon — Ok Hoye Paye Haan   [punjabi pop, pop 71, ~0.997]
+     Sidhu Moose Wala — Take Notes   [pakistani hip hop, pop 75, ~0.996]
+
+=== Karan Aujla  [region IN]  liked-as "Karan Aujla"
+  seed in graph: Karan Aujla / IN / conf 0.8 / pop 0 / 4a779683-5404-4b90-a0d7-242495158265
+  seed sound: yes
+    NB	Karan Aujla	Sidhu Moose Wala	LB	0.996	pakistani hip hop	people 1
+    NB	Karan Aujla	Arjan Dhillon	LB	0.997	punjabi pop	people 1
+  graph neighbours (2): Sidhu Moose Wala(LB 0.50 ~0.996), Arjan Dhillon(LB 0.31 ~0.997)
+  -> Because you like Karan Aujla  |  People who listen to Karan Aujla also play these  (4 rows)
+     Arjan Dhillon — Gears   [punjabi pop, pop 71, ~0.997]
+     Sidhu Moose Wala — 0008   [pakistani hip hop, pop 76, ~0.996]
+     Arjan Dhillon — Ok Hoye Paye Haan   [punjabi pop, pop 71, ~0.997]
+     Sidhu Moose Wala — Take Notes   [pakistani hip hop, pop 75, ~0.996]
+
+=== Fairuz  [region US]  liked-as "Fairuz"
+  seed in graph: NOT FOUND
+  -> Sounds like Fairuz  |  Artists whose sound sits closest to theirs  (12 rows)
+     Fayza Ahmed — Set El Habayib   [syrian pop, pop 36, ~0.997]
+     Faia Younan — Ya Qatily   [arab alternative, pop 38, ~0.997]
+     Abdel Halim Hafez — Gana El Hawa   [classic arab pop, pop 46, ~0.997]
+     Sayed Darwish — Zourouni Kouli Sanah Marah   [classic arab pop, pop 39, ~0.997]
+     Melhem Barakat — Habbaytek Wu Bhibek   [lebanese pop, pop 38, ~0.996]
+     Sabah — Yana Yana   [lebanese pop, pop 50, ~0.995]
+     Majida El Roumi — Kalimat   [lebanese pop, pop 49, ~0.995]
+     Zaki Nassif — Frasha Wa Zahra   [lebanese pop, pop 39, ~0.995]
+     Aida el Ayoubi — Asfour   [arab pop, pop 42, ~0.995]
+     Tamer Ashour — Youm Ma Tensa   [arab pop, pop 59, ~0.994]
+     Hussein Al Deek — Jamalek Ma Byekhlas   [dabke, pop 38, ~0.994]
+     Rahma Riad — Ha Khouya   [khaliji, pop 37, ~0.994]
+
+=== Fairuz  [region LB]  liked-as "Fairuz"
+  seed in graph: NOT FOUND
+  -> Sounds like Fairuz  |  Artists whose sound sits closest to theirs  (12 rows)
+     Fayza Ahmed — Set El Habayib   [syrian pop, pop 36, ~0.997]
+     Faia Younan — Ya Qatily   [arab alternative, pop 38, ~0.997]
+     Abdel Halim Hafez — Gana El Hawa   [classic arab pop, pop 46, ~0.997]
+     Sayed Darwish — Zourouni Kouli Sanah Marah   [classic arab pop, pop 39, ~0.997]
+     Melhem Barakat — Habbaytek Wu Bhibek   [lebanese pop, pop 38, ~0.996]
+     Sabah — Yana Yana   [lebanese pop, pop 50, ~0.995]
+     Majida El Roumi — Kalimat   [lebanese pop, pop 49, ~0.995]
+     Zaki Nassif — Frasha Wa Zahra   [lebanese pop, pop 39, ~0.995]
+     Aida el Ayoubi — Asfour   [arab pop, pop 42, ~0.995]
+     Tamer Ashour — Youm Ma Tensa   [arab pop, pop 59, ~0.994]
+     Hussein Al Deek — Jamalek Ma Byekhlas   [dabke, pop 38, ~0.994]
+     Rahma Riad — Ha Khouya   [khaliji, pop 37, ~0.994]
+
+=== Amr Diab  [region US]  liked-as "Amr Diab"
+  seed in graph: NOT FOUND
+  -> Sounds like Amr Diab  |  Artists whose sound sits closest to theirs  (12 rows)
+     Hamid Al Shaeri — Reet   [libyan pop, pop 43, ~0.996]
+     Wael Kfoury — El Bint El Awiye   [arab pop, pop 54, ~0.995]
+     Najwa Karam — يلعن البعد   [arab pop, pop 38, ~0.994]
+     Nourhanne — Habibi Ya Einy   [arab pop, pop 37, ~0.993]
+     Adnan Sefiani — Ya men saken abda   [andalusian classical, pop 24, ~0.992]
+     Maher Zain — Baraka Allahu Lakuma   [sholawat, pop 67, ~0.992]
+     Bashir Abdel Aal — Ta'ala Oullak   [middle eastern traditional, pop 15, ~0.992]
+     Fadel Chaker — Ya Ghayeb   [lebanese pop, pop 63, ~0.991]
+     Mahmoud Fadl — Ya Imam Al Rusli   [nubian traditional, pop 25, ~0.991]
+     Rachid Taha — Ya Rayah   [rai, pop 51, ~0.991]
+     Mohamed Bajeddoub — La Jamal ila jamalo al ajib / لا جمال إلا جمال العجيب   [andalusian classical, pop 26, ~0.991]
+     Mohamed Youssef — Love and Life   [egyptian pop, pop 50, ~0.991]
+
+=== Amr Diab  [region EG]  liked-as "Amr Diab"
+  seed in graph: NOT FOUND
+  -> Sounds like Amr Diab  |  Artists whose sound sits closest to theirs  (12 rows)
+     Hamid Al Shaeri — Reet   [libyan pop, pop 43, ~0.996]
+     Wael Kfoury — El Bint El Awiye   [arab pop, pop 54, ~0.995]
+     Najwa Karam — يلعن البعد   [arab pop, pop 38, ~0.994]
+     Nourhanne — Habibi Ya Einy   [arab pop, pop 37, ~0.993]
+     Adnan Sefiani — Ya men saken abda   [andalusian classical, pop 24, ~0.992]
+     Maher Zain — Baraka Allahu Lakuma   [sholawat, pop 67, ~0.992]
+     Bashir Abdel Aal — Ta'ala Oullak   [middle eastern traditional, pop 15, ~0.992]
+     Fadel Chaker — Ya Ghayeb   [lebanese pop, pop 63, ~0.991]
+     Mahmoud Fadl — Ya Imam Al Rusli   [nubian traditional, pop 25, ~0.991]
+     Rachid Taha — Ya Rayah   [rai, pop 51, ~0.991]
+     Mohamed Bajeddoub — La Jamal ila jamalo al ajib / لا جمال إلا جمال العجيب   [andalusian classical, pop 26, ~0.991]
+     Mohamed Youssef — Love and Life   [egyptian pop, pop 50, ~0.991]
+
+=== Umm Kulthum  [region US]  liked-as "Umm Kulthum"
+  seed in graph: NOT FOUND
+  -> Sounds like Umm Kulthum  |  Artists whose sound sits closest to theirs  (12 rows)
+     Munir Bashir — Taqsîm en maqâm : Kurdî   [middle eastern traditional, pop 26, ~0.942]
+     Zein Al-Jundi — Qaddukal Mayyas   [middle eastern traditional, pop 20, ~0.893]
+     Abed Azrié — Croyance   [arab folk, pop 1, ~0.891]
+     Muhammad Al-Khamisi — Al-Burr Wa-s-samn Khirat Ma Tishilleh Banani   [yemeni traditional, pop 2, ~0.886]
+     Nazem al-Ghazali — Tal'a men bit abouha   [middle eastern traditional, pop 22, ~0.884]
+     Abdel Halim Hafez — Ala Hesb Wedad Live   [classic arab pop, pop 46, ~0.882]
+     Habeeb Ali — Walla Haram   [khaleeji iraqi, pop 48, ~0.880]
+     Classical Arabic Orchestra of Aleppo — Samai Husseini (Samai Thaqil 10/8, Samai Darij 6/8)   [middle eastern traditional, pop 21, ~0.879]
+     Warda — Fe Youm We Leila Live   [arab pop, pop 41, ~0.878]
+     Naser Albhar — Al Sadma   [khaleeji iraqi, pop 40, ~0.878]
+     Sayed Darwish — Zourouni Kouli Sanah Marah   [classic arab pop, pop 39, ~0.876]
+     Abadi Al Johar — أحبك لو تكون حاضر   [oud, pop 43, ~0.875]
+
+=== Umm Kulthum  [region EG]  liked-as "Umm Kulthum"
+  seed in graph: NOT FOUND
+  -> Sounds like Umm Kulthum  |  Artists whose sound sits closest to theirs  (12 rows)
+     Munir Bashir — Taqsîm en maqâm : Kurdî   [middle eastern traditional, pop 26, ~0.942]
+     Zein Al-Jundi — Qaddukal Mayyas   [middle eastern traditional, pop 20, ~0.893]
+     Abed Azrié — Croyance   [arab folk, pop 1, ~0.891]
+     Muhammad Al-Khamisi — Al-Burr Wa-s-samn Khirat Ma Tishilleh Banani   [yemeni traditional, pop 2, ~0.886]
+     Nazem al-Ghazali — Tal'a men bit abouha   [middle eastern traditional, pop 22, ~0.884]
+     Abdel Halim Hafez — Ala Hesb Wedad Live   [classic arab pop, pop 46, ~0.882]
+     Habeeb Ali — Walla Haram   [khaleeji iraqi, pop 48, ~0.880]
+     Classical Arabic Orchestra of Aleppo — Samai Husseini (Samai Thaqil 10/8, Samai Darij 6/8)   [middle eastern traditional, pop 21, ~0.879]
+     Warda — Fe Youm We Leila Live   [arab pop, pop 41, ~0.878]
+     Naser Albhar — Al Sadma   [khaleeji iraqi, pop 40, ~0.878]
+     Sayed Darwish — Zourouni Kouli Sanah Marah   [classic arab pop, pop 39, ~0.876]
+     Abadi Al Johar — أحبك لو تكون حاضر   [oud, pop 43, ~0.875]
+
+=== Tarkan  [region US]  liked-as "Tarkan"
+  seed in graph: Tarkan / DE / conf 0.9 / pop 1 / 4ec2451d-ed0c-4273-b683-4c1312df25fd
+  seed sound: yes
+  graph neighbours (0): 
+  -> Sounds like Tarkan  |  Artists whose sound sits closest to theirs  (12 rows)
+     Ferhat Göçer — Ayrılsak Ölürüz Biz   [turkish pop, pop 53, ~0.999]
+     Kenan Doğulu — Şans Meleğim   [turkish pop, pop 60, ~0.999]
+     Mahmut Tuncer — Ay Gördüm Allah   [arabesk, pop 48, ~0.999]
+     Rober Hatemo — Giden Candan Gidiyor - Yaz Versiyon   [turkish pop, pop 42, ~0.999]
+     Soner Arıca — Vefasız   [turkish pop, pop 37, ~0.999]
+     İdo Tatlıses — Sonsuz Teşekkürler   [turkish pop, pop 51, ~0.999]
+     Atiye — Maazallah   [turkish pop, pop 45, ~0.999]
+     Ümit Sayın — Hicran   [turkish pop, pop 39, ~0.999]
+     Yaşar — Sevda Sinemalarda   [turkish pop, pop 51, ~0.999]
+     Resul Dindar — Sevduğum Diyeceğum   [turkish pop, pop 45, ~0.999]
+     Eylem — Aman   [turkish pop, pop 53, ~0.999]
+     Sinan Akçıl — Şarttır   [turkish pop, pop 49, ~0.999]
+
+=== Tarkan  [region TR]  liked-as "Tarkan"
+  seed in graph: Tarkan / TR / conf 0.8 / pop 1 / 4ec2451d-ed0c-4273-b683-4c1312df25fd
+  seed sound: yes
+  graph neighbours (0): 
+  -> Sounds like Tarkan  |  Artists whose sound sits closest to theirs  (12 rows)
+     Ferhat Göçer — Ayrılsak Ölürüz Biz   [turkish pop, pop 53, ~0.999]
+     Kenan Doğulu — Şans Meleğim   [turkish pop, pop 60, ~0.999]
+     Mahmut Tuncer — Ay Gördüm Allah   [arabesk, pop 48, ~0.999]
+     Rober Hatemo — Giden Candan Gidiyor - Yaz Versiyon   [turkish pop, pop 42, ~0.999]
+     Soner Arıca — Vefasız   [turkish pop, pop 37, ~0.999]
+     İdo Tatlıses — Sonsuz Teşekkürler   [turkish pop, pop 51, ~0.999]
+     Atiye — Maazallah   [turkish pop, pop 45, ~0.999]
+     Ümit Sayın — Hicran   [turkish pop, pop 39, ~0.999]
+     Yaşar — Sevda Sinemalarda   [turkish pop, pop 51, ~0.999]
+     Resul Dindar — Sevduğum Diyeceğum   [turkish pop, pop 45, ~0.999]
+     Eylem — Aman   [turkish pop, pop 53, ~0.999]
+     Sinan Akçıl — Şarttır   [turkish pop, pop 49, ~0.999]
+
+=== Sezen Aksu  [region US]  liked-as "Sezen Aksu"
+  seed in graph: NOT FOUND
+  -> Sounds like Sezen Aksu  |  Artists whose sound sits closest to theirs  (12 rows)
+     İdo Tatlıses — Sevgi Zararı   [turkish pop, pop 45, ~0.999]
+     Erkin Koray — Çöpçüler - 2022 Remastered   [anadolu rock, pop 50, ~0.998]
+     Demet Sağıroğlu — Kinali Bebek   [turkish pop, pop 43, ~0.998]
+     Gülben Ergen — Kalbimi Koydum   [arabesk, pop 54, ~0.998]
+     Bengü — Saygımdan   [turkish pop, pop 73, ~0.998]
+     emre aydın — Belki Bir Gün Özlersin   [turkish singer-songwriter, pop 57, ~0.998]
+     Sezer Sarıgöz — Sensiz Olmak Ne Haddime   [turkish pop, pop 56, ~0.998]
+     İzzet Yıldızhan — Bana Kara Diyen Dilber   [arabesk, pop 36, ~0.998]
+     Sıla — Sevişmeden Uyumayalım   [turkish pop, pop 62, ~0.998]
+     Barış Kocatürk — Kalmalısın   [turkish rock, pop 37, ~0.998]
+     Merve Özbey — Kül   [turkish pop, pop 64, ~0.997]
+     Ferman Akdeniz — Haberin Yok   [arabesk, pop 44, ~0.997]
+
+=== Sezen Aksu  [region TR]  liked-as "Sezen Aksu"
+  seed in graph: NOT FOUND
+  -> Sounds like Sezen Aksu  |  Artists whose sound sits closest to theirs  (12 rows)
+     İdo Tatlıses — Sevgi Zararı   [turkish pop, pop 45, ~0.999]
+     Erkin Koray — Çöpçüler - 2022 Remastered   [anadolu rock, pop 50, ~0.998]
+     Demet Sağıroğlu — Kinali Bebek   [turkish pop, pop 43, ~0.998]
+     Gülben Ergen — Kalbimi Koydum   [arabesk, pop 54, ~0.998]
+     Bengü — Saygımdan   [turkish pop, pop 73, ~0.998]
+     emre aydın — Belki Bir Gün Özlersin   [turkish singer-songwriter, pop 57, ~0.998]
+     Sezer Sarıgöz — Sensiz Olmak Ne Haddime   [turkish pop, pop 56, ~0.998]
+     İzzet Yıldızhan — Bana Kara Diyen Dilber   [arabesk, pop 36, ~0.998]
+     Sıla — Sevişmeden Uyumayalım   [turkish pop, pop 62, ~0.998]
+     Barış Kocatürk — Kalmalısın   [turkish rock, pop 37, ~0.998]
+     Merve Özbey — Kül   [turkish pop, pop 64, ~0.997]
+     Ferman Akdeniz — Haberin Yok   [arabesk, pop 44, ~0.997]
+
+=== Stromae  [region US]  liked-as "Stromae"
+  seed in graph: Stromae / BE / conf 0.94 / pop 7 / ab2528d9-719f-4261-8098-21849222a0f2
+  seed sound: yes
+  graph neighbours (0): 
+  -> Sounds like Stromae  |  Artists whose sound sits closest to theirs  (12 rows)
+     Henri PFR — Run (feat. Ragdoll)   [belgian pop, pop 55, ~0.953]
+     Tez Cadey — No Place I Call Home   [deep tropical house, pop 49, ~0.867]
+     Mozambo — Dia De Sol   [deep tropical house, pop 39, ~0.860]
+     Madeon — All My Friends   [complextro, pop 49, ~0.840]
+     Fake Blood — I Think I Like It - Radio Edit   [fidget house, pop 54, ~0.827]
+     Oliver Dollar — Doin' Ya Thang   [fidget house, pop 55, ~0.826]
+     Aniki — Ese Miedo (Bonus Track)   [fidget house, pop 40, ~0.824]
+     Crookers — scs - edit   [fidget house, pop 47, ~0.824]
+     The Toxic Avenger — 4'18" 'Till the End   [electro house, pop 37, ~0.824]
+     Le Castle Vania — Nobody Gets Out Alive, Pt. 3   [electro trash, pop 46, ~0.823]
+     3LAU — Is It Love   [pop dance, pop 43, ~0.823]
+     #LikeMe Cast — Meisjes aan de macht   [belgian pop, pop 44, ~0.822]
+
+=== Stromae  [region BE]  liked-as "Stromae"
+  seed in graph: Stromae / BE / conf 0.94 / pop 7 / ab2528d9-719f-4261-8098-21849222a0f2
+  seed sound: yes
+  graph neighbours (0): 
+  -> Sounds like Stromae  |  Artists whose sound sits closest to theirs  (12 rows)
+     Henri PFR — Run (feat. Ragdoll)   [belgian pop, pop 55, ~0.953]
+     Tez Cadey — No Place I Call Home   [deep tropical house, pop 49, ~0.867]
+     Mozambo — Dia De Sol   [deep tropical house, pop 39, ~0.860]
+     Madeon — All My Friends   [complextro, pop 49, ~0.840]
+     Fake Blood — I Think I Like It - Radio Edit   [fidget house, pop 54, ~0.827]
+     Oliver Dollar — Doin' Ya Thang   [fidget house, pop 55, ~0.826]
+     Aniki — Ese Miedo (Bonus Track)   [fidget house, pop 40, ~0.824]
+     Crookers — scs - edit   [fidget house, pop 47, ~0.824]
+     The Toxic Avenger — 4'18" 'Till the End   [electro house, pop 37, ~0.824]
+     Le Castle Vania — Nobody Gets Out Alive, Pt. 3   [electro trash, pop 46, ~0.823]
+     3LAU — Is It Love   [pop dance, pop 43, ~0.823]
+     #LikeMe Cast — Meisjes aan de macht   [belgian pop, pop 44, ~0.822]
+
+=== Édith Piaf  [region US]  liked-as "Édith Piaf"
+  seed in graph: Édith Piaf / FR / conf 0.98 / pop 3 / 4f8ef4a3-40fa-46b5-8773-97686a8424f4
+  seed sound: yes
+  graph neighbours (0): 
+  -> Sounds like Édith Piaf  |  Artists whose sound sits closest to theirs  (12 rows)
+     Jean Sablon — Vous qui passez sans me voir   [vintage chanson, pop 33, ~0.922]
+     Maurice Chevalier — Paris sera toujours Paris   [vintage chanson, pop 35, ~0.900]
+     Marlene Dietrich — Sag mir wo die Blumen sind   [vintage hollywood, pop 35, ~0.883]
+     Ute Lemper — Mack the Knife   [cabaret, pop 34, ~0.828]
+     Lotte Lenya — Speak Low   [cabaret, pop 7, ~0.827]
+     Lys Assia — Refrain   [vintage schlager, pop 22, ~0.823]
+     Camillo Felgen — Sag Warum   [vintage schlager, pop 11, ~0.821]
+     Ken Page — Oogie Boogie's Song   [cabaret, pop 44, ~0.820]
+     Jane Olivor — Morning, Noon And Nightime   [cabaret, pop 37, ~0.817]
+     Caterina Valente — Bongo Cha Cha Cha   [vintage schlager, pop 35, ~0.814]
+     Puddles Pity Party — The Spy and the Liar   [cabaret, pop 42, ~0.811]
+     Comedian Harmonists — Wenn die Sonja russisch tanzt   [vintage schlager, pop 42, ~0.810]
+
+=== Édith Piaf  [region FR]  liked-as "Édith Piaf"
+  seed in graph: Édith Piaf / FR / conf 0.98 / pop 3 / 4f8ef4a3-40fa-46b5-8773-97686a8424f4
+  seed sound: yes
+  graph neighbours (0): 
+  -> Sounds like Édith Piaf  |  Artists whose sound sits closest to theirs  (12 rows)
+     Jean Sablon — Vous qui passez sans me voir   [vintage chanson, pop 33, ~0.922]
+     Maurice Chevalier — Paris sera toujours Paris   [vintage chanson, pop 35, ~0.900]
+     Marlene Dietrich — Sag mir wo die Blumen sind   [vintage hollywood, pop 35, ~0.883]
+     Ute Lemper — Mack the Knife   [cabaret, pop 34, ~0.828]
+     Lotte Lenya — Speak Low   [cabaret, pop 7, ~0.827]
+     Lys Assia — Refrain   [vintage schlager, pop 22, ~0.823]
+     Camillo Felgen — Sag Warum   [vintage schlager, pop 11, ~0.821]
+     Ken Page — Oogie Boogie's Song   [cabaret, pop 44, ~0.820]
+     Jane Olivor — Morning, Noon And Nightime   [cabaret, pop 37, ~0.817]
+     Caterina Valente — Bongo Cha Cha Cha   [vintage schlager, pop 35, ~0.814]
+     Puddles Pity Party — The Spy and the Liar   [cabaret, pop 42, ~0.811]
+     Comedian Harmonists — Wenn die Sonja russisch tanzt   [vintage schlager, pop 42, ~0.810]
+
+=== Aya Nakamura  [region US]  liked-as "Aya Nakamura"
+  seed in graph: Aya Nakamura / FR / conf 0.8 / pop 2 / cf580d82-3f3e-4b86-8874-7e0fbe794f01
+  seed sound: yes
+  graph neighbours (0): 
+  -> Sounds like Aya Nakamura  |  Artists whose sound sits closest to theirs  (12 rows)
+     SAF — La surprise - Afro Tropical   [musique comorienne, pop 47, ~0.970]
+     Says'z — NATHALIE   [r&b francais, pop 46, ~0.970]
+     Goulam — Pour toujours   [musique comorienne, pop 37, ~0.969]
+     Ahamada Smis — Gamina ndzaya   [musique comorienne, pop 1, ~0.964]
+     Nixo — Trala Paréni   [musique mahoraise, pop 9, ~0.960]
+     Komo — Djira   [musique comorienne, pop 21, ~0.958]
+     Nawal — احاول1   [musique traditionnelle comorienne, pop 19, ~0.954]
+     M'Toro Chamou — Ritawalé   [musique mahoraise, pop 15, ~0.954]
+     Sourette — Choco   [musique mahoraise, pop 26, ~0.954]
+     X-Man — Madame   [shatta, pop 47, ~0.953]
+     Ronisia — Call Of   [r&b francais, pop 49, ~0.952]
+     Genezio — ENFANT DU GHETTO   [r&b francais, pop 56, ~0.952]
+
+=== Aya Nakamura  [region FR]  liked-as "Aya Nakamura"
+  seed in graph: Aya Nakamura / FR / conf 0.8 / pop 2 / cf580d82-3f3e-4b86-8874-7e0fbe794f01
+  seed sound: yes
+  graph neighbours (0): 
+  -> Sounds like Aya Nakamura  |  Artists whose sound sits closest to theirs  (12 rows)
+     SAF — La surprise - Afro Tropical   [musique comorienne, pop 47, ~0.970]
+     Says'z — NATHALIE   [r&b francais, pop 46, ~0.970]
+     Goulam — Pour toujours   [musique comorienne, pop 37, ~0.969]
+     Ahamada Smis — Gamina ndzaya   [musique comorienne, pop 1, ~0.964]
+     Nixo — Trala Paréni   [musique mahoraise, pop 9, ~0.960]
+     Komo — Djira   [musique comorienne, pop 21, ~0.958]
+     Nawal — احاول1   [musique traditionnelle comorienne, pop 19, ~0.954]
+     M'Toro Chamou — Ritawalé   [musique mahoraise, pop 15, ~0.954]
+     Sourette — Choco   [musique mahoraise, pop 26, ~0.954]
+     X-Man — Madame   [shatta, pop 47, ~0.953]
+     Ronisia — Call Of   [r&b francais, pop 49, ~0.952]
+     Genezio — ENFANT DU GHETTO   [r&b francais, pop 56, ~0.952]
+
+=== Kraftwerk  [region US]  liked-as "Kraftwerk"
+  seed in graph: Kraftwerk / DE / conf 0.94 / pop 18 / 5700dcd4-c139-4f31-aa3e-6382b9af9032
+  seed sound: yes
+    NB	Kraftwerk	Rammstein	LB	0.565	neue deutsche harte	people 1
+    NB	Kraftwerk	Tangerine Dream	LB	0.484	synthesizer	people 1
+    NB	Kraftwerk	Can	LB	0.532	experimental rock	people 2
+    NB	Kraftwerk	Radiohead	LB	0.526	rock	people 1
+    NB	Kraftwerk	The Cure	LB	0.694	uk post-punk	people 1
+    NB	Kraftwerk	The Beatles	LB	0.308	classic rock	people 1
+    NB	Kraftwerk	Pink Floyd	LB	0.387	art rock	people 1
+    NB	Kraftwerk	Talking Heads	LB	0.698	permanent wave	people 1
+    NB	Kraftwerk	The Clash	LB	0.507	alternative rock	people 1
+    NB	Kraftwerk	Led Zeppelin	LB	0.344	rock	people 1
+    NB	Kraftwerk	Nine Inch Nails	LB	0.558	industrial	people 1
+    NB	Kraftwerk	Nirvana	LB	0.509	permanent wave	people 1
+    NB	Kraftwerk	The Rolling Stones	LB	0.353	rock	people 1
+    NB	Kraftwerk	Gorillaz	LB	0.286	rock	people 1
+    NB	Kraftwerk	Björk	LB	0.337	art pop	people 1
+    NB	Kraftwerk	R.E.M.	LB	0.507	athens indie	people 1
+    NB	Kraftwerk	Moby	LB	0.267	electronica	people 1
+    NB	Kraftwerk	Pixies	LB	0.513	alternative rock	people 1
+    NB	Kraftwerk	The Doors	LB	0.327	rock	people 1
+    NB	Kraftwerk	Air	LB	0.296	indietronica	people 2
+    NB	Kraftwerk	U2	LB	0.473	irish rock	people 1
+    NB	Kraftwerk	Beastie Boys	LB	0.288	rap	people 1
+    NB	Kraftwerk	Portishead	LB	0.436	art pop	people 1
+    NB	Kraftwerk	Bob Dylan	LB	0.259	country rock	people 1
+    NB	Kraftwerk	Blur	LB	0.593	permanent wave	people 1
+    NB	Kraftwerk	The Smashing Pumpkins	LB	0.499	alternative rock	people 1
+    NB	Kraftwerk	The Velvet Underground	LB	0.526	protopunk	people 1
+  graph neighbours (27): Rammstein(LB 1.00 ~0.565), Tangerine Dream(LB 1.00 ~0.484), Can(LB 1.00 ~0.532), Radiohead(LB 1.00 ~0.526), The Cure(LB 1.00 ~0.694), The Beatles(LB 1.00 ~0.308), Pink Floyd(LB 1.00 ~0.387), Talking Heads(LB 1.00 ~0.698), The Clash(LB 1.00 ~0.507), Led Zeppelin(LB 1.00 ~0.344), Nine Inch Nails(LB 1.00 ~0.558), Nirvana(LB 1.00 ~0.509), The Rolling Stones(LB 1.00 ~0.353), Gorillaz(LB 1.00 ~0.286), Björk(LB 1.00 ~0.337), R.E.M.(LB 1.00 ~0.507), Moby(LB 1.00 ~0.267), Pixies(LB 1.00 ~0.513), The Doors(LB 1.00 ~0.327), Air(LB 1.00 ~0.296), U2(LB 1.00 ~0.473), Beastie Boys(LB 1.00 ~0.288), Portishead(LB 1.00 ~0.436), Bob Dylan(LB 1.00 ~0.259), Blur(LB 1.00 ~0.593), The Smashing Pumpkins(LB 1.00 ~0.499), The Velvet Underground(LB 1.00 ~0.526)
+  -> Because you like Kraftwerk  |  People who listen to Kraftwerk also play these  (12 rows)
+     Talking Heads — Psycho Killer - 2005 Remaster   [permanent wave, pop 74, ~0.698]
+     The Cure — Boys Don't Cry   [uk post-punk, pop 77, ~0.694]
+     Blur — Song 2 - 2012 Remaster   [permanent wave, pop 80, ~0.593]
+     Rammstein — Sonne   [neue deutsche harte, pop 79, ~0.565]
+     Nine Inch Nails — Closer   [industrial, pop 74, ~0.558]
+     CAN — Vitamin C   [experimental rock, pop 54, ~0.532]
+     Radiohead — Creep   [rock, pop 89, ~0.526]
+     The Velvet Underground — Sunday Morning   [protopunk, pop 65, ~0.526]
+     Talking Heads — This Must Be the Place (Naive Melody) - 2005 Remaster   [permanent wave, pop 73, ~0.698]
+     The Cure — Friday I'm In Love   [uk post-punk, pop 77, ~0.694]
+     Blur — Girls & Boys   [permanent wave, pop 71, ~0.593]
+     Rammstein — Deutschland   [neue deutsche harte, pop 77, ~0.565]
+
+=== Kraftwerk  [region DE]  liked-as "Kraftwerk"
+  seed in graph: Kraftwerk / DE / conf 0.94 / pop 18 / 5700dcd4-c139-4f31-aa3e-6382b9af9032
+  seed sound: yes
+    NB	Kraftwerk	Rammstein	LB	0.565	neue deutsche harte	people 1
+    NB	Kraftwerk	Tangerine Dream	LB	0.484	synthesizer	people 1
+    NB	Kraftwerk	Can	LB	0.532	experimental rock	people 2
+    NB	Kraftwerk	Radiohead	LB	0.526	rock	people 1
+    NB	Kraftwerk	The Cure	LB	0.694	uk post-punk	people 1
+    NB	Kraftwerk	The Beatles	LB	0.308	classic rock	people 1
+    NB	Kraftwerk	Pink Floyd	LB	0.387	art rock	people 1
+    NB	Kraftwerk	Talking Heads	LB	0.698	permanent wave	people 1
+    NB	Kraftwerk	The Clash	LB	0.507	alternative rock	people 1
+    NB	Kraftwerk	Led Zeppelin	LB	0.344	rock	people 1
+    NB	Kraftwerk	Nine Inch Nails	LB	0.558	industrial	people 1
+    NB	Kraftwerk	Nirvana	LB	0.509	permanent wave	people 1
+    NB	Kraftwerk	The Rolling Stones	LB	0.353	rock	people 1
+    NB	Kraftwerk	Gorillaz	LB	0.286	rock	people 1
+    NB	Kraftwerk	Björk	LB	0.337	art pop	people 1
+    NB	Kraftwerk	R.E.M.	LB	0.507	athens indie	people 1
+    NB	Kraftwerk	Moby	LB	0.267	electronica	people 1
+    NB	Kraftwerk	Pixies	LB	0.513	alternative rock	people 1
+    NB	Kraftwerk	The Doors	LB	0.327	rock	people 1
+    NB	Kraftwerk	Air	LB	0.296	indietronica	people 2
+    NB	Kraftwerk	U2	LB	0.473	irish rock	people 1
+    NB	Kraftwerk	Beastie Boys	LB	0.288	rap	people 1
+    NB	Kraftwerk	Portishead	LB	0.436	art pop	people 1
+    NB	Kraftwerk	Bob Dylan	LB	0.259	country rock	people 1
+    NB	Kraftwerk	Blur	LB	0.593	permanent wave	people 1
+    NB	Kraftwerk	The Smashing Pumpkins	LB	0.499	alternative rock	people 1
+    NB	Kraftwerk	The Velvet Underground	LB	0.526	protopunk	people 1
+  graph neighbours (27): Rammstein(LB 1.00 ~0.565), Tangerine Dream(LB 1.00 ~0.484), Can(LB 1.00 ~0.532), Radiohead(LB 1.00 ~0.526), The Cure(LB 1.00 ~0.694), The Beatles(LB 1.00 ~0.308), Pink Floyd(LB 1.00 ~0.387), Talking Heads(LB 1.00 ~0.698), The Clash(LB 1.00 ~0.507), Led Zeppelin(LB 1.00 ~0.344), Nine Inch Nails(LB 1.00 ~0.558), Nirvana(LB 1.00 ~0.509), The Rolling Stones(LB 1.00 ~0.353), Gorillaz(LB 1.00 ~0.286), Björk(LB 1.00 ~0.337), R.E.M.(LB 1.00 ~0.507), Moby(LB 1.00 ~0.267), Pixies(LB 1.00 ~0.513), The Doors(LB 1.00 ~0.327), Air(LB 1.00 ~0.296), U2(LB 1.00 ~0.473), Beastie Boys(LB 1.00 ~0.288), Portishead(LB 1.00 ~0.436), Bob Dylan(LB 1.00 ~0.259), Blur(LB 1.00 ~0.593), The Smashing Pumpkins(LB 1.00 ~0.499), The Velvet Underground(LB 1.00 ~0.526)
+  -> Because you like Kraftwerk  |  People who listen to Kraftwerk also play these  (12 rows)
+     Talking Heads — Psycho Killer - 2005 Remaster   [permanent wave, pop 74, ~0.698]
+     The Cure — Boys Don't Cry   [uk post-punk, pop 77, ~0.694]
+     Blur — Song 2 - 2012 Remaster   [permanent wave, pop 80, ~0.593]
+     Rammstein — Sonne   [neue deutsche harte, pop 79, ~0.565]
+     Nine Inch Nails — Closer   [industrial, pop 74, ~0.558]
+     CAN — Vitamin C   [experimental rock, pop 54, ~0.532]
+     Radiohead — Creep   [rock, pop 89, ~0.526]
+     The Velvet Underground — Sunday Morning   [protopunk, pop 65, ~0.526]
+     Talking Heads — This Must Be the Place (Naive Melody) - 2005 Remaster   [permanent wave, pop 73, ~0.698]
+     The Cure — Friday I'm In Love   [uk post-punk, pop 77, ~0.694]
+     Blur — Girls & Boys   [permanent wave, pop 71, ~0.593]
+     Rammstein — Deutschland   [neue deutsche harte, pop 77, ~0.565]
+
+=== Helene Fischer  [region US]  liked-as "Helene Fischer"
+  seed in graph: Helene Fischer / DE / conf 0.8 / pop 6 / 167e1cd2-4a9e-4f34-bcda-2e0acf0a1797
+  seed sound: yes
+  graph neighbours (0): 
+  -> Sounds like Helene Fischer  |  Artists whose sound sits closest to theirs  (12 rows)
+     Mike Leon Grosch — Ich lieb alles an dir   [schlager, pop 47, ~0.999]
+     Alisha — Stell dir vor   [schlager, pop 36, ~0.999]
+     Tim Peters — Krass verliebt   [schlager, pop 39, ~0.999]
+     Wolkenfrei — Ich versprech dir nichts und geb dir alles   [schlager, pop 43, ~0.999]
+     Charlien — Millionen Optionen   [schlager, pop 40, ~0.999]
+     Sonia Liebing — Jugendliebe   [schlager, pop 51, ~0.999]
+     Kerstin Ott — Regenbogenfarben   [schlager, pop 54, ~0.999]
+     Andreas Gabalier — Hallihallo   [schlager, pop 49, ~0.998]
+     Eric Philippi — Schockverliebt   [schlager, pop 52, ~0.998]
+     DJ Herzbeat — Die Liebe gewinnt   [schlager, pop 47, ~0.998]
+     Marina Marx — Der geilste Fehler   [schlager, pop 46, ~0.998]
+     Eloy de Jong — Schritt für Schritt   [schlager, pop 41, ~0.997]
+
+=== Helene Fischer  [region DE]  liked-as "Helene Fischer"
+  seed in graph: Helene Fischer / DE / conf 0.8 / pop 6 / 167e1cd2-4a9e-4f34-bcda-2e0acf0a1797
+  seed sound: yes
+  graph neighbours (0): 
+  -> Sounds like Helene Fischer  |  Artists whose sound sits closest to theirs  (12 rows)
+     Mike Leon Grosch — Ich lieb alles an dir   [schlager, pop 47, ~0.999]
+     Alisha — Stell dir vor   [schlager, pop 36, ~0.999]
+     Tim Peters — Krass verliebt   [schlager, pop 39, ~0.999]
+     Wolkenfrei — Ich versprech dir nichts und geb dir alles   [schlager, pop 43, ~0.999]
+     Charlien — Millionen Optionen   [schlager, pop 40, ~0.999]
+     Sonia Liebing — Jugendliebe   [schlager, pop 51, ~0.999]
+     Kerstin Ott — Regenbogenfarben   [schlager, pop 54, ~0.999]
+     Andreas Gabalier — Hallihallo   [schlager, pop 49, ~0.998]
+     Eric Philippi — Schockverliebt   [schlager, pop 52, ~0.998]
+     DJ Herzbeat — Die Liebe gewinnt   [schlager, pop 47, ~0.998]
+     Marina Marx — Der geilste Fehler   [schlager, pop 46, ~0.998]
+     Eloy de Jong — Schritt für Schritt   [schlager, pop 41, ~0.997]
+
+=== Böhse Onkelz  [region US]  liked-as "Böhse Onkelz"
+  seed in graph: Böhse Onkelz / DE / conf 0.94 / pop 6 / b3a70929-32bc-4ace-994f-434b26ce96fe
+  seed sound: yes
+    NB	Böhse Onkelz	Die Ärzte	LB	0.817	german rock	people 1
+    NB	Böhse Onkelz	Die Toten Hosen	LB	0.811	german rock	people 1
+  graph neighbours (2): Die Ärzte(LB 1.00 ~0.817), Die Toten Hosen(LB 1.00 ~0.811)
+  -> Because you like Böhse Onkelz  |  People who listen to Böhse Onkelz also play these  (4 rows)
+     Die Ärzte — Junge   [german rock, pop 67, ~0.817]
+     Die Toten Hosen — Tage wie diese   [german rock, pop 64, ~0.811]
+     Die Ärzte — Lasse redn   [german rock, pop 64, ~0.817]
+     Die Toten Hosen — Altes Fieber   [german rock, pop 60, ~0.811]
+
+=== Böhse Onkelz  [region DE]  liked-as "Böhse Onkelz"
+  seed in graph: Böhse Onkelz / DE / conf 0.94 / pop 6 / b3a70929-32bc-4ace-994f-434b26ce96fe
+  seed sound: yes
+    NB	Böhse Onkelz	Die Ärzte	LB	0.817	german rock	people 1
+    NB	Böhse Onkelz	Die Toten Hosen	LB	0.811	german rock	people 1
+  graph neighbours (2): Die Ärzte(LB 1.00 ~0.817), Die Toten Hosen(LB 1.00 ~0.811)
+  -> Because you like Böhse Onkelz  |  People who listen to Böhse Onkelz also play these  (4 rows)
+     Die Ärzte — Junge   [german rock, pop 67, ~0.817]
+     Die Toten Hosen — Tage wie diese   [german rock, pop 64, ~0.811]
+     Die Ärzte — Lasse redn   [german rock, pop 64, ~0.817]
+     Die Toten Hosen — Altes Fieber   [german rock, pop 60, ~0.811]
+
+=== Frei.Wild  [region US]  liked-as "Frei.Wild"
+  seed in graph: NOT FOUND
+  -> Sounds like Frei.Wild  |  Artists whose sound sits closest to theirs  (12 rows)
+     Haudegen — Feuer und Flamme   [german oi, pop 37, ~0.998]
+     Störte.Priester — Klare Sicht   [deutschrock, pop 38, ~0.996]
+     Kärbholz — Vollgas   [deutschrock, pop 45, ~0.996]
+     Wilde Jungs — Senorita   [deutschrock, pop 36, ~0.996]
+     Der W — Geschichtenhasser   [german oi, pop 39, ~0.995]
+     KrawallBrüder — KrawallBrüder - 2015 Version   [deutschrock, pop 38, ~0.995]
+     Artefuckt — Die Welt wartet nicht   [deutschrock, pop 43, ~0.994]
+     Unantastbar — Gerader Weg   [deutschrock, pop 49, ~0.994]
+     Rotz & Wasser — Ann Cathrin aus Berlin   [deutschrock, pop 36, ~0.993]
+     Vogelfrei — Gegen den Wind   [deutschrock, pop 37, ~0.992]
+     Toxpack — Bastarde von morgen   [deutschrock, pop 38, ~0.992]
+     Berliner Weisse — Arschloch bleibt Arschloch   [deutschrock, pop 38, ~0.991]
+
+=== Frei.Wild  [region IT]  liked-as "Frei.Wild"
+  seed in graph: NOT FOUND
+  -> Sounds like Frei.Wild  |  Artists whose sound sits closest to theirs  (12 rows)
+     Haudegen — Feuer und Flamme   [german oi, pop 37, ~0.998]
+     Störte.Priester — Klare Sicht   [deutschrock, pop 38, ~0.996]
+     Kärbholz — Vollgas   [deutschrock, pop 45, ~0.996]
+     Wilde Jungs — Senorita   [deutschrock, pop 36, ~0.996]
+     Der W — Geschichtenhasser   [german oi, pop 39, ~0.995]
+     KrawallBrüder — KrawallBrüder - 2015 Version   [deutschrock, pop 38, ~0.995]
+     Artefuckt — Die Welt wartet nicht   [deutschrock, pop 43, ~0.994]
+     Unantastbar — Gerader Weg   [deutschrock, pop 49, ~0.994]
+     Rotz & Wasser — Ann Cathrin aus Berlin   [deutschrock, pop 36, ~0.993]
+     Vogelfrei — Gegen den Wind   [deutschrock, pop 37, ~0.992]
+     Toxpack — Bastarde von morgen   [deutschrock, pop 38, ~0.992]
+     Berliner Weisse — Arschloch bleibt Arschloch   [deutschrock, pop 38, ~0.991]
+
+=== Anitta  [region US]  liked-as "Anitta"
+  seed in graph: NOT FOUND
+  -> Sounds like Anitta  |  Artists whose sound sits closest to theirs  (12 rows)
+     Pabllo Vittar — São Amores   [pop nacional, pop 59, ~0.988]
+     Mc Ster — ZELDA FUNK   [funk pop, pop 58, ~0.973]
+     Lexa — Mania   [funk carioca, pop 41, ~0.970]
+     Tília — Conteúdo Explícito   [funk pop, pop 37, ~0.963]
+     Melody — Princesinha   [pop teen brasileiro, pop 39, ~0.963]
+     MC Kevinho — Rabiola   [funk carioca, pop 53, ~0.962]
+     ZAAC — Vai Embrazando   [funk carioca, pop 63, ~0.957]
+     Luísa Sonza — MiuMiu   [pop nacional, pop 64, ~0.957]
+     Valesca Popozuda — Eu Sou a Diva Que Você Quer Copiar   [funk pop, pop 52, ~0.956]
+     Igor Kannário — Meu Groove   [pagode baiano, pop 36, ~0.956]
+     Restart — Amanhecer no Teu Olhar   [pop teen brasileiro, pop 37, ~0.956]
+     Kaya Conky — PODE DALE   [pop lgbtq+ brasileira, pop 36, ~0.956]
+
+=== Anitta  [region BR]  liked-as "Anitta"
+  seed in graph: NOT FOUND
+  -> Sounds like Anitta  |  Artists whose sound sits closest to theirs  (12 rows)
+     Pabllo Vittar — São Amores   [pop nacional, pop 59, ~0.988]
+     Mc Ster — ZELDA FUNK   [funk pop, pop 58, ~0.973]
+     Lexa — Mania   [funk carioca, pop 41, ~0.970]
+     Tília — Conteúdo Explícito   [funk pop, pop 37, ~0.963]
+     Melody — Princesinha   [pop teen brasileiro, pop 39, ~0.963]
+     MC Kevinho — Rabiola   [funk carioca, pop 53, ~0.962]
+     ZAAC — Vai Embrazando   [funk carioca, pop 63, ~0.957]
+     Luísa Sonza — MiuMiu   [pop nacional, pop 64, ~0.957]
+     Valesca Popozuda — Eu Sou a Diva Que Você Quer Copiar   [funk pop, pop 52, ~0.956]
+     Igor Kannário — Meu Groove   [pagode baiano, pop 36, ~0.956]
+     Restart — Amanhecer no Teu Olhar   [pop teen brasileiro, pop 37, ~0.956]
+     Kaya Conky — PODE DALE   [pop lgbtq+ brasileira, pop 36, ~0.956]
+
+=== Caetano Veloso  [region US]  liked-as "Caetano Veloso"
+  seed in graph: NOT FOUND
+  -> Sounds like Caetano Veloso  |  Artists whose sound sits closest to theirs  (12 rows)
+     Wilson Simonal — Mas Que Nada   [samba, pop 41, ~0.996]
+     Lô Borges — Paisagem Da Janela   [mpb, pop 42, ~0.995]
+     Chico Buarque — Apesar De Você   [bossa nova, pop 66, ~0.995]
+     Quarteto Em Cy — Canto de Ossanha   [velha guarda, pop 40, ~0.995]
+     Zizi Possi — Perigo   [samba, pop 52, ~0.994]
+     Angela Ro Ro — Balada Da Arrasada   [samba, pop 41, ~0.994]
+     Luiz Melodia — Mistério da raça   [samba, pop 44, ~0.993]
+     Gal Costa — Azul   [samba, pop 58, ~0.993]
+     Milton Nascimento — Cacador De Mim   [samba, pop 51, ~0.992]
+     Cassiano — Coleção   [mpb, pop 47, ~0.992]
+     Jair Rodrigues — Disparada   [samba, pop 46, ~0.992]
+     Sérgio Sampaio — Polícia Bandido Cachorro Dentista   [mpb, pop 39, ~0.992]
+
+=== Caetano Veloso  [region BR]  liked-as "Caetano Veloso"
+  seed in graph: NOT FOUND
+  -> Sounds like Caetano Veloso  |  Artists whose sound sits closest to theirs  (12 rows)
+     Wilson Simonal — Mas Que Nada   [samba, pop 41, ~0.996]
+     Lô Borges — Paisagem Da Janela   [mpb, pop 42, ~0.995]
+     Chico Buarque — Apesar De Você   [bossa nova, pop 66, ~0.995]
+     Quarteto Em Cy — Canto de Ossanha   [velha guarda, pop 40, ~0.995]
+     Zizi Possi — Perigo   [samba, pop 52, ~0.994]
+     Angela Ro Ro — Balada Da Arrasada   [samba, pop 41, ~0.994]
+     Luiz Melodia — Mistério da raça   [samba, pop 44, ~0.993]
+     Gal Costa — Azul   [samba, pop 58, ~0.993]
+     Milton Nascimento — Cacador De Mim   [samba, pop 51, ~0.992]
+     Cassiano — Coleção   [mpb, pop 47, ~0.992]
+     Jair Rodrigues — Disparada   [samba, pop 46, ~0.992]
+     Sérgio Sampaio — Polícia Bandido Cachorro Dentista   [mpb, pop 39, ~0.992]
+
+=== Henrique & Juliano  [region US]  liked-as "Henrique"
+  seed in graph: NOT FOUND
+  -> Sounds like Henrique & Juliano  |  Artists whose sound sits closest to theirs  (12 rows)
+     Naiara Azevedo — Segunda Prioridade - Ao Vivo   [sertanejo pop, pop 48, ~0.998]
+     Fred & Gustavo — Então valeu - Ao Vivo   [sertanejo pop, pop 49, ~0.998]
+     Raquel dos Teclados — Pra Sempre   [arrocha, pop 45, ~0.997]
+     Diego & Arnaldo — Se Eu Te Procurar   [sertanejo universitario, pop 48, ~0.997]
+     Zé Neto & Cristiano — Largado Às Traças - Ao Vivo   [sertanejo universitario, pop 71, ~0.997]
+     Banda Torpedo — Diz na Minha Cara   [forro, pop 43, ~0.997]
+     Banda Sedutora — No Dia do Seu Casamento   [brega romantico, pop 38, ~0.997]
+     Toque Dez — Vaqueira   [arrocha, pop 55, ~0.996]
+     Tayara Andreza — Revanche   [brega romantico, pop 40, ~0.996]
+     Hugo & Guilherme — Deslumbrante - Ao Vivo   [sertanejo universitario, pop 66, ~0.996]
+     George Henrique & Rodrigo — Deixa / Deslizes   [sertanejo universitario, pop 56, ~0.996]   <<SEED
+     Hugo Pena & Gabriel — Mala Pronta   [sertanejo universitario, pop 51, ~0.996]
+
+=== Henrique & Juliano  [region BR]  liked-as "Henrique"
+  seed in graph: NOT FOUND
+  -> Sounds like Henrique & Juliano  |  Artists whose sound sits closest to theirs  (12 rows)
+     Naiara Azevedo — Segunda Prioridade - Ao Vivo   [sertanejo pop, pop 48, ~0.998]
+     Fred & Gustavo — Então valeu - Ao Vivo   [sertanejo pop, pop 49, ~0.998]
+     Raquel dos Teclados — Pra Sempre   [arrocha, pop 45, ~0.997]
+     Diego & Arnaldo — Se Eu Te Procurar   [sertanejo universitario, pop 48, ~0.997]
+     Zé Neto & Cristiano — Largado Às Traças - Ao Vivo   [sertanejo universitario, pop 71, ~0.997]
+     Banda Torpedo — Diz na Minha Cara   [forro, pop 43, ~0.997]
+     Banda Sedutora — No Dia do Seu Casamento   [brega romantico, pop 38, ~0.997]
+     Toque Dez — Vaqueira   [arrocha, pop 55, ~0.996]
+     Tayara Andreza — Revanche   [brega romantico, pop 40, ~0.996]
+     Hugo & Guilherme — Deslumbrante - Ao Vivo   [sertanejo universitario, pop 66, ~0.996]
+     George Henrique & Rodrigo — Deixa / Deslizes   [sertanejo universitario, pop 56, ~0.996]   <<SEED
+     Hugo Pena & Gabriel — Mala Pronta   [sertanejo universitario, pop 51, ~0.996]
+
+=== Кино  [region US]  liked-as "Кино"
+  seed in graph: Кино / RU / conf 0.9 / pop 9 / 064db6e8-fdfb-4acb-a327-fc2de75b37de
+  seed sound: NONE
+    NB	Кино	Nautilus Pompilius	LB	-9.000	russian rock	people 1
+    NB	Кино	ДДТ	LB	-9.000	russian rock	people 1
+    NB	Кино	Би-2	LB	-9.000	belarusian rock	people 1
+    NB	Кино	Lumen	LB	-9.000	rain	people 3
+    NB	Кино	Мельница	LB	-9.000	russian rock	people 1
+    NB	Кино	Владимир Высоцкий	LB	-9.000	classic russian rock	people 1
+    NB	Кино	Radiohead	LB	-9.000	rock	people 1
+    NB	Кино	Nirvana	LB	-9.000	permanent wave	people 1
+    NB	Кино	The Beatles	LB	-9.000	classic rock	people 1
+    NB	Кино	Rammstein	LB	-9.000	neue deutsche harte	people 1
+    NB	Кино	Depeche Mode	LB	-9.000	new wave	people 1
+    NB	Кино	Metallica	LB	-9.000	hard rock	people 1
+    NB	Кино	Linkin Park	LB	-9.000	alternative metal	people 1
+    NB	Кино	Pink Floyd	LB	-9.000	art rock	people 1
+    NB	Кино	Red Hot Chili Peppers	LB	-9.000	permanent wave	people 1
+    NB	Кино	System of a Down	LB	-9.000	alternative metal	people 1
+    NB	Кино	The Doors	LB	-9.000	rock	people 1
+    NB	Кино	David Bowie	LB	-9.000	rock	people 1
+    NB	Кино	Led Zeppelin	LB	-9.000	rock	people 1
+    NB	Кино	The Cure	LB	-9.000	uk post-punk	people 1
+    NB	Кино	Muse	LB	-9.000	permanent wave	people 1
+    NB	Кино	The Prodigy	LB	-9.000	rave	people 1
+    NB	Кино	Gorillaz	LB	-9.000	rock	people 1
+    NB	Кино	Placebo	LB	-9.000	permanent wave	people 1
+    NB	Кино	Scorpions	LB	-9.000	hard rock	people 1
+    NB	Кино	Joy Division	LB	-9.000	uk post-punk	people 1
+    NB	Кино	The Rolling Stones	LB	-9.000	rock	people 1
+    NB	Кино	The Offspring	LB	-9.000	skate punk	people 1
+    NB	Кино	Marilyn Manson	LB	-9.000	industrial	people 1
+    NB	Кино	Coldplay	LB	-9.000	permanent wave	people 1
+  graph neighbours (48): Nautilus Pompilius(LB 1.00 ~-9.000), Сплин(LB 1.00 ~-nocat), ДДТ(LB 1.00 ~-9.000), Агата Кристи(LB 1.00 ~-nocat), Земфира(LB 1.00 ~-nocat), Би-2(LB 1.00 ~-9.000), Аквариум(LB 1.00 ~-nocat), Король и Шут(LB 1.00 ~-nocat), Алиса(LB 1.00 ~-nocat), Пикник(LB 1.00 ~-nocat), Гражданская оборона(LB 1.00 ~-nocat), Ленинград(LB 1.00 ~-nocat), Ария(LB 1.00 ~-nocat), Ногу свело!(LB 1.00 ~-nocat), Lumen(LB 1.00 ~-9.000), Виктор Цой(LB 1.00 ~-nocat), Сектор Газа(LB 1.00 ~-nocat), Кукрыниксы(LB 1.00 ~-nocat), Мельница(LB 1.00 ~-9.000), Владимир Высоцкий(LB 1.00 ~-9.000), Егор Летов(LB 1.00 ~-nocat), Зоопарк(LB 1.00 ~-nocat), Тараканы!(LB 1.00 ~-nocat), Ночные Снайперы(LB 1.00 ~-nocat), Radiohead(LB 1.00 ~-9.000), Nirvana(LB 1.00 ~-9.000), The Beatles(LB 1.00 ~-9.000), Rammstein(LB 1.00 ~-9.000), Depeche Mode(LB 1.00 ~-9.000), Metallica(LB 1.00 ~-9.000), Linkin Park(LB 1.00 ~-9.000), Pink Floyd(LB 1.00 ~-9.000), Red Hot Chili Peppers(LB 1.00 ~-9.000), System of a Down(LB 1.00 ~-9.000), The Doors(LB 1.00 ~-9.000), David Bowie(LB 1.00 ~-9.000), Led Zeppelin(LB 1.00 ~-9.000), The Cure(LB 1.00 ~-9.000), Muse(LB 1.00 ~-9.000), The Prodigy(LB 1.00 ~-9.000), Gorillaz(LB 1.00 ~-9.000), Placebo(LB 1.00 ~-9.000), Scorpions(LB 1.00 ~-9.000), Joy Division(LB 1.00 ~-9.000), The Rolling Stones(LB 1.00 ~-9.000), The Offspring(LB 1.00 ~-9.000), Marilyn Manson(LB 1.00 ~-9.000), Coldplay(LB 1.00 ~-9.000)
+  -> Because you like Кино  |  People who listen to Кино also play these  (12 rows)
+     Nautilus Pompilius — Крылья   [russian rock, pop 53, ~0.000]
+     ДДТ — Что такое осень   [russian rock, pop 50, ~0.000]
+     [Би-2] — Полковнику никто не пишет   [belarusian rock, pop 54, ~0.000]
+     lumen — On This Rainy Night   [rain, pop 66, ~0.000]
+     Мельница — Прощай   [russian rock, pop 35, ~0.000]
+     Владимир Высоцкий — Москва - Одесса   [classic russian rock, pop 36, ~0.000]
+     Radiohead — Creep   [rock, pop 89, ~0.000]
+     Nirvana — Smells Like Teen Spirit   [permanent wave, pop 84, ~0.000]
+     Nautilus Pompilius — Дыхание   [russian rock, pop 48, ~0.000]
+     ДДТ — Просвистела   [russian rock, pop 49, ~0.000]
+     [Би-2] — Варвара   [belarusian rock, pop 51, ~0.000]
+     lumen — it's raining   [rain, pop 59, ~0.000]
+
+=== Кино  [region RU]  liked-as "Кино"
+  seed in graph: Кино / RU / conf 0.9 / pop 9 / 064db6e8-fdfb-4acb-a327-fc2de75b37de
+  seed sound: NONE
+    NB	Кино	Nautilus Pompilius	LB	-9.000	russian rock	people 1
+    NB	Кино	ДДТ	LB	-9.000	russian rock	people 1
+    NB	Кино	Би-2	LB	-9.000	belarusian rock	people 1
+    NB	Кино	Lumen	LB	-9.000	rain	people 3
+    NB	Кино	Мельница	LB	-9.000	russian rock	people 1
+    NB	Кино	Владимир Высоцкий	LB	-9.000	classic russian rock	people 1
+    NB	Кино	Radiohead	LB	-9.000	rock	people 1
+    NB	Кино	Nirvana	LB	-9.000	permanent wave	people 1
+    NB	Кино	The Beatles	LB	-9.000	classic rock	people 1
+    NB	Кино	Rammstein	LB	-9.000	neue deutsche harte	people 1
+    NB	Кино	Depeche Mode	LB	-9.000	new wave	people 1
+    NB	Кино	Metallica	LB	-9.000	hard rock	people 1
+    NB	Кино	Linkin Park	LB	-9.000	alternative metal	people 1
+    NB	Кино	Pink Floyd	LB	-9.000	art rock	people 1
+    NB	Кино	Red Hot Chili Peppers	LB	-9.000	permanent wave	people 1
+    NB	Кино	System of a Down	LB	-9.000	alternative metal	people 1
+    NB	Кино	The Doors	LB	-9.000	rock	people 1
+    NB	Кино	David Bowie	LB	-9.000	rock	people 1
+    NB	Кино	Led Zeppelin	LB	-9.000	rock	people 1
+    NB	Кино	The Cure	LB	-9.000	uk post-punk	people 1
+    NB	Кино	Muse	LB	-9.000	permanent wave	people 1
+    NB	Кино	The Prodigy	LB	-9.000	rave	people 1
+    NB	Кино	Gorillaz	LB	-9.000	rock	people 1
+    NB	Кино	Placebo	LB	-9.000	permanent wave	people 1
+    NB	Кино	Scorpions	LB	-9.000	hard rock	people 1
+    NB	Кино	Joy Division	LB	-9.000	uk post-punk	people 1
+    NB	Кино	The Rolling Stones	LB	-9.000	rock	people 1
+    NB	Кино	The Offspring	LB	-9.000	skate punk	people 1
+    NB	Кино	Marilyn Manson	LB	-9.000	industrial	people 1
+    NB	Кино	Coldplay	LB	-9.000	permanent wave	people 1
+  graph neighbours (48): Nautilus Pompilius(LB 1.00 ~-9.000), Сплин(LB 1.00 ~-nocat), ДДТ(LB 1.00 ~-9.000), Агата Кристи(LB 1.00 ~-nocat), Земфира(LB 1.00 ~-nocat), Би-2(LB 1.00 ~-9.000), Аквариум(LB 1.00 ~-nocat), Король и Шут(LB 1.00 ~-nocat), Алиса(LB 1.00 ~-nocat), Пикник(LB 1.00 ~-nocat), Гражданская оборона(LB 1.00 ~-nocat), Ленинград(LB 1.00 ~-nocat), Ария(LB 1.00 ~-nocat), Ногу свело!(LB 1.00 ~-nocat), Lumen(LB 1.00 ~-9.000), Виктор Цой(LB 1.00 ~-nocat), Сектор Газа(LB 1.00 ~-nocat), Кукрыниксы(LB 1.00 ~-nocat), Мельница(LB 1.00 ~-9.000), Владимир Высоцкий(LB 1.00 ~-9.000), Егор Летов(LB 1.00 ~-nocat), Зоопарк(LB 1.00 ~-nocat), Тараканы!(LB 1.00 ~-nocat), Ночные Снайперы(LB 1.00 ~-nocat), Radiohead(LB 1.00 ~-9.000), Nirvana(LB 1.00 ~-9.000), The Beatles(LB 1.00 ~-9.000), Rammstein(LB 1.00 ~-9.000), Depeche Mode(LB 1.00 ~-9.000), Metallica(LB 1.00 ~-9.000), Linkin Park(LB 1.00 ~-9.000), Pink Floyd(LB 1.00 ~-9.000), Red Hot Chili Peppers(LB 1.00 ~-9.000), System of a Down(LB 1.00 ~-9.000), The Doors(LB 1.00 ~-9.000), David Bowie(LB 1.00 ~-9.000), Led Zeppelin(LB 1.00 ~-9.000), The Cure(LB 1.00 ~-9.000), Muse(LB 1.00 ~-9.000), The Prodigy(LB 1.00 ~-9.000), Gorillaz(LB 1.00 ~-9.000), Placebo(LB 1.00 ~-9.000), Scorpions(LB 1.00 ~-9.000), Joy Division(LB 1.00 ~-9.000), The Rolling Stones(LB 1.00 ~-9.000), The Offspring(LB 1.00 ~-9.000), Marilyn Manson(LB 1.00 ~-9.000), Coldplay(LB 1.00 ~-9.000)
+  -> Because you like Кино  |  People who listen to Кино also play these  (12 rows)
+     Nautilus Pompilius — Крылья   [russian rock, pop 53, ~0.000]
+     ДДТ — Что такое осень   [russian rock, pop 50, ~0.000]
+     [Би-2] — Полковнику никто не пишет   [belarusian rock, pop 54, ~0.000]
+     lumen — On This Rainy Night   [rain, pop 66, ~0.000]
+     Мельница — Прощай   [russian rock, pop 35, ~0.000]
+     Владимир Высоцкий — Москва - Одесса   [classic russian rock, pop 36, ~0.000]
+     Radiohead — Creep   [rock, pop 89, ~0.000]
+     Nirvana — Smells Like Teen Spirit   [permanent wave, pop 84, ~0.000]
+     Nautilus Pompilius — Дыхание   [russian rock, pop 48, ~0.000]
+     ДДТ — Просвистела   [russian rock, pop 49, ~0.000]
+     [Би-2] — Варвара   [belarusian rock, pop 51, ~0.000]
+     lumen — it's raining   [rain, pop 59, ~0.000]
+
+=== Земфира  [region US]  liked-as "Земфира"
+  seed in graph: Земфира / RU / conf 0.94 / pop 4 / cec59910-2d12-46ec-8e39-85ca06acb0ed
+  seed sound: NONE
+  graph neighbours (1): Кино(LB 1.00 ~-nocat)
+  -> NO ARTIST SHELF  (shelves: popular)
+
+=== Земфира  [region RU]  liked-as "Земфира"
+  seed in graph: Земфира / RU / conf 0.94 / pop 4 / cec59910-2d12-46ec-8e39-85ca06acb0ed
+  seed sound: NONE
+  graph neighbours (1): Кино(LB 1.00 ~-nocat)
+  -> NO ARTIST SHELF  (shelves: popular)
+
+=== Oxxxymiron  [region US]  liked-as "Oxxxymiron"
+  seed in graph: Oxxxymiron / GB / conf 0.8 / pop 2 / fb2a8279-79cf-4849-b692-1ce674709159
+  seed sound: yes
+  graph neighbours (0): 
+  -> Sounds like Oxxxymiron  |  Artists whose sound sits closest to theirs  (12 rows)
+     Lizer — заря   [russian hip hop, pop 46, ~0.998]
+     Gunwest — Сеньорита   [russian hip hop, pop 37, ~0.998]
+     Aarne — Slim Shady   [russian hip hop, pop 55, ~0.998]
+     Куок — ГОРОД ЗАСЫПАЕТ   [russian trap, pop 40, ~0.998]
+     вышел покурить — падаю   [russian hip hop, pop 48, ~0.998]
+     BUSHIDO ZHO — Дай мне посмотреть   [russian trap, pop 53, ~0.998]
+     10AGE — Зоопарк   [russian hip hop, pop 49, ~0.998]
+     Boulevard Depo — ВВВ - THE DAWLESS REMIX   [russian hip hop, pop 44, ~0.998]
+     Chester Nebro — Хлам   [russian gangster rap, pop 37, ~0.998]
+     METAN — Farma   [russian underground rap, pop 41, ~0.998]
+     YUNG TRAPPA — Молодые боссы   [russian trap, pop 40, ~0.998]
+     Зараза — Холод и апатия   [russian trap, pop 43, ~0.998]
+
+=== Oxxxymiron  [region RU]  liked-as "Oxxxymiron"
+  seed in graph: Oxxxymiron / RU / conf 0.9 / pop 2 / fb2a8279-79cf-4849-b692-1ce674709159
+  seed sound: yes
+  graph neighbours (0): 
+  -> Sounds like Oxxxymiron  |  Artists whose sound sits closest to theirs  (12 rows)
+     Lizer — заря   [russian hip hop, pop 46, ~0.998]
+     Gunwest — Сеньорита   [russian hip hop, pop 37, ~0.998]
+     Aarne — Slim Shady   [russian hip hop, pop 55, ~0.998]
+     Куок — ГОРОД ЗАСЫПАЕТ   [russian trap, pop 40, ~0.998]
+     вышел покурить — падаю   [russian hip hop, pop 48, ~0.998]
+     BUSHIDO ZHO — Дай мне посмотреть   [russian trap, pop 53, ~0.998]
+     10AGE — Зоопарк   [russian hip hop, pop 49, ~0.998]
+     Boulevard Depo — ВВВ - THE DAWLESS REMIX   [russian hip hop, pop 44, ~0.998]
+     Chester Nebro — Хлам   [russian gangster rap, pop 37, ~0.998]
+     METAN — Farma   [russian underground rap, pop 41, ~0.998]
+     YUNG TRAPPA — Молодые боссы   [russian trap, pop 40, ~0.998]
+     Зараза — Холод и апатия   [russian trap, pop 43, ~0.998]
+
+=== Tinariwen  [region US]  liked-as "Tinariwen"
+  seed in graph: NOT FOUND
+  -> Sounds like Tinariwen  |  Artists whose sound sits closest to theirs  (12 rows)
+     Djelimady Tounkara — Fanta Bourama   [mande pop, pop 35, ~0.997]
+     Nabil Baly Othmani — Edunia tigla   [tuareg guitar, pop 14, ~0.995]
+     Baaba Maal — Traveller   [mbalax, pop 33, ~0.994]
+     Fatoumata Diawara — Sonkolon   [mande pop, pop 45, ~0.993]
+     Zani Diabaté — Nikoyi   [desert blues, pop 1, ~0.993]
+     Amadou & Mariam — M' Bife   [malian blues, pop 49, ~0.993]
+     Etran Finatawa — Matinfa   [desert blues, pop 29, ~0.992]
+     Boubacar Traoré — Duna ma yelema   [malian blues, pop 36, ~0.992]
+     Les Filles de Illighadad — Inssegh Inssegh   [tuareg guitar, pop 31, ~0.992]
+     AMADEUS — JIIN   [mbalax, pop 38, ~0.992]
+     Habib Koité — Batoumambe   [mande pop, pop 41, ~0.992]
+     Iba Montana — Gangsta   [rap malien, pop 30, ~0.992]
+
+=== Tinariwen  [region ML]  liked-as "Tinariwen"
+  seed in graph: NOT FOUND
+  -> Sounds like Tinariwen  |  Artists whose sound sits closest to theirs  (12 rows)
+     Djelimady Tounkara — Fanta Bourama   [mande pop, pop 35, ~0.997]
+     Nabil Baly Othmani — Edunia tigla   [tuareg guitar, pop 14, ~0.995]
+     Baaba Maal — Traveller   [mbalax, pop 33, ~0.994]
+     Fatoumata Diawara — Sonkolon   [mande pop, pop 45, ~0.993]
+     Zani Diabaté — Nikoyi   [desert blues, pop 1, ~0.993]
+     Amadou & Mariam — M' Bife   [malian blues, pop 49, ~0.993]
+     Etran Finatawa — Matinfa   [desert blues, pop 29, ~0.992]
+     Boubacar Traoré — Duna ma yelema   [malian blues, pop 36, ~0.992]
+     Les Filles de Illighadad — Inssegh Inssegh   [tuareg guitar, pop 31, ~0.992]
+     AMADEUS — JIIN   [mbalax, pop 38, ~0.992]
+     Habib Koité — Batoumambe   [mande pop, pop 41, ~0.992]
+     Iba Montana — Gangsta   [rap malien, pop 30, ~0.992]
+
+=== Ichiko Aoba  [region US]  liked-as "Ichiko Aoba"
+  seed in graph: NOT FOUND
+  -> Sounds like Ichiko Aoba  |  Artists whose sound sits closest to theirs  (12 rows)
+     Lamp — 密やかに   [japanese alternative pop, pop 56, ~0.991]
+     Saho Terao — 愛よ届け   [j-acoustic, pop 36, ~0.991]
+     Naotaro Moriyama — 生きてることが辛いなら   [japanese singer-songwriter, pop 39, ~0.990]
+     上野大樹 — て   [j-acoustic, pop 46, ~0.988]
+     Humbert Humbert — 虎   [j-acoustic, pop 39, ~0.988]
+     Koji Tamaki — メロディー   [classic j-pop, pop 51, ~0.987]
+     mamerico — natsu no stole   [japanese indie folk, pop 37, ~0.987]
+     Mone Kamishiraishi — 366日   [j-pop, pop 40, ~0.987]
+     Hanare Gumi — 深呼吸   [j-rock, pop 40, ~0.987]
+     君島大空 — 向こう髪   [japanese singer-songwriter, pop 36, ~0.987]
+     Sakura Fujiwara — 初恋のにおい   [japanese singer-songwriter, pop 40, ~0.987]
+     Kyogo Kawaguchi — 桜   [japanese singer-songwriter, pop 49, ~0.986]
+
+=== Ichiko Aoba  [region JP]  liked-as "Ichiko Aoba"
+  seed in graph: NOT FOUND
+  -> Sounds like Ichiko Aoba  |  Artists whose sound sits closest to theirs  (12 rows)
+     Lamp — 密やかに   [japanese alternative pop, pop 56, ~0.991]
+     Saho Terao — 愛よ届け   [j-acoustic, pop 36, ~0.991]
+     Naotaro Moriyama — 生きてることが辛いなら   [japanese singer-songwriter, pop 39, ~0.990]
+     上野大樹 — て   [j-acoustic, pop 46, ~0.988]
+     Humbert Humbert — 虎   [j-acoustic, pop 39, ~0.988]
+     Koji Tamaki — メロディー   [classic j-pop, pop 51, ~0.987]
+     mamerico — natsu no stole   [japanese indie folk, pop 37, ~0.987]
+     Mone Kamishiraishi — 366日   [j-pop, pop 40, ~0.987]
+     Hanare Gumi — 深呼吸   [j-rock, pop 40, ~0.987]
+     君島大空 — 向こう髪   [japanese singer-songwriter, pop 36, ~0.987]
+     Sakura Fujiwara — 初恋のにおい   [japanese singer-songwriter, pop 40, ~0.987]
+     Kyogo Kawaguchi — 桜   [japanese singer-songwriter, pop 49, ~0.986]
+
+=== Black Country, New Road  [region US]  liked-as "Black Country"
+  seed in graph: NOT FOUND
+  -> Sounds like Black Country, New Road  |  Artists whose sound sits closest to theirs  (12 rows)
+     Jockstrap — Glasgow   [london indie, pop 36, ~0.976]
+     Billy Nomates — Metalhorse   [crank wave, pop 38, ~0.963]
+     caroline — U R UR ONLY ACHING   [crank wave, pop 38, ~0.963]
+     Geese — Gravity Blues   [crank wave, pop 43, ~0.961]
+     Squid — Fieldworks II   [crank wave, pop 43, ~0.961]
+     Heartworms — Just To Ask A Dance   [crank wave, pop 42, ~0.960]
+     Divorce — Lord   [crank wave, pop 40, ~0.960]
+     Grian Chatten — Last Time Every Time Forever   [crank wave, pop 41, ~0.959]
+     IDLES — POP POP POP   [crank wave, pop 51, ~0.959]
+     Opus Kink — I Wanna Live With You   [crank wave, pop 41, ~0.957]
+     WOOZE — I'll Have What She's Having   [london indie, pop 36, ~0.956]
+     Katy J Pearson — Beautiful Soul   [chamber psych, pop 47, ~0.955]
+
+=== Black Country, New Road  [region GB]  liked-as "Black Country"
+  seed in graph: NOT FOUND
+  -> Sounds like Black Country, New Road  |  Artists whose sound sits closest to theirs  (12 rows)
+     Jockstrap — Glasgow   [london indie, pop 36, ~0.976]
+     Billy Nomates — Metalhorse   [crank wave, pop 38, ~0.963]
+     caroline — U R UR ONLY ACHING   [crank wave, pop 38, ~0.963]
+     Geese — Gravity Blues   [crank wave, pop 43, ~0.961]
+     Squid — Fieldworks II   [crank wave, pop 43, ~0.961]
+     Heartworms — Just To Ask A Dance   [crank wave, pop 42, ~0.960]
+     Divorce — Lord   [crank wave, pop 40, ~0.960]
+     Grian Chatten — Last Time Every Time Forever   [crank wave, pop 41, ~0.959]
+     IDLES — POP POP POP   [crank wave, pop 51, ~0.959]
+     Opus Kink — I Wanna Live With You   [crank wave, pop 41, ~0.957]
+     WOOZE — I'll Have What She's Having   [london indie, pop 36, ~0.956]
+     Katy J Pearson — Beautiful Soul   [chamber psych, pop 47, ~0.955]
+
+=== AC/DC  [region US]  liked-as "AC/DC"
+  seed in graph: AC/DC / AU / conf 0.94 / pop 34 / 66c662b6-6e2f-4930-8610-912e24c63ed1
+  seed sound: yes
+    NB	AC/DC	INXS	LB	0.873	new wave	people 1
+    NB	AC/DC	Nickelback	LB	0.613	canadian rock	people 1
+    NB	AC/DC	Evanescence	LB	0.633	alternative metal	people 1
+    NB	AC/DC	The Black Keys	LB	0.676	rock	people 1
+    NB	AC/DC	The Who	LB	0.922	rock	people 1
+    NB	AC/DC	The Doors	LB	0.896	rock	people 1
+    NB	AC/DC	Deep Purple	LB	0.932	album rock	people 1
+    NB	AC/DC	Radiohead	LB	0.820	rock	people 1
+    NB	AC/DC	Coldplay	LB	0.646	permanent wave	people 1
+    NB	AC/DC	Megadeth	LB	0.659	metal	people 1
+    NB	AC/DC	The Killers	LB	0.826	permanent wave	people 1
+    NB	AC/DC	Arctic Monkeys	LB	0.736	permanent wave	people 1
+    NB	AC/DC	Gorillaz	LB	0.704	rock	people 1
+    NB	AC/DC	R.E.M.	LB	0.825	athens indie	people 1
+    NB	AC/DC	Slipknot	LB	0.761	alternative metal	people 1
+    NB	AC/DC	Guns N’ Roses	LB	0.939	hard rock	people 1
+    NB	AC/DC	a‐ha	LB	0.776	new wave	people 1
+    NB	AC/DC	Fleetwood Mac	LB	0.902	rock	people 1
+    NB	AC/DC	Red Hot Chili Peppers	LB	0.875	permanent wave	people 1
+    NB	AC/DC	Franz Ferdinand	LB	0.706	scottish rock	people 1
+    NB	AC/DC	ZZ Top	LB	0.919	rock	people 1
+    NB	AC/DC	Michael Jackson	LB	0.139	soul	people 2
+    NB	AC/DC	Foo Fighters	LB	0.846	permanent wave	people 1
+    NB	AC/DC	Stone Temple Pilots	LB	0.911	alternative rock	people 1
+    NB	AC/DC	Scorpions	LB	0.820	hard rock	people 1
+  graph neighbours (25): INXS(LB 1.00 ~0.873), Nickelback(LB 1.00 ~0.613), Evanescence(LB 1.00 ~0.633), The Black Keys(LB 1.00 ~0.676), The Who(LB 1.00 ~0.922), The Doors(LB 1.00 ~0.896), Deep Purple(LB 1.00 ~0.932), Radiohead(LB 1.00 ~0.820), Coldplay(LB 1.00 ~0.646), Megadeth(LB 1.00 ~0.659), The Killers(LB 1.00 ~0.826), Arctic Monkeys(LB 1.00 ~0.736), Gorillaz(LB 1.00 ~0.704), R.E.M.(LB 1.00 ~0.825), Slipknot(LB 1.00 ~0.761), Guns N’ Roses(LB 1.00 ~0.939), a‐ha(LB 1.00 ~0.776), Fleetwood Mac(LB 1.00 ~0.902), Red Hot Chili Peppers(LB 1.00 ~0.875), Franz Ferdinand(LB 1.00 ~0.706), ZZ Top(LB 1.00 ~0.919), Michael Jackson(LB 1.00 ~0.139), Foo Fighters(LB 1.00 ~0.846), Stone Temple Pilots(LB 1.00 ~0.911), Scorpions(LB 1.00 ~0.820)
+  -> Because you like AC/DC  |  People who listen to AC/DC also play these  (12 rows)
+     Guns N' Roses — Sweet Child O' Mine   [hard rock, pop 87, ~0.939]
+     Deep Purple — Smoke On The Water - Remastered 2012   [album rock, pop 73, ~0.932]
+     The Who — Baba O'Riley   [rock, pop 76, ~0.922]
+     ZZ Top — La Grange (2005 Remaster)   [rock, pop 80, ~0.919]
+     Stone Temple Pilots — Interstate Love Song - 2019 Remaster   [alternative rock, pop 76, ~0.911]
+     Fleetwood Mac — Dreams - 2004 Remaster   [rock, pop 88, ~0.902]
+     The Doors — Riders on the Storm   [rock, pop 75, ~0.896]
+     Red Hot Chili Peppers — Can't Stop   [permanent wave, pop 86, ~0.875]
+     Guns N' Roses — Welcome To The Jungle   [hard rock, pop 84, ~0.939]
+     Deep Purple — Perfect Strangers   [album rock, pop 66, ~0.932]
+     The Who — Behind Blue Eyes   [rock, pop 70, ~0.922]
+     ZZ Top — Sharp Dressed Man (2008 Remaster)   [rock, pop 78, ~0.919]
+
+=== AC/DC  [region AU]  liked-as "AC/DC"
+  seed in graph: AC/DC / AU / conf 0.94 / pop 34 / 66c662b6-6e2f-4930-8610-912e24c63ed1
+  seed sound: yes
+    NB	AC/DC	INXS	LB	0.873	new wave	people 1
+    NB	AC/DC	Nickelback	LB	0.613	canadian rock	people 1
+    NB	AC/DC	Evanescence	LB	0.633	alternative metal	people 1
+    NB	AC/DC	The Black Keys	LB	0.676	rock	people 1
+    NB	AC/DC	The Who	LB	0.922	rock	people 1
+    NB	AC/DC	The Doors	LB	0.896	rock	people 1
+    NB	AC/DC	Deep Purple	LB	0.932	album rock	people 1
+    NB	AC/DC	Radiohead	LB	0.820	rock	people 1
+    NB	AC/DC	Coldplay	LB	0.646	permanent wave	people 1
+    NB	AC/DC	Megadeth	LB	0.659	metal	people 1
+    NB	AC/DC	The Killers	LB	0.826	permanent wave	people 1
+    NB	AC/DC	Arctic Monkeys	LB	0.736	permanent wave	people 1
+    NB	AC/DC	Gorillaz	LB	0.704	rock	people 1
+    NB	AC/DC	R.E.M.	LB	0.825	athens indie	people 1
+    NB	AC/DC	Slipknot	LB	0.761	alternative metal	people 1
+    NB	AC/DC	Guns N’ Roses	LB	0.939	hard rock	people 1
+    NB	AC/DC	a‐ha	LB	0.776	new wave	people 1
+    NB	AC/DC	Fleetwood Mac	LB	0.902	rock	people 1
+    NB	AC/DC	Red Hot Chili Peppers	LB	0.875	permanent wave	people 1
+    NB	AC/DC	Franz Ferdinand	LB	0.706	scottish rock	people 1
+    NB	AC/DC	ZZ Top	LB	0.919	rock	people 1
+    NB	AC/DC	Michael Jackson	LB	0.139	soul	people 2
+    NB	AC/DC	Foo Fighters	LB	0.846	permanent wave	people 1
+    NB	AC/DC	Stone Temple Pilots	LB	0.911	alternative rock	people 1
+    NB	AC/DC	Scorpions	LB	0.820	hard rock	people 1
+  graph neighbours (25): INXS(LB 1.00 ~0.873), Nickelback(LB 1.00 ~0.613), Evanescence(LB 1.00 ~0.633), The Black Keys(LB 1.00 ~0.676), The Who(LB 1.00 ~0.922), The Doors(LB 1.00 ~0.896), Deep Purple(LB 1.00 ~0.932), Radiohead(LB 1.00 ~0.820), Coldplay(LB 1.00 ~0.646), Megadeth(LB 1.00 ~0.659), The Killers(LB 1.00 ~0.826), Arctic Monkeys(LB 1.00 ~0.736), Gorillaz(LB 1.00 ~0.704), R.E.M.(LB 1.00 ~0.825), Slipknot(LB 1.00 ~0.761), Guns N’ Roses(LB 1.00 ~0.939), a‐ha(LB 1.00 ~0.776), Fleetwood Mac(LB 1.00 ~0.902), Red Hot Chili Peppers(LB 1.00 ~0.875), Franz Ferdinand(LB 1.00 ~0.706), ZZ Top(LB 1.00 ~0.919), Michael Jackson(LB 1.00 ~0.139), Foo Fighters(LB 1.00 ~0.846), Stone Temple Pilots(LB 1.00 ~0.911), Scorpions(LB 1.00 ~0.820)
+  -> Because you like AC/DC  |  People who listen to AC/DC also play these  (12 rows)
+     Guns N' Roses — Sweet Child O' Mine   [hard rock, pop 87, ~0.939]
+     Deep Purple — Smoke On The Water - Remastered 2012   [album rock, pop 73, ~0.932]
+     The Who — Baba O'Riley   [rock, pop 76, ~0.922]
+     ZZ Top — La Grange (2005 Remaster)   [rock, pop 80, ~0.919]
+     Stone Temple Pilots — Interstate Love Song - 2019 Remaster   [alternative rock, pop 76, ~0.911]
+     Fleetwood Mac — Dreams - 2004 Remaster   [rock, pop 88, ~0.902]
+     The Doors — Riders on the Storm   [rock, pop 75, ~0.896]
+     Red Hot Chili Peppers — Can't Stop   [permanent wave, pop 86, ~0.875]
+     Guns N' Roses — Welcome To The Jungle   [hard rock, pop 84, ~0.939]
+     Deep Purple — Perfect Strangers   [album rock, pop 66, ~0.932]
+     The Who — Behind Blue Eyes   [rock, pop 70, ~0.922]
+     ZZ Top — Sharp Dressed Man (2008 Remaster)   [rock, pop 78, ~0.919]
+
+=== Simon & Garfunkel  [region US]  liked-as "Simon & Garfunkel"
+  seed in graph: Simon & Garfunkel / US / conf 0.94 / pop 16 / 5d02f264-e225-41ff-83f7-d9b1f0b1874a
+  seed sound: yes
+    NB	Simon & Garfunkel	The Doors	LB	0.911	rock	people 1
+    NB	Simon & Garfunkel	R.E.M.	LB	0.695	athens indie	people 1
+    NB	Simon & Garfunkel	Red Hot Chili Peppers	LB	0.652	permanent wave	people 1
+    NB	Simon & Garfunkel	Guns N’ Roses	LB	0.775	hard rock	people 1
+    NB	Simon & Garfunkel	The Smashing Pumpkins	LB	0.575	alternative rock	people 1
+    NB	Simon & Garfunkel	Foo Fighters	LB	0.582	permanent wave	people 1
+    NB	Simon & Garfunkel	The Killers	LB	0.640	permanent wave	people 1
+    NB	Simon & Garfunkel	Pearl Jam	LB	0.642	alternative rock	people 1
+    NB	Simon & Garfunkel	Pixies	LB	0.687	alternative rock	people 1
+    NB	Simon & Garfunkel	Marvin Gaye	LB	0.165	neo soul	people 1
+    NB	Simon & Garfunkel	Metallica	LB	0.465	hard rock	people 1
+    NB	Simon & Garfunkel	Weezer	LB	0.620	permanent wave	people 1
+    NB	Simon & Garfunkel	Janis Joplin	LB	0.920	rock	people 1
+    NB	Simon & Garfunkel	Michael Jackson	LB	0.145	soul	people 2
+    NB	Simon & Garfunkel	Talking Heads	LB	0.625	permanent wave	people 1
+    NB	Simon & Garfunkel	Bruce Springsteen	LB	0.956	rock	people 1
+    NB	Simon & Garfunkel	Bob Marley & The Wailers	LB	0.028	roots reggae	people 1
+    NB	Simon & Garfunkel	Ramones	LB	0.570	alternative rock	people 1
+    NB	Simon & Garfunkel	Tom Petty and the Heartbreakers	LB	0.956	rock	people 1
+    NB	Simon & Garfunkel	Lynyrd Skynyrd	LB	0.906	rock	people 1
+    NB	Simon & Garfunkel	Billy Joel	LB	0.953	piano rock	people 1
+    NB	Simon & Garfunkel	Bob Dylan	LB	0.957	country rock	people 1
+    NB	Simon & Garfunkel	Moby	LB	0.090	electronica	people 1
+    NB	Simon & Garfunkel	The Beach Boys	LB	0.950	classic rock	people 1
+    NB	Simon & Garfunkel	Radiohead	LB	0.760	rock	people 1
+    NB	Simon & Garfunkel	The Who	LB	0.907	rock	people 1
+    NB	Simon & Garfunkel	Muse	LB	0.655	permanent wave	people 1
+    NB	Simon & Garfunkel	AC/DC	LB	0.818	australian rock	people 1
+    NB	Simon & Garfunkel	Depeche Mode	LB	0.708	new wave	people 1
+    NB	Simon & Garfunkel	Gorillaz	LB	0.535	rock	people 1
+    NB	Simon & Garfunkel	Deep Purple	LB	0.848	album rock	people 1
+    NB	Simon & Garfunkel	Arctic Monkeys	LB	0.612	permanent wave	people 1
+    NB	Simon & Garfunkel	Blur	LB	0.638	permanent wave	people 1
+    NB	Simon & Garfunkel	Fleetwood Mac	LB	0.933	rock	people 1
+    NB	Simon & Garfunkel	Eric Clapton	LB	0.961	classic rock	people 1
+  graph neighbours (35): The Doors(LB 1.00 ~0.911), R.E.M.(LB 1.00 ~0.695), Red Hot Chili Peppers(LB 1.00 ~0.652), Guns N’ Roses(LB 1.00 ~0.775), The Smashing Pumpkins(LB 1.00 ~0.575), Foo Fighters(LB 1.00 ~0.582), The Killers(LB 1.00 ~0.640), Pearl Jam(LB 1.00 ~0.642), Pixies(LB 1.00 ~0.687), Marvin Gaye(LB 1.00 ~0.165), Metallica(LB 1.00 ~0.465), Weezer(LB 1.00 ~0.620), Janis Joplin(LB 1.00 ~0.920), Michael Jackson(LB 1.00 ~0.145), Talking Heads(LB 1.00 ~0.625), Bruce Springsteen(LB 1.00 ~0.956), Bob Marley & The Wailers(LB 1.00 ~0.028), Ramones(LB 1.00 ~0.570), Tom Petty and the Heartbreakers(LB 1.00 ~0.956), Lynyrd Skynyrd(LB 1.00 ~0.906), Billy Joel(LB 1.00 ~0.953), Bob Dylan(LB 1.00 ~0.957), Moby(LB 1.00 ~0.090), The Beach Boys(LB 1.00 ~0.950), Radiohead(LB 1.00 ~0.760), The Who(LB 1.00 ~0.907), Muse(LB 1.00 ~0.655), AC/DC(LB 1.00 ~0.818), Depeche Mode(LB 1.00 ~0.708), Gorillaz(LB 1.00 ~0.535), Deep Purple(LB 1.00 ~0.848), Arctic Monkeys(LB 1.00 ~0.612), Blur(LB 1.00 ~0.638), Fleetwood Mac(LB 1.00 ~0.933), Eric Clapton(LB 1.00 ~0.961)
+  -> Because you like Simon & Garfunkel  |  People who listen to Simon & Garfunkel also play these  (12 rows)
+     Eric Clapton — Wonderful Tonight   [classic rock, pop 76, ~0.961]
+     Bob Dylan — Knockin' On Heaven's Door   [country rock, pop 81, ~0.957]
+     Tom Petty and the Heartbreakers — Mary Jane's Last Dance   [rock, pop 76, ~0.956]
+     Bruce Springsteen — Dancing In the Dark   [rock, pop 84, ~0.956]
+     Billy Joel — Vienna   [piano rock, pop 82, ~0.953]
+     The Beach Boys — Good Vibrations - Remastered 2001   [classic rock, pop 72, ~0.950]
+     Fleetwood Mac — Dreams - 2004 Remaster   [rock, pop 88, ~0.933]
+     Janis Joplin — Me and Bobby McGee   [rock, pop 70, ~0.920]
+     Eric Clapton — Tears in Heaven   [classic rock, pop 73, ~0.961]
+     Bob Dylan — Like a Rolling Stone   [country rock, pop 78, ~0.957]
+     Tom Petty and the Heartbreakers — Learning To Fly   [rock, pop 73, ~0.956]
+     Bruce Springsteen — I'm On Fire   [rock, pop 78, ~0.956]
+
+=== Earth, Wind & Fire  [region US]  liked-as "Earth"
+  seed in graph: NOT FOUND
+  -> Sounds like Earth, Wind & Fire  |  Artists whose sound sits closest to theirs  (12 rows)
+     The Blackbyrds — Rock Creek Park   [funk, pop 45, ~0.992]
+     The J.B.'s — Doing It To Death - Pts. 1 & 2   [southern soul, pop 36, ~0.990]
+     Jean Carn — Don't Let It Go to Your Head - 12" Version   [disco, pop 42, ~0.988]
+     Tower Of Power — Only so Much Oil in the Ground   [funk, pop 40, ~0.988]
+     Patrice Rushen — Forget Me Nots - Single Version   [funk, pop 49, ~0.987]
+     Leroy Hutson — I Think I'm Falling In Love   [classic soul, pop 36, ~0.987]
+     Tom Browne — Funkin' for Jamaica   [funk, pop 51, ~0.986]
+     Milton Wright — Get No Lovin' Tonight   [classic soul, pop 40, ~0.985]
+     Charles Bradley — Ain't It a Sin   [funk, pop 49, ~0.985]
+     Eugene Record — Overdose of Joy   [rare groove, pop 36, ~0.985]
+     Dexter Wansel — The Sweetest Pain   [rare groove, pop 42, ~0.985]
+     James Brown — Papa's Got A Brand New Bag   [funk, pop 54, ~0.985]
+
+=== cache check: findArtist(name, own country) on the US-warmed graph vs a graph that only saw that country
+
+SUMMARY (US pass): graph 23, sounds-like 37, none 2, seed-in-own-shelf rows 1, duplicate rows 0

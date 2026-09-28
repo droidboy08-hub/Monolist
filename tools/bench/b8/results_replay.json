@@ -1,0 +1,66 @@
+﻿[
+    {
+        "id":  "7nVctvQVz0U",
+        "rescued":  "itag 18",
+        "firstPlays":  "Streaming ? yt-dlp ? muxed aac 44100",
+        "replay":  "remembered link, tier muxed",
+        "replayPlays":  "Streaming ? yt-dlp ? muxed aac 44100",
+        "arm":  "before"
+    },
+    {
+        "id":  "BSTsnWoslP4",
+        "rescued":  "itag 18",
+        "firstPlays":  "Streaming ? yt-dlp ? muxed aac 44100",
+        "replay":  "remembered link, tier muxed",
+        "replayPlays":  "Streaming ? yt-dlp ? muxed aac 44100",
+        "arm":  "before"
+    },
+    {
+        "id":  "CmThpha4Hoo",
+        "rescued":  "itag 18",
+        "firstPlays":  "Streaming ? yt-dlp ? muxed aac 44100",
+        "replay":  "remembered link, tier muxed",
+        "replayPlays":  "Streaming ? yt-dlp ? muxed aac 44100",
+        "arm":  "before"
+    },
+    {
+        "id":  "4D7u5KF7SP8",
+        "rescued":  "itag 18",
+        "firstPlays":  "Streaming ? yt-dlp ? muxed aac 44100",
+        "replay":  "remembered link, tier muxed",
+        "replayPlays":  "Streaming ? yt-dlp ? muxed aac 44100",
+        "arm":  "before"
+    },
+    {
+        "id":  "7nVctvQVz0U",
+        "rescued":  "itag 18",
+        "firstPlays":  "Streaming � yt-dlp � muxed aac 44100",
+        "replay":  "InnerTube itag 251",
+        "replayPlays":  "Streaming � InnerTube opus 48000",
+        "arm":  "after"
+    },
+    {
+        "id":  "BSTsnWoslP4",
+        "rescued":  "itag 18",
+        "firstPlays":  "Streaming � yt-dlp � muxed aac 44100",
+        "replay":  "InnerTube itag 251",
+        "replayPlays":  "Streaming � InnerTube opus 48000",
+        "arm":  "after"
+    },
+    {
+        "id":  "CmThpha4Hoo",
+        "rescued":  "itag 18",
+        "firstPlays":  "Streaming � yt-dlp � muxed aac 44100",
+        "replay":  "InnerTube itag 140",
+        "replayPlays":  "Streaming � InnerTube aac 44100",
+        "arm":  "after"
+    },
+    {
+        "id":  "4D7u5KF7SP8",
+        "rescued":  "itag 18",
+        "firstPlays":  "Streaming � yt-dlp � muxed aac 44100",
+        "replay":  "InnerTube itag 251",
+        "replayPlays":  "Streaming � InnerTube opus 48000",
+        "arm":  "after"
+    }
+]

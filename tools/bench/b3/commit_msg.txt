@@ -1,0 +1,37 @@
+Play YouTube's Opus stream whenever it is offered, and log the format chosen
+
+The app played whichever audio format /player listed with the highest peak
+bitrate, whatever its codec. When AAC 140's peak came out a little above
+Opus 251's, a song that YouTube offers as 48 kHz Opus played as 44.1 kHz
+AAC, and mpv had to resample it on the way out. IPeJ7iM55hc was one:
+131,770 against 130,713 b/s. Nothing in the log said which format played or
+why, and a dynamic-range-compressed copy of a format would have been taken
+like any other.
+
+- The choice is now an order: Opus 774, Opus 251, AAC 141, AAC 140, then
+  the rest by bitrate. A DRC copy (isDrc, or "drc" in its xtags) is passed
+  over while any other format is offered. The video's own sound comes
+  before a dubbed track. Nothing depends on the order formats are listed
+  in, so a second /player call makes the same choice. Formats offered only
+  behind signatureCipher are still skipped, and itag 18 is still the
+  fallback when no audio-only format has a plain link.
+- Every resolve logs what it chose and from what, with the codec taken
+  from the mimeType: "innertube: <id> chose itag 251: opus, 48 kHz,
+  125 kbps (of 139 140 249 250 251)". The link itself is never logged.
+- The setting youtube.format=bitrate switches back to the old rule.
+- --format-test: 21 checks against the stand-in server, on two real
+  answers with their links replaced and on invented ones.
+
+Measured on Windows the same day, on the instrumented build: bench_B seq
+over the 12 benchmark tracks, 4 runs per arm, with the old rule (the
+switch) as the control on the same binary.
+- Both rules chose the same itags on these 12 tracks: 251 on 44 of 48
+  resolves, and 140 on CmThpha4Hoo, which offers no Opus.
+- Outside one process, the only resampled opens were CmThpha4Hoo's (6 of
+  72). In that one process googlevideo refused all 12 first links with
+  403, CmThpha4Hoo's 140 included, and the itag 18 rescues played as AAC.
+- IPeJ7iM55hc: Opus 251 on 4 of 4 opens with no resampling. The old rule
+  gave AAC 140 on 4 of 4, all resampled.
+- A new track in a warm session, time to audio (median / p90): 483 / 753
+  ms without the refused process (n=33), against 474.5 / 804 for the old
+  rule (n=44). With it included: 525.5 / 4,030 (n=44).

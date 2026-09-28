@@ -1,0 +1,49 @@
+Ask for a fresh link before the muxed stream, and pick up songs that stop short (B8)
+
+When googlevideo refused a song's link, the player went straight to the
+song's muxed stream: about three seconds of silence, then itag 18, 96 kbps
+AAC resampled to 48 kHz. That link was then kept as the song's own, so
+every replay for up to five hours played it too. A stream that stopped
+short (a dropped connection, or a reconnect googlevideo refused) moved on
+to the next song mid-way without a word. A downloaded file mpv would not
+open stopped the listening. And the three-in-a-row stop was reset as soon
+as a link arrived, even one mpv then refused.
+
+- A refused InnerTube link: InnerTube is asked once more for a fresh link,
+  once a track, before the muxed stream (the order the owner agreed for
+  U01). Muxed stays ahead of yt-dlp.
+- A link found below the song's own rung after a refusal is a rescue link.
+  It serves that play only: the same play can go back to it (the sound
+  after the picture), and the next play starts from InnerTube again.
+- An end of file more than 5 s (or 3%) before the length mpv read from the
+  stream counts as the link failing. The song gets a fresh link from the
+  same rung and carries on from the same second, once a track. A row's own
+  http link is loaded again. Not for files, nor with the picture on.
+- A downloaded or local file mpv refuses: the song streams from where it
+  was; with no source id it is skipped like a song that will not resolve.
+- The three-in-a-row count goes back to 0 only when a song's sound starts
+  (MpvEngine::audioStarted), not when its link arrives.
+- Switches back: playback.refused=muxed, playback.rescue_link=keep,
+  playback.early_end=next. The log says what rescued a song and after how
+  long. --spoil takes a count. New --recovery-test: 20 checks on the real
+  mpv against a stand-in server, no network.
+
+Measured with instrumented Release builds (B7's as before), median / p90:
+- --play <id> 30 --spoil, the 12 fixed ids, arms interleaved: Play to
+  sound 3,086 / 3,368 -> 761 / 882 ms; refusal to sound 2,641.5 / 2,853 ->
+  301.5 / 412 ms. Rescued by itag 18 12/12 -> by a fresh InnerTube link
+  12/12 (Opus 251 x11, AAC 140 on the one song without Opus).
+- Replay after a rescue (4 ids): the kept itag 18 link 4/4 -> InnerTube
+  again 4/4 (251 x3, 140 x1).
+- --at 600 on the 13:32 track, 8 launches: 8/8 clean seeks, as in B0.
+- bench_B seq x9 (fresh visitor id each): 216 opens, 0 refusals, 0 early
+  ends. So the plan's gate (keep the rung if it rescues >= 50% of real
+  refusals) could not be judged on healthy ids.
+- The only real refusals: a stored visitor id went bad mid-run and every
+  link minted with it was refused, the fresh one too (11 songs). The rung
+  rescued 0 of them and cost 196.5 / 230 ms before the muxed stream (the
+  plan guessed ~450). A new id cured it: ROADMAP F37.
+
+Checked: Debug build clean; --recovery-test 20/0 (Debug and Release);
+--listen-test 35/0; --scrobble-test 32/0; --queue-test and --recover as
+in B7. Also ROADMAP F36 (a song whose every link is refused still halts).

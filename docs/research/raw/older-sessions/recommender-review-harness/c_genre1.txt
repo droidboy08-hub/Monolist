@@ -1,0 +1,89 @@
+Agoraphobic Nosebleed [noisecore]	rows 2	maxpop 29
+Neutral [neofolk]	rows 8	maxpop 16
+Hexvessel [neofolk]	rows 8	maxpop 36
+Boyd Rice and Friends [martial industrial]	rows 1	maxpop 23
+Perkele [oi]	rows 8	maxpop 46
+The Adicts [oi]	rows 5	maxpop 44
+MR. Brodnax [maga rap]	rows 1	maxpop 37
+Death In June [british industrial]	rows 7	maxpop 42
+Der Blutharsch and the Infinite Church of the Leading Hand [martial industrial]	rows 8	maxpop 2
+Brutal Sphincter [pornogrind]	rows 8	maxpop 26
+Chris & Cosey [british industrial]	rows 1	maxpop 37
+Prag 83 [neofolk]	rows 1	maxpop 29
+Tyson James [maga rap]	rows 8	maxpop 39
+King Dude [martial industrial]	rows 2	maxpop 39
+Bryson Gray [maga rap]	rows 8	maxpop 45
+Lymphatic Phlegm [pornogrind]	rows 2	maxpop 14
+Loza Alexander [maga rap]	rows 2	maxpop 41
+Hong Kong Fuck You [powerviolence]	rows 1	maxpop 34
+The Bruisers [oi]	rows 3	maxpop 31
+Anal Cunt [noisecore]	rows 3	maxpop 28
+Ordo Rosarius Equilibrio [martial industrial]	rows 8	maxpop 31
+Death In Rome [neofolk]	rows 1	maxpop 35
+Rare of Breed [maga rap]	rows 8	maxpop 48
+Der Blutharsch [neofolk]	rows 8	maxpop 19
+Angelic Upstarts [oi]	rows 1	maxpop 34
+Derniere Volonte [neofolk]	rows 8	maxpop 25
+GUT [pornogrind]	rows 6	maxpop 17
+Forgiato Blow [maga rap]	rows 1	maxpop 37
+Joelpatrick [maga rap]	rows 1	maxpop 36
+Combat 77 [oi]	rows 1	maxpop 31
+Scorn [british industrial]	rows 4	maxpop 24
+The Real Samson [maga rap]	rows 1	maxpop 36
+Jimmy Levy [maga rap]	rows 2	maxpop 39
+Cockney Rejects [oi]	rows 1	maxpop 42
+Zee [maga rap]	rows 1	maxpop 40
+U.K. Subs [oi]	rows 1	maxpop 36
+Hi-Rez [maga rap]	rows 8	maxpop 51
+Nature And Organisation [neofolk]	rows 8	maxpop 26
+Haudegen [german oi]	rows 5	maxpop 44
+Parasitic Ejaculation [pornogrind]	rows 1	maxpop 36
+Loikaemie [german oi]	rows 1	maxpop 36
+Malodorous [pornogrind]	rows 1	maxpop 36
+November Növelet [martial industrial]	rows 1	maxpop 23
+Mjhanks [maga rap]	rows 1	maxpop 41
+Stoney Dudebro [maga rap]	rows 1	maxpop 41
+Rico [british industrial]	rows 8	maxpop 4
+Couch Slut [powerviolence]	rows 1	maxpop 26
+Bryann T [maga rap]	rows 6	maxpop 37
+Lion's Law [german oi]	rows 8	maxpop 37
+Kieran the Light [maga rap]	rows 8	maxpop 51
+Lower Class Brats [oi]	rows 2	maxpop 31
+Stage Bottles [german oi]	rows 8	maxpop 36
+Dystopia [powerviolence]	rows 8	maxpop 53
+Booze & Glory [oi]	rows 6	maxpop 45
+The Old Firm Casuals [oi]	rows 4	maxpop 36
+Vulvectomy [pornogrind]	rows 2	maxpop 27
+Siege [powerviolence]	rows 1	maxpop 31
+Isaiah Robin [maga rap]	rows 1	maxpop 36
+4 Promille [german oi]	rows 1	maxpop 44
+Der W [german oi]	rows 2	maxpop 39
+Tom MacDonald [maga rap]	rows 8	maxpop 65
+Cock Sparrer [oi]	rows 8	maxpop 48
+Topher [maga rap]	rows 8	maxpop 57
+Rocky Luciano [maga rap]	rows 1	maxpop 44
+ROME [martial industrial]	rows 8	maxpop 43
+Rude Pride [oi]	rows 1	maxpop 35
+Gruesome Malady [pornogrind]	rows 1	maxpop 1
+Throbbing Gristle [british industrial]	rows 1	maxpop 32
+Haggus [goregrind]	rows 8	maxpop 37
+Gutalax [pornogrind]	rows 8	maxpop 48
+Goitzsche Front [german oi]	rows 8	maxpop 48
+Frei.Wild [german oi]	rows 8	maxpop 56
+Caustic Wound [grindcore]	rows 2	maxpop 32
+Brandon Hart [maga rap]	rows 2	maxpop 36
+:Of The Wand And The Moon: [martial industrial]	rows 8	maxpop 32
+Apartment 213 [powerviolence]	rows 1	maxpop 23
+Zaunpfahl [german oi]	rows 1	maxpop 36
+Phyllomedusa [pornogrind]	rows 6	maxpop 55
+A Challenge Of Honour [neofolk]	rows 8	maxpop 14
+Empyrium [neofolk]	rows 1	maxpop 37
+The Skinflicks [oi]	rows 8	maxpop 45
+Psychic TV [british industrial]	rows 5	maxpop 38
+Deterioration [goregrind]	rows 5	maxpop 22
+Oldfashioned Ideas [oi]	rows 4	maxpop 34
+Dimple Minds [german oi]	rows 1	maxpop 41
+On The Job [oi]	rows 6	maxpop 36
+Blood and Sun [neofolk]	rows 8	maxpop 20
+Dehydrated Goat [pornogrind]	rows 2	maxpop 15
+Doom [powerviolence]	rows 3	maxpop 31

@@ -1,0 +1,68 @@
+﻿{
+    "b9base":  {
+                   "files":  "results_A_b9baseA.json results_A_b9baseB.json results_A_b9baseC.json results_A_b9baseD.json",
+                   "ttfaColdLaunch":  {
+                                          "n":  48,
+                                          "median":  575.5,
+                                          "p90":  788,
+                                          "min":  383,
+                                          "max":  3622
+                                      },
+                   "resolveColdLaunch":  {
+                                             "n":  48,
+                                             "median":  329.5,
+                                             "p90":  429,
+                                             "min":  211,
+                                             "max":  602
+                                         },
+                   "ttfaWarm":  {
+                                    "n":  48,
+                                    "median":  167.5,
+                                    "p90":  511,
+                                    "min":  107,
+                                    "max":  3375
+                                },
+                   "resolveWarm":  {
+                                       "n":  48,
+                                       "median":  34,
+                                       "p90":  44,
+                                       "min":  20,
+                                       "max":  179
+                                   },
+                   "tiers":  "InnerTube=96",
+                   "missingTtfa":  0
+               },
+    "b9new":  {
+                  "files":  "results_A_b9newA.json results_A_b9newB.json results_A_b9newC.json results_A_b9newD.json",
+                  "ttfaColdLaunch":  {
+                                         "n":  48,
+                                         "median":  568.5,
+                                         "p90":  794,
+                                         "min":  389,
+                                         "max":  3511
+                                     },
+                  "resolveColdLaunch":  {
+                                            "n":  48,
+                                            "median":  340.5,
+                                            "p90":  416,
+                                            "min":  209,
+                                            "max":  502
+                                        },
+                  "ttfaWarm":  {
+                                   "n":  48,
+                                   "median":  181.5,
+                                   "p90":  711,
+                                   "min":  107,
+                                   "max":  3311
+                               },
+                  "resolveWarm":  {
+                                      "n":  48,
+                                      "median":  35,
+                                      "p90":  46,
+                                      "min":  24,
+                                      "max":  196
+                                  },
+                  "tiers":  "InnerTube=96",
+                  "missingTtfa":  0
+              }
+}

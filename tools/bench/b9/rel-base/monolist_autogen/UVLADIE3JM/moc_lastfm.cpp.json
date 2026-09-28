@@ -1,0 +1,97 @@
+{
+    "classes": [
+        {
+            "className": "LastFmApi",
+            "enums": [
+                {
+                    "isClass": true,
+                    "isFlag": false,
+                    "lineNumber": 55,
+                    "name": "Outcome",
+                    "values": [
+                        "Ok",
+                        "Retry",
+                        "RateLimited",
+                        "Reauthenticate",
+                        "Hold",
+                        "KeepWaiting",
+                        "RestartSignIn",
+                        "Rejected"
+                    ]
+                },
+                {
+                    "isClass": true,
+                    "isFlag": false,
+                    "lineNumber": 74,
+                    "name": "ItemOutcome",
+                    "values": [
+                        "Accepted",
+                        "Dropped",
+                        "TryTomorrow"
+                    ]
+                }
+            ],
+            "lineNumber": 37,
+            "object": true,
+            "properties": [
+                {
+                    "constant": true,
+                    "designable": true,
+                    "final": false,
+                    "index": 0,
+                    "lineNumber": 41,
+                    "name": "hasKey",
+                    "override": false,
+                    "read": "hasKey",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "bool",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": true,
+                    "designable": true,
+                    "final": false,
+                    "index": 1,
+                    "lineNumber": 44,
+                    "name": "available",
+                    "override": false,
+                    "read": "available",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "bool",
+                    "user": false,
+                    "virtual": false
+                },
+                {
+                    "constant": true,
+                    "designable": true,
+                    "final": false,
+                    "index": 2,
+                    "lineNumber": 46,
+                    "name": "unavailableReason",
+                    "override": false,
+                    "read": "unavailableReason",
+                    "required": false,
+                    "scriptable": true,
+                    "stored": true,
+                    "type": "QString",
+                    "user": false,
+                    "virtual": false
+                }
+            ],
+            "qualifiedClassName": "LastFmApi",
+            "superClasses": [
+                {
+                    "access": "public",
+                    "name": "QObject"
+                }
+            ]
+        }
+    ],
+    "inputFile": "lastfm.h",
+    "outputRevision": 69
+}

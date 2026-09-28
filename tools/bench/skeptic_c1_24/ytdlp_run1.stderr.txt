@@ -1,0 +1,24 @@
+[debug] Command-line config: ['--ignore-config', '--encoding', 'utf-8', '--socket-timeout', '15', '--retries', '2', '--extractor-retries', '1', '--js-runtimes', 'deno:C:\\dev\\monolist-build\\release\\tools\\deno.exe', '--ffmpeg-location', 'C:\\dev\\monolist-build\\release\\tools', '--cache-dir', 'C:\\Users\\droid\\AppData\\Local\\Temp\\claude\\--psf-Home-Desktop-Multiplatform-Music-player\\04bbb583-faaf-4a88-9a62-5827ef684e67\\scratchpad\\bench\\skeptic_c1_24\\ytdlp-cache', '-v', 'https://www.youtube.com/watch?v=LrM_Y39Gmhk', '--dump-single-json', '--no-playlist', '-f', 'bestaudio/best']
+[debug] Encodings: locale cp1252, fs utf-8, pref utf-8, out cp1252 (No ANSI), error cp1252 (No ANSI), screen cp1252 (No ANSI)
+[debug] yt-dlp version stable@2026.08.19 from yt-dlp/yt-dlp [594bd50c2] (win_arm64_exe)
+[debug] Python 3.13.15 (CPython ARM64 64bit) - Windows-11-10.0.26200-SP0 (OpenSSL 3.0.21 9 Jun 2026)
+[debug] exe versions: ffmpeg N-126740-gcdc79d6949-20260921 (setts), ffprobe N-126740-gcdc79d6949-20260921
+[debug] Optional libraries: Cryptodome-3.23.0, brotli-1.2.0, certifi-2026.07.22, curl_cffi-0.16.0, mutagen-1.48.1, requests-2.34.2, sqlite3-3.50.4, urllib3-2.7.0, websockets-17.0.1, yt_dlp_ejs-0.8.0
+[debug] JS runtimes: deno-2.9.7
+[debug] Proxy map: {}
+[debug] Request Handlers: urllib, requests, websockets, curl_cffi
+[debug] Plugin directories: none
+[debug] Loaded 1744 extractors
+[debug] [youtube] [pot] PO Token Providers: none
+[debug] [youtube] [pot] PO Token Cache Providers: memory
+[debug] [youtube] [pot] PO Token Cache Spec Providers: webpo
+[debug] [youtube] [jsc] JS Challenge Providers: bun (unavailable), deno, node (unavailable), quickjs (unavailable)
+[youtube] Extracting URL: https://www.youtube.com/watch?v=LrM_Y39Gmhk
+[youtube] LrM_Y39Gmhk: Downloading webpage
+[debug] [youtube] Forcing "main" player JS variant for player 7460dd14
+        original url = /s/player/7460dd14/player_es6.vflset/en_US/base.js
+[youtube] LrM_Y39Gmhk: Downloading visionos player API JSON
+[youtube] LrM_Y39Gmhk: Downloading m3u8 information
+[debug] Sort order given by extractor: quality, res, fps, hdr:12, source, vcodec, channels, acodec, lang, proto
+[debug] Formats sorted by: hasvid, ie_pref, quality, res, fps, hdr:12(7), source, vcodec, channels, acodec, lang, proto, size, br, asr, vext, aext, hasaud, id
+[info] LrM_Y39Gmhk: Downloading 1 format(s): 251

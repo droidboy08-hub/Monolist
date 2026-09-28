@@ -1,0 +1,269 @@
+diff --git a/base/src/mpvengine.cpp b/b7/src/mpvengine.cpp
+index 939e79c..34f21a5 100644
+--- a/base/src/mpvengine.cpp
++++ b/b7/src/mpvengine.cpp
+@@ -1,4 +1,5 @@
+ #include "mpvengine.h"
++#include "benchlog.h"
+ 
+ #include <QMetaObject>
+ #include <QtGlobal>
+@@ -28,9 +29,8 @@ enum ObservedProperty : uint64_t {
+     PropVideoWidth,
+     PropVideoHeight,
+     PropAudioDeviceList,
+-    // What StreamInfo is read from. A change only says it is time to read
+-    // it all again, together (refreshStreamInfo); the values themselves are
+-    // not taken from the events.
++    // What StreamInfo is read from. Observed for the fact of a change alone
++    // (MPV_FORMAT_NONE): the values are read when it is time, all together.
+     PropAudioCodec,
+     PropAudioParams,
+     PropAudioOutParams,
+@@ -92,19 +92,14 @@ void readAudioParams(mpv_handle *mpv, const char *name, int *rate, QString *form
+     mpv_free_node_contents(&node);
+ }
+ 
+-// What the open file's track list says about its bitrate: whether the file
+-// holds sound alone, so that its size is all sound (no picture in it, not
+-// even a cover; a picture mpv found beside it, such as a folder's cover.jpg,
+-// is another file and does not count); and the bitrate the container
+-// declares for the sound playing, in bits per second, 0 where it declares
+-// none (an Opus stream usually).
+-void readTrackList(mpv_handle *mpv, bool *soundOnly, double *declaredBitrate)
++// Whether the open file holds sound alone: no track of any other kind, not
++// even a cover picture, so that its size is all sound. False when mpv cannot
++// say.
++bool fileIsSoundOnly(mpv_handle *mpv)
+ {
+-    *soundOnly = false;
+-    *declaredBitrate = 0.0;
+     mpv_node node;
+     if (mpv_get_property(mpv, "track-list", MPV_FORMAT_NODE, &node) < 0)
+-        return;
++        return false;
+     bool sound = false;
+     bool other = false;
+     if (node.format == MPV_FORMAT_NODE_ARRAY && node.u.list) {
+@@ -112,34 +107,19 @@ void readTrackList(mpv_handle *mpv, bool *soundOnly, double *declaredBitrate)
+             const mpv_node &track = node.u.list->values[i];
+             if (track.format != MPV_FORMAT_NODE_MAP || !track.u.list)
+                 continue;
+-            bool audio = false;
+-            bool external = false;
+-            bool selected = false;
+-            double bitrate = 0.0;
+             for (int k = 0; k < track.u.list->num; ++k) {
+-                const char *key = track.u.list->keys[k];
+-                const mpv_node &value = track.u.list->values[k];
+-                if (qstrcmp(key, "type") == 0 && value.format == MPV_FORMAT_STRING)
+-                    audio = qstrcmp(value.u.string, "audio") == 0;
+-                else if (qstrcmp(key, "external") == 0 && value.format == MPV_FORMAT_FLAG)
+-                    external = value.u.flag != 0;
+-                else if (qstrcmp(key, "selected") == 0 && value.format == MPV_FORMAT_FLAG)
+-                    selected = value.u.flag != 0;
+-                else if (qstrcmp(key, "demux-bitrate") == 0 && value.format == MPV_FORMAT_INT64)
+-                    bitrate = double(value.u.int64);
++                if (qstrcmp(track.u.list->keys[k], "type") != 0
++                    || track.u.list->values[k].format != MPV_FORMAT_STRING)
++                    continue;
++                if (qstrcmp(track.u.list->values[k].u.string, "audio") == 0)
++                    sound = true;
++                else
++                    other = true;
+             }
+-            if (external)
+-                continue;
+-            if (audio)
+-                sound = true;
+-            else
+-                other = true;
+-            if (audio && selected)
+-                *declaredBitrate = bitrate;
+         }
+     }
+     mpv_free_node_contents(&node);
+-    *soundOnly = sound && !other;
++    return sound && !other;
+ }
+ 
+ // The devices in mpv's audio-device-list: an array of maps, each with a
+@@ -288,6 +268,14 @@ void MpvEngine::applyBaseOptions()
+     // Keep libmpv from writing to the app's stderr; errors surface as signals.
+     setOption("terminal", "no");
+     setOption("msg-level", "all=no");
++
++    // BENCH: mpv's own log-file, every line stamped on mpv's clock by mpv.
++    const QByteArray benchLogFile = qgetenv("MONOLIST_MPV_LOGFILE");
++    if (!benchLogFile.isEmpty()) {
++        setOption("log-file", benchLogFile.constData());
++        const QByteArray level = qgetenv("MONOLIST_MPV_MSGLEVEL");
++        setOption("msg-level", level.isEmpty() ? "all=v" : level.constData());
++    }
+ }
+ 
+ void MpvEngine::observeProperties()
+@@ -341,8 +329,8 @@ void MpvEngine::drainEvents()
+         switch (event->event_id) {
+         case MPV_EVENT_PROPERTY_CHANGE: {
+             auto *prop = static_cast<mpv_event_property *>(event->data);
+-            // StreamInfo's properties (see observeProperties): read again,
+-            // for the current file only. The bitrate only until it is known.
++            // Notifications without a value (see observeProperties), about
++            // the current file only.
+             switch (event->reply_userdata) {
+             case PropAudioBitrate:
+                 if (m_streamInfo.kbps > 0)
+@@ -372,9 +360,15 @@ void MpvEngine::drainEvents()
+                 break;
+ 
+             switch (event->reply_userdata) {
+-            case PropTimePos:
+-                Q_EMIT positionChanged(qint64(*static_cast<double *>(prop->data) * 1000.0));
++            case PropTimePos: {
++                const double pos = *static_cast<double *>(prop->data);
++                if (!m_benchFirstPos && pos > 0.0) {
++                    m_benchFirstPos = true;
++                    benchMark(QStringLiteral("mpv-event first time-pos %1").arg(pos, 0, 'f', 3));
++                }
++                Q_EMIT positionChanged(qint64(pos * 1000.0));
+                 break;
++            }
+             case PropDuration: {
+                 const qint64 ms = qint64(*static_cast<double *>(prop->data) * 1000.0);
+                 if (ms != m_duration) {
+@@ -395,6 +389,7 @@ void MpvEngine::drainEvents()
+                 const bool buffering = *static_cast<int *>(prop->data) != 0;
+                 if (buffering != m_buffering) {
+                     m_buffering = buffering;
++                    benchMark(QStringLiteral("mpv-event paused-for-cache %1").arg(buffering ? 1 : 0));
+                     Q_EMIT bufferingChanged(buffering);
+                 }
+                 break;
+@@ -473,6 +468,7 @@ void MpvEngine::drainEvents()
+         }
+ 
+         case MPV_EVENT_FILE_LOADED: {
++            benchMark(QStringLiteral("mpv-event FILE_LOADED"));
+             // For the file last asked for only: one it replaced can still
+             // report having opened, after the new load was sent.
+             if (!currentFileStarted())
+@@ -494,12 +490,16 @@ void MpvEngine::drainEvents()
+         // output was opened anew: what it is can be read now.
+         case MPV_EVENT_PLAYBACK_RESTART:
+         case MPV_EVENT_AUDIO_RECONFIG:
++            if (event->event_id == MPV_EVENT_PLAYBACK_RESTART)
++                benchMark(QStringLiteral("mpv-event PLAYBACK_RESTART"));
+             if (currentFileStarted())
+                 refreshStreamInfo();
+             break;
+ 
+         case MPV_EVENT_END_FILE: {
+             auto *end = static_cast<mpv_event_end_file *>(event->data);
++            benchMark(QStringLiteral("mpv-event END_FILE reason=%1 error=%2 entry=%3 current=%4")
++                          .arg(int(end->reason)).arg(end->error).arg(end->playlist_entry_id).arg(m_currentEntry));
+             // The end of a file that has since been replaced or stopped. Its
+             // natural end would skip the track that took its place, and its
+             // error would be blamed on it.
+@@ -616,6 +616,8 @@ bool MpvEngine::load(const QString &urlOrPath, bool startPlaying, const QString
+     // still reports goes nowhere.
+     ++m_loadRequest;
+     m_currentEntry = 0;
++    m_benchFirstPos = false;
++    benchMark(QStringLiteral("mpv loadfile %1").arg(urlOrPath.left(60)));
+     const char *args[] = { "loadfile", target.constData(), "replace", nullptr };
+     const int rc = mpv_command_async(m_mpv, m_loadRequest, args);
+     if (rc < 0) {
+@@ -642,6 +644,7 @@ void MpvEngine::stop()
+         Q_EMIT videoSizeChanged(m_videoSize);
+     }
+     clearStreamInfo();
++    benchMark(QStringLiteral("mpv stop"));
+     const char *args[] = { "stop", nullptr };
+     mpv_command_async(m_mpv, 0, args);
+ }
+@@ -671,23 +674,16 @@ void MpvEngine::refreshStreamInfo()
+     if (m_streamInfo.kbps > 0) {
+         info.kbps = m_streamInfo.kbps;
+         info.kbpsIsFileAverage = m_streamInfo.kbpsIsFileAverage;
+-        info.kbpsIsDeclared = m_streamInfo.kbpsIsDeclared;
+     } else {
+-        bool soundOnly = false;
+-        double declared = 0.0;
+         double bytes = 0.0;
+         double seconds = 0.0;
+-        double measured = 0.0;
+-        readTrackList(m_mpv, &soundOnly, &declared);
+-        if (soundOnly && numberProperty(m_mpv, "file-size", &bytes)
++        double bitsPerSecond = 0.0;
++        if (fileIsSoundOnly(m_mpv) && numberProperty(m_mpv, "file-size", &bytes)
+             && numberProperty(m_mpv, "duration", &seconds) && bytes > 0.0 && seconds > 1.0) {
+             info.kbps = qRound(bytes * 8.0 / seconds / 1000.0);
+             info.kbpsIsFileAverage = true;
+-        } else if (declared > 0.0) {
+-            info.kbps = qRound(declared / 1000.0);
+-            info.kbpsIsDeclared = true;
+-        } else if (numberProperty(m_mpv, "audio-bitrate", &measured) && measured > 0.0) {
+-            info.kbps = qRound(measured / 1000.0);
++        } else if (numberProperty(m_mpv, "audio-bitrate", &bitsPerSecond) && bitsPerSecond > 0.0) {
++            info.kbps = qRound(bitsPerSecond / 1000.0);
+         }
+     }
+ 
+@@ -760,6 +756,56 @@ void MpvEngine::setReplayGainEnabled(bool enabled)
+     setOption("replaygain", enabled ? "track" : "no");
+ }
+ 
++void MpvEngine::benchPrint(const QByteArray &text)
++{
++    if (!m_mpv)
++        return;
++    const QByteArray line = "BENCH " + text;
++    const char *args[] = { "print-text", line.constData(), nullptr };
++    mpv_command(m_mpv, args);
++}
++
++QString MpvEngine::benchCacheSample()
++{
++    if (!m_mpv)
++        return {};
++    int64_t speed = -1;
++    mpv_get_property(m_mpv, "cache-speed", MPV_FORMAT_INT64, &speed);
++    double timePos = -1;
++    mpv_get_property(m_mpv, "time-pos", MPV_FORMAT_DOUBLE, &timePos);
++    int pausedForCache = -1;
++    mpv_get_property(m_mpv, "paused-for-cache", MPV_FORMAT_FLAG, &pausedForCache);
++    double cacheDuration = -1;
++    mpv_get_property(m_mpv, "demuxer-cache-duration", MPV_FORMAT_DOUBLE, &cacheDuration);
++    int64_t fileSize = -1;
++    mpv_get_property(m_mpv, "file-size", MPV_FORMAT_INT64, &fileSize);
++    int64_t fwBytes = -1;
++    int64_t rawRate = -1;
++    int64_t totalBytes = -1;
++    int eof = -1;
++    mpv_node node;
++    if (mpv_get_property(m_mpv, "demuxer-cache-state", MPV_FORMAT_NODE, &node) >= 0) {
++        if (node.format == MPV_FORMAT_NODE_MAP && node.u.list) {
++            for (int i = 0; i < node.u.list->num; ++i) {
++                const char *key = node.u.list->keys[i];
++                const mpv_node &value = node.u.list->values[i];
++                if (qstrcmp(key, "fw-bytes") == 0 && value.format == MPV_FORMAT_INT64)
++                    fwBytes = value.u.int64;
++                else if (qstrcmp(key, "raw-input-rate") == 0 && value.format == MPV_FORMAT_INT64)
++                    rawRate = value.u.int64;
++                else if (qstrcmp(key, "total-bytes") == 0 && value.format == MPV_FORMAT_INT64)
++                    totalBytes = value.u.int64;
++                else if (qstrcmp(key, "eof") == 0 && value.format == MPV_FORMAT_FLAG)
++                    eof = value.u.flag;
++            }
++        }
++        mpv_free_node_contents(&node);
++    }
++    return QStringLiteral("pos=%1 pfc=%2 speed=%3 rawRate=%4 fwBytes=%5 totalBytes=%6 cacheDur=%7 eof=%8 fileSize=%9")
++        .arg(timePos, 0, 'f', 3).arg(pausedForCache).arg(qint64(speed)).arg(qint64(rawRate))
++        .arg(qint64(fwBytes)).arg(qint64(totalBytes)).arg(cacheDuration, 0, 'f', 1).arg(eof).arg(qint64(fileSize));
++}
++
+ // Asked without waiting for the answer: during a song, mpv reopens the sound
+ // output on the new device before it answers, which is long enough to be
+ // felt if the interface stood still for it.

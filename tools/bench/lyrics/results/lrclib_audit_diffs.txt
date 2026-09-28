@@ -1,0 +1,36 @@
+﻿#4 Billie Jean
+   search pick: 36973034 | Billie Jean | Michael Jackson | Thriller [25th Anniversary Edition Alternate Cover] | 294s synced=True | She was more like a beauty queen from a movie scene / I said "Don't mind, but what do you 
+   api/get    : 200 130407 | Billie Jean | Michael Jackson | Thriller | 294s synced=True instr=False | She was more like a beauty queen from a movie scene / I said, "Don't mind, but what do you
+   distinct texts in search results: 1
+#8 Get Lucky (feat. Pharrell Williams and Nile Rodgers)
+   search pick: 37075924 | Get Lucky | Daft Punk | Random Access Memories (10th Annyversary) | 370s synced=True | Like the legend of the phoenix, huh / Our ends were beginnings
+   api/get    : 200 3735335 | Get Lucky | Daft Punk | Random Access Memories | 370s synced=True instr=False | Like the legend of the phoenix, huh / All ends with beginnings
+   distinct texts in search results: 1
+#10 Flowers
+   search pick: 33736661 | Flowers | Miley Cyrus | Made for Spatial Audio | 201s synced=True | We were good, we were gold / Kind of dream that can't be sold
+   api/get    : 200 2160917 | Flowers | Miley Cyrus | Flowers | 201s synced=True instr=False | We were good, we were gold / Kinda dream that can't be sold
+   distinct texts in search results: 1
+#13 Despacito
+   search pick: 37084584 | Despacito | Luis Fonsi | Die Ultimative Chartshow - Die erfolgreichsten Hits für Kids | 229s synced=True | Ay, ¡Fonsi! ¡D.Y. / Ohhh, oh, no, oh, no, oh
+   api/get    : 200 3927808 | Despacito | Luis Fonsi | Despacito | 229s synced=True instr=False | ¡Ay! / ¡Fonsi!
+   distinct texts in search results: 1
+#14 Tití Me Preguntó
+   search pick: 37495105 | Tití Me Preguntó | Bad Bunny | Billboard Hot 100 Single Charts 2026.03 | 244s synced=True | Ey, Tití me preguntó si tengo muchas novias / Muchas novias
+   api/get    : 200 1462 | Tití Me Preguntó | Bad Bunny | Un Verano Sin Ti | 244s synced=True instr=False | Ey, Tití me preguntó si tengo muchas novias, muchas novias / Hoy tengo a una, mañana a otr
+   distinct texts in search results: 1
+#16 Hasta la Raíz
+   search pick: 18558008 | Hasta la Raíz | Natalia Lafourcade | Hasta la Raíz (Dolby Atmos) | 222s synced=True | Sigo cruzando ríos / Andando selvas, amando el sol
+   api/get    : 404  |  |  |  | s synced= instr= | 
+   distinct texts in search results: 2
+#24 アイドル
+   search pick: 34971523 | アイドル | YOASOBI | Singles | 214s synced=True | 相壊す ぐわんぐわんな その眼に / 課す 冥土 よこす 実に上の上
+   api/get    : 200 2116394 | アイドル | YOASOBI | アイドル | 213s synced=True instr=False | 無敵の笑顔で荒らすメディア / 知りたいその秘密ミステリアス
+   distinct texts in search results: 1
+#29 Clair De Lune
+   search pick:  |  |  |  | s synced= | 
+   api/get    : 200 9269892 | Clair De Lune | Claude Debussy | Classical Best | 248s synced=False instr=True | 
+   distinct texts in search results: 1
+#30 Sandstorm
+   search pick:  |  |  |  | s synced= | 
+   api/get    : 200 10570044 | Sandstorm | Darude | Sandstorm | 446s synced=False instr=True | 
+   distinct texts in search results: 1

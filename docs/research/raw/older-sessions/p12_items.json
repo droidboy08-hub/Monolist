@@ -1,0 +1,80 @@
+﻿[
+    {
+        "id":  "B01",
+        "title":  "Every launch waits on three tool --version checks because Settings is built at startup",
+        "evidence":  "Main.qml:256-261 creates SettingsView inside a ViewFade with no Loader. Its Component.onCompleted (SettingsView.qml:23-29) calls About.refreshComponents() while main.cpp:243 loads QML, before window-\u003eshow() at main.cpp:249. appinfo.cpp:116-128 and 137-171 run yt-dlp, ffmpeg and deno --version one after another, each with waitForFinished(4000) on the main thread (up to about 12 s; yt-dlp is a Python start under x64 emulation). The comment at SettingsView.qml:25-26 says the opposite was intended. copyReport (appinfo.cpp:191-194) takes the same blocking path.",
+        "done":  "The version checks run in the background through QProcess signals and start only the first time Settings is shown. The window appears at once, and Settings shows \u0027Reading versions…\u0027 until the answers arrive."
+    },
+    {
+        "id":  "B02",
+        "title":  "A retried InnerTube request can replace a newer one: search spins forever, or autoplay sticks on \u0027Finding more songs…\u0027",
+        "evidence":  "innertube.cpp:461-487: after a failed attempt the slot is cleared and a 1.2 s timer calls send(), which writes the old request\u0027s new reply back into *slot (453-454). cancelSearch and cancelRadio (678-692) cannot stop that timer. The newer reply then fails the `*slot != reply` check (461) and is dropped without done() ever running. For search, MediaExtractor ignores the stale query (mediaextractor.cpp:93), so Extractor.busy never clears. For radio, m_radioSeed never clears, extendWithRadio keeps answering \u0027already on its way\u0027 (playbackcontroller.cpp:341-342), and advance() stays on \u0027Finding more songs…\u0027 (867-871).",
+        "done":  "Each slot carries a generation token. A pending retry checks it before sending, and cancelling or starting a new request bumps it, so an old retry can never replace or silence a newer search or radio request."
+    },
+    {
+        "id":  "B03",
+        "title":  "Player settings, including Settings\u0027 Autoplay switch, reset on every launch",
+        "evidence":  "playbackcontroller.h:243-248 hard-codes m_autoplay=true, m_volume=0.65, m_shuffle=false and m_repeatMode=Off. Nothing reads or writes these to the settings table; the only setting keys used are region, profile name, video height, download options, recommendation folders and update.feed. The \u0027Autoplay similar songs\u0027 switch (SettingsView.qml:239-245) sets Player.autoplay, so turning it off comes back on at the next start. QML has no Settings persistence either (NowPlayingBar.qml:265-267 binds straight to Player.volume).",
+        "done":  "Volume, shuffle, repeat and autoplay are saved when they change and restored in main.cpp before QML loads."
+    },
+    {
+        "id":  "B04",
+        "title":  "A song started with Play after launch, or reached with Next/Previous while paused, is never recorded; launching offline shows an error toast unprompted",
+        "evidence":  "main.cpp:134 calls loadModel, which runs beginTrack(autoPlay=false). History and play events are written only when autoPlay is true (playbackcontroller.cpp:655-658). play() only unpauses (824-834), and advance and previous use loadIndex while paused (878-881, 894-897). So the first song of every session never reaches Recently played, History or the recommender. The paused load also resolves at launch, and a failure emits playbackError when !wasGoingToPlay (773-777), which Main.qml:382 shows as a toast when offline.",
+        "done":  "The first time a paused-loaded track starts playing, it records history and opens its play event. A resolve failure for a track nobody asked to play only updates the status line."
+    },
+    {
+        "id":  "B05",
+        "title":  "After Next or Previous the old song keeps playing until the new one resolves, and its end can skip or fail the new track",
+        "evidence":  "beginTrack (playbackcontroller.cpp:613-697) starts a resolve but never stops mpv; MpvEngine::stop (mpvengine.cpp:301-307) is never called anywhere. The old file\u0027s time-pos keeps overwriting m_position for the new track (playbackcontroller.cpp:59-64). drainEvents emits endOfFile or loadFailed for any END_FILE without matching it to the current loadfile (mpvengine.cpp:214-223). So an old end-of-file during a resolve runs handleEndOfFile→next() (806-820) and skips a song, and an old error reaches the loadFailed branch with m_streamTier=-1 (88-119) and marks the new track \u0027Playback failed\u0027.",
+        "done":  "Starting a new track stops or pauses the old file, and mpv events are matched to the current playlist_entry_id from MPV_EVENT_START_FILE. Nothing from the previous file reaches the new one, and position starts at 0."
+    },
+    {
+        "id":  "B06",
+        "title":  "Player bar: the queue and Now Playing buttons vanish below 1040 px, volume has no fallback, and the queue button does nothing while Now Playing is open",
+        "evidence":  "NowPlayingBar.qml:9 sets showVolume to width \u003e= 1040, which hides rightControls (219-269). That group holds the Now Playing toggle (227-236), the queue toggle (237-246), the device button and volume. The window\u0027s minimum width is 480 (Main.qml:13), and no shortcut opens the queue or changes volume (Main.qml:426-446). The docked QueuePanel (Main.qml:148-166) is inside `shell`, which NowPlayingView covers completely (Main.qml:284-299, z 800), so in Now Playing the queue button only turns red.",
+        "done":  "The Now Playing and queue toggles stay visible at every width, and only volume collapses to a button with a popup slider and mute. In Now Playing the queue button switches the right pane to UP NEXT."
+    },
+    {
+        "id":  "B07",
+        "title":  "Ctrl+F and the Search nav item don\u0027t put the cursor in the search field, and the field has no clear button",
+        "evidence":  "The Find shortcut (Main.qml:435-441) only closes Now Playing and navigates. TopBar.qml:131 searchField is never focused; the only forceActiveFocus calls are PlaylistView.qml:51, SettingsView.qml:115 and Sidebar.qml:357. The search box (TopBar.qml:109-186) has no clear control; Melody had one (LumenViews.tsx:94).",
+        "done":  "TopBar.focusSearch() (forceActiveFocus plus selectAll) is called by the Find shortcut and the Search nav item. An X clears the text and suggestions and keeps focus in the field."
+    },
+    {
+        "id":  "B08",
+        "title":  "A failed search\u0027s error stays on the Search page after the field is cleared",
+        "evidence":  "For an empty query, mediaextractor.cpp:201-205 returns before setLastError(QString()) at line 208. SearchView.qml:128-136 shows Extractor.lastError without checking root.term, so the red error sits under the suggestion shelves.",
+        "done":  "An empty query clears lastError, or the error Text also requires term.length \u003e 0."
+    },
+    {
+        "id":  "B09",
+        "title":  "Track menu shows a greyed-out \u0027Downloading…\u0027 for failed downloads, and can\u0027t remove or show a finished one",
+        "evidence":  "TrackMenu.qml:51-58 labels any state other than empty or done \u0027Downloading…\u0027 and disables the item. downloadmanager.h:75 lists \u0027failed\u0027 as a state. DownloadButton.qml:121-126 already retries and reveals, but the only delete is the trash button in DownloadsView.qml:317-332. Melody\u0027s download toggle removed the file from any row (App.tsx:275-280).",
+        "done":  "A failed track shows \u0027Retry download\u0027 (Downloads.retry). A finished one shows \u0027Show in folder\u0027 and \u0027Remove download\u0027 with the two-step confirmation (Downloads.remove)."
+    },
+    {
+        "id":  "B10",
+        "title":  "Quitting while recommendations are being built can crash the app",
+        "evidence":  "~Recommender (recommender.cpp:325-329) calls m_thread.quit() and then wait(2000), ignoring the result. A build scans about 400k catalogue rows plus the graph shards over the network share and can run past 2 s. Destroying a running QThread is qFatal in Qt 6.",
+        "done":  "The worker checks a stop flag between scans, and the destructor waits until it stops, so quitting mid-build exits cleanly."
+    },
+    {
+        "id":  "B11",
+        "title":  "The recommender learns the wrong things: re-liked songs never count, skipped songs seed \u0027More like…\u0027, weekends use the UTC day",
+        "evidence":  "taste.cpp:162-183 skips every \u0027like\u0027 of a song that was ever unliked, whatever the order; shelves.cpp:406-427 gets this right by letting the newest like or unlike decide. shelves.cpp:651-660 seeds song rails from the newest \u0027play\u0027 events with no label or listened_ms check, so a song abandoned after 5 s (label 0.0, which counts against it in taste.cpp:76) becomes \u0027More like X — Because you played X\u0027 (670-673). isWeekend (taste.cpp:85-92) takes .date() of a UTC QDateTime (304-306).",
+        "done":  "The newest like or unlike per song decides. Only positively labelled plays seed song rails (label ≥0.6, liked, or unlabelled but heard for ≥30 s). The weekend check uses the local date."
+    },
+    {
+        "id":  "B12",
+        "title":  "Changing the country while Home is still loading is ignored",
+        "evidence":  "Catalog::load() (catalog.cpp:43-46) returns at once when m_pendingHome \u003e 0, and main.cpp:151 wires Library::regionChanged straight to Catalog::refresh. A country picked during a slow first load leaves Home and New releases on the old country.",
+        "done":  "A refresh asked for during a load is queued, as Recommender does with m_refreshQueued, or restarts the load with the new region."
+    },
+    {
+        "id":  "B13",
+        "title":  "Downloads stay disabled after the tools are installed or updated, until restart",
+        "evidence":  "downloadmanager.cpp:31-32 checks for yt-dlp and FFmpeg once, and available and canConvert are CONSTANT (downloadmanager.h:39-40). enqueue returns silently when !m_available (downloadmanager.cpp:152). AppInfo::updateTools refreshes the component versions on success (appinfo.cpp:346-348) but never tells DownloadManager.",
+        "done":  "DownloadManager re-checks its tools after a tool update, and lazily on enqueue, through NOTIFY properties, so new tools work without a restart."
+    }
+]

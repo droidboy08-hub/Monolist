@@ -1,0 +1,101 @@
+{
+    "classes": [
+        {
+            "className": "YtDlpRequest",
+            "lineNumber": 28,
+            "object": true,
+            "qualifiedClassName": "YtDlpRequest",
+            "signals": [
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "document",
+                            "type": "QJsonDocument"
+                        }
+                    ],
+                    "index": 0,
+                    "lineNumber": 42,
+                    "name": "succeededJson",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "received",
+                            "type": "qint64"
+                        },
+                        {
+                            "name": "total",
+                            "type": "qint64"
+                        },
+                        {
+                            "name": "speed",
+                            "type": "double"
+                        },
+                        {
+                            "name": "etaSeconds",
+                            "type": "int"
+                        }
+                    ],
+                    "index": 1,
+                    "lineNumber": 45,
+                    "name": "progress",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "step",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 2,
+                    "lineNumber": 47,
+                    "name": "postProcessing",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "path",
+                            "type": "QString"
+                        },
+                        {
+                            "name": "metadata",
+                            "type": "QVariantMap"
+                        }
+                    ],
+                    "index": 3,
+                    "lineNumber": 50,
+                    "name": "finishedFile",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "reason",
+                            "type": "QString"
+                        }
+                    ],
+                    "index": 4,
+                    "lineNumber": 51,
+                    "name": "failed",
+                    "returnType": "void"
+                }
+            ],
+            "superClasses": [
+                {
+                    "access": "public",
+                    "name": "QObject"
+                }
+            ]
+        }
+    ],
+    "inputFile": "ytdlp.h",
+    "outputRevision": 69
+}

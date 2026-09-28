@@ -1,0 +1,19 @@
+﻿Warm-connection lookups (2nd and 3rd song of each cold process; other songs, not the fixed list):
+  synced/LRCLIB                                 n=494 median=247 p90=391 min=165 max=1270
+  none/-                                        n=47 median=818 p90=1180 min=543 max=1440
+  instrumental/-                                n=31 median=204 p90=407 min=158 max=474
+  plain/LRCLIB                                  n=14 median=227 p90=279 min=185 max=389
+  plain/Musixmatch via YouTube Music            n=12 median=914 p90=1145 min=655 max=1332
+  plain/LyricFind via YouTube Music             n=2 median=720 p90=724 min=714 max=725
+First lookup per process (fresh TLS to lrclib.net), LRCLIB answer: n=271 median=453 p90=587 min=287 max=1230
+
+Proxy passes, per lookup:
+  LRCLIB strict leg (in-app window) n=145 median=447 p90=595 min=314 max=1005
+  LRCLIB loose q= search used: 0 of 145
+  YouTube Music asked: 5 of 145
+  slowest provider asked: {"LRCLIB":145}; slowest-provider time n=145 median=447 p90=595 min=314 max=1005
+  #30 none total=734 LRCLIB=367 YTM=363 overhead=4
+  #30 none total=959 LRCLIB=478 YTM=467 overhead=14
+  #30 none total=865 LRCLIB=421 YTM=417 overhead=27
+  #30 none total=851 LRCLIB=434 YTM=401 overhead=16
+  #30 none total=739 LRCLIB=386 YTM=325 overhead=28

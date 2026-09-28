@@ -1,0 +1,70 @@
+diff --git a/base/src/innertube.cpp b/b7/src/innertube.cpp
+index 9a2a59c..c6ee595 100644
+--- a/base/src/innertube.cpp
++++ b/b7/src/innertube.cpp
+@@ -1,4 +1,5 @@
+ #include "innertube.h"
++#include "benchlog.h"
+ 
+ #include <QCoreApplication>
+ #include <QDate>
+@@ -400,12 +401,16 @@ void fetchVisitorFrom(bool homePage)
+     clock.start();
+     QNetworkAccessManager *network = visitorNetwork();
+     QNetworkReply *reply = network->get(request);
++    benchMark(QStringLiteral("visitorData fetch start source=%1").arg(homePage ? QStringLiteral("home") : QStringLiteral("sw")));
+     QObject::connect(reply, &QNetworkReply::finished, network, [reply, homePage, generation, clock]() {
+         reply->deleteLater();
+         if (g_visitor.generation != generation)
+             return;   // started afresh meanwhile (a new store)
+         const bool ok = reply->error() == QNetworkReply::NoError;
+         const QByteArray body = ok ? reply->readAll() : QByteArray();
++        benchMark(QStringLiteral("visitorData fetch done source=%1 ms=%2 error=%3 bytes=%4")
++                      .arg(homePage ? QStringLiteral("home") : QStringLiteral("sw")).arg(clock.elapsed())
++                      .arg(int(reply->error())).arg(body.size()));
+         const QString id = homePage ? visitorFromHomePage(body) : visitorFromSwJsData(body);
+         const QString why = !ok ? reply->errorString()
+                           : reply->url().host().startsWith(QLatin1String("consent."))
+@@ -1543,6 +1548,9 @@ void InnerTube::player(const QString &videoId,
+     ask->videoId = videoId;
+     ask->done = std::move(done);
+     ask->clock.start();
++    benchMark(QStringLiteral("player call %1 obj=%2 visitor=%3 pending=%4")
++                  .arg(videoId).arg(quintptr(this), 0, 16)
++                  .arg(g_visitor.anonymous.isEmpty() ? 0 : 1).arg(g_visitor.pending ? 1 : 0));
+     const PlayerClients clients = playerClients();
+     ask->fallbackLeft = clients == PlayerClients::Both;
+     askPlayer(clients == PlayerClients::Second ? Client::PlayerFallback : Client::Player, ask);
+@@ -1551,6 +1559,9 @@ void InnerTube::player(const QString &videoId,
+ void InnerTube::askPlayer(Client client, std::shared_ptr<PlayerAsk> ask)
+ {
+     withVisitorData([this, client, ask]() {
++        const qint64 waited = ask->clock.elapsed();
++        benchMark(QStringLiteral("player visitor-ready %1 waited=%2 visitor=%3")
++                      .arg(ask->videoId).arg(waited).arg(g_visitor.anonymous.isEmpty() ? 0 : 1));
+         // The id post() puts on this call: afterwards it tells whether the
+         // call went with the stored id, and whether a newer one has come.
+         const QString visitor = g_visitor.anonymous;
+@@ -1566,8 +1577,11 @@ void InnerTube::askPlayer(Client client, std::shared_ptr<PlayerAsk> ask)
+         const bool second = !ask->refusals.isEmpty();
+         send(client, QStringLiteral("player"), body, second ? kPlayerFallbackTimeoutMs : kPlayerTimeoutMs,
+              /*slot=*/nullptr,
+-             [this, client, visitor, ask](const QJsonObject &root, const QString &error) {
++             [this, client, visitor, ask, waited](const QJsonObject &root, const QString &error) {
+                  const QString &videoId = ask->videoId;
++                 benchMark(QStringLiteral("player answered %1 post=%2 total=%3 status=%4 error=%5")
++                               .arg(videoId).arg(ask->clock.elapsed() - waited).arg(ask->clock.elapsed())
++                               .arg(dig(root, { "playabilityStatus", "status" }).toString(), error));
+                  if (!error.isEmpty()) {
+                      // No answer at all: not asked of the other client, which
+                      // would only wait on the same server again.
+@@ -1643,6 +1657,9 @@ void InnerTube::askPlayer(Client client, std::shared_ptr<PlayerAsk> ask)
+                      qInfo("innertube: %s answered as %s in %lld ms%s", qPrintable(videoId),
+                            qPrintable(playerClientName(client)), (long long)ask->clock.elapsed(), qPrintable(after));
+                  }
++                 benchMark(QStringLiteral("player picked %1 itag=%2 bitrate=%3 audioFormats=%4")
++                               .arg(videoId).arg(choice.chosen.itag).arg(choice.chosen.peakBitrate)
++                               .arg(choice.offered.size()));
+                  ask->done(choice.chosen.url, choice.chosen.itag, QString());
+              },
+              /*retries=*/second ? 0 : 1);

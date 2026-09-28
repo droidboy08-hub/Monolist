@@ -1,0 +1,27 @@
+--- a/src/mpvengine.h
++++ b/src/mpvengine.h
+@@ -124,12 +121,18 @@ public:
+                    && channels == o.channels && outputRate == o.outputRate
+                    && outputFormat == o.outputFormat && outputChannels == o.outputChannels
+                    && output == o.output && kbps == o.kbps && kbpsIsFileAverage == o.kbpsIsFileAverage
+                    && kbpsIsDeclared == o.kbpsIsDeclared && volume == o.volume;
+         }
+         bool operator!=(const StreamInfo &o) const { return !(*this == o); }
+     };
+     StreamInfo streamInfo() const { return m_streamInfo; }
+ 
++    // BENCH: prints `text` into mpv's own log (and log-file) through
++    // print-text, synchronously, so it carries mpv's timestamp.
++    void benchPrint(const QByteArray &text);
++    // BENCH: one line of mpv's cache state (cache-speed, demuxer-cache-state).
++    QString benchCacheSample();
++
+ Q_SIGNALS:
+     void positionChanged(qint64 ms);
+     void durationChanged(qint64 ms);
+@@ -188,4 +191,5 @@ private:
+     qint64 m_duration = 0;
+     QVariantList m_audioDevices;
+     StreamInfo m_streamInfo;
++    bool m_benchFirstPos = false;   // BENCH: first time-pos > 0 of the latest load logged
+ };

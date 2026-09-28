@@ -1,0 +1,83 @@
+{
+    "classes": [
+        {
+            "className": "ListenTracker",
+            "lineNumber": 30,
+            "object": true,
+            "qualifiedClassName": "ListenTracker",
+            "signals": [
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "track",
+                            "type": "QVariantMap"
+                        },
+                        {
+                            "name": "startedAt",
+                            "type": "qint64"
+                        },
+                        {
+                            "name": "chosenByUser",
+                            "type": "bool"
+                        }
+                    ],
+                    "index": 0,
+                    "lineNumber": 73,
+                    "name": "listenStarted",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "track",
+                            "type": "QVariantMap"
+                        },
+                        {
+                            "name": "startedAt",
+                            "type": "qint64"
+                        },
+                        {
+                            "name": "chosenByUser",
+                            "type": "bool"
+                        }
+                    ],
+                    "index": 1,
+                    "lineNumber": 74,
+                    "name": "listenQualified",
+                    "returnType": "void"
+                },
+                {
+                    "access": "public",
+                    "arguments": [
+                        {
+                            "name": "track",
+                            "type": "QVariantMap"
+                        },
+                        {
+                            "name": "startedAt",
+                            "type": "qint64"
+                        },
+                        {
+                            "name": "chosenByUser",
+                            "type": "bool"
+                        }
+                    ],
+                    "index": 2,
+                    "lineNumber": 76,
+                    "name": "listenResumed",
+                    "returnType": "void"
+                }
+            ],
+            "superClasses": [
+                {
+                    "access": "public",
+                    "name": "QObject"
+                }
+            ]
+        }
+    ],
+    "inputFile": "listentracker.h",
+    "outputRevision": 69
+}

@@ -1,0 +1,51 @@
+﻿diff --git a/b3base/Monolist Player/src/playbackcontroller.cpp b/../src-b3/src/playbackcontroller.cpp
+index 7c5f4d1..c54472f 100644
+--- a/b3base/Monolist Player/src/playbackcontroller.cpp	
++++ b/../src-b3/src/playbackcontroller.cpp
+@@ -1,4 +1,5 @@
+ #include "playbackcontroller.h"
++#include "benchlog.h"
+ #include "appdatabase.h"
+ #include "downloadmanager.h"
+ #include "library.h"
+@@ -766,6 +767,7 @@ void PlaybackController::prefetchUpcoming()
+         return;
+     if (m_downloads && !m_downloads->localPathFor(upcoming->videoId).isEmpty())
+         return;
++    benchMark(QStringLiteral("prefetchUpcoming %1").arg(upcoming->videoId));
+     m_resolver->prefetch(upcoming->videoId);
+ }
+ 
+@@ -926,6 +928,8 @@ void PlaybackController::closePlayEvent(bool restarting)
+ // class only cares that something is playing.
+ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
+ {
++    benchMark(QStringLiteral("beginTrack %1 autoPlay=%2")
++                  .arg(track.value(QStringLiteral("sourceId")).toString()).arg(autoPlay ? 1 : 0));
+     // First, while m_position still belongs to the track being left: how much
+     // of it was heard is the single most useful thing the recommender gets,
+     // and it exists only in this instant.
+@@ -1039,6 +1043,7 @@ void PlaybackController::handleResolved(const QString &videoId, const QString &u
+     if (videoId != m_pendingVideoId)
+         return;                       // a later track superseded this one
+     m_pendingVideoId.clear();
++    benchMark(QStringLiteral("handleResolved %1 tier=%2 fromCache=%3").arg(videoId).arg(tier).arg(fromCache ? 1 : 0));
+ 
+     setStatus(QStringLiteral("Streaming"), tierLabel(tier), false);
+     m_consecutiveFailures = 0;
+@@ -1049,6 +1054,7 @@ void PlaybackController::handleResolved(const QString &videoId, const QString &u
+     // only — a stream refreshed or re-resolved mid-song arrives here again.)
+     if (m_autoPlayAfterResolve)
+         startListening();
++    benchMark(QStringLiteral("handleResolved %1 listening recorded, loading").arg(videoId));
+     // A link some tiers only serve to the client that asked for it (the muxed
+     // stream's) comes with the headers to ask as.
+     if (m_engine)
+@@ -1161,6 +1167,7 @@ bool PlaybackController::abandonVideo(const QString &reason)
+ 
+ void PlaybackController::handleEndOfFile()
+ {
++    benchMark(QStringLiteral("handleEndOfFile position=%1 duration=%2").arg(m_position).arg(m_duration));
+     // A video that stopped before it ever showed a frame did not finish the
+     // song; it failed. The queue must not move on.
+     if (abandonVideo(QStringLiteral("This video would not play — back to audio")))

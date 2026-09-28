@@ -1,0 +1,14 @@
+{
+    "pattern":  "B_b3rate_seq_*",
+    "files":  4,
+    "opens":  96,
+    "openedWithAudio":  96,
+    "byItag":  "140=8 251=88",
+    "byCodecRate":  "opus@48000=88 aac@44100=8",
+    "resampled":  8,
+    "resampledIds":  "CmThpha4Hoox8(itag 140)",
+    "opusOfferedButAac":  0,
+    "choseLines":  48,
+    "choseByItag":  "140=4 251=44",
+    "choseNon251":  "CmThpha4Hoo: itag 140: aac, 44.1 kHz, 130 kbps (of 139 140, by bitrate alone: youtube.format=bitrate)"
+}

@@ -1,0 +1,313 @@
+loaded yes
+
+=== bbno$  [region US]  liked-as "bbno$"
+  seed in graph: NOT FOUND
+  -> Sounds like bbno$  |  Artists whose sound sits closest to theirs  (12 rows)
+     DillanPonders — BOP - Hype Hop Edit (feat. DillanPonders, Kris the $pirit)   [canadian hip hop, pop 40]
+     Haviah Mighty — Double The Fun   [toronto rap, pop 36]
+     Dr. Bushman — Super OT   [canadian hip hop, pop 36]
+     FRITOGANG — Best Friend   [san antonio rap, pop 33]
+     Murda Beatz — Bonde da Fumaça (feat. Murda Beatz)   [canadian hip hop, pop 45]
+     DillanPonders — Fully Goated   [canadian hip hop, pop 39]
+     Jazz Cartier — • RIGHT NOW   [underground hip hop, pop 38]
+     BIGBABYGUCCI — Pressure + Layers   [plugg, pop 38]
+     Dr. Bushman — Govy   [canadian hip hop, pop 40]
+     Belly — Mumble Rap   [canadian hip hop, pop 39]
+     BIGBABYGUCCI — Can’t Feel Shit   [plugg, pop 39]
+     Burna Bandz — BeastMode   [toronto rap, pop 45]
+
+=== bbno$  [region CA]  liked-as "bbno$"
+  seed in graph: NOT FOUND
+  -> Sounds like bbno$  |  Artists whose sound sits closest to theirs  (12 rows)
+     DillanPonders — BOP - Hype Hop Edit (feat. DillanPonders, Kris the $pirit)   [canadian hip hop, pop 40]
+     Haviah Mighty — Double The Fun   [toronto rap, pop 36]
+     Dr. Bushman — Super OT   [canadian hip hop, pop 36]
+     FRITOGANG — Best Friend   [san antonio rap, pop 33]
+     Murda Beatz — Bonde da Fumaça (feat. Murda Beatz)   [canadian hip hop, pop 45]
+     DillanPonders — Fully Goated   [canadian hip hop, pop 39]
+     Jazz Cartier — • RIGHT NOW   [underground hip hop, pop 38]
+     BIGBABYGUCCI — Pressure + Layers   [plugg, pop 38]
+     Dr. Bushman — Govy   [canadian hip hop, pop 40]
+     Belly — Mumble Rap   [canadian hip hop, pop 39]
+     BIGBABYGUCCI — Can’t Feel Shit   [plugg, pop 39]
+     Burna Bandz — BeastMode   [toronto rap, pop 45]
+
+=== Yung Gravy  [region US]  liked-as "Yung Gravy"
+  seed in graph: NOT FOUND
+  -> Sounds like Yung Gravy  |  Artists whose sound sits closest to theirs  (12 rows)
+     Pardyalone — Pray For The Rain   [indie hip hop, pop 45]
+     Boslen — GONE   [indie hip hop, pop 36]
+     Merkules — Way Down   [bc underground hip hop, pop 49]
+     Boslen — DIFFERENT   [indie hip hop, pop 44]
+     Ciscero — GEEKIN   [indie hip hop, pop 44]
+     Malz Monday — Isolation   [indie hip hop, pop 47]
+     Terry Presume — Act Up   [indie hip hop, pop 54]
+     YTK — GILLIGAN   [indie hip hop, pop 50]
+     Malz Monday — Switch Up   [indie hip hop, pop 48]
+     Merkules — Bad News   [bc underground hip hop, pop 48]
+     Pardyalone — Sincerely, Fuck You   [indie hip hop, pop 48]
+     Lil Sil — 91   [indie hip hop, pop 44]
+
+=== Tiny Meat Gang  [region US]  liked-as "Tiny Meat Gang"
+  seed in graph: NOT FOUND
+  -> Sounds like Tiny Meat Gang  |  Artists whose sound sits closest to theirs  (12 rows)
+     Halogen — Kid Again   [meme rap, pop 19]
+     Billy Marchiafava — BIG BODY BROTHERS   [meme rap, pop 51]
+     lil ricefield — Trapanese   [meme rap, pop 46]
+     Billy Marchiafava — MAKE A MOVE   [meme rap, pop 41]
+     Tae Retro — FLASHBANG!   [meme rap, pop 44]
+     Big Dick Chima — Skinny Legend Anthem   [meme rap, pop 44]
+     YNG Martyr — 50k   [meme rap, pop 55]
+     Yung Nugget — Simp Detector   [meme rap, pop 41]
+     Splash Daddy — Wii Tennis   [meme rap, pop 37]
+     Yung Nugget — Onlyfans Girl   [meme rap, pop 39]
+     Shotgun Willy — Winnebago   [meme rap, pop 55]
+     Halogen — Can't Resist   [meme rap, pop 30]
+
+=== Shotgun Willy  [region US]  liked-as "Shotgun Willy"
+  seed in graph: NOT FOUND
+  -> Sounds like Shotgun Willy  |  Artists whose sound sits closest to theirs  (12 rows)
+     IceJJFish — On the Floor   [meme rap, pop 40]
+     Kusorare — Booty on My Mind   [meme rap, pop 43]
+     Billy Marchiafava — MAKE A MOVE   [meme rap, pop 41]
+     Nigpro — Niggas in My Butthole   [meme rap, pop 39]
+     Nigpro — Niggas in My Butthole   [meme rap, pop 38]   <<DUPTITLE,DUPKEY
+     Vitas — 7 элемент   [meme rap, pop 52]
+     Yun Head — giant enemy spider   [meme rap, pop 36]
+     Tiny Meat Gang — No Flex   [meme rap, pop 37]
+     Halogen — Kid Again   [meme rap, pop 19]
+     Yung Nugget — Simp Detector   [meme rap, pop 41]
+     YNG Martyr — 50k   [meme rap, pop 55]
+     YNG Martyr — Ease Off   [meme rap, pop 53]
+
+=== 88rising  [region US]  liked-as "88rising"
+  seed in graph: NOT FOUND
+  -> Sounds like 88rising  |  Artists whose sound sits closest to theirs  (12 rows)
+     seiji oda — LAST SUMMER...   [asian american hip hop, pop 40]
+     RUSSELL! — HONEY, I'M HOME!   [asian american hip hop, pop 35]
+     seiji oda — a gentle gigg...   [asian american hip hop, pop 38]
+     Dane Amar — Butterflies   [asian american hip hop, pop 40]
+     Dane Amar — Tell Me Why   [asian american hip hop, pop 39]
+     RUSSELL! — SCARLETT'S WEEKEND   [asian american hip hop, pop 44]
+     Jae Luna — Summertime 2016   [asian american hip hop, pop 36]
+     JMIN — GOYD   [asian american hip hop, pop 37]
+     Heartbreaka — Thing Called Love   [lao hip hop, pop 26]
+     Spence Lee — Write My Name   [asian american hip hop, pop 38]
+     Thai VG — I'm Me   [asian american hip hop, pop 36]
+     G Yamazawa — North Cack   [asian american hip hop, pop 36]
+
+=== P-Lo  [region US]  liked-as "P-Lo"
+  seed in graph: NOT FOUND
+  -> Sounds like P-Lo  |  Artists whose sound sits closest to theirs  (12 rows)
+     Jalen Santoy — Foreplay   [north carolina hip hop, pop 56]
+     Jalen Santoy — Foreplay   [north carolina hip hop, pop 66]   <<DUPTITLE,DUPKEY
+     Toosii — Favorite Song   [north carolina hip hop, pop 67]
+     Toosii — Favorite Song   [north carolina hip hop, pop 67]   <<DUPTITLE,DUPKEY
+     MBNel — CLUTCH   [asian american hip hop, pop 41]
+     Lute — GED (Gettin Every Dolla)   [north carolina hip hop, pop 48]
+     Lute — cracked screen   [north carolina hip hop, pop 38]
+     $tupid Young — Pipe Down   [cali rap, pop 39]
+     Kenny Mason — PULP FICTION   [indie hip hop, pop 45]
+     $tupid Young — No Fear   [cali rap, pop 36]
+     YSB Tril — BRAND NEW   [north carolina hip hop, pop 36]
+     Joey Purp — Elastic   [underground hip hop, pop 59]
+
+=== Discordance Axis  [region US]  liked-as "Discordance Axis"
+  seed in graph: NOT FOUND
+  -> Sounds like Discordance Axis  |  Artists whose sound sits closest to theirs  (12 rows)
+     Magrudergrind — The Protocols Of Anti-Sound   [american grindcore, pop 30]
+     Magrudergrind — Pulverizing Hate Mongers   [american grindcore, pop 31]
+     Burnt By The Sun — Dracula With Glasses   [technical grindcore, pop 21]
+     Deterioration — Blast Damage   [goregrind, pop 18]
+     Tower of Rome — Girls That Smoke Gross Me Out To The Max   [mathgrind, pop 26]
+     Haggus — Rotting Off   [goregrind, pop 32]
+     Haggus — Plastic Mincer   [goregrind, pop 37]
+     Anal Cunt — I Went Back In TIme And Voted For Hitler   [noisecore, pop 28]
+     Agoraphobic Nosebleed — Not a Daughter   [noisecore, pop 28]
+     Agoraphobic Nosebleed — Amputee   [noisecore, pop 29]
+     Destroyer Destroyer — Void   [technical grindcore, pop 24]
+     ByoNoiseGenerator — I'mNot20Anymore (21Ne)   [technical grindcore, pop 23]
+
+=== Brutal Truth  [region US]  liked-as "Brutal Truth"
+  seed in graph: NOT FOUND
+  -> Sounds like Brutal Truth  |  Artists whose sound sits closest to theirs  (12 rows)
+     Mortician — Witches Coven   [deathgrind, pop 36]
+     Aborted — Hellbound   [brutal death metal, pop 32]
+     Cattle Decapitation — One Day Closer to the End of the World   [brutal death metal, pop 41]
+     Aborted — Meticulous Invagination   [brutal death metal, pop 34]
+     Mortician — Witches Coven   [deathgrind, pop 39]   <<DUPTITLE,DUPKEY
+     Cattle Decapitation — We Eat Our Young   [brutal death metal, pop 42]
+     Terrorizer — After World Obliteration   [deathgrind, pop 35]
+     Amputated — Skullfuck Lobotomy   [brutal death metal, pop 40]
+     Gorgasm — Kuntkiller   [technical death metal, pop 29]
+     Terrorizer — Fear Of Napalm   [deathgrind, pop 42]
+     Defeated Sanity — The Odour Of Sanctity   [brutal death metal, pop 28]
+     Regurgitate — The Pulsating Feast   [brutal death metal, pop 23]
+
+=== Magrudergrind  [region US]  liked-as "Magrudergrind"
+  seed in graph: NOT FOUND
+  -> Sounds like Magrudergrind  |  Artists whose sound sits closest to theirs  (12 rows)
+     Discordance Axis — Jigsaw   [technical grindcore, pop 22]
+     Discordance Axis — The Inalienable Dreamless   [technical grindcore, pop 22]
+     Haggus — Rotting Off   [goregrind, pop 32]
+     Deterioration — Blast Damage   [goregrind, pop 18]
+     Haggus — Plastic Mincer   [goregrind, pop 37]
+     ByoNoiseGenerator — I'mNot20Anymore (21Ne)   [technical grindcore, pop 23]
+     ByoNoiseGenerator — 4-Ho-Dmtnzambikult   [technical grindcore, pop 22]
+     Deterioration — Car Battery Interrogation   [goregrind, pop 22]
+     Agathocles — The Truth Begins Where Man Stops to Think   [crust punk, pop 17]
+     Agathocles — Kill Your Fucking Idols   [crust punk, pop 16]
+     WVRM — Grave Bloom   [deathgrind, pop 15]
+     Agoraphobic Nosebleed — Not a Daughter   [noisecore, pop 28]
+
+=== Insect Warfare  [region US]  liked-as "Insect Warfare"
+  seed in graph: NOT FOUND
+  -> NO ARTIST SHELF  (shelves: popular)
+
+=== Nails  [region US]  liked-as "Nails"
+  seed in graph: NOT FOUND
+  -> Sounds like Nails  |  Artists whose sound sits closest to theirs  (12 rows)
+     Gaza — The Vipers   [mathcore, pop 28]
+     Cult Leader — Mongrel   [mathcore, pop 19]
+     KEN Mode — Doesn't Feel Pain Like He Should   [mathcore, pop 25]
+     Gaza — The Crown   [mathcore, pop 26]
+     Cult Leader — Curse of Satisfaction   [mathcore, pop 23]
+     KEN Mode — Save Face on a Regular Basis   [mathcore, pop 27]
+     Converge — All We Love We Leave Behind   [mathcore, pop 34]
+     Converge — Hell to Pay   [mathcore, pop 35]
+     Full Of Hell — To Ruin and the World's Ending   [american grindcore, pop 38]
+     Full Of Hell — From Dog's Mouth, A Blessing   [american grindcore, pop 41]
+     Snuff Tape — Dead to Me   [slc hardcore, pop 12]
+     Throes — Basura   [sludgecore, pop 31]
+
+=== Full of Hell  [region US]  liked-as "Full of Hell"
+  seed in graph: NOT FOUND
+  -> Sounds like Full of Hell  |  Artists whose sound sits closest to theirs  (12 rows)
+     Gaza — The Crown   [mathcore, pop 26]
+     Portrayal of Guilt — The One   [texas death metal, pop 33]
+     Portrayal of Guilt — One Last Taste of Heaven   [texas death metal, pop 31]
+     Gaza — The Vipers   [mathcore, pop 28]
+     Cult Leader — Mongrel   [mathcore, pop 19]
+     Young And In The Way — Betrayed by Light   [chaotic hardcore, pop 23]
+     Nails — Give Me The Painkiller   [chaotic hardcore, pop 40]
+     Cult Leader — Great I Am   [mathcore, pop 23]
+     Nails — Unsilent Death   [chaotic hardcore, pop 42]
+     Endless Swarm — Split Brain   [edinburgh metal, pop 22]
+     Tower of Rome — Girls That Smoke Gross Me Out To The Max   [mathgrind, pop 26]
+     Endless Swarm — Tin Foil Hat   [edinburgh metal, pop 21]
+
+=== Melt-Banana  [region US]  liked-as "Melt-Banana"
+  seed in graph: NOT FOUND
+  -> Sounds like Melt-Banana  |  Artists whose sound sits closest to theirs  (12 rows)
+     Black Eyes — Someone Has His Fingers Broken   [double drumming, pop 27]
+     Black Eyes — Speaking In Tongues   [double drumming, pop 25]
+     Kim Gordon — BYE BYE   [noise rock, pop 41]
+     No Trend — Reality Breakdown   [noise punk, pop 31]
+     Gnod — Drop Out   [noise rock, pop 28]
+     Cows — Heave Ho   [noise rock, pop 25]
+     Cherubs — Stag Party   [noise rock, pop 26]
+     Zach Hill — The Primitives Talk   [experimental rock, pop 36]
+     Brainbombs — Die You Fuck   [noise punk, pop 25]
+     Gnod — Drop Out   [noise rock, pop 29]   <<DUPTITLE,DUPKEY
+     Show Me the Body — It Burns   [noise punk, pop 33]
+     Brainbombs — Lipstick on My Dick   [noise punk, pop 22]
+
+=== Melt-Banana  [region JP]  liked-as "Melt-Banana"
+  seed in graph: NOT FOUND
+  -> Sounds like Melt-Banana  |  Artists whose sound sits closest to theirs  (12 rows)
+     Black Eyes — Someone Has His Fingers Broken   [double drumming, pop 27]
+     Black Eyes — Speaking In Tongues   [double drumming, pop 25]
+     Kim Gordon — BYE BYE   [noise rock, pop 41]
+     No Trend — Reality Breakdown   [noise punk, pop 31]
+     Gnod — Drop Out   [noise rock, pop 28]
+     Cows — Heave Ho   [noise rock, pop 25]
+     Cherubs — Stag Party   [noise rock, pop 26]
+     Zach Hill — The Primitives Talk   [experimental rock, pop 36]
+     Brainbombs — Die You Fuck   [noise punk, pop 25]
+     Gnod — Drop Out   [noise rock, pop 29]   <<DUPTITLE,DUPKEY
+     Show Me the Body — It Burns   [noise punk, pop 33]
+     Brainbombs — Lipstick on My Dick   [noise punk, pop 22]
+
+=== Eddy Arnold  [region US]  liked-as "Eddy Arnold"
+  seed in graph: NOT FOUND
+  -> Sounds like Eddy Arnold  |  Artists whose sound sits closest to theirs  (12 rows)
+     Kitty Wells — Amigo's Guitar   [nashville sound, pop 36]
+     Hank Thompson — Hangover Heart   [cowboy western, pop 41]
+     Ernest Tubb — Goodnight, Irene   [honky tonk, pop 38]
+     Webb Pierce — There Stands The Glass   [honky tonk, pop 47]
+     Hank Thompson — The Wild Side Of Life   [cowboy western, pop 44]
+     Ray Price — Crazy Arms   [honky tonk, pop 39]
+     Hank Williams — Lost Highway   [honky tonk, pop 50]
+     Hank Williams — Your Cheatin' Heart   [honky tonk, pop 52]
+     Wynn Stewart — It's Such A Pretty World Today   [classic country pop, pop 40]
+     Ernest Tubb — Drivin' Nails In My Coffin - Single Version   [honky tonk, pop 39]
+     Kitty Wells — Making Believe - 1955 Single Version   [nashville sound, pop 39]
+     Faron Young — It's Four in the Morning   [honky tonk, pop 44]
+
+=== Bill Monroe  [region US]  liked-as "Bill Monroe"
+  seed in graph: NOT FOUND
+  -> Sounds like Bill Monroe  |  Artists whose sound sits closest to theirs  (12 rows)
+     The Peasall Sisters — In The Highways   [bluegrass gospel, pop 40]
+     Easter Brothers — They're Holding Up The Ladder   [traditional bluegrass, pop 35]
+     George Hamilton IV — Abilene   [traditional country, pop 44]
+     George Hamilton IV — Break My Mind   [traditional country, pop 36]
+     Merle Travis — Sixteen Tons   [western swing, pop 41]
+     Appalachian Express — Lord Lead Me On   [bluegrass gospel, pop 36]
+     Easter Brothers — Thank You Lord For Your Blessings On Me   [traditional bluegrass, pop 30]
+     Tennessee Ernie Ford — 16 Tons   [western swing, pop 42]
+     Nelson & Sarah Coblentz — A Heart That Will Never Break Again   [family gospel, pop 14]
+     Tennessee Ernie Ford — Union Dixie   [western swing, pop 51]
+     The Cox Family — I Am Weary (Let Me Rest)   [bluegrass gospel, pop 45]
+     Flatt & Scruggs — Blue Ridge Cabin Home   [banjo, pop 36]
+
+=== The Delmore Brothers  [region US]  liked-as "The Delmore Brothers"
+  seed in graph: NOT FOUND
+  -> Sounds like The Delmore Brothers  |  Artists whose sound sits closest to theirs  (12 rows)
+     Chet Atkins and his Guitar Pickers — Telling My Troubles To My Old Guitar - Buddha Remastered - 2000   [country boogie, pop 20]
+     Billy Walker — Funny How Time Slips Away - Single Version   [traditional country, pop 44]
+     Tennessee Ernie Ford — Dark As A Dungeon   [western swing, pop 44]
+     Elton Britt — Uranium Fever   [western swing, pop 51]
+     Elton Britt — Uranium Fever   [western swing, pop 47]   <<DUPTITLE,DUPKEY
+     Al Dexter & His Troopers — Pistol Packin' Mama   [country boogie, pop 21]
+     Jimmy Bryant — The Night Rider   [country boogie, pop 22]
+     George Hamilton IV — Abilene   [traditional country, pop 44]
+     Harper Family — Through It All   [family gospel, pop 37]
+     Tennessee Ernie Ford — Sixteen Tons   [western swing, pop 61]
+     The Peasall Sisters — In The Highways   [bluegrass gospel, pop 40]
+     Crist Family — Jesus Savior Pilot Me   [family gospel, pop 39]
+
+=== Sons of the Pioneers  [region US]  liked-as "Sons of the Pioneers"
+  seed in graph: NOT FOUND
+  -> Sounds like Sons of the Pioneers  |  Artists whose sound sits closest to theirs  (12 rows)
+     Rex Allen — There's a Great Big Beautiful Tomorrow   [western swing, pop 38]
+     Rex Allen — There's a Great Big Beautiful Tomorrow - From The Carousel of Progress   [western swing, pop 36]
+     Bob Wills — Stay All Night (Stay A Little Longer)   [western swing, pop 36]
+     Hank Thompson — Hangover Heart   [cowboy western, pop 41]
+     Hank Thompson — The Wild Side Of Life   [cowboy western, pop 44]
+     Ernest Tubb — Drivin' Nails In My Coffin - Single Version   [honky tonk, pop 39]
+     Tex Williams — The Ballad Of Thunder Road   [cowboy western, pop 39]
+     Ernest Tubb — Waltz Across Texas   [honky tonk, pop 46]
+     Faron Young — Hello Walls   [honky tonk, pop 52]
+     Ray Price — Crazy Arms   [honky tonk, pop 39]
+     Tex Williams — Smoke! Smoke! Smoke! (That Cigarette)   [cowboy western, pop 45]
+     Hawkshaw Hawkins — Lonesome 7-7203   [western swing, pop 39]
+
+=== Hank Williams  [region US]  liked-as "Hank Williams"
+  seed in graph: NOT FOUND
+  -> Sounds like Hank Williams  |  Artists whose sound sits closest to theirs  (12 rows)
+     George Jones — She Thinks I Still Care   [classic country pop, pop 53]
+     Merle Haggard — Big City   [bakersfield sound, pop 55]
+     The Oak Ridge Boys — I'm Settin' Fancy Free - Single Version   [country, pop 42]
+     Merle Haggard — Okie From Muskogee   [bakersfield sound, pop 55]
+     John Anderson — She Just Started Liking Cheatin' Songs   [country, pop 46]
+     Larry Gatlin & The Gatlin Brothers — All The Gold In California   [classic country pop, pop 37]
+     Barbara Mandrell — I Wish That I Could Fall In Love Today   [classic country pop, pop 40]
+     Ronnie Milsap — Daydreams About Night Things   [country, pop 53]
+     Larry Gatlin & The Gatlin Brothers — All the Gold In California   [classic country pop, pop 45]   <<DUPTITLE,DUPKEY
+     Charley Pride — Is Anybody Goin' to San Antone   [classic country pop, pop 42]
+     Janie Fricke — Do Me with Love   [classic country pop, pop 36]
+     Johnny Lee — Lookin' for Love   [country, pop 44]
+
+=== cache check: findArtist(name, own country) on the US-warmed graph vs a graph that only saw that country
+
+SUMMARY (US pass): graph 0, sounds-like 17, none 1, seed-in-own-shelf rows 0, duplicate rows 7

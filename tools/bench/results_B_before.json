@@ -1,0 +1,537 @@
+﻿[
+    {
+        "metric":  "TTFA-cold (a) launch",
+        "field":  "ttfaMs",
+        "n":  18,
+        "median":  665.5,
+        "p90":  1167,
+        "min":  402,
+        "max":  5839
+    },
+    {
+        "metric":  "TTFA-cold (a) launch",
+        "field":  "ttfaQtLoggedMs",
+        "n":  18,
+        "median":  666,
+        "p90":  1586,
+        "min":  403,
+        "max":  5850
+    },
+    {
+        "metric":  "TTFA-cold (a) launch",
+        "field":  "ttfaFirstPosEventMs",
+        "n":  18,
+        "median":  695.5,
+        "p90":  1571,
+        "min":  408,
+        "max":  5888
+    },
+    {
+        "metric":  "TTFA-cold (a) launch",
+        "field":  "resolveMs",
+        "n":  18,
+        "median":  267,
+        "p90":  395,
+        "min":  182,
+        "max":  520
+    },
+    {
+        "metric":  "TTFA-cold (a) launch",
+        "field":  "visitorWaitMs",
+        "n":  18,
+        "median":  0,
+        "p90":  0,
+        "min":  0,
+        "max":  51
+    },
+    {
+        "metric":  "TTFA-cold (a) launch",
+        "field":  "playerPostMs",
+        "n":  18,
+        "median":  219,
+        "p90":  355,
+        "min":  144,
+        "max":  462
+    },
+    {
+        "metric":  "TTFA-cold (a) launch",
+        "field":  "resolvedToLoadfileMs",
+        "n":  18,
+        "median":  14,
+        "p90":  20,
+        "min":  10,
+        "max":  21
+    },
+    {
+        "metric":  "TTFA-cold (a) launch",
+        "field":  "loadfileToHttpOpenMs",
+        "n":  18,
+        "median":  3,
+        "p90":  35,
+        "min":  1,
+        "max":  40
+    },
+    {
+        "metric":  "TTFA-cold (a) launch",
+        "field":  "httpOpenToResponseMs",
+        "n":  18,
+        "median":  263,
+        "p90":  419,
+        "min":  125,
+        "max":  823
+    },
+    {
+        "metric":  "TTFA-cold (a) launch",
+        "field":  "responseToAudioMs",
+        "n":  18,
+        "median":  54.5,
+        "p90":  362,
+        "min":  42,
+        "max":  364
+    },
+    {
+        "metric":  "TTFA-cold (a) launch",
+        "field":  "downloadMs",
+        "n":  17,
+        "median":  818,
+        "p90":  1964,
+        "min":  465,
+        "max":  396713
+    },
+    {
+        "metric":  "TTFA-cold (a) launch",
+        "field":  "downloadRate",
+        "n":  17,
+        "median":  5077525,
+        "p90":  7981253,
+        "min":  36772,
+        "max":  8060877
+    },
+    {
+        "metric":  "TTFA-cold (a) launch",
+        "field":  "linkSource",
+        "n":  18,
+        "median":  "resolve=18",
+        "p90":  "tier0=18"
+    },
+    {
+        "metric":  "TTFA-cold (b) new track, warm session",
+        "field":  "ttfaMs",
+        "n":  22,
+        "median":  553.5,
+        "p90":  761,
+        "min":  309,
+        "max":  1069
+    },
+    {
+        "metric":  "TTFA-cold (b) new track, warm session",
+        "field":  "ttfaQtLoggedMs",
+        "n":  22,
+        "median":  554,
+        "p90":  768,
+        "min":  310,
+        "max":  1069
+    },
+    {
+        "metric":  "TTFA-cold (b) new track, warm session",
+        "field":  "ttfaFirstPosEventMs",
+        "n":  22,
+        "median":  569.5,
+        "p90":  794,
+        "min":  341,
+        "max":  1084
+    },
+    {
+        "metric":  "TTFA-cold (b) new track, warm session",
+        "field":  "resolveMs",
+        "n":  22,
+        "median":  203.5,
+        "p90":  283,
+        "min":  152,
+        "max":  312
+    },
+    {
+        "metric":  "TTFA-cold (b) new track, warm session",
+        "field":  "visitorWaitMs",
+        "n":  22,
+        "median":  0,
+        "p90":  0,
+        "min":  0,
+        "max":  2
+    },
+    {
+        "metric":  "TTFA-cold (b) new track, warm session",
+        "field":  "playerPostMs",
+        "n":  22,
+        "median":  169,
+        "p90":  254,
+        "min":  122,
+        "max":  287
+    },
+    {
+        "metric":  "TTFA-cold (b) new track, warm session",
+        "field":  "resolvedToLoadfileMs",
+        "n":  22,
+        "median":  54.5,
+        "p90":  101,
+        "min":  22,
+        "max":  127
+    },
+    {
+        "metric":  "TTFA-cold (b) new track, warm session",
+        "field":  "loadfileToHttpOpenMs",
+        "n":  22,
+        "median":  3,
+        "p90":  21,
+        "min":  2,
+        "max":  81
+    },
+    {
+        "metric":  "TTFA-cold (b) new track, warm session",
+        "field":  "httpOpenToResponseMs",
+        "n":  22,
+        "median":  200.5,
+        "p90":  374,
+        "min":  30,
+        "max":  424
+    },
+    {
+        "metric":  "TTFA-cold (b) new track, warm session",
+        "field":  "responseToAudioMs",
+        "n":  22,
+        "median":  45,
+        "p90":  202,
+        "min":  30,
+        "max":  363
+    },
+    {
+        "metric":  "TTFA-cold (b) new track, warm session",
+        "field":  "downloadMs",
+        "n":  20,
+        "median":  651,
+        "p90":  1303,
+        "min":  183,
+        "max":  1414
+    },
+    {
+        "metric":  "TTFA-cold (b) new track, warm session",
+        "field":  "downloadRate",
+        "n":  20,
+        "median":  6446368,
+        "p90":  12400315,
+        "min":  3350622,
+        "max":  15252383
+    },
+    {
+        "metric":  "TTFA-cold (b) new track, warm session",
+        "field":  "linkSource",
+        "n":  22,
+        "median":  "resolve=22",
+        "p90":  "tier0=22"
+    },
+    {
+        "metric":  "TTFA-warm (link cache hit)",
+        "field":  "ttfaMs",
+        "n":  24,
+        "median":  421.5,
+        "p90":  592,
+        "min":  292,
+        "max":  796
+    },
+    {
+        "metric":  "TTFA-warm (link cache hit)",
+        "field":  "ttfaQtLoggedMs",
+        "n":  24,
+        "median":  424,
+        "p90":  593,
+        "min":  300,
+        "max":  796
+    },
+    {
+        "metric":  "TTFA-warm (link cache hit)",
+        "field":  "ttfaFirstPosEventMs",
+        "n":  24,
+        "median":  462,
+        "p90":  624,
+        "min":  319,
+        "max":  811
+    },
+    {
+        "metric":  "TTFA-warm (link cache hit)",
+        "field":  "resolveMs",
+        "n":  24,
+        "median":  49,
+        "p90":  64,
+        "min":  20,
+        "max":  68
+    },
+    {
+        "metric":  "TTFA-warm (link cache hit)",
+        "field":  "resolvedToLoadfileMs",
+        "n":  24,
+        "median":  78.5,
+        "p90":  122,
+        "min":  61,
+        "max":  134
+    },
+    {
+        "metric":  "TTFA-warm (link cache hit)",
+        "field":  "loadfileToHttpOpenMs",
+        "n":  24,
+        "median":  3,
+        "p90":  8,
+        "min":  2,
+        "max":  13
+    },
+    {
+        "metric":  "TTFA-warm (link cache hit)",
+        "field":  "httpOpenToResponseMs",
+        "n":  24,
+        "median":  219,
+        "p90":  352,
+        "min":  48,
+        "max":  392
+    },
+    {
+        "metric":  "TTFA-warm (link cache hit)",
+        "field":  "responseToAudioMs",
+        "n":  24,
+        "median":  42.5,
+        "p90":  184,
+        "min":  8,
+        "max":  386
+    },
+    {
+        "metric":  "TTFA-warm (link cache hit)",
+        "field":  "downloadMs",
+        "n":  22,
+        "median":  665.5,
+        "p90":  1000,
+        "min":  228,
+        "max":  1328
+    },
+    {
+        "metric":  "TTFA-warm (link cache hit)",
+        "field":  "downloadRate",
+        "n":  22,
+        "median":  7379713,
+        "p90":  13679956,
+        "min":  3600541,
+        "max":  18818022
+    },
+    {
+        "metric":  "TTFA-warm (link cache hit)",
+        "field":  "linkSource",
+        "n":  24,
+        "median":  "cache=24",
+        "p90":  "tier0=24"
+    },
+    {
+        "metric":  "Skip latency (Next, prefetched)",
+        "field":  "ttfaMs",
+        "n":  22,
+        "median":  412.5,
+        "p90":  660,
+        "min":  259,
+        "max":  821
+    },
+    {
+        "metric":  "Skip latency (Next, prefetched)",
+        "field":  "ttfaQtLoggedMs",
+        "n":  22,
+        "median":  414,
+        "p90":  661,
+        "min":  260,
+        "max":  820
+    },
+    {
+        "metric":  "Skip latency (Next, prefetched)",
+        "field":  "ttfaFirstPosEventMs",
+        "n":  22,
+        "median":  440.5,
+        "p90":  693,
+        "min":  292,
+        "max":  853
+    },
+    {
+        "metric":  "Skip latency (Next, prefetched)",
+        "field":  "resolveMs",
+        "n":  22,
+        "median":  42.5,
+        "p90":  51,
+        "min":  33,
+        "max":  70
+    },
+    {
+        "metric":  "Skip latency (Next, prefetched)",
+        "field":  "resolvedToLoadfileMs",
+        "n":  22,
+        "median":  45.5,
+        "p90":  89,
+        "min":  15,
+        "max":  157
+    },
+    {
+        "metric":  "Skip latency (Next, prefetched)",
+        "field":  "loadfileToHttpOpenMs",
+        "n":  22,
+        "median":  2,
+        "p90":  5,
+        "min":  1,
+        "max":  32
+    },
+    {
+        "metric":  "Skip latency (Next, prefetched)",
+        "field":  "httpOpenToResponseMs",
+        "n":  22,
+        "median":  247,
+        "p90":  408,
+        "min":  83,
+        "max":  566
+    },
+    {
+        "metric":  "Skip latency (Next, prefetched)",
+        "field":  "responseToAudioMs",
+        "n":  22,
+        "median":  35.5,
+        "p90":  201,
+        "min":  10,
+        "max":  425
+    },
+    {
+        "metric":  "Skip latency (Next, prefetched)",
+        "field":  "downloadMs",
+        "n":  20,
+        "median":  791,
+        "p90":  996,
+        "min":  283,
+        "max":  1284
+    },
+    {
+        "metric":  "Skip latency (Next, prefetched)",
+        "field":  "downloadRate",
+        "n":  20,
+        "median":  6400468,
+        "p90":  9587786,
+        "min":  3705908,
+        "max":  14349528
+    },
+    {
+        "metric":  "Skip latency (Next, prefetched)",
+        "field":  "linkSource",
+        "n":  22,
+        "median":  "cache=22",
+        "p90":  "tier0=22"
+    },
+    {
+        "metric":  "Track change at natural end (EOF-\u003eaudio)",
+        "field":  "ttfaMs",
+        "n":  4,
+        "median":  907,
+        "p90":  1083,
+        "min":  370,
+        "max":  1083
+    },
+    {
+        "metric":  "Track change at natural end (EOF-\u003eaudio)",
+        "field":  "ttfaQtLoggedMs",
+        "n":  4,
+        "median":  916,
+        "p90":  1098,
+        "min":  370,
+        "max":  1098
+    },
+    {
+        "metric":  "Track change at natural end (EOF-\u003eaudio)",
+        "field":  "ttfaFirstPosEventMs",
+        "n":  4,
+        "median":  940.5,
+        "p90":  1128,
+        "min":  384,
+        "max":  1128
+    },
+    {
+        "metric":  "Track change at natural end (EOF-\u003eaudio)",
+        "field":  "resolveMs",
+        "n":  4,
+        "median":  89,
+        "p90":  172,
+        "min":  43,
+        "max":  172
+    },
+    {
+        "metric":  "Track change at natural end (EOF-\u003eaudio)",
+        "field":  "resolvedToLoadfileMs",
+        "n":  4,
+        "median":  58.5,
+        "p90":  151,
+        "min":  26,
+        "max":  151
+    },
+    {
+        "metric":  "Track change at natural end (EOF-\u003eaudio)",
+        "field":  "loadfileToHttpOpenMs",
+        "n":  4,
+        "median":  3,
+        "p90":  5,
+        "min":  1,
+        "max":  5
+    },
+    {
+        "metric":  "Track change at natural end (EOF-\u003eaudio)",
+        "field":  "httpOpenToResponseMs",
+        "n":  4,
+        "median":  492.5,
+        "p90":  869,
+        "min":  232,
+        "max":  869
+    },
+    {
+        "metric":  "Track change at natural end (EOF-\u003eaudio)",
+        "field":  "responseToAudioMs",
+        "n":  4,
+        "median":  55.5,
+        "p90":  331,
+        "min":  40,
+        "max":  331
+    },
+    {
+        "metric":  "Track change at natural end (EOF-\u003eaudio)",
+        "field":  "downloadMs",
+        "n":  4,
+        "median":  888,
+        "p90":  2043,
+        "min":  601,
+        "max":  2043
+    },
+    {
+        "metric":  "Track change at natural end (EOF-\u003eaudio)",
+        "field":  "downloadRate",
+        "n":  4,
+        "median":  3800780.5,
+        "p90":  5991639,
+        "min":  3044575,
+        "max":  5991639
+    },
+    {
+        "metric":  "Track change at natural end (EOF-\u003eaudio)",
+        "field":  "linkSource",
+        "n":  4,
+        "median":  "cache=4",
+        "p90":  "tier0=4"
+    },
+    {
+        "metric":  "Rebuffer (continuous play runs)",
+        "field":  "stalls / stallSec / playSec",
+        "n":  6,
+        "median":  "0 stalls, 0 s stalled",
+        "p90":  "ratio 0 over 1555.2 s played"
+    },
+    {
+        "metric":  "All plays: link refused by googlevideo (HTTP error)",
+        "field":  "httpErrors",
+        "n":  90,
+        "median":  1,
+        "p90":  "munhCAshfH0:403-\u003etier2"
+    }
+]

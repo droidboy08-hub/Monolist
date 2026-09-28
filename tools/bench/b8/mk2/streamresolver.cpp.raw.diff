@@ -1,0 +1,104 @@
+diff --git a/base/src/streamresolver.cpp b/b7/src/streamresolver.cpp
+index 05ee5bb..5914af8 100644
+--- a/base/src/streamresolver.cpp
++++ b/b7/src/streamresolver.cpp
+@@ -1,6 +1,36 @@
+ #include "streamresolver.h"
+ #include "appdatabase.h"
+ #include "ytdlp.h"
++#include "benchlog.h"
++
++#include <QElapsedTimer>
++#include <QHash>
++
++namespace {
++// BENCH: when each job's current tier started, by video id.
++QHash<QString, QElapsedTimer> &benchTierClocks()
++{
++    static QHash<QString, QElapsedTimer> clocks;
++    return clocks;
++}
++QHash<QString, QElapsedTimer> &benchJobClocks()
++{
++    static QHash<QString, QElapsedTimer> clocks;
++    return clocks;
++}
++const char *benchTierName(int tier)
++{
++    switch (tier) {
++    case 0: return "InnerTube";
++    case 1: return "yt-dlp";
++    case 2: return "muxed";
++    case 3: return "Piped";
++    case 4: return "Invidious";
++    case 5: return "JioSaavn";
++    default: return "exhausted";
++    }
++}
++}
+ 
+ #include <QJsonArray>
+ #include <QJsonDocument>
+@@ -131,6 +161,7 @@ void StreamResolver::resolve(const QString &videoId, int firstTier)
+         const auto cached = m_cache.constFind(videoId);
+         if (cached != m_cache.constEnd() && cached->expires > QDateTime::currentDateTimeUtc()) {
+             const CacheEntry entry = *cached;
++            benchMark(QStringLiteral("resolve %1 cache-hit tier=%2").arg(videoId, QLatin1String(benchTierName(entry.tier))));
+             QMetaObject::invokeMethod(this, [this, videoId, entry]() {
+                 report(videoId, entry.url, entry.tier, /*fromCache=*/true);
+             }, Qt::QueuedConnection);
+@@ -139,6 +170,7 @@ void StreamResolver::resolve(const QString &videoId, int firstTier)
+         // A prefetch already on its way: let it finish, and report this time.
+         if (Job *running = m_jobs.value(videoId); running && running->prefetch) {
+             running->prefetch = false;
++            benchMark(QStringLiteral("resolve %1 takes-over-prefetch").arg(videoId));
+             return;
+         }
+     }
+@@ -302,6 +334,11 @@ void StreamResolver::startTier(Job *job, int tier)
+ {
+     job->tier = tier;
+     ++job->generation;
++    if (!benchJobClocks().contains(job->videoId))
++        benchJobClocks()[job->videoId].start();
++    benchTierClocks()[job->videoId].start();
++    benchMark(QStringLiteral("tier start %1 tier=%2 prefetch=%3")
++                  .arg(job->videoId, QLatin1String(benchTierName(tier))).arg(job->prefetch ? 1 : 0));
+     Q_EMIT tierChanged(job->videoId, tier);
+ 
+     switch (tier) {
+@@ -587,6 +624,13 @@ void StreamResolver::succeed(Job *job, const QString &url, const QVariantMap &he
+     const QString videoId = job->videoId;
+     const int tier = job->tier;
+     const bool silent = job->prefetch;
++    benchMark(QStringLiteral("tier ok %1 tier=%2 tierMs=%3 jobMs=%4 prefetch=%5 clen=%6")
++                  .arg(videoId, QLatin1String(benchTierName(tier)))
++                  .arg(benchTierClocks().value(videoId).elapsed()).arg(benchJobClocks().value(videoId).elapsed())
++                  .arg(silent ? 1 : 0)
++                  .arg(QUrlQuery(QUrl(url)).queryItemValue(QStringLiteral("clen"))));
++    benchTierClocks().remove(videoId);
++    benchJobClocks().remove(videoId);
+     m_cache.insert(videoId, { url, tier, expiryOf(url), headers });
+ 
+     abortPending(job);
+@@ -600,6 +644,9 @@ void StreamResolver::tierExhausted(Job *job, const QString &reason)
+ {
+     if (job->settled)
+         return;
++    benchMark(QStringLiteral("tier fail %1 tier=%2 tierMs=%3 reason=%4")
++                  .arg(job->videoId, QLatin1String(benchTierName(job->tier)))
++                  .arg(benchTierClocks().value(job->videoId).elapsed()).arg(reason.left(160)));
+     job->errors.append(reason);
+     abortPending(job);
+     startTier(job, job->next.isEmpty() ? int(TierExhausted) : job->next.takeFirst());
+@@ -641,6 +688,10 @@ void StreamResolver::cancelJob(const QString &videoId)
+     Job *job = m_jobs.value(videoId);
+     if (!job)
+         return;
++    benchMark(QStringLiteral("resolve %1 cancelled tier=%2 prefetch=%3")
++                  .arg(videoId, QLatin1String(benchTierName(job->tier))).arg(job->prefetch ? 1 : 0));
++    benchTierClocks().remove(videoId);
++    benchJobClocks().remove(videoId);
+     job->settled = true;
+     abortPending(job);
+     discard(job);

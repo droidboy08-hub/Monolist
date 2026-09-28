@@ -1,0 +1,421 @@
+
+### Simon & Garfunkel   key "simon"  firstPerformer "Simon"
+  catalogue lead for key: Simon & Garfunkel
+  credits in key group (7): Simon & Garfunkel | Simon & Jan | Simon | SIMON | Simón, Basta! | Simon & Frippe | Simon & Shaker
+  creditedRows(Simon & Garfunkel): 3
+     Simon & Garfunkel — Mrs. Robinson - From "The Graduate" Soundtrack [classic rock, pop 76]
+     Simon & Garfunkel — The Sound of Silence - Acoustic Version [classic rock, pop 73]
+     Simon & Garfunkel — Cecilia [classic rock, pop 72]
+  graph: Simon & Garfunkel / US
+  neighbours: The Doors, R.E.M., Red Hot Chili Peppers, Guns N’ Roses, The Smashing Pumpkins, Foo Fighters, The Killers, Pearl Jam, Pixies, Marvin Gaye, Metallica, Weezer, Radiohead, The Who, Muse, AC/DC
+
+### Simon   key "simon"  firstPerformer "Simon"
+  catalogue lead for key: Simon & Garfunkel
+  credits in key group (7): Simon & Garfunkel | Simon & Jan | Simon | SIMON | Simón, Basta! | Simon & Frippe | Simon & Shaker
+  creditedRows(Simon): 3
+     Simon & Garfunkel — Mrs. Robinson - From "The Graduate" Soundtrack [classic rock, pop 76]
+     Simon & Garfunkel — The Sound of Silence - Acoustic Version [classic rock, pop 73]
+     Simon & Garfunkel — Cecilia [classic rock, pop 72]
+  graph: not found
+
+### AC/DC   key "ac"  firstPerformer "AC"
+  catalogue lead for key: AC/DC
+  credits in key group (5): AC/DC | AC | AC/DC Tribute Band | AC/DC's Greatest Tribute Band | AC/DC Backing Force
+  creditedRows(AC/DC): 3
+     AC/DC — Thunderstruck [australian rock, pop 86]
+     AC/DC — Highway to Hell [australian rock, pop 85]
+     AC/DC — Back In Black [australian rock, pop 84]
+  graph: AC/DC / AU
+  neighbours: INXS, Nickelback, Evanescence, The Black Keys, The Who, The Doors, Deep Purple, Radiohead, Coldplay, Megadeth, The Killers, Arctic Monkeys, Gorillaz
+
+### AC   key "ac"  firstPerformer "AC"
+  catalogue lead for key: AC/DC
+  credits in key group (5): AC/DC | AC | AC/DC Tribute Band | AC/DC's Greatest Tribute Band | AC/DC Backing Force
+  creditedRows(AC): 3
+     AC/DC — Thunderstruck [australian rock, pop 86]
+     AC/DC — Highway to Hell [australian rock, pop 85]
+     AC/DC — Back In Black [australian rock, pop 84]
+  graph: not found
+
+### Earth, Wind & Fire   key "earth"  firstPerformer "Earth"
+  catalogue lead for key: Earth, Wind & Fire
+  credits in key group (5): Earth, Wind & Fire | Earth & Fire | Earth | Earth & Stone | Earth and Pillars
+  creditedRows(Earth, Wind & Fire): 3
+     Earth, Wind & Fire — September [jazz funk, pop 82]
+     Earth, Wind & Fire — Let's Groove [jazz funk, pop 80]
+     Earth, Wind & Fire — Boogie Wonderland [jazz funk, pop 80]
+  graph: not found
+
+### Earth   key "earth"  firstPerformer "Earth"
+  catalogue lead for key: Earth, Wind & Fire
+  credits in key group (5): Earth, Wind & Fire | Earth & Fire | Earth | Earth & Stone | Earth and Pillars
+  creditedRows(Earth): 3
+     Earth, Wind & Fire — September [jazz funk, pop 82]
+     Earth, Wind & Fire — Let's Groove [jazz funk, pop 80]
+     Earth, Wind & Fire — Boogie Wonderland [jazz funk, pop 80]
+  graph: not found
+
+### Tyler, The Creator   key "tyler"  firstPerformer "Tyler"
+  catalogue lead for key: Tyler, The Creator
+  credits in key group (2): Tyler, The Creator | Tyler and Mark
+  creditedRows(Tyler, The Creator): 3
+     Tyler, The Creator — Like Him (feat. Lola Young) [rap, pop 91]
+     Tyler, The Creator — See You Again (feat. Kali Uchis) [rap, pop 91]
+     Tyler, The Creator — Sticky (feat. GloRilla, Sexyy Red & Lil Wayne) [rap, pop 88]
+  graph: not found
+
+### Tyler   key "tyler"  firstPerformer "Tyler"
+  catalogue lead for key: Tyler, The Creator
+  credits in key group (2): Tyler, The Creator | Tyler and Mark
+  creditedRows(Tyler): 3
+     Tyler, The Creator — Like Him (feat. Lola Young) [rap, pop 91]
+     Tyler, The Creator — See You Again (feat. Kali Uchis) [rap, pop 91]
+     Tyler, The Creator — Sticky (feat. GloRilla, Sexyy Red & Lil Wayne) [rap, pop 88]
+  graph: not found
+
+### Brooks & Dunn   key "brooks"  firstPerformer "Brooks"
+  catalogue lead for key: Brooks & Dunn
+  credits in key group (2): Brooks & Dunn | Brooks
+  creditedRows(Brooks & Dunn): 3
+     Brooks & Dunn — Boot Scootin' Boogie [country road, pop 73]
+     Brooks & Dunn — My Maria [country road, pop 72]
+     Brooks & Dunn — Neon Moon [country road, pop 72]
+  graph: not found
+
+### Brooks   key "brooks"  firstPerformer "Brooks"
+  catalogue lead for key: Brooks & Dunn
+  credits in key group (2): Brooks & Dunn | Brooks
+  creditedRows(Brooks): 3
+     Brooks & Dunn — Boot Scootin' Boogie [country road, pop 73]
+     Brooks & Dunn — My Maria [country road, pop 72]
+     Brooks & Dunn — Neon Moon [country road, pop 72]
+  graph: not found
+
+### Above & Beyond   key "above"  firstPerformer "Above"
+  catalogue lead for key: Above & Beyond
+  credits in key group (2): Above & Beyond | Above, Below
+  creditedRows(Above & Beyond): 3
+     Above & Beyond — Quicksand (Don't Go) [trance, pop 60]
+     Above & Beyond — Start A Fire [trance, pop 57]
+     Above & Beyond — Palermo [trance, pop 56]
+  graph: not found
+
+### Wisin & Yandel   key "wisin"  firstPerformer "Wisin"
+  catalogue lead for key: Wisin & Yandel
+  credits in key group (2): Wisin & Yandel | Wisin
+  creditedRows(Wisin & Yandel): 3
+     Wisin & Yandel — Sexy Movimiento [reggaeton, pop 78]
+     Wisin & Yandel — Rakata [reggaeton, pop 75]
+     Wisin & Yandel — El Telefono [reggaeton, pop 74]
+  graph: not found
+
+### Black Country, New Road   key "black country"  firstPerformer "Black Country"
+  catalogue lead for key: Black Country, New Road
+  credits in key group (1): Black Country, New Road
+  creditedRows(Black Country, New Road): 3
+     Black Country, New Road — The Place Where He Inserted the Blade [crank wave, pop 61]
+     Black Country, New Road — Happy Birthday [crank wave, pop 60]
+     Black Country, New Road — Besties [crank wave, pop 59]
+  graph: not found
+
+### Henrique & Juliano   key "henrique"  firstPerformer "Henrique"
+  catalogue lead for key: Henrique & Juliano
+  credits in key group (3): Henrique & Juliano | Henrique & Diego | Henrique & Claudinho
+  creditedRows(Henrique & Juliano): 3
+     Henrique & Juliano — Amigo Da Minha Saudade - Ao Vivo [sertanejo universitario, pop 80]
+     Henrique & Juliano — Última Saudade - Ao Vivo [sertanejo universitario, pop 79]
+     Henrique & Juliano — Aquela Pessoa - Ao Vivo [sertanejo universitario, pop 77]
+  graph: not found
+
+### 米津玄師   key "米津玄師"  firstPerformer "米津玄師"
+  catalogue lead for key: none
+  graph: not found
+
+### Kenshi Yonezu   key "kenshi yonezu"  firstPerformer "Kenshi Yonezu"
+  catalogue lead for key: Kenshi Yonezu
+  credits in key group (1): Kenshi Yonezu
+  creditedRows(Kenshi Yonezu): 3
+     Kenshi Yonezu — BOW AND ARROW [j-pop, pop 77]
+     Kenshi Yonezu — Plazma [j-pop, pop 76]
+     Kenshi Yonezu — KICK BACK [j-pop, pop 73]
+  graph: not found
+
+### Земфира   key "земфира"  firstPerformer "Земфира"
+  catalogue lead for key: none
+  graph: Земфира / RU
+  neighbours: Кино -nocat
+
+### Zemfira   key "zemfira"  firstPerformer "Zemfira"
+  catalogue lead for key: Zemfira
+  credits in key group (1): Zemfira
+  creditedRows(Zemfira): 3
+     Zemfira — ИСКАЛА [russian rock, pop 57]
+     Zemfira — ХОЧЕШЬ? [russian rock, pop 56]
+     Zemfira — П.М.М.Л. [russian rock, pop 55]
+  graph: not found
+
+### Кино   key "кино"  firstPerformer "Кино"
+  catalogue lead for key: none
+  graph: Кино / RU
+  neighbours: Nautilus Pompilius, Сплин -nocat, ДДТ, Агата Кристи -nocat, Земфира -nocat, Би-2, Аквариум -nocat, Король и Шут -nocat, Алиса -nocat, Пикник -nocat, Гражданская оборона -nocat, Ленинград -nocat, Radiohead, Nirvana, The Beatles, Rammstein, Depeche Mode, Metallica, Linkin Park, Pink Floyd, Red Hot Chili Peppers, System of a Down, The Doors, David Bowie
+
+### Kino   key "kino"  firstPerformer "Kino"
+  catalogue lead for key: Kino
+  credits in key group (2): Kino | Kiño
+  creditedRows(Kino): 3
+     Kino — Пачка сигарет [russian rock, pop 61]
+     Kino — Звезда по имени Солнце [russian rock, pop 59]
+     Kino — Группа крови [russian rock, pop 59]
+  graph: not found
+
+### Сплин   key "сплин"  firstPerformer "Сплин"
+  catalogue lead for key: none
+  graph: Сплин / RU
+  neighbours: Кино -nocat
+
+### Король и Шут   key "король и шут"  firstPerformer "Король и Шут"
+  catalogue lead for key: none
+  graph: Король и Шут / RU
+  neighbours: Кино -nocat
+
+### Death   key "death"  firstPerformer "Death"
+  catalogue lead for key: Death
+  credits in key group (4): Death | Death and Vanilla | Death and the Maiden | death
+  creditedRows(Death): 3
+     Death — Voice of the Soul [technical death metal, pop 58]
+     Death — Symbolic [technical death metal, pop 55]
+     Death — Crystal Mountain [technical death metal, pop 54]
+  graph: Death / US
+  neighbours: Guns N’ Roses, Neurosis, Megadeth, Mastodon, System of a Down, Dream Theater, Slipknot, Pantera, Agalloch, Isis, Buckethead, Dio, Amorphis, Arch Enemy, DragonForce, Ayreon, Iron Maiden, Motörhead
+
+### Europe   key "europe"  firstPerformer "Europe"
+  catalogue lead for key: Europe
+  credits in key group (1): Europe
+  creditedRows(Europe): 3
+     Europe — The Final Countdown [glam metal, pop 77]
+     Europe — Carrie [glam metal, pop 70]
+     Europe — Rock the Night [glam metal, pop 62]
+  graph: Europe / SE
+  neighbours: Roxette, ABBA, John Norum, The Alan Parsons Project, Falco, Guns N’ Roses, Michael Jackson, R.E.M., Linkin Park, Eagles, Evanescence, Simple Minds, Ramones, New Order
+
+### Ghost   key "ghost"  firstPerformer "Ghost"
+  catalogue lead for key: Ghost
+  credits in key group (5): Ghost | Ghost and Pals | ghost/\/ghoul | ghost and tape | Ghost & Writer
+  creditedRows(Ghost): 3
+     Ghost — Mary On A Cross [hard rock, pop 79]
+     Ghost — Satanized [hard rock, pop 76]
+     Ghost — Spillways [hard rock, pop 67]
+  graph: Ghost / SE
+  neighbours: In Flames, Arch Enemy, Sabaton, Amon Amarth, Katatonia, Opeth, Megadeth, Amorphis, Mastodon, Death, Judas Priest, Dio, Slayer, Behemoth
+
+### Can   key "can"  firstPerformer "Can"
+  catalogue lead for key: CAN
+  credits in key group (1): CAN
+  creditedRows(Can): 3
+     CAN — Vitamin C [experimental rock, pop 54]
+     CAN — Vitamin C - 2004 Remastered Version [experimental rock, pop 50]
+     CAN — She Brings the Rain [experimental rock, pop 45]
+  graph: Can / DE
+  neighbours: Kraftwerk, Tangerine Dream, Popol Vuh, Nico
+
+### Air   key "air"  firstPerformer "Air"
+  catalogue lead for key: Air
+  credits in key group (1): Air
+  creditedRows(Air): 3
+     Air — Playground Love [indietronica, pop 68]
+     Air — All I Need (feat. Beth Hirsch) [indietronica, pop 68]
+     Air — Sexy Boy [indietronica, pop 67]
+  graph: Air / FR
+  neighbours: Vangelis, Alizée -nocat, M83, Justice, Phoenix, Jean‐Michel Jarre, Daft Punk, Hans Zimmer, Aphex Twin, Gorillaz, Coldplay, Sigur Rós, R.E.M., Mogwai, Brian Eno, Belle and Sebastian, Garbage, New Order, Amy Winehouse
+
+### Justice   key "justice"  firstPerformer "Justice"
+  catalogue lead for key: Justice
+  credits in key group (2): Justice | Justice & Kaos
+  creditedRows(Justice): 3
+     Justice — D.A.N.C.E [new rave, pop 68]
+     Justice — Genesis [new rave, pop 61]
+     Justice — We Are Your Friends - Justice Vs Simian [new rave, pop 61]
+  graph: Justice / FR
+  neighbours: Air, Phoenix, M83, Cassius, Daft Punk, Death Grips, Ladytron, Gorillaz, MGMT, Radiohead, Crystal Castles, Muse, Arctic Monkeys, Franz Ferdinand, Moby, The Killers, The Beatles
+
+### Phoenix   key "phoenix"  firstPerformer "Phoenix"
+  catalogue lead for key: Phoenix
+  credits in key group (2): Phoenix | Phoenix and the Flower Girl
+  creditedRows(Phoenix): 3
+     Phoenix — 1901 [shimmer pop, pop 74]
+     Phoenix — Lisztomania [shimmer pop, pop 72]
+     Phoenix — If I Ever Feel Better [shimmer pop, pop 68]
+  graph: Phoenix / FR
+  neighbours: Air, M83, Justice, Daft Punk
+
+### Genesis   key "genesis"  firstPerformer "Genesis"
+  catalogue lead for key: Genesis
+  credits in key group (1): Genesis
+  creditedRows(Genesis): 3
+     Genesis — Invisible Touch - 2007 Remaster [rock, pop 72]
+     Genesis — That's All - 2007 Remaster [rock, pop 71]
+     Genesis — I Can't Dance - 2007 Remaster [rock, pop 66]
+  graph: Genesis / GB
+  neighbours: Uriah Heep, The Beatles, Yes, The Police, The Rolling Stones, Fleetwood Mac, The Who, Jethro Tull, Radiohead, The Alan Parsons Project, Coldplay, The Clash, U2, R.E.M., Guns N’ Roses
+
+### Yes   key "yes"  firstPerformer "Yes"
+  catalogue lead for key: Yes
+  credits in key group (4): Yes | yes/and | Yes* | yes, mama ok?
+  creditedRows(Yes): 3
+     Yes — Owner of a Lonely Heart [rock, pop 74]
+     Yes — Roundabout - 2024 Remaster [rock, pop 62]
+     Yes — I've Seen All Good People: a. Your Move, b. All Good People - 2008 Remaster [rock, pop 52]
+  graph: Yes / GB
+  neighbours: The Alan Parsons Project, Iron Maiden, Coldplay, New Order, Gorillaz, Simple Minds, Uriah Heep, Jethro Tull, Whitesnake, David Bowie, The Beatles, The Who, R.E.M., Michael Jackson, Guns N’ Roses, Lynyrd Skynyrd, Eagles, The Beach Boys, Scorpions
+
+### Kiss   key "kiss"  firstPerformer "Kiss"
+  catalogue lead for key: KISS
+  credits in key group (2): KISS | Kiss and Demise
+  creditedRows(Kiss): 3
+     KISS — I Was Made For Lovin' You [glam rock, pop 84]
+     KISS — Rock And Roll All Nite [glam rock, pop 74]
+     KISS — Detroit Rock City [glam rock, pop 69]
+  graph: KISS / US
+  neighbours: Bob Marley, Guns N’ Roses, R.E.M., Linkin Park, Michael Jackson, Tom Petty and the Heartbreakers, Eagles, Frank Zappa, Janis Joplin, Dream Theater, Meat Loaf, Buckethead, Uriah Heep, The Alan Parsons Project, Jethro Tull, Die Ärzte, DragonForce
+
+### Boston   key "boston"  firstPerformer "Boston"
+  catalogue lead for key: Boston
+  credits in key group (1): Boston
+  creditedRows(Boston): 3
+     Boston — More Than a Feeling [album rock, pop 79]
+     Boston — Peace of Mind [album rock, pop 67]
+     Boston — Amanda [album rock, pop 64]
+  graph: not found
+
+### Heart   key "heart"  firstPerformer "Heart"
+  catalogue lead for key: Heart
+  credits in key group (4): Heart | Heart & Soul | Heart & Lung | Heart/Dancer
+  creditedRows(Heart): 3
+     Heart — Alone [rock, pop 76]
+     Heart — Barracuda [rock, pop 74]
+     Heart — Crazy On You [rock, pop 70]
+  graph: Heart / US
+  neighbours: Cher, Guns N’ Roses, Lynyrd Skynyrd, R.E.M., Michael Jackson, Tom Petty and the Heartbreakers, Linkin Park, The Beach Boys, The Bangles, KISS, Eagles, Janis Joplin, Uriah Heep, The Alan Parsons Project, Scorpions, Iron Maiden, Yes, Coldplay
+
+### Low   key "low"  firstPerformer "Low"
+  catalogue lead for key: low&slow
+  credits in key group (2): low&slow | Low
+  creditedRows(Low): 3
+     low&slow — glow [study beats, pop 55]
+     low&slow — poseidon [study beats, pop 55]
+     low&slow — highway one [study beats, pop 52]
+  graph: not found
+
+### Wire   key "wire"  firstPerformer "Wire"
+  catalogue lead for key: Wire
+  credits in key group (1): Wire
+  creditedRows(Wire): 3
+     Wire — Mannequin - 2006 Remastered Version [alternative rock, pop 50]
+     Wire — Ex Lion Tamer - 2006 Remastered Version [alternative rock, pop 45]
+     Wire — Three Girl Rhumba - 2006 Remastered Version [alternative rock, pop 43]
+  graph: not found
+
+### Suicide   key "suicide"  firstPerformer "Suicide"
+  catalogue lead for key: Suicide
+  credits in key group (1): Suicide
+  creditedRows(Suicide): 3
+     Suicide — Surrender ('88 Version) (2023 Remaster) [no wave, pop 53]
+     Suicide — Dream Baby Dream - Single Edit [no wave, pop 44]
+     Suicide — Ghost Rider (2019 - Remaster) [no wave, pop 43]
+  graph: not found
+
+### Love   key "love"  firstPerformer "Love"
+  catalogue lead for key: =LOVE
+  credits in key group (8): =LOVE | Love | Love and Theft | Love and Rockets | Love & The Outcome | Love & Money | Love and Death | Love And Kisses
+  creditedRows(Love): 3
+     =LOVE — とくべチュ、して [j-pop girl group, pop 57]
+     Love — Everybody's Gotta Live [psychedelic rock, pop 57]
+     =LOVE — 絶対アイドル辞めないで [j-pop girl group, pop 56]
+  graph: not found
+
+### Television   key "television"  firstPerformer "Television"
+  catalogue lead for key: Television
+  credits in key group (1): Television
+  creditedRows(Television): 3
+     Television — Marquee Moon [indie rock, pop 52]
+     Television — See No Evil [indie rock, pop 46]
+     Television — Venus [indie rock, pop 44]
+  graph: not found
+
+### Train   key "train"  firstPerformer "Train"
+  catalogue lead for key: Train
+  credits in key group (1): Train
+  creditedRows(Train): 3
+     Train — Hey, Soul Sister [pop, pop 84]
+     Train — Drops of Jupiter (Tell Me) [pop, pop 83]
+     Train — Drive By [pop, pop 82]
+  graph: not found
+
+### Journey   key "journey"  firstPerformer "Journey"
+  catalogue lead for key: Journey
+  credits in key group (1): Journey
+  creditedRows(Journey): 3
+     Journey — Don't Stop Believin' (2022 Remaster) [rock, pop 86]
+     Journey — Any Way You Want It [rock, pop 76]
+     Journey — Don't Stop Believin' [rock, pop 76]
+  graph: not found
+
+### Chicago   key "chicago"  firstPerformer "Chicago"
+  catalogue lead for key: Chicago
+  credits in key group (1): Chicago
+  creditedRows(Chicago): 3
+     Chicago — If You Leave Me Now [rock, pop 77]
+     Chicago — Hard to Say I'm Sorry / Get Away - 2006 Remaster [rock, pop 76]
+     Chicago — You're the Inspiration - 2006 Remaster [rock, pop 75]
+  graph: not found
+
+### America   key "america"  firstPerformer "America"
+  catalogue lead for key: America
+  credits in key group (1): America
+  creditedRows(America): 3
+     America — A Horse with No Name [mellow gold, pop 79]
+     America — Ventura Highway [mellow gold, pop 78]
+     America — Sister Golden Hair [mellow gold, pop 75]
+  graph: not found
+
+### Poison   key "poison"  firstPerformer "Poison"
+  catalogue lead for key: Poison
+  credits in key group (1): Poison
+  creditedRows(Poison): 3
+     Poison — Every Rose Has Its Thorn - 2003 Remaster [album rock, pop 71]
+     Poison — Nothin' But A Good Time - Remastered 2006 [album rock, pop 69]
+     Poison — Talk Dirty To Me [album rock, pop 62]
+  graph: not found
+
+### Free   key "free"  firstPerformer "Free"
+  catalogue lead for key: Free
+  credits in key group (1): Free
+  creditedRows(Free): 3
+     Free — All Right Now [british blues, pop 69]
+     Free — All Right Now [british blues, pop 51]
+     Free — All Right Now [british blues, pop 51]
+  graph: not found
+
+### Saga   key "saga"  firstPerformer "Saga"
+  catalogue lead for key: Saga & Simon
+  credits in key group (2): Saga & Simon | Saga
+  creditedRows(Saga): 3
+     Saga & Simon — Hjulen på bussen [barnmusik, pop 47]
+     Saga & Simon — Baby haj [barnmusik, pop 47]
+     Saga — On the Loose [progressive rock, pop 45]
+  graph: Saga / CA
+  neighbours: 
+
+### Absurd   key "absurd"  firstPerformer "Absurd"
+  catalogue lead for key: none
+  graph: not found
+
+### Bushido   key "bushido"  firstPerformer "Bushido"
+  catalogue lead for key: Bushido
+  credits in key group (1): Bushido
+  creditedRows(Bushido): 3
+     Bushido — Alles wird gut [german hip hop, pop 61]
+     Bushido — Sonnenbank Flavour [german hip hop, pop 58]
+     Bushido — Für immer jung [german hip hop, pop 58]
+  graph: Bushido / DE
+  neighbours: 

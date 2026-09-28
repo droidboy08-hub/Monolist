@@ -1,0 +1,30 @@
+﻿ 1 synced         493ms strict=439 up=437 res=20 loose= ytm= ovh=54 chosen=Hey Jude | The Beatles | 426s gap 0
+ 2 synced         512ms strict=441 up=439 res=20 loose= ytm= ovh=71 chosen=Bohemian Rhapsody | Queen | 355s gap 0
+ 3 synced         510ms strict=460 up=460 res=20 loose= ytm= ovh=50 chosen=Dreams | Fleetwood Mac | 258s gap 0
+ 4 synced         528ms strict=444 up=443 res=20 loose= ytm= ovh=84 chosen=Billie Jean | Michael Jackson | 294s gap 1
+ 5 synced         619ms strict=552 up=551 res=20 loose= ytm= ovh=67 chosen=Smells Like Teen Spirit | Nirvana | 302s gap 0
+ 6 synced         551ms strict=479 up=478 res=20 loose= ytm= ovh=72 chosen=Juicy | Notorious B.I.G. | 303s gap 0
+ 7 synced         584ms strict=511 up=509 res=20 loose= ytm= ovh=73 chosen=Lose Yourself | Eminem | 320s gap 1
+ 8 synced         444ms strict=386 up=384 res=20 loose= ytm= ovh=58 chosen=Get Lucky | Daft Punk | 370s gap 0
+ 9 synced         449ms strict=410 up=409 res=20 loose= ytm= ovh=39 chosen=Blinding Lights | The Weeknd | 202s gap 0
+10 synced         541ms strict=484 up=484 res=20 loose= ytm= ovh=57 chosen=Flowers | Miley Cyrus | 201s gap 0
+11 synced         692ms strict=562 up=559 res=20 loose= ytm= ovh=130 chosen=Not Like Us | Kendrick Lamar | 275s gap 0
+12 synced         508ms strict=447 up=446 res=20 loose= ytm= ovh=61 chosen=Espresso | Sabrina Carpenter | 176s gap 0
+13 synced         592ms strict=512 up=511 res=20 loose= ytm= ovh=80 chosen=Despacito | Luis Fonsi | 229s gap 0
+14 synced         660ms strict=585 up=576 res=20 loose= ytm= ovh=75 chosen=Tití Me Preguntó | Bad Bunny | 244s gap 0
+15 synced        1069ms strict=1005 up=1004 res=17 loose= ytm= ovh=64 chosen=La Bamba (Single Version) | Ritchie Valens | 127s gap 0
+16 synced         417ms strict=344 up=343 res=20 loose= ytm= ovh=73 chosen=Hasta la Raíz | Natalia Lafourcade | 222s gap 0
+17 synced         663ms strict=617 up=617 res=20 loose= ytm= ovh=46 chosen=Tum Hi Ho | Arijit Singh | 262s gap 0
+18 synced         761ms strict=649 up=646 res=20 loose= ytm= ovh=112 chosen=chaiyya chaiyya | sukhwinder singh | 407s gap 0
+19 synced         792ms strict=671 up=669 res=20 loose= ytm= ovh=121 chosen=Brown Munde | AP Dhillon | 255s gap 0
+20 synced         604ms strict=529 up=528 res=20 loose= ytm= ovh=75 chosen=Spring Day | BTS | 275s gap 0
+21 synced         479ms strict=403 up=402 res=20 loose= ytm= ovh=76 chosen=Gangnam Style | PSY | 220s gap 0
+22 synced         559ms strict=512 up=511 res=20 loose= ytm= ovh=47 chosen=hype boy | newjeans | 180s gap 0
+23 synced         469ms strict=417 up=417 res=20 loose= ytm= ovh=52 chosen=Lemon | Kenshi Yonezu | 256s gap 1
+24 synced         433ms strict=371 up=370 res=20 loose= ytm= ovh=62 chosen=アイドル | YOASOBI | 214s gap 0
+25 synced         346ms strict=314 up=313 res=3 loose= ytm= ovh=32 chosen=上を向いて歩こう - Sukiyaki | Kyu Sakamoto | 189s gap 0
+26 synced         460ms strict=421 up=421 res=20 loose= ytm= ovh=39 chosen=La Vie En Rose | Edith Piaf | 188s gap 0
+27 synced         463ms strict=405 up=404 res=20 loose= ytm= ovh=58 chosen=99 Luftballons [99 Luftballons, 1984] | Nena | 232s gap 0
+28 synced         517ms strict=454 up=453 res=20 loose= ytm= ovh=63 chosen=Tamally Maak | Amr Diab | 272s gap 0
+29 instrumental   363ms strict=339 up=339 res=20 loose= ytm= ovh=24 chosen=Clair De Lune | Claude Debussy | 248s gap 
+30 none           734ms strict=367 up=366 res=20 loose= ytm=363 ovh=4 chosen=-

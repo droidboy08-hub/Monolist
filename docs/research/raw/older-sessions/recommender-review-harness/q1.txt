@@ -1,0 +1,15 @@
+US	Simon & Garfunkel	US	0.94	16	56
+US	Miles Davis	US	0.98	21	26
+AU	AC/DC	AU	0.94	34	1
+GB	Belle and Sebastian	GB	0.94	10	21
+global	AC/DC	ZZ	0.94	34	164
+global	Miles Davis	ZZ	0.98	21	48
+global	Simon & Garfunkel	ZZ	0.94	16	106
+global	Belle and Sebastian	ZZ	0.94	10	62
+IN	Shreyas Gaikwad	IN	0.94	1	0
+IN	Shreya Jayadeep	IN	0.8	0	0
+IN	Shreyans Bokadiya	IN	0.94	0	0
+IN	Shreya Goparaju	IN	0.8	0	0
+IN	Shreyashi Tripathy	IN	0.8	0	0
+IN	Shreyas Skandan	IN	0.8	0	0
+IN	Shreyasi Mukherjee	IN	0.94	0	0

@@ -1,0 +1,18 @@
+{
+    "classes": [
+        {
+            "className": "JioSaavn",
+            "lineNumber": 124,
+            "object": true,
+            "qualifiedClassName": "JioSaavn",
+            "superClasses": [
+                {
+                    "access": "public",
+                    "name": "QObject"
+                }
+            ]
+        }
+    ],
+    "inputFile": "jiosaavn.h",
+    "outputRevision": 69
+}

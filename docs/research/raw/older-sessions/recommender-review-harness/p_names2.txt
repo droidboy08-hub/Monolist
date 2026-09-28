@@ -1,0 +1,210 @@
+
+### Bono   key "bono"  firstPerformer "Bono"
+  catalogue lead for key: Bono
+  credits in key group (1): Bono
+  creditedRows(Bono): 3
+     Bono — Marrëzisht [albanian hip hop, pop 37]
+     Bono — 24/7 [albanian hip hop, pop 34]
+     Bono — BONOLAND [albanian hip hop, pop 31]
+  graph: Bono / IE
+  neighbours: U2
+
+### LISA   key "lisa"  firstPerformer "LISA"
+  catalogue lead for key: LiSA
+  credits in key group (7): LiSA | LISA | Lisa, Amy & Shelley | lisa | Lisa & Xenia | Lisa & Karin | Lisa/Liza
+  creditedRows(LISA): 3
+     LiSA — ReawakeR (feat. Felix of Stray Kids) [anime rock, pop 80]
+     LISA — Rockstar [k-pop, pop 78]
+     LISA — New Woman (feat. ROSALÍA) [k-pop, pop 77]
+  graph: LISA / KR
+  neighbours: BLACKPINK
+
+### BoA   key "boa"  firstPerformer "BoA"
+  catalogue lead for key: bôa
+  credits in key group (3): bôa | BoA | Boa
+  creditedRows(BoA): 3
+     bôa — Duvet [pov: indie, pop 85]
+     bôa — Twilight [pov: indie, pop 73]
+     bôa — Duvet - Sped Up Version [pov: indie, pop 66]
+  graph: BoA / KR
+  neighbours: BIGBANG, Girls’ Generation, 東方神起 -nocat
+
+### Yves   key "yves"  firstPerformer "Yves"
+  catalogue lead for key: Yves & Yvan
+  credits in key group (1): Yves & Yvan
+  creditedRows(Yves): 3
+     Yves & Yvan — Dyab ka fache [haitian gospel, pop 26]
+     Yves & Yvan — Tout bagay byen - Live [haitian gospel, pop 25]
+     Yves & Yvan — Baka yo tonbe [haitian gospel, pop 24]
+  graph: Yves / KR
+  neighbours: 이달의 소녀 -nocat
+
+### MONO   key "mono"  firstPerformer "MONO"
+  catalogue lead for key: MONO
+  credits in key group (4): MONO | mono._ | Mono & Nikitaman | Mono/Poly
+  creditedRows(MONO): 3
+     MONO — Chăm Hoa [v-pop, pop 67]
+     MONO — Em Xinh [v-pop, pop 60]
+     MONO — Em Là [v-pop, pop 56]
+  graph: MONO / JP
+  neighbours: Boris, Mogwai, 65daysofstatic, Godspeed You! Black Emperor, Isis, Aphex Twin, Brian Eno, Ulver, Neurosis, Sigur Rós
+
+### Samo   key "samo"  firstPerformer "Samo"
+  catalogue lead for key: SAMO
+  credits in key group (1): SAMO
+  creditedRows(Samo): 3
+     SAMO — Strangers - Radio Edit [jackin' house, pop 45]
+     SAMO — Never Say Goodnight - Radio Edit [jackin' house, pop 37]
+     SAMO — Strangers - Joi N'Juno Radio Edit [jackin' house, pop 36]
+  graph: Samo / MX
+  neighbours: Camila
+
+### PABLO   key "pablo"  firstPerformer "PABLO"
+  catalogue lead for key: Pablo
+  credits in key group (3): Pablo | PABLO | Pablo and Frank Huerito
+  creditedRows(PABLO): 3
+     Pablo — Tomara - Ao Vivo [forro, pop 68]
+     Pablo — Mega Sena - Ao Vivo [forro, pop 63]
+     Pablo — Agora [forro, pop 63]
+  graph: PABLO / PH
+  neighbours: SB19
+
+### justin   key "justin"  firstPerformer "justin"
+  catalogue lead for key: Justin
+  credits in key group (1): Justin
+  creditedRows(justin): 3
+     Justin — Shake Me [jawaiian, pop 27]
+     Justin — Leaving On A Jet Plane [jawaiian, pop 25]
+     Justin — Never Forget Where I’m From [jawaiian, pop 23]
+  graph: justin / PH
+  neighbours: SB19
+
+### Lumen   key "lumen"  firstPerformer "Lumen"
+  catalogue lead for key: lumen
+  credits in key group (2): lumen | Lumen
+  creditedRows(Lumen): 3
+     lumen — On This Rainy Night [rain, pop 66]
+     lumen — it's raining [rain, pop 59]
+     lumen — Dream Drops [rain, pop 50]
+  graph: Lumen / RU
+  neighbours: Кино -nocat
+
+### Isis   key "isis"  firstPerformer "Isis"
+  catalogue lead for key: Isis
+  credits in key group (2): Isis | ISIS
+  creditedRows(Isis): 3
+     Isis — Pequeña y Frágil [rock urbano mexicano, pop 55]
+     Isis — Pequeña y Frágil [rock urbano mexicano, pop 46]
+     Isis — Por Tu Amor [rock urbano mexicano, pop 45]
+  graph: Isis / US
+  neighbours: Neurosis, Mastodon, Tool, Nine Inch Nails, Deftones, Metallica, Queens of the Stone Age, System of a Down, Slayer, Faith No More, Korn, Red Hot Chili Peppers, Mogwai, Radiohead, Pink Floyd, Iron Maiden
+
+### Nico   key "nico"  firstPerformer "Nico"
+  catalogue lead for key: Nico & Vinz
+  credits in key group (3): Nico & Vinz | Nico | Nico & Tetta
+  creditedRows(Nico): 3
+     Nico & Vinz — Am I Wrong [afrobeats, pop 77]
+     Nico — These Days [experimental, pop 66]
+     Nico & Vinz — Am I Wrong [afrobeats, pop 58]
+  graph: Nico / DE
+  neighbours: Can
+
+### SUKI   key "suki"  firstPerformer "SUKI"
+  catalogue lead for key: Suki & Ding
+  credits in key group (1): Suki & Ding
+  creditedRows(SUKI): 3
+     Suki & Ding — Shabbos Kodesh [jewish a capella, pop 15]
+     Suki & Ding — Midos Medley [jewish a capella, pop 13]
+     Suki & Ding — Ein Aroch [jewish a capella, pop 12]
+  graph: SUKI / DE
+  neighbours: Skaidra Lapina-Sibirjakowa -nocat
+
+### Alif   key "alif"  firstPerformer "Alif"
+  catalogue lead for key: Alif & Mimi
+  credits in key group (2): Alif & Mimi | Alif
+  creditedRows(Alif): 3
+     Alif & Mimi — Alif Ba Ta [musik anak-anak, pop 32]
+     Alif — Ride Home [kashmiri pop, pop 30]
+     Alif — Kya Karie Korimol [kashmiri pop, pop 27]
+  graph: Alif / IN
+  neighbours: Mohammad Muneem
+
+### June   key "june"  firstPerformer "June"
+  catalogue lead for key: JUNE
+  credits in key group (4): JUNE | June | June & Lula | JUNE!
+  creditedRows(June): 3
+     JUNE — Gas Station [korean r&b, pop 35]
+     June — Lost in Yo Ways (feat. JT the 4th) [cali rap, pop 34]
+     JUNE — Anywhere [korean r&b, pop 32]
+  graph: June / NL
+  neighbours: G.J.O.R. Rollocks -nocat
+
+### [unknown]   key "unknown"  firstPerformer "[unknown]"
+  catalogue lead for key: Unknown
+  credits in key group (1): Unknown
+  creditedRows([unknown]): 3
+     Unknown — Forget. [pixel, pop 11]
+     Unknown — Nightmare [pixel, pop 9]
+     Unknown — See My Name In Lights (Marcy Wu0 [pixel, pop 6]
+  graph: [unknown] / ZZ
+  neighbours: Ennio Morricone, The Beatles, Vangelis, Ludwig van Beethoven, Hans Zimmer, Pink Floyd, Radiohead, David Bowie, Coldplay, Red Hot Chili Peppers, The Rolling Stones, Muse
+
+### 𝔪𝔬𝔲𝔫𝔱   key "mount"  firstPerformer "𝔪𝔬𝔲𝔫𝔱"
+  catalogue lead for key: MOUNT
+  credits in key group (1): MOUNT
+  creditedRows(𝔪𝔬𝔲𝔫𝔱): 3
+     MOUNT — Around The World [deep tropical house, pop 37]
+     MOUNT — Venus [deep tropical house, pop 32]
+     MOUNT — Fool [deep tropical house, pop 31]
+  graph: 𝔪𝔬𝔲𝔫𝔱 / US
+  neighbours: Tashi Dorji
+
+### Sandy   key "sandy"  firstPerformer "Sandy"
+  catalogue lead for key: Sandy
+  credits in key group (3): Sandy | Sandy & Papo | Sandy & The Wild Wombats
+  creditedRows(Sandy): 3
+     Sandy — Areia [nova mpb, pop 59]
+     Sandy & Papo — La Hora De Bailar [salsa, pop 56]
+     Sandy & Papo — El Alacrán [salsa, pop 53]
+  graph: Sandy / BR
+  neighbours: Sandy & Junior -nocat
+
+### Darkness   key "darkness"  firstPerformer "Darkness"
+  catalogue lead for key: Darkness
+  credits in key group (2): Darkness | DARKNESS
+  creditedRows(Darkness): 3
+     Darkness — Hate Is My Engine [german thrash metal, pop 20]
+     Darkness — Wake Up In Rage [german thrash metal, pop 17]
+     Darkness — Critical Threshold - Remastered [german thrash metal, pop 15]
+  graph: Darkness / SV
+  neighbours: Dismal Gale -nocat, New Oscurantis Order -nocat
+
+### Naga   key "naga"  firstPerformer "Naga"
+  catalogue lead for key: Naga
+  credits in key group (1): Naga
+  creditedRows(Naga): 3
+     Naga — Rain [japanese chillhop, pop 29]
+     Naga — Formless [japanese chillhop, pop 29]
+     Naga — Fate [japanese chillhop, pop 27]
+  graph: Naga / SG
+  neighbours: Gayle San
+
+### Lords of Acid   key "lords of acid"  firstPerformer "Lords of Acid"
+  catalogue lead for key: Lords Of Acid
+  credits in key group (1): Lords Of Acid
+  creditedRows(Lords of Acid): 3
+     Lords Of Acid — I Sit on Acid [hardcore techno, pop 44]
+     Lords Of Acid — Pussy (Round) (Remastered) [hardcore techno, pop 37]
+     Lords Of Acid — The Crablouse (Remastered) [hardcore techno, pop 36]
+  graph: Lords of Acid / BE
+  neighbours: Praga Khan
+
+### Burzum   key "burzum"  firstPerformer "Burzum"
+  catalogue lead for key: Burzum
+  credits in key group (1): Burzum
+  creditedRows(Burzum): 3
+     Burzum — Dunkelheit [black metal, pop 54]
+     Burzum — Jesus' Tod [black metal, pop 48]
+     Burzum — Erblicket Die Tochter Des Firmaments [black metal, pop 46]
+  graph: Burzum / NO
+  neighbours: Darkthrone, Mayhem, Immortal, Emperor, Satyricon, Ulver, Gorgoroth, Taake, Borknagar, Enslaved, 1349, Windir, Black Sabbath, Death, Slayer, Metallica, Amon Amarth, Iron Maiden, Opeth, Nine Inch Nails, Pink Floyd, Cradle of Filth

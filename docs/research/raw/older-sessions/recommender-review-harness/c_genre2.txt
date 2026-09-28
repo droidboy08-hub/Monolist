@@ -1,0 +1,68 @@
+JMIN [asian american hip hop]	rows 2	maxpop 38
+Billy Marchiafava [meme rap]	rows 8	maxpop 51
+G Yamazawa [asian american hip hop]	rows 2	maxpop 41
+YNG Martyr [meme rap]	rows 8	maxpop 63
+lil ricefield [meme rap]	rows 1	maxpop 46
+maxtaylor [meme rap]	rows 1	maxpop 36
+Dubskie [meme rap]	rows 3	maxpop 40
+Vitas [meme rap]	rows 3	maxpop 52
+Nigpro [meme rap]	rows 3	maxpop 39
+Eric Reprid [asian american hip hop]	rows 8	maxpop 57
+Yung Spinach Cumshot [meme rap]	rows 4	maxpop 55
+Dbangz [meme rap]	rows 5	maxpop 52
+Gangsta Rap [meme rap]	rows 1	maxpop 59
+seiji oda [asian american hip hop]	rows 2	maxpop 40
+Northmane [meme rap]	rows 1	maxpop 47
+Eddy Arnold [traditional country]	rows 8	maxpop 51
+Thai VG [asian american hip hop]	rows 1	maxpop 36
+Yun Head [meme rap]	rows 4	maxpop 40
+MC Virgins [meme rap]	rows 8	maxpop 56
+Mcap Steve [meme rap]	rows 2	maxpop 50
+Shotgun Willy [meme rap]	rows 8	maxpop 60
+Uncle Dave Macon [traditional country]	rows 1	maxpop 38
+Iceboy Ben [meme rap]	rows 4	maxpop 43
+London Yellow [meme rap]	rows 3	maxpop 49
+Jae Luna [asian american hip hop]	rows 1	maxpop 36
+Yung Craka [meme rap]	rows 3	maxpop 49
+Sons of the Pioneers [traditional country]	rows 3	maxpop 39
+Big Dick Chima [meme rap]	rows 1	maxpop 44
+RUSSELL! [asian american hip hop]	rows 7	maxpop 44
+Supa Dupa Humble [meme rap]	rows 1	maxpop 43
+Kero One [asian american hip hop]	rows 7	maxpop 40
+P-Lo [asian american hip hop]	rows 8	maxpop 48
+The Delmore Brothers [traditional country]	rows 8	maxpop 35
+Kid Trunks [asian american hip hop]	rows 1	maxpop 37
+Mando Audio [meme rap]	rows 2	maxpop 46
+hooligan chase [meme rap]	rows 4	maxpop 48
+Sad Frosty [meme rap]	rows 3	maxpop 41
+Lil Darkie [meme rap]	rows 8	maxpop 68
+Jimmie Rodgers [traditional country]	rows 2	maxpop 41
+Tsundere Twintails [meme rap]	rows 8	maxpop 59
+Tiny Meat Gang [meme rap]	rows 5	maxpop 49
+Splash Daddy [meme rap]	rows 1	maxpop 37
+Bill Monroe & His Blue Grass Boys [traditional country]	rows 1	maxpop 42
+Yung Gravy [meme rap]	rows 8	maxpop 65
+88rising [asian american hip hop]	rows 8	maxpop 64
+ACOT [meme rap]	rows 1	maxpop 46
+Anal Cunt [noisecore]	rows 3	maxpop 28
+Kahoot! [meme rap]	rows 3	maxpop 52
+Lil Milk [meme rap]	rows 1	maxpop 41
+Halogen [meme rap]	rows 8	maxpop 56
+Kusorare [meme rap]	rows 3	maxpop 49
+Lil Kapow [meme rap]	rows 2	maxpop 50
+Billy Walker [traditional country]	rows 1	maxpop 44
+Yung Nugget [meme rap]	rows 6	maxpop 53
+Bandingo YGNE [meme rap]	rows 1	maxpop 38
+Lil Boom [meme rap]	rows 1	maxpop 37
+Sanic [meme rap]	rows 1	maxpop 35
+Tae Retro [meme rap]	rows 3	maxpop 45
+Kenny Maness [meme rap]	rows 1	maxpop 37
+bbno$ [meme rap]	rows 8	maxpop 83
+Spence Lee [asian american hip hop]	rows 4	maxpop 44
+Cyranek [meme rap]	rows 1	maxpop 40
+MBNel [asian american hip hop]	rows 8	maxpop 49
+George Hamilton IV [traditional country]	rows 2	maxpop 44
+Agoraphobic Nosebleed [noisecore]	rows 2	maxpop 29
+Yung Frown [meme rap]	rows 3	maxpop 45
+IceJJFish [meme rap]	rows 1	maxpop 40
+Dane Amar [asian american hip hop]	rows 4	maxpop 44

@@ -1,0 +1,166 @@
+﻿=== U2  [region US]  liked-as "U2"
+  -> Because you like U2  |  People who listen to U2 also play these  (12 rows)
+=== U2  [region IE]  liked-as "U2"
+  -> Because you like U2  |  People who listen to U2 also play these  (12 rows)
+=== Girls' Generation  [region US]  liked-as "Girls' Generation"
+  -> Sounds like Girls' Generation  |  Artists whose sound sits closest to theirs  (12 rows)
+=== Girls' Generation  [region KR]  liked-as "Girls' Generation"
+  -> Sounds like Girls' Generation  |  Artists whose sound sits closest to theirs  (12 rows)
+=== BIGBANG  [region US]  liked-as "BIGBANG"
+  -> Because you like BIGBANG  |  People who listen to BIGBANG also play these  (12 rows)
+=== BIGBANG  [region KR]  liked-as "BIGBANG"
+  -> Because you like BIGBANG  |  People who listen to BIGBANG also play these  (12 rows)
+=== Camila  [region US]  liked-as "Camila"
+  -> Sounds like Camila  |  Artists whose sound sits closest to theirs  (12 rows)
+=== Camila  [region MX]  liked-as "Camila"
+  -> Sounds like Camila  |  Artists whose sound sits closest to theirs  (12 rows)
+=== SB19  [region US]  liked-as "SB19"
+  -> Because you like SB19  |  Artists MusicBrainz connects with SB19  (6 rows)
+=== SB19  [region PH]  liked-as "SB19"
+  -> Because you like SB19  |  Artists MusicBrainz connects with SB19  (6 rows)
+=== Can  [region US]  liked-as "Can"
+  -> Because you like Can  |  People who listen to Can also play these  (8 rows)
+=== Can  [region DE]  liked-as "Can"
+  -> Because you like Can  |  People who listen to Can also play these  (8 rows)
+=== Popol Vuh  [region US]  liked-as "Popol Vuh"
+  -> Because you like Popol Vuh  |  People who listen to Popol Vuh also play these  (4 rows)
+=== Popol Vuh  [region DE]  liked-as "Popol Vuh"
+  -> Because you like Popol Vuh  |  People who listen to Popol Vuh also play these  (4 rows)
+=== Boris  [region US]  liked-as "Boris"
+  -> Sounds like Boris  |  Artists whose sound sits closest to theirs  (12 rows)
+=== Boris  [region JP]  liked-as "Boris"
+  -> Sounds like Boris  |  Artists whose sound sits closest to theirs  (12 rows)
+=== Neurosis  [region US]  liked-as "Neurosis"
+  -> Because you like Neurosis  |  People who listen to Neurosis also play these  (12 rows)
+=== Mogwai  [region US]  liked-as "Mogwai"
+  -> Because you like Mogwai  |  People who listen to Mogwai also play these  (12 rows)
+=== Mogwai  [region GB]  liked-as "Mogwai"
+  -> Because you like Mogwai  |  People who listen to Mogwai also play these  (12 rows)
+=== Godspeed You! Black Emperor  [region US]  liked-as "Godspeed You! Black Emperor"
+  -> Because you like Godspeed You! Black Emperor  |  People who listen to Godspeed You! Black Emperor also play these  (12 rows)
+=== Godspeed You! Black Emperor  [region CA]  liked-as "Godspeed You! Black Emperor"
+  -> Because you like Godspeed You! Black Emperor  |  People who listen to Godspeed You! Black Emperor also play these  (12 rows)
+=== Tool  [region US]  liked-as "Tool"
+  -> Because you like Tool  |  People who listen to Tool also play these  (12 rows)
+=== Deftones  [region US]  liked-as "Deftones"
+  -> Because you like Deftones  |  People who listen to Deftones also play these  (12 rows)
+=== Ennio Morricone  [region US]  liked-as "Ennio Morricone"
+  -> Because you like Ennio Morricone  |  People who listen to Ennio Morricone also play these  (12 rows)
+=== Ennio Morricone  [region IT]  liked-as "Ennio Morricone"
+  -> Because you like Ennio Morricone  |  People who listen to Ennio Morricone also play these  (12 rows)
+=== Vangelis  [region US]  liked-as "Vangelis"
+  -> Because you like Vangelis  |  People who listen to Vangelis also play these  (12 rows)
+=== Vangelis  [region FR]  liked-as "Vangelis"
+  -> Because you like Vangelis  |  People who listen to Vangelis also play these  (12 rows)
+=== Hans Zimmer  [region US]  liked-as "Hans Zimmer"
+  -> Because you like Hans Zimmer  |  People who listen to Hans Zimmer also play these  (12 rows)
+=== Hans Zimmer  [region DE]  liked-as "Hans Zimmer"
+  -> Because you like Hans Zimmer  |  People who listen to Hans Zimmer also play these  (12 rows)
+=== Praga Khan  [region US]  liked-as "Praga Khan"
+  -> Sounds like Praga Khan  |  Artists whose sound sits closest to theirs  (12 rows)
+=== Praga Khan  [region BE]  liked-as "Praga Khan"
+  -> Sounds like Praga Khan  |  Artists whose sound sits closest to theirs  (12 rows)
+=== Technotronic  [region US]  liked-as "Technotronic"
+  -> Sounds like Technotronic  |  Artists whose sound sits closest to theirs  (12 rows)
+=== Technotronic  [region BE]  liked-as "Technotronic"
+  -> Sounds like Technotronic  |  Artists whose sound sits closest to theirs  (12 rows)
+=== Mayhem  [region US]  liked-as "Mayhem"
+  -> Because you like Mayhem  |  People who listen to Mayhem also play these  (8 rows)
+=== Mayhem  [region NO]  liked-as "Mayhem"
+  -> Because you like Mayhem  |  People who listen to Mayhem also play these  (8 rows)
+=== Darkthrone  [region US]  liked-as "Darkthrone"
+  -> Because you like Darkthrone  |  People who listen to Darkthrone also play these  (12 rows)
+=== Darkthrone  [region NO]  liked-as "Darkthrone"
+  -> Because you like Darkthrone  |  People who listen to Darkthrone also play these  (12 rows)
+=== Emperor  [region US]  liked-as "Emperor"
+  -> Because you like Emperor  |  People who listen to Emperor also play these  (10 rows)
+=== Emperor  [region NO]  liked-as "Emperor"
+  -> Because you like Emperor  |  People who listen to Emperor also play these  (10 rows)
+=== Tashi Dorji  [region US]  liked-as "Tashi Dorji"
+  -> Sounds like Tashi Dorji  |  Artists whose sound sits closest to theirs  (12 rows)
+=== 이달의 소녀  [region US]  liked-as "이달의 소녀"
+  -> Because you like 이달의 소녀  |  People who listen to 이달의 소녀 also play these  (4 rows)
+=== 이달의 소녀  [region KR]  liked-as "이달의 소녀"
+  -> Because you like 이달의 소녀  |  People who listen to 이달의 소녀 also play these  (4 rows)
+=== Mohammad Muneem  [region US]  liked-as "Mohammad Muneem"
+  -> Sounds like Mohammad Muneem  |  Artists whose sound sits closest to theirs  (12 rows)
+=== Mohammad Muneem  [region IN]  liked-as "Mohammad Muneem"
+  -> Sounds like Mohammad Muneem  |  Artists whose sound sits closest to theirs  (12 rows)
+=== Gayle San  [region US]  liked-as "Gayle San"
+  -> Sounds like Gayle San  |  Artists whose sound sits closest to theirs  (12 rows)
+=== Gayle San  [region SG]  liked-as "Gayle San"
+  -> Sounds like Gayle San  |  Artists whose sound sits closest to theirs  (12 rows)
+=== Kenshi Yonezu  [region US]  liked-as "Kenshi Yonezu"
+  -> Sounds like Kenshi Yonezu  |  Artists whose sound sits closest to theirs  (12 rows)
+=== Kenshi Yonezu  [region JP]  liked-as "Kenshi Yonezu"
+  -> Sounds like Kenshi Yonezu  |  Artists whose sound sits closest to theirs  (12 rows)
+=== Zemfira  [region US]  liked-as "Zemfira"
+  -> Sounds like Zemfira  |  Artists whose sound sits closest to theirs  (12 rows)
+=== Zemfira  [region RU]  liked-as "Zemfira"
+  -> Sounds like Zemfira  |  Artists whose sound sits closest to theirs  (12 rows)
+=== Kino  [region US]  liked-as "Kino"
+  -> Sounds like Kino  |  Artists whose sound sits closest to theirs  (12 rows)
+=== Kino  [region RU]  liked-as "Kino"
+  -> Sounds like Kino  |  Artists whose sound sits closest to theirs  (12 rows)
+=== Agoraphobic Nosebleed  [region US]  liked-as "Agoraphobic Nosebleed"
+  -> Sounds like Agoraphobic Nosebleed  |  Artists whose sound sits closest to theirs  (12 rows)
+=== Napalm Death  [region US]  liked-as "Napalm Death"
+  -> Sounds like Napalm Death  |  Artists whose sound sits closest to theirs  (12 rows)
+=== Napalm Death  [region GB]  liked-as "Napalm Death"
+  -> Sounds like Napalm Death  |  Artists whose sound sits closest to theirs  (12 rows)
+=== Pig Destroyer  [region US]  liked-as "Pig Destroyer"
+  -> Sounds like Pig Destroyer  |  Artists whose sound sits closest to theirs  (12 rows)
+=== Cannibal Corpse  [region US]  liked-as "Cannibal Corpse"
+  -> Sounds like Cannibal Corpse  |  Artists whose sound sits closest to theirs  (12 rows)
+=== Mortician  [region US]  liked-as "Mortician"
+  -> Sounds like Mortician  |  Artists whose sound sits closest to theirs  (12 rows)
+=== Devourment  [region US]  liked-as "Devourment"
+  -> Sounds like Devourment  |  Artists whose sound sits closest to theirs  (12 rows)
+=== Carcass  [region US]  liked-as "Carcass"
+  -> Sounds like Carcass  |  Artists whose sound sits closest to theirs  (12 rows)
+=== Carcass  [region GB]  liked-as "Carcass"
+  -> Sounds like Carcass  |  Artists whose sound sits closest to theirs  (12 rows)
+=== Gutalax  [region US]  liked-as "Gutalax"
+  -> Sounds like Gutalax  |  Artists whose sound sits closest to theirs  (12 rows)
+=== Gutalax  [region CZ]  liked-as "Gutalax"
+  -> Sounds like Gutalax  |  Artists whose sound sits closest to theirs  (12 rows)
+=== Wardruna  [region US]  liked-as "Wardruna"
+  -> Sounds like Wardruna  |  Artists whose sound sits closest to theirs  (12 rows)
+=== Wardruna  [region NO]  liked-as "Wardruna"
+  -> Sounds like Wardruna  |  Artists whose sound sits closest to theirs  (12 rows)
+=== Heilung  [region US]  liked-as "Heilung"
+  -> Sounds like Heilung  |  Artists whose sound sits closest to theirs  (12 rows)
+=== Heilung  [region DK]  liked-as "Heilung"
+  -> Sounds like Heilung  |  Artists whose sound sits closest to theirs  (12 rows)
+=== Current 93  [region US]  liked-as "Current 93"
+  -> NO ARTIST SHELF  (shelves: popular)
+=== Current 93  [region GB]  liked-as "Current 93"
+  -> NO ARTIST SHELF  (shelves: popular)
+=== Dead Can Dance  [region US]  liked-as "Dead Can Dance"
+  -> Because you like Dead Can Dance  |  People who listen to Dead Can Dance also play these  (12 rows)
+=== Dead Can Dance  [region AU]  liked-as "Dead Can Dance"
+  -> Because you like Dead Can Dance  |  People who listen to Dead Can Dance also play these  (12 rows)
+=== NF  [region US]  liked-as "NF"
+  -> Sounds like NF  |  Artists whose sound sits closest to theirs  (12 rows)
+=== Jelly Roll  [region US]  liked-as "Jelly Roll"
+  -> Sounds like Jelly Roll  |  Artists whose sound sits closest to theirs  (12 rows)
+=== Hopsin  [region US]  liked-as "Hopsin"
+  -> Sounds like Hopsin  |  Artists whose sound sits closest to theirs  (12 rows)
+=== Upchurch  [region US]  liked-as "Upchurch"
+  -> Sounds like Upchurch  |  Artists whose sound sits closest to theirs  (12 rows)
+=== Sham 69  [region US]  liked-as "Sham 69"
+  -> NO ARTIST SHELF  (shelves: popular)
+=== Sham 69  [region GB]  liked-as "Sham 69"
+  -> NO ARTIST SHELF  (shelves: popular)
+=== Cock Sparrer  [region US]  liked-as "Cock Sparrer"
+  -> Sounds like Cock Sparrer  |  Artists whose sound sits closest to theirs  (12 rows)
+=== Cock Sparrer  [region GB]  liked-as "Cock Sparrer"
+  -> Sounds like Cock Sparrer  |  Artists whose sound sits closest to theirs  (12 rows)
+=== Dropkick Murphys  [region US]  liked-as "Dropkick Murphys"
+  -> Sounds like Dropkick Murphys  |  Artists whose sound sits closest to theirs  (12 rows)
+=== Broilers  [region US]  liked-as "Broilers"
+  -> Sounds like Broilers  |  Artists whose sound sits closest to theirs  (12 rows)
+=== Broilers  [region DE]  liked-as "Broilers"
+  -> Sounds like Broilers  |  Artists whose sound sits closest to theirs  (12 rows)
+=== cache check: findArtist(name, own country) on the US-warmed graph vs a graph that only saw that country
+SUMMARY (US pass): graph 18, sounds-like 28, none 2, seed-in-own-shelf rows 0, duplicate rows 7

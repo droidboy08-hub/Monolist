@@ -1,0 +1,217 @@
+diff --git "a/C:\\Users\\droid\\AppData\\Local\\Temp\\claude\\--psf-Home-Desktop-Multiplatform-Music-player\\04bbb583-faaf-4a88-9a62-5827ef684e67\\scratchpad\\bench\\b3\\main_b1.cpp" "b/C:\\Users\\droid\\AppData\\Local\\Temp\\claude\\--psf-Home-Desktop-Multiplatform-Music-player\\04bbb583-faaf-4a88-9a62-5827ef684e67\\scratchpad\\bench\\src-b1\\src\\main.cpp"
+index d15ef91..14c08c9 100644
+--- "a/C:\\Users\\droid\\AppData\\Local\\Temp\\claude\\--psf-Home-Desktop-Multiplatform-Music-player\\04bbb583-faaf-4a88-9a62-5827ef684e67\\scratchpad\\bench\\b3\\main_b1.cpp"
++++ "b/C:\\Users\\droid\\AppData\\Local\\Temp\\claude\\--psf-Home-Desktop-Multiplatform-Music-player\\04bbb583-faaf-4a88-9a62-5827ef684e67\\scratchpad\\bench\\src-b1\\src\\main.cpp"
+@@ -14,9 +14,11 @@
+ #include <QSqlQuery>
+ #include <QTimeZone>
+ #include <QTimer>
++#include <QUrlQuery>
+ #include <QWindow>
+ 
+ #include "appdatabase.h"
++#include "benchlog.h"
+ #include "artistlinks.h"
+ #include "artistselftest.h"
+ #include "artworkcache.h"
+@@ -224,6 +226,14 @@ int main(int argc, char *argv[])
+     MpvEngine engine;
+     if (!engine.isValid())
+         qWarning("Monolist: %s", qPrintable(engine.lastError()));
++    // BENCH: every benchMark line also goes into mpv's log, on mpv's clock.
++    // Unhooked before the engine goes (the guard is destroyed first).
++    if (engine.isValid())
++        benchMarker() = [&engine](const QByteArray &text) { engine.benchPrint(text); };
++    struct BenchMarkerGuard {
++        ~BenchMarkerGuard() { benchMarker() = nullptr; }
++    } benchMarkerGuard;
++    benchMark(QStringLiteral("engine ready"));
+ 
+     StreamResolver resolver;
+     // Instance lists are stored in settings so a dead host can be swapped out
+@@ -512,6 +522,185 @@ int main(int argc, char *argv[])
+         });
+     }
+ 
++    // BENCH: --bench seq|skip|play|resolve --ids a,b,c [--listen <s>] [--settle <ms>]
++    //        [--total <s>] [--again] [--tiers 0,1,2] [--sample-ms <ms>]
++    //  seq     autoplay off; playSource() each id in turn (a new track, link not cached),
++    //          moving on once `listen` seconds of it have played; --again then plays the
++    //          same ids once more (link-cache hits).
++    //  skip    autoplay off; playTracks(all ids), and Next each time `listen` seconds of
++    //          the current one have played (the next row's link was prefetched).
++    //  play    autoplay off; playTracks(all ids) and let it play for `total` seconds.
++    //  resolve no playback; for each id and each tier: invalidate, resolveVia({tier}).
++    const int benchFlag = args.indexOf(QStringLiteral("--bench"));
++    if (benchFlag >= 0 && benchFlag + 1 < args.size()) {
++        const QString mode = args.at(benchFlag + 1);
++        const auto intArg = [args](const char *name, int fallback) {
++            const int i = args.indexOf(QLatin1String(name));
++            return i >= 0 && i + 1 < args.size() ? args.at(i + 1).toInt() : fallback;
++        };
++        const auto listArg = [args](const char *name, const QString &fallback) {
++            const int i = args.indexOf(QLatin1String(name));
++            return (i >= 0 && i + 1 < args.size() ? args.at(i + 1) : fallback)
++                .split(QLatin1Char(','), Qt::SkipEmptyParts);
++        };
++        const QStringList ids = listArg("--ids", QString());
++        const qint64 listenMs = qint64(intArg("--listen", 8)) * 1000;
++        const int settleMs = intArg("--settle", 500);
++        const int totalS = intArg("--total", 660);
++        const bool againPass = args.contains(QStringLiteral("--again"));
++        const QStringList tierArgs = listArg("--tiers", QStringLiteral("0,1,2"));
++
++        const auto quitSoon = []() {
++            benchMark(QStringLiteral("bench done"));
++            QTimer::singleShot(500, qApp, []() { QCoreApplication::quit(); });
++        };
++        // Polls until `ready` holds, or `limitMs` passes, then carries on.
++        const auto waitFor = [](std::function<bool()> ready, int limitMs, std::function<void()> then) {
++            auto *poll = new QTimer(qApp);
++            auto waited = std::make_shared<QElapsedTimer>();
++            waited->start();
++            QObject::connect(poll, &QTimer::timeout, qApp, [poll, waited, ready, limitMs, then]() {
++                if (!ready() && waited->elapsed() < limitMs)
++                    return;
++                if (waited->elapsed() >= limitMs)
++                    benchMark(QStringLiteral("wait timed out"));
++                poll->stop();
++                poll->deleteLater();
++                then();
++            });
++            poll->start(50);
++        };
++
++        auto *sampler = new QTimer(&app);
++        sampler->setInterval(intArg("--sample-ms", 250));
++        QObject::connect(sampler, &QTimer::timeout, &app, [&engine]() {
++            qInfo("bench-sample: %s", qPrintable(engine.benchCacheSample()));
++        });
++        QObject::connect(&player, &PlaybackController::statusChanged, &app, [&player]() {
++            benchMark(QStringLiteral("status \"%1\" source=%2").arg(player.statusText(), player.sourceLabel()));
++        });
++        QObject::connect(&player, &PlaybackController::playbackError, &app, [](const QString &reason) {
++            benchMark(QStringLiteral("playback error: %1").arg(reason));
++        });
++
++        benchMark(QStringLiteral("bench start mode=%1 ids=%2 listen=%3 settle=%4").arg(mode, ids.join(QLatin1Char(',')))
++                      .arg(listenMs).arg(settleMs));
++        QTimer::singleShot(2400 * 1000, &app, []() {
++            benchMark(QStringLiteral("bench timed out"));
++            QCoreApplication::exit(2);
++        });
++
++        const auto trackList = [ids]() {
++            QVariantList tracks;
++            for (int i = 0; i < ids.size(); ++i) {
++                tracks.append(QVariantMap{ { QStringLiteral("sourceId"), ids.at(i) },
++                                           { QStringLiteral("title"), QStringLiteral("Bench %1").arg(i + 1) },
++                                           { QStringLiteral("artist"), QStringLiteral("Bench") } });
++            }
++            return tracks;
++        };
++
++        if (mode == QLatin1String("seq")) {
++            auto order = std::make_shared<QStringList>(ids);
++            if (againPass)
++                *order += ids;
++            auto index = std::make_shared<int>(-1);
++            auto step = std::make_shared<std::function<void()>>();
++            *step = [&player, order, index, step, listenMs, waitFor, quitSoon, count = ids.size()]() {
++                ++*index;
++                if (*index >= order->size()) {
++                    quitSoon();
++                    return;
++                }
++                const QString id = order->at(*index);
++                benchMark(QStringLiteral("PLAY %1 n=%2 pass=%3").arg(id).arg(*index)
++                              .arg(*index >= count ? QStringLiteral("again") : QStringLiteral("first")));
++                player.playSource(id, QStringLiteral("Bench %1").arg(*index), QStringLiteral("Bench"));
++                waitFor([&player, listenMs]() { return player.position() >= listenMs; }, 60000, *step);
++            };
++            QTimer::singleShot(settleMs, &app, [&player, sampler, step]() {
++                player.setAutoplay(false);
++                sampler->start();
++                (*step)();
++            });
++        } else if (mode == QLatin1String("skip")) {
++            auto step = std::make_shared<std::function<void()>>();
++            *step = [&player, step, listenMs, waitFor, quitSoon]() {
++                waitFor([&player, listenMs]() { return player.position() >= listenMs; }, 60000, [&player, step, quitSoon]() {
++                    const int row = player.currentIndex();
++                    if (row + 1 >= player.queue()->rowCount()) {
++                        quitSoon();
++                        return;
++                    }
++                    benchMark(QStringLiteral("NEXT from row %1 to %2 (%3)").arg(row).arg(row + 1)
++                                  .arg(player.queue()->get(row + 1).value(QStringLiteral("sourceId")).toString()));
++                    player.next();
++                    (*step)();
++                });
++            };
++            QTimer::singleShot(settleMs, &app, [&player, sampler, step, trackList, ids]() {
++                player.setAutoplay(false);
++                sampler->start();
++                benchMark(QStringLiteral("PLAYQUEUE %1").arg(ids.value(0)));
++                player.playTracks(trackList(), 0);
++                (*step)();
++            });
++        } else if (mode == QLatin1String("play")) {
++            QTimer::singleShot(settleMs, &app, [&player, sampler, trackList, ids, totalS, quitSoon]() {
++                player.setAutoplay(false);
++                sampler->start();
++                benchMark(QStringLiteral("PLAYQUEUE %1").arg(ids.value(0)));
++                player.playTracks(trackList(), 0);
++                QTimer::singleShot(totalS * 1000, qApp, [&player, quitSoon]() {
++                    benchMark(QStringLiteral("played for the total; row %1 at %2 ms").arg(player.currentIndex())
++                                  .arg(player.position()));
++                    quitSoon();
++                });
++            });
++        } else if (mode == QLatin1String("resolve")) {
++            struct Step { QString id; int tier; };
++            auto steps = std::make_shared<QList<Step>>();
++            for (const QString &id : ids)
++                for (const QString &tier : tierArgs)
++                    steps->append({ id, tier.toInt() });
++            auto index = std::make_shared<int>(-1);
++            auto clock = std::make_shared<QElapsedTimer>();
++            auto step = std::make_shared<std::function<void()>>();
++            *step = [&resolver, steps, index, clock, quitSoon]() {
++                ++*index;
++                if (*index >= steps->size()) {
++                    quitSoon();
++                    return;
++                }
++                const Step s = steps->at(*index);
++                resolver.invalidate(s.id);
++                benchMark(QStringLiteral("RESOLVE %1 tier=%2").arg(s.id).arg(s.tier));
++                clock->start();
++                resolver.resolveVia(s.id, { s.tier });
++            };
++            const auto finished = [steps, index, clock, step](const QString &id, bool ok, const QString &detail) {
++                if (*index < 0 || *index >= steps->size() || steps->at(*index).id != id)
++                    return;
++                benchMark(QStringLiteral("RESOLVED %1 tier=%2 ok=%3 ms=%4 %5").arg(id).arg(steps->at(*index).tier)
++                              .arg(ok ? 1 : 0).arg(clock->elapsed()).arg(detail.left(200)));
++                QTimer::singleShot(300, qApp, [step]() { (*step)(); });
++            };
++            QObject::connect(&resolver, &StreamResolver::resolved, &app,
++                             [finished](const QString &id, const QString &url, int tier, bool fromCache) {
++                                 finished(id, true, QStringLiteral("tier=%1 fromCache=%2 itag=%3 clen=%4")
++                                                        .arg(tier).arg(fromCache ? 1 : 0)
++                                                        .arg(QUrlQuery(QUrl(url)).queryItemValue(QStringLiteral("itag")),
++                                                             QUrlQuery(QUrl(url)).queryItemValue(QStringLiteral("clen"))));
++                             });
++            QObject::connect(&resolver, &StreamResolver::failed, &app,
++                             [finished](const QString &id, const QString &reason) { finished(id, false, reason); });
++            QTimer::singleShot(settleMs, &app, [step]() { (*step)(); });
++        } else {
++            benchMark(QStringLiteral("unknown bench mode"));
++            QCoreApplication::exit(3);
++        }
++    }
++
+     // --queue-test <videoId> [<videoId> ...]
+     //
+     // The queue driven the way a listener drives it after a launch: the first

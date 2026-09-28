@@ -1,0 +1,1349 @@
+loaded yes
+
+=== BLACKPINK  [region US]  liked-as "BLACKPINK"
+  seed in graph: BLACKPINK / KR / conf 0.94 / pop 2 / 48646387-1664-4c9a-9139-9bfd091b823c
+  seed sound: yes
+    NB	BLACKPINK	BIGBANG	LB	0.898	k-pop	people 2
+    NB	BLACKPINK	Girls’ Generation	LB	0.977	k-pop	people 1
+    NB	BLACKPINK	BTS	LB	0.968	pop	people 1
+    NB	BLACKPINK	ROSÉ	st	0.869	k-pop	people 5
+    NB	BLACKPINK	LISA	st	0.875	k-pop	people 6
+  graph neighbours (6): BIGBANG(LB 1.00 ~0.898), Girls’ Generation(LB 1.00 ~0.977), BTS(LB 1.00 ~0.968), 東方神起(LB 1.00 ~-nocat), ROSÉ(st 0.38 ~0.869), LISA(st 0.38 ~0.875)
+  -> Because you like BLACKPINK  |  What listeners of BLACKPINK play, and artists linked to them  (10 rows)
+     Girls' Generation — Gee   [k-pop, pop 67, ~0.977]
+     BTS — Dynamite   [pop, pop 80, ~0.968]
+     BIGBANG — BANG BANG BANG   [k-pop, pop 79, ~0.898]
+     LISA — Rockstar   [k-pop, pop 78, ~0.875]
+     ROSÉ — toxic till the end   [k-pop, pop 88, ~0.869]
+     Girls' Generation — Into the New World   [k-pop, pop 63, ~0.977]
+     BTS — FAKE LOVE   [pop, pop 79, ~0.968]
+     BIGBANG — Fantastic Baby   [k-pop, pop 73, ~0.898]
+     LISA — New Woman (feat. ROSALÍA)   [k-pop, pop 77, ~0.875]
+     ROSÉ — number one girl   [k-pop, pop 82, ~0.869]
+
+=== BLACKPINK  [region KR]  liked-as "BLACKPINK"
+  seed in graph: BLACKPINK / KR / conf 0.94 / pop 2 / 48646387-1664-4c9a-9139-9bfd091b823c
+  seed sound: yes
+    NB	BLACKPINK	BIGBANG	LB	0.898	k-pop	people 2
+    NB	BLACKPINK	Girls’ Generation	LB	0.977	k-pop	people 1
+    NB	BLACKPINK	BTS	LB	0.968	pop	people 1
+    NB	BLACKPINK	ROSÉ	st	0.869	k-pop	people 5
+    NB	BLACKPINK	LISA	st	0.875	k-pop	people 6
+  graph neighbours (6): BIGBANG(LB 1.00 ~0.898), Girls’ Generation(LB 1.00 ~0.977), BTS(LB 1.00 ~0.968), 東方神起(LB 1.00 ~-nocat), ROSÉ(st 0.38 ~0.869), LISA(st 0.38 ~0.875)
+  -> Because you like BLACKPINK  |  What listeners of BLACKPINK play, and artists linked to them  (10 rows)
+     Girls' Generation — Gee   [k-pop, pop 67, ~0.977]
+     BTS — Dynamite   [pop, pop 80, ~0.968]
+     BIGBANG — BANG BANG BANG   [k-pop, pop 79, ~0.898]
+     LISA — Rockstar   [k-pop, pop 78, ~0.875]
+     ROSÉ — toxic till the end   [k-pop, pop 88, ~0.869]
+     Girls' Generation — Into the New World   [k-pop, pop 63, ~0.977]
+     BTS — FAKE LOVE   [pop, pop 79, ~0.968]
+     BIGBANG — Fantastic Baby   [k-pop, pop 73, ~0.898]
+     LISA — New Woman (feat. ROSALÍA)   [k-pop, pop 77, ~0.875]
+     ROSÉ — number one girl   [k-pop, pop 82, ~0.869]
+
+=== BTS  [region US]  liked-as "BTS"
+  seed in graph: BTS / KR / conf 0.94 / pop 15 / 0d79fe8e-ba27-4859-bb8c-2f255f346853
+  seed sound: yes
+    NB	BTS	BLACKPINK	LB	0.968	pop	people 1
+    NB	BTS	TWICE	LB	0.964	pop	people 2
+    NB	BTS	Red Velvet	LB	0.971	k-pop girl group	people 1
+    NB	BTS	EXO	LB	0.964	k-pop	people 3
+    NB	BTS	MAMAMOO	LB	0.979	k-pop	people 1
+    NB	BTS	SUNMI	LB	0.926	k-pop	people 1
+    NB	BTS	MONSTA X	LB	0.959	k-pop	people 1
+    NB	BTS	IU	LB	0.982	pop	people 1
+    NB	BTS	SHINee	LB	0.966	k-pop	people 1
+    NB	BTS	DREAMCATCHER	LB	0.968	k-pop	people 2
+    NB	BTS	EXID	LB	0.978	k-pop	people 1
+    NB	BTS	f(x)	LB	0.980	k-pop	people 1
+    NB	BTS	CLC	LB	0.926	k-pop	people 1
+    NB	BTS	2NE1	LB	0.952	dance pop	people 1
+    NB	BTS	OH MY GIRL	LB	0.979	k-pop	people 1
+    NB	BTS	BIGBANG	LB	0.959	k-pop	people 2
+    NB	BTS	Girls’ Generation	LB	0.984	k-pop	people 1
+    NB	BTS	CHUNG HA	LB	0.929	k-pop	people 1
+    NB	BTS	j‐hope	st	0.809	k-rap	people 1
+    NB	BTS	Ariana Grande	LB	0.857	pop	people 1
+    NB	BTS	Taylor Swift	LB	0.852	pop	people 1
+    NB	BTS	Ed Sheeran	LB	0.837	uk pop	people 1
+    NB	BTS	Justin Bieber	LB	0.802	pop	people 1
+    NB	BTS	Coldplay	LB	0.657	permanent wave	people 1
+    NB	BTS	Katy Perry	LB	0.858	pop	people 1
+    NB	BTS	Lady Gaga	LB	0.786	pop	people 1
+    NB	BTS	Sia	LB	0.795	pop	people 1
+    NB	BTS	Nicki Minaj	LB	0.549	hip pop	people 1
+    NB	BTS	Rihanna	LB	0.782	urban contemporary	people 1
+    NB	BTS	Drake	LB	0.457	hip hop	people 1
+    NB	BTS	Miley Cyrus	LB	0.862	pop	people 1
+    NB	BTS	Beyoncé	LB	0.798	pop	people 1
+    NB	BTS	Britney Spears	LB	0.846	pop	people 1
+    NB	BTS	Lana Del Rey	LB	0.672	pop	people 1
+    NB	BTS	Panic! at the Disco	LB	0.685	pop	people 1
+    NB	BTS	Kendrick Lamar	LB	0.233	hip hop	people 1
+    NB	BTS	Olivia Rodrigo	LB	0.816	pop	people 1
+    NB	BTS	Billie Eilish	LB	0.668	pop	people 1
+  graph neighbours (39): BLACKPINK(LB 1.00 ~0.968), TWICE(LB 1.00 ~0.964), Red Velvet(LB 1.00 ~0.971), EXO(LB 1.00 ~0.964), MAMAMOO(LB 1.00 ~0.979), SUNMI(LB 1.00 ~0.926), MONSTA X(LB 1.00 ~0.959), IU(LB 1.00 ~0.982), SHINee(LB 1.00 ~0.966), DREAMCATCHER(LB 1.00 ~0.968), EXID(LB 1.00 ~0.978), f(x)(LB 1.00 ~0.980), CLC(LB 1.00 ~0.926), 2NE1(LB 1.00 ~0.952), OH MY GIRL(LB 1.00 ~0.979), BIGBANG(LB 1.00 ~0.959), Girls’ Generation(LB 1.00 ~0.984), CHUNG HA(LB 1.00 ~0.929), 東方神起(LB 1.00 ~-nocat), j‐hope(st 0.38 ~0.809), Ariana Grande(LB 1.00 ~0.857), Taylor Swift(LB 1.00 ~0.852), Ed Sheeran(LB 1.00 ~0.837), Justin Bieber(LB 1.00 ~0.802), Coldplay(LB 1.00 ~0.657), Katy Perry(LB 1.00 ~0.858), Lady Gaga(LB 1.00 ~0.786), Sia(LB 1.00 ~0.795), Nicki Minaj(LB 1.00 ~0.549), Rihanna(LB 1.00 ~0.782), Drake(LB 1.00 ~0.457), Miley Cyrus(LB 1.00 ~0.862), Beyoncé(LB 1.00 ~0.798), Britney Spears(LB 1.00 ~0.846), Lana Del Rey(LB 1.00 ~0.672), Panic! at the Disco(LB 1.00 ~0.685), Kendrick Lamar(LB 1.00 ~0.233), Olivia Rodrigo(LB 1.00 ~0.816), Billie Eilish(LB 1.00 ~0.668)
+  -> Because you like BTS  |  People who listen to BTS also play these  (12 rows)
+     Girls' Generation — Gee   [k-pop, pop 67, ~0.984]
+     IU — Love wins all   [pop, pop 70, ~0.982]
+     f(x) — 4 Walls   [k-pop, pop 59, ~0.980]
+     OH MY GIRL — Dolphin   [k-pop, pop 58, ~0.979]
+     MAMAMOO — HIP   [k-pop, pop 65, ~0.979]
+     EXID — Up & Down   [k-pop, pop 60, ~0.978]
+     Red Velvet — Psycho   [k-pop girl group, pop 70, ~0.971]
+     Dreamcatcher — BOCA   [k-pop, pop 55, ~0.968]
+     Girls' Generation — Into the New World   [k-pop, pop 63, ~0.984]
+     IU — eight(Prod.&Feat. SUGA of BTS)   [pop, pop 68, ~0.982]
+     f(x) — 첫 사랑니 (Rum Pum Pum Pum)   [k-pop, pop 56, ~0.980]
+     OH MY GIRL — Nonstop   [k-pop, pop 57, ~0.979]
+
+=== BTS  [region KR]  liked-as "BTS"
+  seed in graph: BTS / KR / conf 0.94 / pop 15 / 0d79fe8e-ba27-4859-bb8c-2f255f346853
+  seed sound: yes
+    NB	BTS	BLACKPINK	LB	0.968	pop	people 1
+    NB	BTS	TWICE	LB	0.964	pop	people 2
+    NB	BTS	Red Velvet	LB	0.971	k-pop girl group	people 1
+    NB	BTS	EXO	LB	0.964	k-pop	people 3
+    NB	BTS	MAMAMOO	LB	0.979	k-pop	people 1
+    NB	BTS	SUNMI	LB	0.926	k-pop	people 1
+    NB	BTS	MONSTA X	LB	0.959	k-pop	people 1
+    NB	BTS	IU	LB	0.982	pop	people 1
+    NB	BTS	SHINee	LB	0.966	k-pop	people 1
+    NB	BTS	DREAMCATCHER	LB	0.968	k-pop	people 2
+    NB	BTS	EXID	LB	0.978	k-pop	people 1
+    NB	BTS	f(x)	LB	0.980	k-pop	people 1
+    NB	BTS	CLC	LB	0.926	k-pop	people 1
+    NB	BTS	2NE1	LB	0.952	dance pop	people 1
+    NB	BTS	OH MY GIRL	LB	0.979	k-pop	people 1
+    NB	BTS	BIGBANG	LB	0.959	k-pop	people 2
+    NB	BTS	Girls’ Generation	LB	0.984	k-pop	people 1
+    NB	BTS	CHUNG HA	LB	0.929	k-pop	people 1
+    NB	BTS	j‐hope	st	0.809	k-rap	people 1
+    NB	BTS	Ariana Grande	LB	0.857	pop	people 1
+    NB	BTS	Taylor Swift	LB	0.852	pop	people 1
+    NB	BTS	Ed Sheeran	LB	0.837	uk pop	people 1
+    NB	BTS	Justin Bieber	LB	0.802	pop	people 1
+    NB	BTS	Coldplay	LB	0.657	permanent wave	people 1
+    NB	BTS	Katy Perry	LB	0.858	pop	people 1
+    NB	BTS	Lady Gaga	LB	0.786	pop	people 1
+    NB	BTS	Sia	LB	0.795	pop	people 1
+    NB	BTS	Nicki Minaj	LB	0.549	hip pop	people 1
+    NB	BTS	Rihanna	LB	0.782	urban contemporary	people 1
+    NB	BTS	Drake	LB	0.457	hip hop	people 1
+    NB	BTS	Miley Cyrus	LB	0.862	pop	people 1
+    NB	BTS	Beyoncé	LB	0.798	pop	people 1
+    NB	BTS	Britney Spears	LB	0.846	pop	people 1
+    NB	BTS	Lana Del Rey	LB	0.672	pop	people 1
+    NB	BTS	Panic! at the Disco	LB	0.685	pop	people 1
+    NB	BTS	Kendrick Lamar	LB	0.233	hip hop	people 1
+    NB	BTS	Olivia Rodrigo	LB	0.816	pop	people 1
+    NB	BTS	Billie Eilish	LB	0.668	pop	people 1
+  graph neighbours (39): BLACKPINK(LB 1.00 ~0.968), TWICE(LB 1.00 ~0.964), Red Velvet(LB 1.00 ~0.971), EXO(LB 1.00 ~0.964), MAMAMOO(LB 1.00 ~0.979), SUNMI(LB 1.00 ~0.926), MONSTA X(LB 1.00 ~0.959), IU(LB 1.00 ~0.982), SHINee(LB 1.00 ~0.966), DREAMCATCHER(LB 1.00 ~0.968), EXID(LB 1.00 ~0.978), f(x)(LB 1.00 ~0.980), CLC(LB 1.00 ~0.926), 2NE1(LB 1.00 ~0.952), OH MY GIRL(LB 1.00 ~0.979), BIGBANG(LB 1.00 ~0.959), Girls’ Generation(LB 1.00 ~0.984), CHUNG HA(LB 1.00 ~0.929), 東方神起(LB 1.00 ~-nocat), j‐hope(st 0.38 ~0.809), Ariana Grande(LB 1.00 ~0.857), Taylor Swift(LB 1.00 ~0.852), Ed Sheeran(LB 1.00 ~0.837), Justin Bieber(LB 1.00 ~0.802), Coldplay(LB 1.00 ~0.657), Katy Perry(LB 1.00 ~0.858), Lady Gaga(LB 1.00 ~0.786), Sia(LB 1.00 ~0.795), Nicki Minaj(LB 1.00 ~0.549), Rihanna(LB 1.00 ~0.782), Drake(LB 1.00 ~0.457), Miley Cyrus(LB 1.00 ~0.862), Beyoncé(LB 1.00 ~0.798), Britney Spears(LB 1.00 ~0.846), Lana Del Rey(LB 1.00 ~0.672), Panic! at the Disco(LB 1.00 ~0.685), Kendrick Lamar(LB 1.00 ~0.233), Olivia Rodrigo(LB 1.00 ~0.816), Billie Eilish(LB 1.00 ~0.668)
+  -> Because you like BTS  |  People who listen to BTS also play these  (12 rows)
+     Girls' Generation — Gee   [k-pop, pop 67, ~0.984]
+     IU — Love wins all   [pop, pop 70, ~0.982]
+     f(x) — 4 Walls   [k-pop, pop 59, ~0.980]
+     OH MY GIRL — Dolphin   [k-pop, pop 58, ~0.979]
+     MAMAMOO — HIP   [k-pop, pop 65, ~0.979]
+     EXID — Up & Down   [k-pop, pop 60, ~0.978]
+     Red Velvet — Psycho   [k-pop girl group, pop 70, ~0.971]
+     Dreamcatcher — BOCA   [k-pop, pop 55, ~0.968]
+     Girls' Generation — Into the New World   [k-pop, pop 63, ~0.984]
+     IU — eight(Prod.&Feat. SUGA of BTS)   [pop, pop 68, ~0.982]
+     f(x) — 첫 사랑니 (Rum Pum Pum Pum)   [k-pop, pop 56, ~0.980]
+     OH MY GIRL — Nonstop   [k-pop, pop 57, ~0.979]
+
+=== The Weeknd  [region US]  liked-as "The Weeknd"
+  seed in graph: The Weeknd / CA / conf 0.94 / pop 8 / c8b03190-306c-4120-bb0b-6f2ebfc06ea9
+  seed sound: yes
+    NB	The Weeknd	Justin Bieber	LB	0.975	pop	people 1
+    NB	The Weeknd	Grimes	LB	0.524	indietronica	people 1
+    NB	The Weeknd	Drake	LB	0.608	hip hop	people 1
+  graph neighbours (3): Justin Bieber(LB 1.00 ~0.975), Grimes(LB 1.00 ~0.524), Drake(LB 1.00 ~0.608)
+  -> Because you like The Weeknd  |  People who listen to The Weeknd also play these  (6 rows)
+     Justin Bieber — Let Me Love You   [pop, pop 86, ~0.975]
+     Drake — NOKIA   [hip hop, pop 91, ~0.608]
+     Grimes — Genesis   [indietronica, pop 73, ~0.524]
+     Justin Bieber — Sorry   [pop, pop 85, ~0.975]
+     Drake — DIE TRYING   [hip hop, pop 88, ~0.608]
+     Grimes — Oblivion   [indietronica, pop 70, ~0.524]
+
+=== The Weeknd  [region CA]  liked-as "The Weeknd"
+  seed in graph: The Weeknd / CA / conf 0.94 / pop 8 / c8b03190-306c-4120-bb0b-6f2ebfc06ea9
+  seed sound: yes
+    NB	The Weeknd	Justin Bieber	LB	0.975	pop	people 1
+    NB	The Weeknd	Grimes	LB	0.524	indietronica	people 1
+    NB	The Weeknd	Drake	LB	0.608	hip hop	people 1
+  graph neighbours (3): Justin Bieber(LB 1.00 ~0.975), Grimes(LB 1.00 ~0.524), Drake(LB 1.00 ~0.608)
+  -> Because you like The Weeknd  |  People who listen to The Weeknd also play these  (6 rows)
+     Justin Bieber — Let Me Love You   [pop, pop 86, ~0.975]
+     Drake — NOKIA   [hip hop, pop 91, ~0.608]
+     Grimes — Genesis   [indietronica, pop 73, ~0.524]
+     Justin Bieber — Sorry   [pop, pop 85, ~0.975]
+     Drake — DIE TRYING   [hip hop, pop 88, ~0.608]
+     Grimes — Oblivion   [indietronica, pop 70, ~0.524]
+
+=== Coldplay  [region US]  liked-as "Coldplay"
+  seed in graph: Coldplay / GB / conf 0.94 / pop 49 / cc197bad-dc9c-440d-a5b5-d52ba2e14234
+  seed sound: yes
+    NB	Coldplay	Belle and Sebastian	LB	0.606	twee pop	people 1
+    NB	Coldplay	Mogwai	LB	0.299	dream pop	people 1
+    NB	Coldplay	Aphex Twin	LB	0.065	uk experimental electronic	people 1
+    NB	Coldplay	Amy Winehouse	LB	0.577	neo soul	people 1
+    NB	Coldplay	PJ Harvey	LB	0.788	piano rock	people 1
+    NB	Coldplay	Gorillaz	LB	0.623	rock	people 1
+    NB	Coldplay	Adele	LB	0.753	british soul	people 2
+    NB	Coldplay	New Order	LB	0.664	new wave	people 1
+    NB	Coldplay	Deep Purple	LB	0.464	album rock	people 1
+    NB	Coldplay	The Who	LB	0.479	rock	people 1
+    NB	Coldplay	Bring Me the Horizon	LB	0.398	uk metalcore	people 1
+    NB	Coldplay	Marillion	LB	0.152	progressive rock	people 1
+    NB	Coldplay	The Prodigy	LB	0.305	rave	people 1
+    NB	Coldplay	The Smiths	LB	0.700	uk post-punk	people 1
+    NB	Coldplay	Black Sabbath	LB	0.414	hard rock	people 1
+    NB	Coldplay	Eric Clapton	LB	0.480	classic rock	people 1
+    NB	Coldplay	Eurythmics	LB	0.734	new wave pop	people 1
+    NB	Coldplay	Whitesnake	LB	0.439	album rock	people 1
+    NB	Coldplay	Zero 7	LB	0.200	electronica	people 1
+    NB	Coldplay	Kate Bush	LB	0.794	art pop	people 1
+    NB	Coldplay	65daysofstatic	LB	0.100	instrumental post-rock	people 1
+    NB	Coldplay	Emerson, Lake & Palmer	LB	0.432	art rock	people 1
+    NB	Coldplay	Sting	LB	0.744	soft rock	people 1
+    NB	Coldplay	Fatboy Slim	LB	0.203	big beat	people 1
+    NB	Coldplay	Hans Zimmer	LB	0.081	soundtrack	people 1
+    NB	Coldplay	Evanescence	LB	0.359	alternative metal	people 1
+    NB	Coldplay	Thirty Seconds to Mars	LB	0.609	modern rock	people 1
+    NB	Coldplay	Ramones	LB	0.648	alternative rock	people 1
+    NB	Coldplay	Tom Petty and the Heartbreakers	LB	0.526	rock	people 1
+    NB	Coldplay	P!nk	LB	0.803	pop	people 1
+    NB	Coldplay	Black Eyed Peas	LB	0.705	dance pop	people 1
+    NB	Coldplay	Justin Bieber	LB	0.851	pop	people 1
+    NB	Coldplay	TV on the Radio	LB	0.566	modern rock	people 1
+    NB	Coldplay	The Beach Boys	LB	0.513	classic rock	people 1
+    NB	Coldplay	Johnny Cash	LB	0.416	outlaw country	people 1
+    NB	Coldplay	Garbage	LB	0.770	permanent wave	people 1
+    NB	Coldplay	Sigur Rós	LB	0.354	post-rock	people 1
+    NB	Coldplay	No Doubt	LB	0.918	pop rock	people 1
+    NB	Coldplay	Linkin Park	LB	0.442	alternative metal	people 1
+    NB	Coldplay	R.E.M.	LB	0.720	athens indie	people 1
+    NB	Coldplay	Michael Jackson	LB	0.390	soul	people 2
+  graph neighbours (41): Belle and Sebastian(LB 1.00 ~0.606), Mogwai(LB 1.00 ~0.299), Aphex Twin(LB 1.00 ~0.065), Amy Winehouse(LB 1.00 ~0.577), PJ Harvey(LB 1.00 ~0.788), Gorillaz(LB 1.00 ~0.623), Adele(LB 1.00 ~0.753), New Order(LB 1.00 ~0.664), Deep Purple(LB 1.00 ~0.464), The Who(LB 1.00 ~0.479), Bring Me the Horizon(LB 1.00 ~0.398), Marillion(LB 1.00 ~0.152), The Prodigy(LB 1.00 ~0.305), The Smiths(LB 1.00 ~0.700), Black Sabbath(LB 1.00 ~0.414), Eric Clapton(LB 1.00 ~0.480), Eurythmics(LB 1.00 ~0.734), Whitesnake(LB 1.00 ~0.439), Zero 7(LB 1.00 ~0.200), Kate Bush(LB 1.00 ~0.794), 65daysofstatic(LB 1.00 ~0.100), Emerson, Lake & Palmer(LB 1.00 ~0.432), Sting(LB 1.00 ~0.744), Fatboy Slim(LB 1.00 ~0.203), Hans Zimmer(LB 1.00 ~0.081), Evanescence(LB 1.00 ~0.359), Thirty Seconds to Mars(LB 1.00 ~0.609), Ramones(LB 1.00 ~0.648), Tom Petty and the Heartbreakers(LB 1.00 ~0.526), P!nk(LB 1.00 ~0.803), Black Eyed Peas(LB 1.00 ~0.705), Justin Bieber(LB 1.00 ~0.851), TV on the Radio(LB 1.00 ~0.566), The Beach Boys(LB 1.00 ~0.513), Johnny Cash(LB 1.00 ~0.416), Garbage(LB 1.00 ~0.770), Sigur Rós(LB 1.00 ~0.354), No Doubt(LB 1.00 ~0.918), Linkin Park(LB 1.00 ~0.442), R.E.M.(LB 1.00 ~0.720), Michael Jackson(LB 1.00 ~0.390)
+  -> Because you like Coldplay  |  People who listen to Coldplay also play these  (12 rows)
+     No Doubt — Don't Speak   [pop rock, pop 80, ~0.918]
+     Justin Bieber — Let Me Love You   [pop, pop 86, ~0.851]
+     P!nk — Just Give Me a Reason (feat. Nate Ruess)   [pop, pop 85, ~0.803]
+     Kate Bush — Running Up That Hill (A Deal With God)   [art pop, pop 81, ~0.794]
+     PJ Harvey — Down By The Water   [piano rock, pop 61, ~0.788]
+     Garbage — Stupid Girl - 2015 Remaster   [permanent wave, pop 60, ~0.770]
+     Adele — Skyfall   [british soul, pop 85, ~0.753]
+     Sting — Fields Of Gold   [soft rock, pop 76, ~0.744]
+     No Doubt — Just A Girl   [pop rock, pop 75, ~0.918]
+     Justin Bieber — Sorry   [pop, pop 85, ~0.851]
+     P!nk — Try   [pop, pop 84, ~0.803]
+     Kate Bush — Army Dreamers - 2018 Remaster   [art pop, pop 72, ~0.794]
+
+=== Coldplay  [region GB]  liked-as "Coldplay"
+  seed in graph: Coldplay / GB / conf 0.94 / pop 49 / cc197bad-dc9c-440d-a5b5-d52ba2e14234
+  seed sound: yes
+    NB	Coldplay	Belle and Sebastian	LB	0.606	twee pop	people 1
+    NB	Coldplay	Mogwai	LB	0.299	dream pop	people 1
+    NB	Coldplay	Aphex Twin	LB	0.065	uk experimental electronic	people 1
+    NB	Coldplay	Amy Winehouse	LB	0.577	neo soul	people 1
+    NB	Coldplay	PJ Harvey	LB	0.788	piano rock	people 1
+    NB	Coldplay	Gorillaz	LB	0.623	rock	people 1
+    NB	Coldplay	Adele	LB	0.753	british soul	people 2
+    NB	Coldplay	New Order	LB	0.664	new wave	people 1
+    NB	Coldplay	Deep Purple	LB	0.464	album rock	people 1
+    NB	Coldplay	The Who	LB	0.479	rock	people 1
+    NB	Coldplay	Bring Me the Horizon	LB	0.398	uk metalcore	people 1
+    NB	Coldplay	Marillion	LB	0.152	progressive rock	people 1
+    NB	Coldplay	The Prodigy	LB	0.305	rave	people 1
+    NB	Coldplay	The Smiths	LB	0.700	uk post-punk	people 1
+    NB	Coldplay	Black Sabbath	LB	0.414	hard rock	people 1
+    NB	Coldplay	Eric Clapton	LB	0.480	classic rock	people 1
+    NB	Coldplay	Eurythmics	LB	0.734	new wave pop	people 1
+    NB	Coldplay	Whitesnake	LB	0.439	album rock	people 1
+    NB	Coldplay	Zero 7	LB	0.200	electronica	people 1
+    NB	Coldplay	Kate Bush	LB	0.794	art pop	people 1
+    NB	Coldplay	65daysofstatic	LB	0.100	instrumental post-rock	people 1
+    NB	Coldplay	Emerson, Lake & Palmer	LB	0.432	art rock	people 1
+    NB	Coldplay	Sting	LB	0.744	soft rock	people 1
+    NB	Coldplay	Fatboy Slim	LB	0.203	big beat	people 1
+    NB	Coldplay	Hans Zimmer	LB	0.081	soundtrack	people 1
+    NB	Coldplay	Evanescence	LB	0.359	alternative metal	people 1
+    NB	Coldplay	Thirty Seconds to Mars	LB	0.609	modern rock	people 1
+    NB	Coldplay	Ramones	LB	0.648	alternative rock	people 1
+    NB	Coldplay	Tom Petty and the Heartbreakers	LB	0.526	rock	people 1
+    NB	Coldplay	P!nk	LB	0.803	pop	people 1
+    NB	Coldplay	Black Eyed Peas	LB	0.705	dance pop	people 1
+    NB	Coldplay	Justin Bieber	LB	0.851	pop	people 1
+    NB	Coldplay	TV on the Radio	LB	0.566	modern rock	people 1
+    NB	Coldplay	The Beach Boys	LB	0.513	classic rock	people 1
+    NB	Coldplay	Johnny Cash	LB	0.416	outlaw country	people 1
+    NB	Coldplay	Garbage	LB	0.770	permanent wave	people 1
+    NB	Coldplay	Sigur Rós	LB	0.354	post-rock	people 1
+    NB	Coldplay	No Doubt	LB	0.918	pop rock	people 1
+    NB	Coldplay	Linkin Park	LB	0.442	alternative metal	people 1
+    NB	Coldplay	R.E.M.	LB	0.720	athens indie	people 1
+    NB	Coldplay	Michael Jackson	LB	0.390	soul	people 2
+  graph neighbours (41): Belle and Sebastian(LB 1.00 ~0.606), Mogwai(LB 1.00 ~0.299), Aphex Twin(LB 1.00 ~0.065), Amy Winehouse(LB 1.00 ~0.577), PJ Harvey(LB 1.00 ~0.788), Gorillaz(LB 1.00 ~0.623), Adele(LB 1.00 ~0.753), New Order(LB 1.00 ~0.664), Deep Purple(LB 1.00 ~0.464), The Who(LB 1.00 ~0.479), Bring Me the Horizon(LB 1.00 ~0.398), Marillion(LB 1.00 ~0.152), The Prodigy(LB 1.00 ~0.305), The Smiths(LB 1.00 ~0.700), Black Sabbath(LB 1.00 ~0.414), Eric Clapton(LB 1.00 ~0.480), Eurythmics(LB 1.00 ~0.734), Whitesnake(LB 1.00 ~0.439), Zero 7(LB 1.00 ~0.200), Kate Bush(LB 1.00 ~0.794), 65daysofstatic(LB 1.00 ~0.100), Emerson, Lake & Palmer(LB 1.00 ~0.432), Sting(LB 1.00 ~0.744), Fatboy Slim(LB 1.00 ~0.203), Hans Zimmer(LB 1.00 ~0.081), Evanescence(LB 1.00 ~0.359), Thirty Seconds to Mars(LB 1.00 ~0.609), Ramones(LB 1.00 ~0.648), Tom Petty and the Heartbreakers(LB 1.00 ~0.526), P!nk(LB 1.00 ~0.803), Black Eyed Peas(LB 1.00 ~0.705), Justin Bieber(LB 1.00 ~0.851), TV on the Radio(LB 1.00 ~0.566), The Beach Boys(LB 1.00 ~0.513), Johnny Cash(LB 1.00 ~0.416), Garbage(LB 1.00 ~0.770), Sigur Rós(LB 1.00 ~0.354), No Doubt(LB 1.00 ~0.918), Linkin Park(LB 1.00 ~0.442), R.E.M.(LB 1.00 ~0.720), Michael Jackson(LB 1.00 ~0.390)
+  -> Because you like Coldplay  |  People who listen to Coldplay also play these  (12 rows)
+     No Doubt — Don't Speak   [pop rock, pop 80, ~0.918]
+     Justin Bieber — Let Me Love You   [pop, pop 86, ~0.851]
+     P!nk — Just Give Me a Reason (feat. Nate Ruess)   [pop, pop 85, ~0.803]
+     Kate Bush — Running Up That Hill (A Deal With God)   [art pop, pop 81, ~0.794]
+     PJ Harvey — Down By The Water   [piano rock, pop 61, ~0.788]
+     Garbage — Stupid Girl - 2015 Remaster   [permanent wave, pop 60, ~0.770]
+     Adele — Skyfall   [british soul, pop 85, ~0.753]
+     Sting — Fields Of Gold   [soft rock, pop 76, ~0.744]
+     No Doubt — Just A Girl   [pop rock, pop 75, ~0.918]
+     Justin Bieber — Sorry   [pop, pop 85, ~0.851]
+     P!nk — Try   [pop, pop 84, ~0.803]
+     Kate Bush — Army Dreamers - 2018 Remaster   [art pop, pop 72, ~0.794]
+
+=== TWICE  [region US]  liked-as "TWICE"
+  seed in graph: TWICE / KR / conf 0.94 / pop 6 / 8da127cc-c432-418f-b356-ef36210d82ac
+  seed sound: yes
+    NB	TWICE	BIGBANG	LB	0.895	k-pop	people 2
+    NB	TWICE	Girls’ Generation	LB	0.975	k-pop	people 1
+    NB	TWICE	BTS	LB	0.964	pop	people 1
+  graph neighbours (4): BIGBANG(LB 1.00 ~0.895), Girls’ Generation(LB 1.00 ~0.975), BTS(LB 1.00 ~0.964), 東方神起(LB 1.00 ~-nocat)
+  -> Because you like TWICE  |  People who listen to TWICE also play these  (6 rows)
+     Girls' Generation — Gee   [k-pop, pop 67, ~0.975]
+     BTS — Dynamite   [pop, pop 80, ~0.964]
+     BIGBANG — BANG BANG BANG   [k-pop, pop 79, ~0.895]
+     Girls' Generation — Into the New World   [k-pop, pop 63, ~0.975]
+     BTS — FAKE LOVE   [pop, pop 79, ~0.964]
+     BIGBANG — Fantastic Baby   [k-pop, pop 73, ~0.895]
+
+=== TWICE  [region KR]  liked-as "TWICE"
+  seed in graph: TWICE / KR / conf 0.94 / pop 6 / 8da127cc-c432-418f-b356-ef36210d82ac
+  seed sound: yes
+    NB	TWICE	BIGBANG	LB	0.895	k-pop	people 2
+    NB	TWICE	Girls’ Generation	LB	0.975	k-pop	people 1
+    NB	TWICE	BTS	LB	0.964	pop	people 1
+  graph neighbours (4): BIGBANG(LB 1.00 ~0.895), Girls’ Generation(LB 1.00 ~0.975), BTS(LB 1.00 ~0.964), 東方神起(LB 1.00 ~-nocat)
+  -> Because you like TWICE  |  People who listen to TWICE also play these  (6 rows)
+     Girls' Generation — Gee   [k-pop, pop 67, ~0.975]
+     BTS — Dynamite   [pop, pop 80, ~0.964]
+     BIGBANG — BANG BANG BANG   [k-pop, pop 79, ~0.895]
+     Girls' Generation — Into the New World   [k-pop, pop 63, ~0.975]
+     BTS — FAKE LOVE   [pop, pop 79, ~0.964]
+     BIGBANG — Fantastic Baby   [k-pop, pop 73, ~0.895]
+
+=== Stray Kids  [region US]  liked-as "Stray Kids"
+  seed in graph: NOT FOUND
+  -> Sounds like Stray Kids  |  Artists whose sound sits closest to theirs  (12 rows)
+     BTS — Permission to Dance   [pop, pop 74, ~0.998]
+     MOMOLAND — Ready Or Not   [k-pop, pop 38, ~0.985]
+     Brown Eyed Girls — Kill Bill   [k-pop, pop 45, ~0.985]
+     3YE — QUEEN   [k-pop, pop 23, ~0.985]
+     Brave Girls — Rollin'   [k-pop, pop 61, ~0.985]
+     LADIES' CODE — Hate You   [k-pop, pop 29, ~0.985]
+     AOA — Come See Me   [k-pop, pop 42, ~0.984]
+     Cherry Bullet — P.O.W! (Play On the World)   [k-pop, pop 39, ~0.984]
+     IU — Good day   [pop, pop 61, ~0.984]
+     NATURE — SOME (You'll Be Mine)   [k-pop, pop 24, ~0.984]
+     Orange Caramel — LIPSTICK   [k-pop, pop 45, ~0.984]
+     WJSN — La La Love   [k-pop, pop 39, ~0.984]
+
+=== Stray Kids  [region KR]  liked-as "Stray Kids"
+  seed in graph: NOT FOUND
+  -> Sounds like Stray Kids  |  Artists whose sound sits closest to theirs  (12 rows)
+     BTS — Permission to Dance   [pop, pop 74, ~0.998]
+     MOMOLAND — Ready Or Not   [k-pop, pop 38, ~0.985]
+     Brown Eyed Girls — Kill Bill   [k-pop, pop 45, ~0.985]
+     3YE — QUEEN   [k-pop, pop 23, ~0.985]
+     Brave Girls — Rollin'   [k-pop, pop 61, ~0.985]
+     LADIES' CODE — Hate You   [k-pop, pop 29, ~0.985]
+     AOA — Come See Me   [k-pop, pop 42, ~0.984]
+     Cherry Bullet — P.O.W! (Play On the World)   [k-pop, pop 39, ~0.984]
+     IU — Good day   [pop, pop 61, ~0.984]
+     NATURE — SOME (You'll Be Mine)   [k-pop, pop 24, ~0.984]
+     Orange Caramel — LIPSTICK   [k-pop, pop 45, ~0.984]
+     WJSN — La La Love   [k-pop, pop 39, ~0.984]
+
+=== BIGBANG  [region US]  liked-as "BIGBANG"
+  seed in graph: BIGBANG / KR / conf 0.94 / pop 8 / ec2bcb77-b9a1-49e2-bfe7-419586bbef48
+  seed sound: yes
+    NB	BIGBANG	MAMAMOO	LB	0.950	k-pop	people 1
+    NB	BIGBANG	SISTAR	LB	0.946	k-pop	people 1
+    NB	BIGBANG	BTS	LB	0.959	pop	people 1
+    NB	BIGBANG	BLACKPINK	LB	0.898	pop	people 1
+    NB	BIGBANG	2NE1	LB	0.887	dance pop	people 1
+    NB	BIGBANG	G‐DRAGON	LB	0.842	k-pop	people 1
+    NB	BIGBANG	EXO	LB	0.997	k-pop	people 3
+    NB	BIGBANG	Red Velvet	LB	0.951	k-pop girl group	people 1
+    NB	BIGBANG	SHINee	LB	0.995	k-pop	people 1
+    NB	BIGBANG	f(x)	LB	0.951	k-pop	people 1
+    NB	BIGBANG	TWICE	LB	0.895	pop	people 2
+    NB	BIGBANG	TAEYANG	LB	0.824	korean r&b	people 1
+    NB	BIGBANG	EXID	LB	0.952	k-pop	people 1
+    NB	BIGBANG	4minute	LB	0.951	k-pop	people 1
+    NB	BIGBANG	IU	LB	0.919	pop	people 1
+    NB	BIGBANG	T‐ARA	LB	0.950	k-pop	people 1
+    NB	BIGBANG	AOA	LB	0.946	k-pop	people 1
+    NB	BIGBANG	BoA	LB	0.975	k-pop	people 3
+    NB	BIGBANG	KARA	LB	0.950	k-pop	people 3
+    NB	BIGBANG	MONSTA X	LB	0.999	k-pop	people 1
+    NB	BIGBANG	SUNMI	LB	0.976	k-pop	people 1
+    NB	BIGBANG	Brown Eyed Girls	LB	0.949	k-pop	people 1
+    NB	BIGBANG	2PM	LB	0.997	k-pop	people 1
+    NB	BIGBANG	miss A	LB	0.950	k-pop	people 1
+    NB	BIGBANG	Ariana Grande	LB	0.702	pop	people 1
+    NB	BIGBANG	Linkin Park	LB	0.068	alternative metal	people 1
+    NB	BIGBANG	Billie Eilish	LB	0.524	pop	people 1
+    NB	BIGBANG	Michael Jackson	LB	0.391	soul	people 2
+    NB	BIGBANG	Perfume	LB	0.327	bitpop	people 1
+    NB	BIGBANG	Girls’ Generation	LB	0.949	k-pop	people 1
+  graph neighbours (31): MAMAMOO(LB 1.00 ~0.950), SISTAR(LB 1.00 ~0.946), BTS(LB 1.00 ~0.959), BLACKPINK(LB 1.00 ~0.898), 2NE1(LB 1.00 ~0.887), G‐DRAGON(LB 1.00 ~0.842), EXO(LB 1.00 ~0.997), Red Velvet(LB 1.00 ~0.951), SHINee(LB 1.00 ~0.995), f(x)(LB 1.00 ~0.951), TWICE(LB 1.00 ~0.895), TAEYANG(LB 1.00 ~0.824), EXID(LB 1.00 ~0.952), 4minute(LB 1.00 ~0.951), IU(LB 1.00 ~0.919), T‐ARA(LB 1.00 ~0.950), AOA(LB 1.00 ~0.946), BoA(LB 1.00 ~0.975), KARA(LB 1.00 ~0.950), MONSTA X(LB 1.00 ~0.999), SUNMI(LB 1.00 ~0.976), Brown Eyed Girls(LB 1.00 ~0.949), 2PM(LB 1.00 ~0.997), miss A(LB 1.00 ~0.950), Ariana Grande(LB 1.00 ~0.702), Linkin Park(LB 1.00 ~0.068), Billie Eilish(LB 1.00 ~0.524), Michael Jackson(LB 1.00 ~0.391), 東方神起(LB 1.00 ~-nocat), Perfume(LB 1.00 ~0.327), Girls’ Generation(LB 1.00 ~0.949)
+  -> Because you like BIGBANG  |  People who listen to BIGBANG also play these  (12 rows)
+     MONSTA X — HERO   [k-pop, pop 55, ~0.999]
+     EXO — Love Shot   [k-pop, pop 70, ~0.997]
+     2PM — My House   [k-pop, pop 57, ~0.997]
+     SHINee — Replay   [k-pop, pop 65, ~0.995]
+     SUNMI — Gashina   [k-pop, pop 61, ~0.976]
+     BoA — Only One   [k-pop, pop 55, ~0.975]
+     BTS — Dynamite   [pop, pop 80, ~0.959]
+     EXID — Up & Down   [k-pop, pop 60, ~0.952]
+     MONSTA X — MIDDLE OF THE NIGHT   [k-pop, pop 54, ~0.999]
+     EXO — Growl   [k-pop, pop 65, ~0.997]
+     2PM — Hands Up   [k-pop, pop 53, ~0.997]
+     SHINee — Lucifer   [k-pop, pop 63, ~0.995]
+
+=== BIGBANG  [region KR]  liked-as "BIGBANG"
+  seed in graph: BIGBANG / KR / conf 0.94 / pop 8 / ec2bcb77-b9a1-49e2-bfe7-419586bbef48
+  seed sound: yes
+    NB	BIGBANG	MAMAMOO	LB	0.950	k-pop	people 1
+    NB	BIGBANG	SISTAR	LB	0.946	k-pop	people 1
+    NB	BIGBANG	BTS	LB	0.959	pop	people 1
+    NB	BIGBANG	BLACKPINK	LB	0.898	pop	people 1
+    NB	BIGBANG	2NE1	LB	0.887	dance pop	people 1
+    NB	BIGBANG	G‐DRAGON	LB	0.842	k-pop	people 1
+    NB	BIGBANG	EXO	LB	0.997	k-pop	people 3
+    NB	BIGBANG	Red Velvet	LB	0.951	k-pop girl group	people 1
+    NB	BIGBANG	SHINee	LB	0.995	k-pop	people 1
+    NB	BIGBANG	f(x)	LB	0.951	k-pop	people 1
+    NB	BIGBANG	TWICE	LB	0.895	pop	people 2
+    NB	BIGBANG	TAEYANG	LB	0.824	korean r&b	people 1
+    NB	BIGBANG	EXID	LB	0.952	k-pop	people 1
+    NB	BIGBANG	4minute	LB	0.951	k-pop	people 1
+    NB	BIGBANG	IU	LB	0.919	pop	people 1
+    NB	BIGBANG	T‐ARA	LB	0.950	k-pop	people 1
+    NB	BIGBANG	AOA	LB	0.946	k-pop	people 1
+    NB	BIGBANG	BoA	LB	0.975	k-pop	people 3
+    NB	BIGBANG	KARA	LB	0.950	k-pop	people 3
+    NB	BIGBANG	MONSTA X	LB	0.999	k-pop	people 1
+    NB	BIGBANG	SUNMI	LB	0.976	k-pop	people 1
+    NB	BIGBANG	Brown Eyed Girls	LB	0.949	k-pop	people 1
+    NB	BIGBANG	2PM	LB	0.997	k-pop	people 1
+    NB	BIGBANG	miss A	LB	0.950	k-pop	people 1
+    NB	BIGBANG	Ariana Grande	LB	0.702	pop	people 1
+    NB	BIGBANG	Linkin Park	LB	0.068	alternative metal	people 1
+    NB	BIGBANG	Billie Eilish	LB	0.524	pop	people 1
+    NB	BIGBANG	Michael Jackson	LB	0.391	soul	people 2
+    NB	BIGBANG	Perfume	LB	0.327	bitpop	people 1
+    NB	BIGBANG	Girls’ Generation	LB	0.949	k-pop	people 1
+  graph neighbours (31): MAMAMOO(LB 1.00 ~0.950), SISTAR(LB 1.00 ~0.946), BTS(LB 1.00 ~0.959), BLACKPINK(LB 1.00 ~0.898), 2NE1(LB 1.00 ~0.887), G‐DRAGON(LB 1.00 ~0.842), EXO(LB 1.00 ~0.997), Red Velvet(LB 1.00 ~0.951), SHINee(LB 1.00 ~0.995), f(x)(LB 1.00 ~0.951), TWICE(LB 1.00 ~0.895), TAEYANG(LB 1.00 ~0.824), EXID(LB 1.00 ~0.952), 4minute(LB 1.00 ~0.951), IU(LB 1.00 ~0.919), T‐ARA(LB 1.00 ~0.950), AOA(LB 1.00 ~0.946), BoA(LB 1.00 ~0.975), KARA(LB 1.00 ~0.950), MONSTA X(LB 1.00 ~0.999), SUNMI(LB 1.00 ~0.976), Brown Eyed Girls(LB 1.00 ~0.949), 2PM(LB 1.00 ~0.997), miss A(LB 1.00 ~0.950), Ariana Grande(LB 1.00 ~0.702), Linkin Park(LB 1.00 ~0.068), Billie Eilish(LB 1.00 ~0.524), Michael Jackson(LB 1.00 ~0.391), 東方神起(LB 1.00 ~-nocat), Perfume(LB 1.00 ~0.327), Girls’ Generation(LB 1.00 ~0.949)
+  -> Because you like BIGBANG  |  People who listen to BIGBANG also play these  (12 rows)
+     MONSTA X — HERO   [k-pop, pop 55, ~0.999]
+     EXO — Love Shot   [k-pop, pop 70, ~0.997]
+     2PM — My House   [k-pop, pop 57, ~0.997]
+     SHINee — Replay   [k-pop, pop 65, ~0.995]
+     SUNMI — Gashina   [k-pop, pop 61, ~0.976]
+     BoA — Only One   [k-pop, pop 55, ~0.975]
+     BTS — Dynamite   [pop, pop 80, ~0.959]
+     EXID — Up & Down   [k-pop, pop 60, ~0.952]
+     MONSTA X — MIDDLE OF THE NIGHT   [k-pop, pop 54, ~0.999]
+     EXO — Growl   [k-pop, pop 65, ~0.997]
+     2PM — Hands Up   [k-pop, pop 53, ~0.997]
+     SHINee — Lucifer   [k-pop, pop 63, ~0.995]
+
+=== NewJeans  [region US]  liked-as "NewJeans"
+  seed in graph: NOT FOUND
+  -> Sounds like NewJeans  |  Artists whose sound sits closest to theirs  (12 rows)
+     miss A — Hush   [k-pop, pop 58, ~1.000]
+     Cherry Bullet — P.O.W! (Play On the World)   [k-pop, pop 39, ~0.999]
+     Weki Meki — Siesta   [k-pop, pop 39, ~0.999]
+     After School — Shampoo   [k-pop, pop 44, ~0.999]
+     FIESTAR — You’re Pitiful   [k-pop, pop 44, ~0.999]
+     WOOAH — BLUSH   [k-pop, pop 52, ~0.999]
+     Lovelyz — Now, We   [k-pop, pop 36, ~0.999]
+     VIVIZ — BOP BOP!   [k-pop, pop 54, ~0.998]
+     STAYC — BEBE   [k-pop, pop 70, ~0.998]
+     WJSN — Last Sequence   [k-pop, pop 45, ~0.998]
+     LOONA — PTT (Paint The Town)   [k-pop, pop 56, ~0.998]
+     T-ARA — Lovey-Dovey   [k-pop, pop 50, ~0.998]
+
+=== NewJeans  [region KR]  liked-as "NewJeans"
+  seed in graph: NOT FOUND
+  -> Sounds like NewJeans  |  Artists whose sound sits closest to theirs  (12 rows)
+     miss A — Hush   [k-pop, pop 58, ~1.000]
+     Cherry Bullet — P.O.W! (Play On the World)   [k-pop, pop 39, ~0.999]
+     Weki Meki — Siesta   [k-pop, pop 39, ~0.999]
+     After School — Shampoo   [k-pop, pop 44, ~0.999]
+     FIESTAR — You’re Pitiful   [k-pop, pop 44, ~0.999]
+     WOOAH — BLUSH   [k-pop, pop 52, ~0.999]
+     Lovelyz — Now, We   [k-pop, pop 36, ~0.999]
+     VIVIZ — BOP BOP!   [k-pop, pop 54, ~0.998]
+     STAYC — BEBE   [k-pop, pop 70, ~0.998]
+     WJSN — Last Sequence   [k-pop, pop 45, ~0.998]
+     LOONA — PTT (Paint The Town)   [k-pop, pop 56, ~0.998]
+     T-ARA — Lovey-Dovey   [k-pop, pop 50, ~0.998]
+
+=== SEVENTEEN  [region US]  liked-as "SEVENTEEN"
+  seed in graph: NOT FOUND
+  -> Sounds like SEVENTEEN  |  Artists whose sound sits closest to theirs  (12 rows)
+     Betharia Sonatha — Hati Yang Luka   [dangdut, pop 55, ~0.999]
+     T.R.I.A.D — Istimewa   [indonesian pop rock, pop 42, ~0.999]
+     Ria Amelia — Pulanglah Uda   [pop minang, pop 47, ~0.999]
+     Setia Band — Kehilangan   [indonesian pop rock, pop 52, ~0.999]
+     Judika — Aku Yang Tersakiti   [indonesian pop, pop 72, ~0.999]
+     Lesti — Egois   [dangdut koplo, pop 56, ~0.999]
+     Five Minutes — Sumpah Mati   [indonesian pop rock, pop 40, ~0.999]
+     Repvblik — Aku Tetap Cinta   [indonesian pop rock, pop 54, ~0.999]
+     Zigaz — Kenanglah   [indonesian pop rock, pop 36, ~0.999]
+     animA — Cinta Katakan Cinta   [indonesian pop rock, pop 33, ~0.999]
+     Seurieus — Rocker Juga Manusia   [indonesian pop rock, pop 52, ~0.999]
+     Kerispatih — Kesalahan Yang Sama   [indonesian pop, pop 56, ~0.999]
+
+=== SEVENTEEN  [region KR]  liked-as "SEVENTEEN"
+  seed in graph: NOT FOUND
+  -> Sounds like SEVENTEEN  |  Artists whose sound sits closest to theirs  (12 rows)
+     Betharia Sonatha — Hati Yang Luka   [dangdut, pop 55, ~0.999]
+     T.R.I.A.D — Istimewa   [indonesian pop rock, pop 42, ~0.999]
+     Ria Amelia — Pulanglah Uda   [pop minang, pop 47, ~0.999]
+     Setia Band — Kehilangan   [indonesian pop rock, pop 52, ~0.999]
+     Judika — Aku Yang Tersakiti   [indonesian pop, pop 72, ~0.999]
+     Lesti — Egois   [dangdut koplo, pop 56, ~0.999]
+     Five Minutes — Sumpah Mati   [indonesian pop rock, pop 40, ~0.999]
+     Repvblik — Aku Tetap Cinta   [indonesian pop rock, pop 54, ~0.999]
+     Zigaz — Kenanglah   [indonesian pop rock, pop 36, ~0.999]
+     animA — Cinta Katakan Cinta   [indonesian pop rock, pop 33, ~0.999]
+     Seurieus — Rocker Juga Manusia   [indonesian pop rock, pop 52, ~0.999]
+     Kerispatih — Kesalahan Yang Sama   [indonesian pop, pop 56, ~0.999]
+
+=== The Beatles  [region US]  liked-as "The Beatles"
+  seed in graph: The Beatles / GB / conf 0.94 / pop 86 / b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d
+  seed sound: yes
+    NB	The Beatles	Panic! at the Disco	LB	0.193	pop	people 1
+    NB	The Beatles	Belle and Sebastian	LB	0.393	twee pop	people 1
+    NB	The Beatles	Eurythmics	LB	0.627	new wave pop	people 1
+    NB	The Beatles	Yes	LB	0.945	rock	people 4
+    NB	The Beatles	Jethro Tull	LB	0.954	art rock	people 1
+    NB	The Beatles	Adele	LB	0.093	british soul	people 2
+    NB	The Beatles	Aphex Twin	LB	0.047	uk experimental electronic	people 1
+    NB	The Beatles	Amy Winehouse	LB	0.125	neo soul	people 1
+    NB	The Beatles	King Crimson	LB	0.792	art rock	people 1
+    NB	The Beatles	Iron Maiden	LB	0.560	hard rock	people 1
+    NB	The Beatles	PJ Harvey	LB	0.584	piano rock	people 1
+    NB	The Beatles	Fleetwood Mac	LB	0.960	rock	people 1
+    NB	The Beatles	Elton John	LB	0.913	rock	people 1
+    NB	The Beatles	Gorillaz	LB	0.518	rock	people 1
+    NB	The Beatles	Blur	LB	0.554	permanent wave	people 1
+    NB	The Beatles	Bee Gees	LB	0.838	soft rock	people 1
+    NB	The Beatles	Coldplay	LB	0.435	permanent wave	people 1
+    NB	The Beatles	New Order	LB	0.456	new wave	people 1
+    NB	The Beatles	Ed Sheeran	LB	0.064	uk pop	people 1
+    NB	The Beatles	Autechre	LB	0.042	intelligent dance music	people 1
+    NB	The Beatles	Marillion	LB	0.619	progressive rock	people 1
+    NB	The Beatles	The Prodigy	LB	0.100	rave	people 1
+    NB	The Beatles	Bauhaus	LB	0.305	uk post-punk	people 1
+    NB	The Beatles	Cradle of Filth	LB	0.081	symphonic black metal	people 1
+    NB	The Beatles	Nickelback	LB	0.290	canadian rock	people 1
+    NB	The Beatles	Evanescence	LB	0.280	alternative metal	people 1
+    NB	The Beatles	Scorpions	LB	0.732	hard rock	people 1
+    NB	The Beatles	Tom Petty and the Heartbreakers	LB	0.959	rock	people 1
+    NB	The Beatles	Black Eyed Peas	LB	0.089	dance pop	people 1
+    NB	The Beatles	Heart	LB	0.951	rock	people 4
+    NB	The Beatles	MGMT	LB	0.419	indie rock	people 1
+    NB	The Beatles	Lana Del Rey	LB	0.157	pop	people 1
+    NB	The Beatles	Incubus	LB	0.457	funk metal	people 1
+    NB	The Beatles	Garbage	LB	0.463	permanent wave	people 1
+    NB	The Beatles	Sigur Rós	LB	0.166	post-rock	people 1
+    NB	The Beatles	Air	LB	0.091	indietronica	people 2
+    NB	The Beatles	My Chemical Romance	LB	0.342	modern rock	people 1
+    NB	The Beatles	No Doubt	LB	0.563	pop rock	people 1
+    NB	The Beatles	Faith No More	LB	0.497	funk metal	people 1
+  graph neighbours (39): Panic! at the Disco(LB 1.00 ~0.193), Belle and Sebastian(LB 1.00 ~0.393), Eurythmics(LB 1.00 ~0.627), Yes(LB 1.00 ~0.945), Jethro Tull(LB 1.00 ~0.954), Adele(LB 1.00 ~0.093), Aphex Twin(LB 1.00 ~0.047), Amy Winehouse(LB 1.00 ~0.125), King Crimson(LB 1.00 ~0.792), Iron Maiden(LB 1.00 ~0.560), PJ Harvey(LB 1.00 ~0.584), Fleetwood Mac(LB 1.00 ~0.960), Elton John(LB 1.00 ~0.913), Gorillaz(LB 1.00 ~0.518), Blur(LB 1.00 ~0.554), Bee Gees(LB 1.00 ~0.838), Coldplay(LB 1.00 ~0.435), New Order(LB 1.00 ~0.456), Ed Sheeran(LB 1.00 ~0.064), Autechre(LB 1.00 ~0.042), Marillion(LB 1.00 ~0.619), The Prodigy(LB 1.00 ~0.100), Bauhaus(LB 1.00 ~0.305), Cradle of Filth(LB 1.00 ~0.081), Nickelback(LB 1.00 ~0.290), Evanescence(LB 1.00 ~0.280), Scorpions(LB 1.00 ~0.732), Tom Petty and the Heartbreakers(LB 1.00 ~0.959), Black Eyed Peas(LB 1.00 ~0.089), Heart(LB 1.00 ~0.951), MGMT(LB 1.00 ~0.419), Lana Del Rey(LB 1.00 ~0.157), Incubus(LB 1.00 ~0.457), Garbage(LB 1.00 ~0.463), Sigur Rós(LB 1.00 ~0.166), Air(LB 1.00 ~0.091), My Chemical Romance(LB 1.00 ~0.342), No Doubt(LB 1.00 ~0.563), Faith No More(LB 1.00 ~0.497)
+  -> Because you like The Beatles  |  People who listen to The Beatles also play these  (12 rows)
+     Fleetwood Mac — Dreams - 2004 Remaster   [rock, pop 88, ~0.960]
+     Tom Petty and the Heartbreakers — Mary Jane's Last Dance   [rock, pop 76, ~0.959]
+     Jethro Tull — Aqualung   [art rock, pop 62, ~0.954]
+     Heart — Alone   [rock, pop 76, ~0.951]
+     Yes — Owner of a Lonely Heart   [rock, pop 74, ~0.945]
+     Elton John — I'm Still Standing   [rock, pop 84, ~0.913]
+     Bee Gees — How Deep Is Your Love   [soft rock, pop 80, ~0.838]
+     King Crimson — 21st Century Schizoid Man - Including "Mirrors"   [art rock, pop 58, ~0.792]
+     Fleetwood Mac — The Chain - 2004 Remaster   [rock, pop 84, ~0.960]
+     Tom Petty and the Heartbreakers — Learning To Fly   [rock, pop 73, ~0.959]
+     Jethro Tull — Locomotive Breath   [art rock, pop 59, ~0.954]
+     Heart — Barracuda   [rock, pop 74, ~0.951]
+
+=== The Beatles  [region GB]  liked-as "The Beatles"
+  seed in graph: The Beatles / GB / conf 0.94 / pop 86 / b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d
+  seed sound: yes
+    NB	The Beatles	Panic! at the Disco	LB	0.193	pop	people 1
+    NB	The Beatles	Belle and Sebastian	LB	0.393	twee pop	people 1
+    NB	The Beatles	Eurythmics	LB	0.627	new wave pop	people 1
+    NB	The Beatles	Yes	LB	0.945	rock	people 4
+    NB	The Beatles	Jethro Tull	LB	0.954	art rock	people 1
+    NB	The Beatles	Adele	LB	0.093	british soul	people 2
+    NB	The Beatles	Aphex Twin	LB	0.047	uk experimental electronic	people 1
+    NB	The Beatles	Amy Winehouse	LB	0.125	neo soul	people 1
+    NB	The Beatles	King Crimson	LB	0.792	art rock	people 1
+    NB	The Beatles	Iron Maiden	LB	0.560	hard rock	people 1
+    NB	The Beatles	PJ Harvey	LB	0.584	piano rock	people 1
+    NB	The Beatles	Fleetwood Mac	LB	0.960	rock	people 1
+    NB	The Beatles	Elton John	LB	0.913	rock	people 1
+    NB	The Beatles	Gorillaz	LB	0.518	rock	people 1
+    NB	The Beatles	Blur	LB	0.554	permanent wave	people 1
+    NB	The Beatles	Bee Gees	LB	0.838	soft rock	people 1
+    NB	The Beatles	Coldplay	LB	0.435	permanent wave	people 1
+    NB	The Beatles	New Order	LB	0.456	new wave	people 1
+    NB	The Beatles	Ed Sheeran	LB	0.064	uk pop	people 1
+    NB	The Beatles	Autechre	LB	0.042	intelligent dance music	people 1
+    NB	The Beatles	Marillion	LB	0.619	progressive rock	people 1
+    NB	The Beatles	The Prodigy	LB	0.100	rave	people 1
+    NB	The Beatles	Bauhaus	LB	0.305	uk post-punk	people 1
+    NB	The Beatles	Cradle of Filth	LB	0.081	symphonic black metal	people 1
+    NB	The Beatles	Nickelback	LB	0.290	canadian rock	people 1
+    NB	The Beatles	Evanescence	LB	0.280	alternative metal	people 1
+    NB	The Beatles	Scorpions	LB	0.732	hard rock	people 1
+    NB	The Beatles	Tom Petty and the Heartbreakers	LB	0.959	rock	people 1
+    NB	The Beatles	Black Eyed Peas	LB	0.089	dance pop	people 1
+    NB	The Beatles	Heart	LB	0.951	rock	people 4
+    NB	The Beatles	MGMT	LB	0.419	indie rock	people 1
+    NB	The Beatles	Lana Del Rey	LB	0.157	pop	people 1
+    NB	The Beatles	Incubus	LB	0.457	funk metal	people 1
+    NB	The Beatles	Garbage	LB	0.463	permanent wave	people 1
+    NB	The Beatles	Sigur Rós	LB	0.166	post-rock	people 1
+    NB	The Beatles	Air	LB	0.091	indietronica	people 2
+    NB	The Beatles	My Chemical Romance	LB	0.342	modern rock	people 1
+    NB	The Beatles	No Doubt	LB	0.563	pop rock	people 1
+    NB	The Beatles	Faith No More	LB	0.497	funk metal	people 1
+  graph neighbours (39): Panic! at the Disco(LB 1.00 ~0.193), Belle and Sebastian(LB 1.00 ~0.393), Eurythmics(LB 1.00 ~0.627), Yes(LB 1.00 ~0.945), Jethro Tull(LB 1.00 ~0.954), Adele(LB 1.00 ~0.093), Aphex Twin(LB 1.00 ~0.047), Amy Winehouse(LB 1.00 ~0.125), King Crimson(LB 1.00 ~0.792), Iron Maiden(LB 1.00 ~0.560), PJ Harvey(LB 1.00 ~0.584), Fleetwood Mac(LB 1.00 ~0.960), Elton John(LB 1.00 ~0.913), Gorillaz(LB 1.00 ~0.518), Blur(LB 1.00 ~0.554), Bee Gees(LB 1.00 ~0.838), Coldplay(LB 1.00 ~0.435), New Order(LB 1.00 ~0.456), Ed Sheeran(LB 1.00 ~0.064), Autechre(LB 1.00 ~0.042), Marillion(LB 1.00 ~0.619), The Prodigy(LB 1.00 ~0.100), Bauhaus(LB 1.00 ~0.305), Cradle of Filth(LB 1.00 ~0.081), Nickelback(LB 1.00 ~0.290), Evanescence(LB 1.00 ~0.280), Scorpions(LB 1.00 ~0.732), Tom Petty and the Heartbreakers(LB 1.00 ~0.959), Black Eyed Peas(LB 1.00 ~0.089), Heart(LB 1.00 ~0.951), MGMT(LB 1.00 ~0.419), Lana Del Rey(LB 1.00 ~0.157), Incubus(LB 1.00 ~0.457), Garbage(LB 1.00 ~0.463), Sigur Rós(LB 1.00 ~0.166), Air(LB 1.00 ~0.091), My Chemical Romance(LB 1.00 ~0.342), No Doubt(LB 1.00 ~0.563), Faith No More(LB 1.00 ~0.497)
+  -> Because you like The Beatles  |  People who listen to The Beatles also play these  (12 rows)
+     Fleetwood Mac — Dreams - 2004 Remaster   [rock, pop 88, ~0.960]
+     Tom Petty and the Heartbreakers — Mary Jane's Last Dance   [rock, pop 76, ~0.959]
+     Jethro Tull — Aqualung   [art rock, pop 62, ~0.954]
+     Heart — Alone   [rock, pop 76, ~0.951]
+     Yes — Owner of a Lonely Heart   [rock, pop 74, ~0.945]
+     Elton John — I'm Still Standing   [rock, pop 84, ~0.913]
+     Bee Gees — How Deep Is Your Love   [soft rock, pop 80, ~0.838]
+     King Crimson — 21st Century Schizoid Man - Including "Mirrors"   [art rock, pop 58, ~0.792]
+     Fleetwood Mac — The Chain - 2004 Remaster   [rock, pop 84, ~0.960]
+     Tom Petty and the Heartbreakers — Learning To Fly   [rock, pop 73, ~0.959]
+     Jethro Tull — Locomotive Breath   [art rock, pop 59, ~0.954]
+     Heart — Barracuda   [rock, pop 74, ~0.951]
+
+=== Queen  [region US]  liked-as "Queen"
+  seed in graph: Queen / GB / conf 0.94 / pop 44 / 0383dadf-2a4e-4d10-a46a-e9e041da8eb3
+  seed sound: yes
+    NB	Queen	David Bowie	LB	0.976	rock	people 1
+    NB	Queen	The Rolling Stones	LB	0.977	rock	people 1
+    NB	Queen	Radiohead	LB	0.801	rock	people 1
+    NB	Queen	The Who	LB	0.970	rock	people 1
+    NB	Queen	Fleetwood Mac	LB	0.968	rock	people 1
+    NB	Queen	Black Sabbath	LB	0.743	hard rock	people 1
+    NB	Queen	The Cure	LB	0.776	uk post-punk	people 1
+    NB	Queen	Deep Purple	LB	0.927	album rock	people 1
+    NB	Queen	Oasis	LB	0.801	permanent wave	people 1
+    NB	Queen	Eric Clapton	LB	0.959	classic rock	people 1
+    NB	Queen	Arctic Monkeys	LB	0.687	permanent wave	people 1
+    NB	Queen	Franz Ferdinand	LB	0.616	scottish rock	people 1
+    NB	Queen	Eurythmics	LB	0.763	new wave pop	people 1
+    NB	Queen	Electric Light Orchestra	LB	0.977	rock	people 1
+    NB	Queen	Muse	LB	0.737	permanent wave	people 1
+    NB	Queen	Gorillaz	LB	0.628	rock	people 1
+    NB	Queen	Ozzy Osbourne	LB	0.835	hard rock	people 1
+    NB	Queen	The Police	LB	0.983	rock	people 1
+    NB	Queen	Depeche Mode	LB	0.788	new wave	people 1
+    NB	Queen	Jimi Hendrix	LB	0.973	album rock	people 1
+    NB	Queen	Genesis	LB	0.954	rock	people 1
+    NB	Queen	Led Zeppelin	LB	0.975	rock	people 1
+    NB	Queen	Phil Collins	LB	0.862	soft rock	people 1
+    NB	Queen	Bee Gees	LB	0.807	soft rock	people 1
+    NB	Queen	AC/DC	LB	0.927	australian rock	people 1
+    NB	Queen	Red Hot Chili Peppers	LB	0.758	permanent wave	people 1
+    NB	Queen	Guns N’ Roses	LB	0.883	hard rock	people 1
+    NB	Queen	Michael Jackson	LB	0.106	soul	people 2
+    NB	Queen	Metallica	LB	0.577	hard rock	people 1
+    NB	Queen	R.E.M.	LB	0.743	athens indie	people 1
+    NB	Queen	The Doors	LB	0.971	rock	people 1
+    NB	Queen	Green Day	LB	0.748	permanent wave	people 1
+    NB	Queen	Foo Fighters	LB	0.692	permanent wave	people 1
+    NB	Queen	Linkin Park	LB	0.558	alternative metal	people 1
+    NB	Queen	The Killers	LB	0.728	permanent wave	people 1
+    NB	Queen	The White Stripes	LB	0.778	modern blues rock	people 1
+    NB	Queen	Bruce Springsteen	LB	0.962	rock	people 1
+    NB	Queen	Simon & Garfunkel	LB	0.938	classic rock	people 1
+  graph neighbours (38): David Bowie(LB 1.00 ~0.976), The Rolling Stones(LB 1.00 ~0.977), Radiohead(LB 1.00 ~0.801), The Who(LB 1.00 ~0.970), Fleetwood Mac(LB 1.00 ~0.968), Black Sabbath(LB 1.00 ~0.743), The Cure(LB 1.00 ~0.776), Deep Purple(LB 1.00 ~0.927), Oasis(LB 1.00 ~0.801), Eric Clapton(LB 1.00 ~0.959), Arctic Monkeys(LB 1.00 ~0.687), Franz Ferdinand(LB 1.00 ~0.616), Eurythmics(LB 1.00 ~0.763), Electric Light Orchestra(LB 1.00 ~0.977), Muse(LB 1.00 ~0.737), Gorillaz(LB 1.00 ~0.628), Ozzy Osbourne(LB 1.00 ~0.835), The Police(LB 1.00 ~0.983), Depeche Mode(LB 1.00 ~0.788), Jimi Hendrix(LB 1.00 ~0.973), Genesis(LB 1.00 ~0.954), Led Zeppelin(LB 1.00 ~0.975), Phil Collins(LB 1.00 ~0.862), Bee Gees(LB 1.00 ~0.807), AC/DC(LB 1.00 ~0.927), Red Hot Chili Peppers(LB 1.00 ~0.758), Guns N’ Roses(LB 1.00 ~0.883), Michael Jackson(LB 1.00 ~0.106), Metallica(LB 1.00 ~0.577), R.E.M.(LB 1.00 ~0.743), The Doors(LB 1.00 ~0.971), Green Day(LB 1.00 ~0.748), Foo Fighters(LB 1.00 ~0.692), Linkin Park(LB 1.00 ~0.558), The Killers(LB 1.00 ~0.728), The White Stripes(LB 1.00 ~0.778), Bruce Springsteen(LB 1.00 ~0.962), Simon & Garfunkel(LB 1.00 ~0.938)
+  -> Because you like Queen  |  People who listen to Queen also play these  (12 rows)
+     The Police — Every Breath You Take   [rock, pop 90, ~0.983]
+     The Rolling Stones — Paint It, Black   [rock, pop 82, ~0.977]
+     Electric Light Orchestra — Mr. Blue Sky   [rock, pop 79, ~0.977]
+     David Bowie — Starman - 2012 Remaster   [rock, pop 77, ~0.976]
+     Led Zeppelin — Stairway to Heaven - Remaster   [rock, pop 80, ~0.975]
+     Jimi Hendrix — All Along the Watchtower   [album rock, pop 75, ~0.973]
+     The Doors — Riders on the Storm   [rock, pop 75, ~0.971]
+     The Who — Baba O'Riley   [rock, pop 76, ~0.970]
+     The Police — Roxanne   [rock, pop 79, ~0.983]
+     The Rolling Stones — Start Me Up - Remastered 2009   [rock, pop 78, ~0.977]
+     Electric Light Orchestra — Don't Bring Me Down   [rock, pop 78, ~0.977]
+     David Bowie — Heroes - 2017 Remaster   [rock, pop 75, ~0.976]
+
+=== Queen  [region GB]  liked-as "Queen"
+  seed in graph: Queen / GB / conf 0.94 / pop 44 / 0383dadf-2a4e-4d10-a46a-e9e041da8eb3
+  seed sound: yes
+    NB	Queen	David Bowie	LB	0.976	rock	people 1
+    NB	Queen	The Rolling Stones	LB	0.977	rock	people 1
+    NB	Queen	Radiohead	LB	0.801	rock	people 1
+    NB	Queen	The Who	LB	0.970	rock	people 1
+    NB	Queen	Fleetwood Mac	LB	0.968	rock	people 1
+    NB	Queen	Black Sabbath	LB	0.743	hard rock	people 1
+    NB	Queen	The Cure	LB	0.776	uk post-punk	people 1
+    NB	Queen	Deep Purple	LB	0.927	album rock	people 1
+    NB	Queen	Oasis	LB	0.801	permanent wave	people 1
+    NB	Queen	Eric Clapton	LB	0.959	classic rock	people 1
+    NB	Queen	Arctic Monkeys	LB	0.687	permanent wave	people 1
+    NB	Queen	Franz Ferdinand	LB	0.616	scottish rock	people 1
+    NB	Queen	Eurythmics	LB	0.763	new wave pop	people 1
+    NB	Queen	Electric Light Orchestra	LB	0.977	rock	people 1
+    NB	Queen	Muse	LB	0.737	permanent wave	people 1
+    NB	Queen	Gorillaz	LB	0.628	rock	people 1
+    NB	Queen	Ozzy Osbourne	LB	0.835	hard rock	people 1
+    NB	Queen	The Police	LB	0.983	rock	people 1
+    NB	Queen	Depeche Mode	LB	0.788	new wave	people 1
+    NB	Queen	Jimi Hendrix	LB	0.973	album rock	people 1
+    NB	Queen	Genesis	LB	0.954	rock	people 1
+    NB	Queen	Led Zeppelin	LB	0.975	rock	people 1
+    NB	Queen	Phil Collins	LB	0.862	soft rock	people 1
+    NB	Queen	Bee Gees	LB	0.807	soft rock	people 1
+    NB	Queen	AC/DC	LB	0.927	australian rock	people 1
+    NB	Queen	Red Hot Chili Peppers	LB	0.758	permanent wave	people 1
+    NB	Queen	Guns N’ Roses	LB	0.883	hard rock	people 1
+    NB	Queen	Michael Jackson	LB	0.106	soul	people 2
+    NB	Queen	Metallica	LB	0.577	hard rock	people 1
+    NB	Queen	R.E.M.	LB	0.743	athens indie	people 1
+    NB	Queen	The Doors	LB	0.971	rock	people 1
+    NB	Queen	Green Day	LB	0.748	permanent wave	people 1
+    NB	Queen	Foo Fighters	LB	0.692	permanent wave	people 1
+    NB	Queen	Linkin Park	LB	0.558	alternative metal	people 1
+    NB	Queen	The Killers	LB	0.728	permanent wave	people 1
+    NB	Queen	The White Stripes	LB	0.778	modern blues rock	people 1
+    NB	Queen	Bruce Springsteen	LB	0.962	rock	people 1
+    NB	Queen	Simon & Garfunkel	LB	0.938	classic rock	people 1
+  graph neighbours (38): David Bowie(LB 1.00 ~0.976), The Rolling Stones(LB 1.00 ~0.977), Radiohead(LB 1.00 ~0.801), The Who(LB 1.00 ~0.970), Fleetwood Mac(LB 1.00 ~0.968), Black Sabbath(LB 1.00 ~0.743), The Cure(LB 1.00 ~0.776), Deep Purple(LB 1.00 ~0.927), Oasis(LB 1.00 ~0.801), Eric Clapton(LB 1.00 ~0.959), Arctic Monkeys(LB 1.00 ~0.687), Franz Ferdinand(LB 1.00 ~0.616), Eurythmics(LB 1.00 ~0.763), Electric Light Orchestra(LB 1.00 ~0.977), Muse(LB 1.00 ~0.737), Gorillaz(LB 1.00 ~0.628), Ozzy Osbourne(LB 1.00 ~0.835), The Police(LB 1.00 ~0.983), Depeche Mode(LB 1.00 ~0.788), Jimi Hendrix(LB 1.00 ~0.973), Genesis(LB 1.00 ~0.954), Led Zeppelin(LB 1.00 ~0.975), Phil Collins(LB 1.00 ~0.862), Bee Gees(LB 1.00 ~0.807), AC/DC(LB 1.00 ~0.927), Red Hot Chili Peppers(LB 1.00 ~0.758), Guns N’ Roses(LB 1.00 ~0.883), Michael Jackson(LB 1.00 ~0.106), Metallica(LB 1.00 ~0.577), R.E.M.(LB 1.00 ~0.743), The Doors(LB 1.00 ~0.971), Green Day(LB 1.00 ~0.748), Foo Fighters(LB 1.00 ~0.692), Linkin Park(LB 1.00 ~0.558), The Killers(LB 1.00 ~0.728), The White Stripes(LB 1.00 ~0.778), Bruce Springsteen(LB 1.00 ~0.962), Simon & Garfunkel(LB 1.00 ~0.938)
+  -> Because you like Queen  |  People who listen to Queen also play these  (12 rows)
+     The Police — Every Breath You Take   [rock, pop 90, ~0.983]
+     The Rolling Stones — Paint It, Black   [rock, pop 82, ~0.977]
+     Electric Light Orchestra — Mr. Blue Sky   [rock, pop 79, ~0.977]
+     David Bowie — Starman - 2012 Remaster   [rock, pop 77, ~0.976]
+     Led Zeppelin — Stairway to Heaven - Remaster   [rock, pop 80, ~0.975]
+     Jimi Hendrix — All Along the Watchtower   [album rock, pop 75, ~0.973]
+     The Doors — Riders on the Storm   [rock, pop 75, ~0.971]
+     The Who — Baba O'Riley   [rock, pop 76, ~0.970]
+     The Police — Roxanne   [rock, pop 79, ~0.983]
+     The Rolling Stones — Start Me Up - Remastered 2009   [rock, pop 78, ~0.977]
+     Electric Light Orchestra — Don't Bring Me Down   [rock, pop 78, ~0.977]
+     David Bowie — Heroes - 2017 Remaster   [rock, pop 75, ~0.976]
+
+=== EXO  [region US]  liked-as "EXO"
+  seed in graph: EXO / KR / conf 0.94 / pop 6 / b3785a55-2cf6-497d-b8e3-cfa21a36f997
+  seed sound: yes
+    NB	EXO	BIGBANG	LB	0.997	k-pop	people 2
+    NB	EXO	Girls’ Generation	LB	0.952	k-pop	people 1
+    NB	EXO	BTS	LB	0.964	pop	people 1
+  graph neighbours (4): BIGBANG(LB 1.00 ~0.997), Girls’ Generation(LB 1.00 ~0.952), BTS(LB 1.00 ~0.964), 東方神起(LB 1.00 ~-nocat)
+  -> Because you like EXO  |  People who listen to EXO also play these  (6 rows)
+     BIGBANG — BANG BANG BANG   [k-pop, pop 79, ~0.997]
+     BTS — Dynamite   [pop, pop 80, ~0.964]
+     Girls' Generation — Gee   [k-pop, pop 67, ~0.952]
+     BIGBANG — Fantastic Baby   [k-pop, pop 73, ~0.997]
+     BTS — FAKE LOVE   [pop, pop 79, ~0.964]
+     Girls' Generation — Into the New World   [k-pop, pop 63, ~0.952]
+
+=== EXO  [region KR]  liked-as "EXO"
+  seed in graph: EXO / KR / conf 0.94 / pop 6 / b3785a55-2cf6-497d-b8e3-cfa21a36f997
+  seed sound: yes
+    NB	EXO	BIGBANG	LB	0.997	k-pop	people 2
+    NB	EXO	Girls’ Generation	LB	0.952	k-pop	people 1
+    NB	EXO	BTS	LB	0.964	pop	people 1
+  graph neighbours (4): BIGBANG(LB 1.00 ~0.997), Girls’ Generation(LB 1.00 ~0.952), BTS(LB 1.00 ~0.964), 東方神起(LB 1.00 ~-nocat)
+  -> Because you like EXO  |  People who listen to EXO also play these  (6 rows)
+     BIGBANG — BANG BANG BANG   [k-pop, pop 79, ~0.997]
+     BTS — Dynamite   [pop, pop 80, ~0.964]
+     Girls' Generation — Gee   [k-pop, pop 67, ~0.952]
+     BIGBANG — Fantastic Baby   [k-pop, pop 73, ~0.997]
+     BTS — FAKE LOVE   [pop, pop 79, ~0.964]
+     Girls' Generation — Into the New World   [k-pop, pop 63, ~0.952]
+
+=== NCT 127  [region US]  liked-as "NCT 127"
+  seed in graph: NOT FOUND
+  -> Sounds like NCT 127  |  Artists whose sound sits closest to theirs  (12 rows)
+     ONEUS — Valkyrie   [k-pop, pop 47, ~1.000]
+     HIGHLIGHT — BODY   [k-pop, pop 43, ~0.999]
+     AB6IX — BREATHE   [k-pop, pop 46, ~0.999]
+     BIGBANG — Fantastic Baby   [k-pop, pop 73, ~0.999]
+     CNBLUE — I`m Sorry   [k-pop, pop 46, ~0.999]
+     2PM — Heartbeat   [k-pop, pop 50, ~0.999]
+     PENTAGON — DO or NOT   [k-pop, pop 44, ~0.999]
+     B1A4 — Tried to walk   [k-pop, pop 42, ~0.999]
+     SF9 — Good Guy   [k-pop, pop 47, ~0.999]
+     UKISS — Am I too easy?   [k-pop, pop 37, ~0.999]
+     GOT7 — If You Do   [k-pop, pop 63, ~0.999]
+     SHINee — View   [k-pop, pop 58, ~0.999]
+
+=== NCT 127  [region KR]  liked-as "NCT 127"
+  seed in graph: NOT FOUND
+  -> Sounds like NCT 127  |  Artists whose sound sits closest to theirs  (12 rows)
+     ONEUS — Valkyrie   [k-pop, pop 47, ~1.000]
+     HIGHLIGHT — BODY   [k-pop, pop 43, ~0.999]
+     AB6IX — BREATHE   [k-pop, pop 46, ~0.999]
+     BIGBANG — Fantastic Baby   [k-pop, pop 73, ~0.999]
+     CNBLUE — I`m Sorry   [k-pop, pop 46, ~0.999]
+     2PM — Heartbeat   [k-pop, pop 50, ~0.999]
+     PENTAGON — DO or NOT   [k-pop, pop 44, ~0.999]
+     B1A4 — Tried to walk   [k-pop, pop 42, ~0.999]
+     SF9 — Good Guy   [k-pop, pop 47, ~0.999]
+     UKISS — Am I too easy?   [k-pop, pop 37, ~0.999]
+     GOT7 — If You Do   [k-pop, pop 63, ~0.999]
+     SHINee — View   [k-pop, pop 58, ~0.999]
+
+=== ITZY  [region US]  liked-as "ITZY"
+  seed in graph: NOT FOUND
+  -> Sounds like ITZY  |  Artists whose sound sits closest to theirs  (12 rows)
+     Cherry Bullet — Q&A   [k-pop, pop 44, ~1.000]
+     After School — AH   [k-pop, pop 39, ~0.999]
+     Brave Girls — Rollin'   [k-pop, pop 61, ~0.999]
+     MOMOLAND — Ready Or Not   [k-pop, pop 38, ~0.999]
+     Weki Meki — Siesta   [k-pop, pop 39, ~0.999]
+     9MUSES — News   [k-pop, pop 36, ~0.999]
+     NewJeans — How Sweet   [k-pop girl group, pop 78, ~0.999]
+     4Minute — Huh   [k-pop, pop 40, ~0.999]
+     Brown Eyed Girls — Kill Bill   [k-pop, pop 45, ~0.999]
+     VIVIZ — BOP BOP!   [k-pop, pop 54, ~0.999]
+     SISTAR — Touch my body   [k-pop, pop 58, ~0.999]
+     Orange Caramel — LIPSTICK   [k-pop, pop 45, ~0.999]
+
+=== ITZY  [region KR]  liked-as "ITZY"
+  seed in graph: NOT FOUND
+  -> Sounds like ITZY  |  Artists whose sound sits closest to theirs  (12 rows)
+     Cherry Bullet — Q&A   [k-pop, pop 44, ~1.000]
+     After School — AH   [k-pop, pop 39, ~0.999]
+     Brave Girls — Rollin'   [k-pop, pop 61, ~0.999]
+     MOMOLAND — Ready Or Not   [k-pop, pop 38, ~0.999]
+     Weki Meki — Siesta   [k-pop, pop 39, ~0.999]
+     9MUSES — News   [k-pop, pop 36, ~0.999]
+     NewJeans — How Sweet   [k-pop girl group, pop 78, ~0.999]
+     4Minute — Huh   [k-pop, pop 40, ~0.999]
+     Brown Eyed Girls — Kill Bill   [k-pop, pop 45, ~0.999]
+     VIVIZ — BOP BOP!   [k-pop, pop 54, ~0.999]
+     SISTAR — Touch my body   [k-pop, pop 58, ~0.999]
+     Orange Caramel — LIPSTICK   [k-pop, pop 45, ~0.999]
+
+=== Red Velvet  [region US]  liked-as "Red Velvet"
+  seed in graph: Red Velvet / KR / conf 0.94 / pop 7 / 4f0cb3b7-6c06-4317-ae35-ddf3106a17ee
+  seed sound: yes
+    NB	Red Velvet	BIGBANG	LB	0.951	k-pop	people 2
+    NB	Red Velvet	Girls’ Generation	LB	0.991	k-pop	people 1
+    NB	Red Velvet	BTS	LB	0.971	pop	people 1
+    NB	Red Velvet	SEULGI	st	0.943	k-pop	people 1
+  graph neighbours (5): BIGBANG(LB 1.00 ~0.951), Girls’ Generation(LB 1.00 ~0.991), BTS(LB 1.00 ~0.971), 東方神起(LB 1.00 ~-nocat), SEULGI(st 0.38 ~0.943)
+  -> Because you like Red Velvet  |  What listeners of Red Velvet play, and artists linked to them  (8 rows)
+     Girls' Generation — Gee   [k-pop, pop 67, ~0.991]
+     BTS — Dynamite   [pop, pop 80, ~0.971]
+     BIGBANG — BANG BANG BANG   [k-pop, pop 79, ~0.951]
+     SEULGI — Baby, Not Baby   [k-pop, pop 72, ~0.943]
+     Girls' Generation — Into the New World   [k-pop, pop 63, ~0.991]
+     BTS — FAKE LOVE   [pop, pop 79, ~0.971]
+     BIGBANG — Fantastic Baby   [k-pop, pop 73, ~0.951]
+     SEULGI — 28 Reasons   [k-pop, pop 65, ~0.943]
+
+=== Red Velvet  [region KR]  liked-as "Red Velvet"
+  seed in graph: Red Velvet / KR / conf 0.94 / pop 7 / 4f0cb3b7-6c06-4317-ae35-ddf3106a17ee
+  seed sound: yes
+    NB	Red Velvet	BIGBANG	LB	0.951	k-pop	people 2
+    NB	Red Velvet	Girls’ Generation	LB	0.991	k-pop	people 1
+    NB	Red Velvet	BTS	LB	0.971	pop	people 1
+    NB	Red Velvet	SEULGI	st	0.943	k-pop	people 1
+  graph neighbours (5): BIGBANG(LB 1.00 ~0.951), Girls’ Generation(LB 1.00 ~0.991), BTS(LB 1.00 ~0.971), 東方神起(LB 1.00 ~-nocat), SEULGI(st 0.38 ~0.943)
+  -> Because you like Red Velvet  |  What listeners of Red Velvet play, and artists linked to them  (8 rows)
+     Girls' Generation — Gee   [k-pop, pop 67, ~0.991]
+     BTS — Dynamite   [pop, pop 80, ~0.971]
+     BIGBANG — BANG BANG BANG   [k-pop, pop 79, ~0.951]
+     SEULGI — Baby, Not Baby   [k-pop, pop 72, ~0.943]
+     Girls' Generation — Into the New World   [k-pop, pop 63, ~0.991]
+     BTS — FAKE LOVE   [pop, pop 79, ~0.971]
+     BIGBANG — Fantastic Baby   [k-pop, pop 73, ~0.951]
+     SEULGI — 28 Reasons   [k-pop, pop 65, ~0.943]
+
+=== Girls' Generation  [region US]  liked-as "Girls' Generation"
+  seed in graph: Girls’ Generation / KR / conf 0.94 / pop 11 / b7442f18-d9be-4185-8b51-482510046156
+  seed sound: yes
+    NB	Girls' Generation	2NE1	LB	0.972	dance pop	people 1
+    NB	Girls' Generation	BIGBANG	LB	0.949	k-pop	people 2
+    NB	Girls' Generation	SISTAR	LB	0.992	k-pop	people 1
+    NB	Girls' Generation	MAMAMOO	LB	0.997	k-pop	people 1
+    NB	Girls' Generation	IU	LB	0.983	pop	people 1
+    NB	Girls' Generation	After School	LB	0.999	k-pop	people 1
+    NB	Girls' Generation	TAEYANG	LB	0.701	korean r&b	people 1
+    NB	Girls' Generation	f(x)	LB	0.998	k-pop	people 1
+    NB	Girls' Generation	Red Velvet	LB	0.991	k-pop girl group	people 1
+    NB	Girls' Generation	TWICE	LB	0.975	pop	people 2
+    NB	Girls' Generation	BLACKPINK	LB	0.977	pop	people 1
+    NB	Girls' Generation	EXID	LB	0.997	k-pop	people 1
+    NB	Girls' Generation	SHINee	LB	0.953	k-pop	people 1
+    NB	Girls' Generation	EXO	LB	0.952	k-pop	people 3
+    NB	Girls' Generation	KARA	LB	0.995	k-pop	people 3
+    NB	Girls' Generation	4minute	LB	0.992	k-pop	people 1
+    NB	Girls' Generation	T‐ARA	LB	0.996	k-pop	people 1
+    NB	Girls' Generation	BTS	LB	0.984	pop	people 1
+    NB	Girls' Generation	BoA	LB	0.944	k-pop	people 3
+    NB	Girls' Generation	AOA	LB	0.994	k-pop	people 1
+    NB	Girls' Generation	Brown Eyed Girls	LB	0.992	k-pop	people 1
+    NB	Girls' Generation	SUNMI	LB	0.943	k-pop	people 1
+    NB	Girls' Generation	Ariana Grande	LB	0.842	pop	people 1
+    NB	Girls' Generation	Lana Del Rey	LB	0.621	pop	people 1
+    NB	Girls' Generation	Linkin Park	LB	0.080	alternative metal	people 1
+    NB	Girls' Generation	Michael Jackson	LB	0.484	soul	people 2
+    NB	Girls' Generation	Coldplay	LB	0.637	permanent wave	people 1
+    NB	Girls' Generation	BABYMETAL	LB	0.133	kawaii metal	people 1
+    NB	Girls' Generation	Perfume	LB	0.172	bitpop	people 1
+  graph neighbours (34): 2NE1(LB 1.00 ~0.972), BIGBANG(LB 1.00 ~0.949), SISTAR(LB 1.00 ~0.992), MAMAMOO(LB 1.00 ~0.997), IU(LB 1.00 ~0.983), After School(LB 1.00 ~0.999), TAEYANG(LB 1.00 ~0.701), Nine Muses(LB 1.00 ~-nocat), 이달의 소녀(LB 1.00 ~-nocat), f(x)(LB 1.00 ~0.998), Red Velvet(LB 1.00 ~0.991), TWICE(LB 1.00 ~0.975), BLACKPINK(LB 1.00 ~0.977), EXID(LB 1.00 ~0.997), SHINee(LB 1.00 ~0.953), EXO(LB 1.00 ~0.952), KARA(LB 1.00 ~0.995), 4minute(LB 1.00 ~0.992), T‐ARA(LB 1.00 ~0.996), BTS(LB 1.00 ~0.984), BoA(LB 1.00 ~0.944), AOA(LB 1.00 ~0.994), Brown Eyed Girls(LB 1.00 ~0.992), SUNMI(LB 1.00 ~0.943), Ariana Grande(LB 1.00 ~0.842), Lana Del Rey(LB 1.00 ~0.621), Linkin Park(LB 1.00 ~0.080), Michael Jackson(LB 1.00 ~0.484), Coldplay(LB 1.00 ~0.637), 浜崎あゆみ(LB 1.00 ~-nocat), BABYMETAL(LB 1.00 ~0.133), Perfume(LB 1.00 ~0.172), 宇多田ヒカル(LB 1.00 ~-nocat), 東方神起(LB 1.00 ~-nocat)
+  -> Because you like Girls’ Generation  |  People who listen to Girls’ Generation also play these  (12 rows)
+     After School — bang   [k-pop, pop 49, ~0.999]
+     f(x) — 4 Walls   [k-pop, pop 59, ~0.998]
+     MAMAMOO — HIP   [k-pop, pop 65, ~0.997]
+     EXID — Up & Down   [k-pop, pop 60, ~0.997]
+     T-ARA — Roly-Poly   [k-pop, pop 57, ~0.996]
+     KARA — Mr.   [k-pop, pop 53, ~0.995]
+     AOA — Miniskirt   [k-pop, pop 70, ~0.994]
+     4Minute — Crazy   [k-pop, pop 60, ~0.992]
+     After School — Because of you   [k-pop, pop 49, ~0.999]
+     f(x) — 첫 사랑니 (Rum Pum Pum Pum)   [k-pop, pop 56, ~0.998]
+     MAMAMOO — Egotistic   [k-pop, pop 60, ~0.997]
+     EXID — DDD   [k-pop, pop 53, ~0.997]
+
+=== Girls' Generation  [region KR]  liked-as "Girls' Generation"
+  seed in graph: Girls’ Generation / KR / conf 0.94 / pop 11 / b7442f18-d9be-4185-8b51-482510046156
+  seed sound: yes
+    NB	Girls' Generation	2NE1	LB	0.972	dance pop	people 1
+    NB	Girls' Generation	BIGBANG	LB	0.949	k-pop	people 2
+    NB	Girls' Generation	SISTAR	LB	0.992	k-pop	people 1
+    NB	Girls' Generation	MAMAMOO	LB	0.997	k-pop	people 1
+    NB	Girls' Generation	IU	LB	0.983	pop	people 1
+    NB	Girls' Generation	After School	LB	0.999	k-pop	people 1
+    NB	Girls' Generation	TAEYANG	LB	0.701	korean r&b	people 1
+    NB	Girls' Generation	f(x)	LB	0.998	k-pop	people 1
+    NB	Girls' Generation	Red Velvet	LB	0.991	k-pop girl group	people 1
+    NB	Girls' Generation	TWICE	LB	0.975	pop	people 2
+    NB	Girls' Generation	BLACKPINK	LB	0.977	pop	people 1
+    NB	Girls' Generation	EXID	LB	0.997	k-pop	people 1
+    NB	Girls' Generation	SHINee	LB	0.953	k-pop	people 1
+    NB	Girls' Generation	EXO	LB	0.952	k-pop	people 3
+    NB	Girls' Generation	KARA	LB	0.995	k-pop	people 3
+    NB	Girls' Generation	4minute	LB	0.992	k-pop	people 1
+    NB	Girls' Generation	T‐ARA	LB	0.996	k-pop	people 1
+    NB	Girls' Generation	BTS	LB	0.984	pop	people 1
+    NB	Girls' Generation	BoA	LB	0.944	k-pop	people 3
+    NB	Girls' Generation	AOA	LB	0.994	k-pop	people 1
+    NB	Girls' Generation	Brown Eyed Girls	LB	0.992	k-pop	people 1
+    NB	Girls' Generation	SUNMI	LB	0.943	k-pop	people 1
+    NB	Girls' Generation	Ariana Grande	LB	0.842	pop	people 1
+    NB	Girls' Generation	Lana Del Rey	LB	0.621	pop	people 1
+    NB	Girls' Generation	Linkin Park	LB	0.080	alternative metal	people 1
+    NB	Girls' Generation	Michael Jackson	LB	0.484	soul	people 2
+    NB	Girls' Generation	Coldplay	LB	0.637	permanent wave	people 1
+    NB	Girls' Generation	BABYMETAL	LB	0.133	kawaii metal	people 1
+    NB	Girls' Generation	Perfume	LB	0.172	bitpop	people 1
+  graph neighbours (34): 2NE1(LB 1.00 ~0.972), BIGBANG(LB 1.00 ~0.949), SISTAR(LB 1.00 ~0.992), MAMAMOO(LB 1.00 ~0.997), IU(LB 1.00 ~0.983), After School(LB 1.00 ~0.999), TAEYANG(LB 1.00 ~0.701), Nine Muses(LB 1.00 ~-nocat), 이달의 소녀(LB 1.00 ~-nocat), f(x)(LB 1.00 ~0.998), Red Velvet(LB 1.00 ~0.991), TWICE(LB 1.00 ~0.975), BLACKPINK(LB 1.00 ~0.977), EXID(LB 1.00 ~0.997), SHINee(LB 1.00 ~0.953), EXO(LB 1.00 ~0.952), KARA(LB 1.00 ~0.995), 4minute(LB 1.00 ~0.992), T‐ARA(LB 1.00 ~0.996), BTS(LB 1.00 ~0.984), BoA(LB 1.00 ~0.944), AOA(LB 1.00 ~0.994), Brown Eyed Girls(LB 1.00 ~0.992), SUNMI(LB 1.00 ~0.943), Ariana Grande(LB 1.00 ~0.842), Lana Del Rey(LB 1.00 ~0.621), Linkin Park(LB 1.00 ~0.080), Michael Jackson(LB 1.00 ~0.484), Coldplay(LB 1.00 ~0.637), 浜崎あゆみ(LB 1.00 ~-nocat), BABYMETAL(LB 1.00 ~0.133), Perfume(LB 1.00 ~0.172), 宇多田ヒカル(LB 1.00 ~-nocat), 東方神起(LB 1.00 ~-nocat)
+  -> Because you like Girls’ Generation  |  People who listen to Girls’ Generation also play these  (12 rows)
+     After School — bang   [k-pop, pop 49, ~0.999]
+     f(x) — 4 Walls   [k-pop, pop 59, ~0.998]
+     MAMAMOO — HIP   [k-pop, pop 65, ~0.997]
+     EXID — Up & Down   [k-pop, pop 60, ~0.997]
+     T-ARA — Roly-Poly   [k-pop, pop 57, ~0.996]
+     KARA — Mr.   [k-pop, pop 53, ~0.995]
+     AOA — Miniskirt   [k-pop, pop 70, ~0.994]
+     4Minute — Crazy   [k-pop, pop 60, ~0.992]
+     After School — Because of you   [k-pop, pop 49, ~0.999]
+     f(x) — 첫 사랑니 (Rum Pum Pum Pum)   [k-pop, pop 56, ~0.998]
+     MAMAMOO — Egotistic   [k-pop, pop 60, ~0.997]
+     EXID — DDD   [k-pop, pop 53, ~0.997]
+
+=== Wu-Tang Clan  [region US]  liked-as "Wu-Tang Clan"
+  seed in graph: NOT FOUND
+  -> Sounds like Wu-Tang Clan  |  Artists whose sound sits closest to theirs  (12 rows)
+     Busta Rhymes — Scenario (feat. Busta Rhymes, Dinco D & Charlie Brown) - LP Mix   [hip hop, pop 59, ~0.996]
+     Warren G — What's Love Got To Do With It   [hip hop, pop 51, ~0.996]
+     The Notorious B.I.G. — Hypnotize - 2007 Remaster   [east coast hip hop, pop 71, ~0.995]
+     Salaam Remi — Here Comes The Hotstepper - Heartical Mix   [hip hop, pop 47, ~0.995]
+     LilBuckss — CERTIFIED CAMPER   [philly drill, pop 38, ~0.994]
+     Kendrick Lamar — tv off (feat. lefty gunplay)   [hip hop, pop 94, ~0.994]
+     Dr. Dre — Hello   [gangster rap, pop 66, ~0.994]
+     Coolio — 1, 2, 3, 4 (Sumpin' New)   [gangster rap, pop 53, ~0.994]
+     Mista Grimm — Indo Smoke   [g funk, pop 40, ~0.994]
+     Westside Connection — Bow Down   [west coast rap, pop 54, ~0.994]
+     Geto Boys — Fuck a War   [gangster rap, pop 41, ~0.993]
+     Ice Cube — Why We Thugs   [gangster rap, pop 67, ~0.993]
+
+=== Fleetwood Mac  [region US]  liked-as "Fleetwood Mac"
+  seed in graph: Fleetwood Mac / GB / conf 0.94 / pop 17 / bd13909f-1c29-4c27-a874-d4aaf27c5b1a
+  seed sound: yes
+    NB	Fleetwood Mac	The Alan Parsons Project	LB	0.940	art rock	people 1
+    NB	Fleetwood Mac	Gorillaz	LB	0.575	rock	people 1
+    NB	Fleetwood Mac	Simple Minds	LB	0.848	scottish new wave	people 1
+    NB	Fleetwood Mac	Yes	LB	0.953	rock	people 4
+    NB	Fleetwood Mac	Jethro Tull	LB	0.942	art rock	people 1
+    NB	Fleetwood Mac	Adele	LB	0.172	british soul	people 2
+    NB	Fleetwood Mac	Pet Shop Boys	LB	0.690	new romantic	people 1
+    NB	Fleetwood Mac	Bee Gees	LB	0.885	soft rock	people 1
+    NB	Fleetwood Mac	Amy Winehouse	LB	0.227	neo soul	people 1
+    NB	Fleetwood Mac	PJ Harvey	LB	0.659	piano rock	people 1
+    NB	Fleetwood Mac	Coldplay	LB	0.540	permanent wave	people 1
+    NB	Fleetwood Mac	New Order	LB	0.578	new wave	people 1
+    NB	Fleetwood Mac	Marillion	LB	0.552	progressive rock	people 1
+    NB	Fleetwood Mac	David Bowie	LB	0.953	rock	people 1
+    NB	Fleetwood Mac	The Who	LB	0.974	rock	people 1
+    NB	Fleetwood Mac	Radiohead	LB	0.712	rock	people 1
+    NB	Fleetwood Mac	Black Sabbath	LB	0.734	hard rock	people 1
+    NB	Fleetwood Mac	The Smiths	LB	0.694	uk post-punk	people 1
+    NB	Fleetwood Mac	Arctic Monkeys	LB	0.598	permanent wave	people 1
+    NB	Fleetwood Mac	Muse	LB	0.670	permanent wave	people 1
+    NB	Fleetwood Mac	Deep Purple	LB	0.912	album rock	people 1
+    NB	Fleetwood Mac	Siouxsie and the Banshees	LB	0.515	uk post-punk	people 1
+    NB	Fleetwood Mac	Eric Clapton	LB	0.959	classic rock	people 1
+    NB	Fleetwood Mac	Eurythmics	LB	0.737	new wave pop	people 1
+    NB	Fleetwood Mac	The Black Keys	LB	0.597	rock	people 1
+    NB	Fleetwood Mac	R.E.M.	LB	0.680	athens indie	people 1
+    NB	Fleetwood Mac	Guns N’ Roses	LB	0.856	hard rock	people 1
+    NB	Fleetwood Mac	Michael Jackson	LB	0.215	soul	people 2
+    NB	Fleetwood Mac	Cher	LB	0.255	junior songfestival	people 2
+    NB	Fleetwood Mac	Scorpions	LB	0.756	hard rock	people 1
+    NB	Fleetwood Mac	Bob Marley & The Wailers	LB	0.049	roots reggae	people 1
+    NB	Fleetwood Mac	Ramones	LB	0.629	alternative rock	people 1
+    NB	Fleetwood Mac	Tom Petty and the Heartbreakers	LB	0.988	rock	people 1
+    NB	Fleetwood Mac	Lynyrd Skynyrd	LB	0.964	rock	people 1
+    NB	Fleetwood Mac	Heart	LB	0.986	rock	people 4
+    NB	Fleetwood Mac	Tori Amos	LB	0.660	lilith	people 1
+    NB	Fleetwood Mac	The Beach Boys	LB	0.969	classic rock	people 1
+    NB	Fleetwood Mac	Johnny Cash	LB	0.656	outlaw country	people 1
+    NB	Fleetwood Mac	Garbage	LB	0.561	permanent wave	people 1
+    NB	Fleetwood Mac	The Cranberries	LB	0.658	irish rock	people 1
+  graph neighbours (40): The Alan Parsons Project(LB 1.00 ~0.940), Gorillaz(LB 1.00 ~0.575), Simple Minds(LB 1.00 ~0.848), Yes(LB 1.00 ~0.953), Jethro Tull(LB 1.00 ~0.942), Adele(LB 1.00 ~0.172), Pet Shop Boys(LB 1.00 ~0.690), Bee Gees(LB 1.00 ~0.885), Amy Winehouse(LB 1.00 ~0.227), PJ Harvey(LB 1.00 ~0.659), Coldplay(LB 1.00 ~0.540), New Order(LB 1.00 ~0.578), Marillion(LB 1.00 ~0.552), David Bowie(LB 1.00 ~0.953), The Who(LB 1.00 ~0.974), Radiohead(LB 1.00 ~0.712), Black Sabbath(LB 1.00 ~0.734), The Smiths(LB 1.00 ~0.694), Arctic Monkeys(LB 1.00 ~0.598), Muse(LB 1.00 ~0.670), Deep Purple(LB 1.00 ~0.912), Siouxsie and the Banshees(LB 1.00 ~0.515), Eric Clapton(LB 1.00 ~0.959), Eurythmics(LB 1.00 ~0.737), The Black Keys(LB 1.00 ~0.597), R.E.M.(LB 1.00 ~0.680), Guns N’ Roses(LB 1.00 ~0.856), Michael Jackson(LB 1.00 ~0.215), Cher(LB 1.00 ~0.255), Scorpions(LB 1.00 ~0.756), Bob Marley & The Wailers(LB 1.00 ~0.049), Ramones(LB 1.00 ~0.629), Tom Petty and the Heartbreakers(LB 1.00 ~0.988), Lynyrd Skynyrd(LB 1.00 ~0.964), Heart(LB 1.00 ~0.986), Tori Amos(LB 1.00 ~0.660), The Beach Boys(LB 1.00 ~0.969), Johnny Cash(LB 1.00 ~0.656), Garbage(LB 1.00 ~0.561), The Cranberries(LB 1.00 ~0.658)
+  -> Because you like Fleetwood Mac  |  People who listen to Fleetwood Mac also play these  (12 rows)
+     Tom Petty and the Heartbreakers — Mary Jane's Last Dance   [rock, pop 76, ~0.988]
+     Heart — Alone   [rock, pop 76, ~0.986]
+     The Who — Baba O'Riley   [rock, pop 76, ~0.974]
+     The Beach Boys — Good Vibrations - Remastered 2001   [classic rock, pop 72, ~0.969]
+     Lynyrd Skynyrd — Sweet Home Alabama   [rock, pop 81, ~0.964]
+     Eric Clapton — Wonderful Tonight   [classic rock, pop 76, ~0.959]
+     David Bowie — Starman - 2012 Remaster   [rock, pop 77, ~0.953]
+     Yes — Owner of a Lonely Heart   [rock, pop 74, ~0.953]
+     Tom Petty and the Heartbreakers — Learning To Fly   [rock, pop 73, ~0.988]
+     Heart — Barracuda   [rock, pop 74, ~0.986]
+     The Who — Behind Blue Eyes   [rock, pop 70, ~0.974]
+     The Beach Boys — Kokomo   [classic rock, pop 71, ~0.969]
+
+=== The Velvet Underground  [region US]  liked-as "The Velvet Underground"
+  seed in graph: The Velvet Underground / US / conf 0.94 / pop 16 / 94b0fb9d-a066-4823-b2ec-af1d324bcfcf
+  seed sound: yes
+    NB	The Velvet Underground	Marvin Gaye	LB	0.062	neo soul	people 1
+    NB	The Velvet Underground	Lou Reed	LB	0.904	rock	people 1
+    NB	The Velvet Underground	The Doors	LB	0.726	rock	people 1
+    NB	The Velvet Underground	Pixies	LB	0.966	alternative rock	people 1
+    NB	The Velvet Underground	Talking Heads	LB	0.917	permanent wave	people 1
+    NB	The Velvet Underground	The Beach Boys	LB	0.766	classic rock	people 1
+    NB	The Velvet Underground	R.E.M.	LB	0.960	athens indie	people 1
+    NB	The Velvet Underground	The Smashing Pumpkins	LB	0.878	alternative rock	people 1
+    NB	The Velvet Underground	Ramones	LB	0.870	alternative rock	people 1
+    NB	The Velvet Underground	Tom Waits	LB	0.686	singer-songwriter	people 1
+    NB	The Velvet Underground	Johnny Cash	LB	0.543	outlaw country	people 1
+    NB	The Velvet Underground	Modest Mouse	LB	0.708	indie rock	people 1
+    NB	The Velvet Underground	Nine Inch Nails	LB	0.588	industrial	people 1
+    NB	The Velvet Underground	The Black Keys	LB	0.792	rock	people 1
+    NB	The Velvet Underground	Beastie Boys	LB	0.395	rap	people 1
+    NB	The Velvet Underground	The Killers	LB	0.912	permanent wave	people 1
+    NB	The Velvet Underground	MGMT	LB	0.803	indie rock	people 1
+    NB	The Velvet Underground	Frank Zappa	LB	0.589	psychedelic rock	people 1
+    NB	The Velvet Underground	Janis Joplin	LB	0.749	rock	people 1
+    NB	The Velvet Underground	Miles Davis	LB	0.071	hard bop	people 1
+    NB	The Velvet Underground	Grateful Dead	LB	0.611	psychedelic rock	people 1
+    NB	The Velvet Underground	They Might Be Giants	LB	0.771	zolo	people 1
+    NB	The Velvet Underground	Animal Collective	LB	0.548	art pop	people 1
+    NB	The Velvet Underground	Willie Nelson	LB	0.384	classic country pop	people 1
+    NB	The Velvet Underground	Yes	LB	0.719	rock	people 4
+    NB	The Velvet Underground	Jethro Tull	LB	0.694	art rock	people 1
+    NB	The Velvet Underground	King Crimson	LB	0.575	art rock	people 1
+    NB	The Velvet Underground	The Beatles	LB	0.697	classic rock	people 1
+    NB	The Velvet Underground	Radiohead	LB	0.972	rock	people 1
+    NB	The Velvet Underground	The Rolling Stones	LB	0.744	rock	people 1
+    NB	The Velvet Underground	Joy Division	LB	0.894	uk post-punk	people 1
+    NB	The Velvet Underground	The Who	LB	0.736	rock	people 1
+    NB	The Velvet Underground	Blur	LB	0.920	permanent wave	people 1
+    NB	The Velvet Underground	U2	LB	0.891	irish rock	people 1
+    NB	The Velvet Underground	Fleetwood Mac	LB	0.754	rock	people 1
+    NB	The Velvet Underground	Belle and Sebastian	LB	0.844	twee pop	people 1
+    NB	The Velvet Underground	Arctic Monkeys	LB	0.862	permanent wave	people 1
+  graph neighbours (37): Marvin Gaye(LB 1.00 ~0.062), Lou Reed(LB 1.00 ~0.904), The Doors(LB 1.00 ~0.726), Pixies(LB 1.00 ~0.966), Talking Heads(LB 1.00 ~0.917), The Beach Boys(LB 1.00 ~0.766), R.E.M.(LB 1.00 ~0.960), The Smashing Pumpkins(LB 1.00 ~0.878), Ramones(LB 1.00 ~0.870), Tom Waits(LB 1.00 ~0.686), Johnny Cash(LB 1.00 ~0.543), Modest Mouse(LB 1.00 ~0.708), Nine Inch Nails(LB 1.00 ~0.588), The Black Keys(LB 1.00 ~0.792), Beastie Boys(LB 1.00 ~0.395), The Killers(LB 1.00 ~0.912), MGMT(LB 1.00 ~0.803), Frank Zappa(LB 1.00 ~0.589), Janis Joplin(LB 1.00 ~0.749), Miles Davis(LB 1.00 ~0.071), Grateful Dead(LB 1.00 ~0.611), They Might Be Giants(LB 1.00 ~0.771), Animal Collective(LB 1.00 ~0.548), Willie Nelson(LB 1.00 ~0.384), Yes(LB 1.00 ~0.719), Jethro Tull(LB 1.00 ~0.694), King Crimson(LB 1.00 ~0.575), The Beatles(LB 1.00 ~0.697), Radiohead(LB 1.00 ~0.972), The Rolling Stones(LB 1.00 ~0.744), Joy Division(LB 1.00 ~0.894), The Who(LB 1.00 ~0.736), Blur(LB 1.00 ~0.920), U2(LB 1.00 ~0.891), Fleetwood Mac(LB 1.00 ~0.754), Belle and Sebastian(LB 1.00 ~0.844), Arctic Monkeys(LB 1.00 ~0.862)
+  -> Because you like The Velvet Underground  |  People who listen to The Velvet Underground also play these  (12 rows)
+     Radiohead — Creep   [rock, pop 89, ~0.972]
+     Pixies — Where Is My Mind? - 2007 Remaster   [alternative rock, pop 78, ~0.966]
+     R.E.M. — Losing My Religion   [athens indie, pop 85, ~0.960]
+     Blur — Song 2 - 2012 Remaster   [permanent wave, pop 80, ~0.920]
+     Talking Heads — Psycho Killer - 2005 Remaster   [permanent wave, pop 74, ~0.917]
+     The Killers — Mr. Brightside   [permanent wave, pop 88, ~0.912]
+     Lou Reed — Walk On the Wild Side   [rock, pop 75, ~0.904]
+     Joy Division — Love Will Tear Us Apart - 2020 Remaster   [uk post-punk, pop 70, ~0.894]
+     Radiohead — No Surprises   [rock, pop 84, ~0.972]
+     Pixies — Here Comes Your Man   [alternative rock, pop 71, ~0.966]
+     R.E.M. — Everybody Hurts   [athens indie, pop 75, ~0.960]
+     Blur — Girls & Boys   [permanent wave, pop 71, ~0.920]
+
+=== Destiny's Child  [region US]  liked-as "Destiny's Child"
+  seed in graph: NOT FOUND
+  -> Sounds like Destiny's Child  |  Artists whose sound sits closest to theirs  (12 rows)
+     Ne-Yo — Closer   [urban contemporary, pop 71, ~0.992]
+     Jennifer Hudson — Love You I Do   [dance pop, pop 47, ~0.991]
+     Jennifer Lopez — Adrenalina (feat. Jennifer Lopez & Ricky Martin)   [pop, pop 65, ~0.984]
+     Ciara — Like a Boy   [urban contemporary, pop 67, ~0.980]
+     Mariah Carey — We Belong Together   [pop, pop 76, ~0.980]
+     Janet Jackson — When I Think Of You   [urban contemporary, pop 57, ~0.978]
+     Danity Kane — Damaged   [urban contemporary, pop 60, ~0.977]
+     t.A.T.u. — All The Things She Said - Sped Up   [dance pop, pop 52, ~0.974]
+     Beyoncé — CUFF IT   [pop, pop 76, ~0.972]
+     The Pussycat Dolls — Hush Hush; Hush Hush / I Will Survive - Medley   [dance pop, pop 60, ~0.968]
+     Normani — Still   [pop, pop 45, ~0.967]
+     Alicia Keys — Finally   [r&b, pop 74, ~0.965]
+
+=== One Direction  [region US]  liked-as "One Direction"
+  seed in graph: NOT FOUND
+  -> Sounds like One Direction  |  Artists whose sound sits closest to theirs  (12 rows)
+     Big Time Rush — Any Kind of Guy   [post-teen pop, pop 59, ~0.995]
+     Cheryl — I Don't Care   [post-teen pop, pop 41, ~0.992]
+     Union J — Carry You   [post-teen pop, pop 39, ~0.992]
+     Cher Lloyd — Sirens   [pop, pop 45, ~0.991]
+     Pixie Lott — All About Tonight   [post-teen pop, pop 53, ~0.989]
+     The Wanted — Glad You Came   [pop, pop 77, ~0.987]
+     Joe Jonas — What This Could Be   [pop, pop 57, ~0.987]
+     PRETTYMUCH — Would You Mind   [post-teen pop, pop 49, ~0.986]
+     Demi Lovato — Give Your Heart a Break   [pop, pop 72, ~0.986]
+     Austin Mahone — Rearview   [pop, pop 42, ~0.986]
+     MKTO — Just Imagine It   [pop, pop 49, ~0.985]
+     The Vamps — Just My Type   [pop, pop 60, ~0.985]
+
+=== One Direction  [region GB]  liked-as "One Direction"
+  seed in graph: NOT FOUND
+  -> Sounds like One Direction  |  Artists whose sound sits closest to theirs  (12 rows)
+     Big Time Rush — Any Kind of Guy   [post-teen pop, pop 59, ~0.995]
+     Cheryl — I Don't Care   [post-teen pop, pop 41, ~0.992]
+     Union J — Carry You   [post-teen pop, pop 39, ~0.992]
+     Cher Lloyd — Sirens   [pop, pop 45, ~0.991]
+     Pixie Lott — All About Tonight   [post-teen pop, pop 53, ~0.989]
+     The Wanted — Glad You Came   [pop, pop 77, ~0.987]
+     Joe Jonas — What This Could Be   [pop, pop 57, ~0.987]
+     PRETTYMUCH — Would You Mind   [post-teen pop, pop 49, ~0.986]
+     Demi Lovato — Give Your Heart a Break   [pop, pop 72, ~0.986]
+     Austin Mahone — Rearview   [pop, pop 42, ~0.986]
+     MKTO — Just Imagine It   [pop, pop 49, ~0.985]
+     The Vamps — Just My Type   [pop, pop 60, ~0.985]
+
+=== Slipknot  [region US]  liked-as "Slipknot"
+  seed in graph: Slipknot / US / conf 0.94 / pop 16 / a466c2a2-6517-42fb-a160-1087c3bafd9f
+  seed sound: yes
+    NB	Slipknot	Megadeth	LB	0.820	metal	people 1
+    NB	Slipknot	Seether	LB	0.936	nu metal	people 1
+    NB	Slipknot	Evanescence	LB	0.972	alternative metal	people 1
+    NB	Slipknot	The Smashing Pumpkins	LB	0.760	alternative rock	people 1
+    NB	Slipknot	Mastodon	LB	0.664	metal	people 1
+    NB	Slipknot	Eminem	LB	0.110	hip hop	people 1
+    NB	Slipknot	Serj Tankian	LB	0.968	alternative metal	people 1
+    NB	Slipknot	Guns N’ Roses	LB	0.800	hard rock	people 1
+    NB	Slipknot	Death	LB	0.585	technical death metal	people 3
+    NB	Slipknot	Thirty Seconds to Mars	LB	0.765	modern rock	people 1
+    NB	Slipknot	Linkin Park	LB	0.990	alternative metal	people 1
+    NB	Slipknot	Skrillex	LB	0.102	brostep	people 1
+    NB	Slipknot	Incubus	LB	0.956	funk metal	people 1
+    NB	Slipknot	Dio	LB	0.854	hard rock	people 2
+    NB	Slipknot	Slayer	LB	0.802	old school thrash	people 1
+    NB	Slipknot	System of a Down	LB	0.998	alternative metal	people 1
+    NB	Slipknot	My Chemical Romance	LB	0.546	modern rock	people 1
+    NB	Slipknot	NOFX	LB	0.448	skate punk	people 1
+    NB	Slipknot	Nine Inch Nails	LB	0.847	industrial	people 1
+    NB	Slipknot	10 Years	LB	0.969	nu metal	people 1
+    NB	Slipknot	Faith No More	LB	0.972	funk metal	people 1
+    NB	Slipknot	Anthrax	LB	0.900	glam metal	people 2
+    NB	Slipknot	KISS	LB	0.704	glam rock	people 1
+    NB	Slipknot	Korn	LB	0.990	funk metal	people 1
+    NB	Slipknot	Radiohead	LB	0.539	rock	people 1
+    NB	Slipknot	Nickelback	LB	0.895	canadian rock	people 1
+    NB	Slipknot	Gorillaz	LB	0.644	rock	people 1
+    NB	Slipknot	Arctic Monkeys	LB	0.575	permanent wave	people 1
+    NB	Slipknot	Coldplay	LB	0.418	permanent wave	people 1
+    NB	Slipknot	The Beatles	LB	0.436	classic rock	people 1
+    NB	Slipknot	The Rolling Stones	LB	0.525	rock	people 1
+    NB	Slipknot	Scorpions	LB	0.682	hard rock	people 1
+    NB	Slipknot	Arch Enemy	LB	0.516	swedish metal	people 1
+    NB	Slipknot	DragonForce	LB	0.408	power metal	people 1
+  graph neighbours (34): Megadeth(LB 1.00 ~0.820), Seether(LB 1.00 ~0.936), Evanescence(LB 1.00 ~0.972), The Smashing Pumpkins(LB 1.00 ~0.760), Mastodon(LB 1.00 ~0.664), Eminem(LB 1.00 ~0.110), Serj Tankian(LB 1.00 ~0.968), Guns N’ Roses(LB 1.00 ~0.800), Death(LB 1.00 ~0.585), Thirty Seconds to Mars(LB 1.00 ~0.765), Linkin Park(LB 1.00 ~0.990), Skrillex(LB 1.00 ~0.102), Incubus(LB 1.00 ~0.956), Dio(LB 1.00 ~0.854), Slayer(LB 1.00 ~0.802), System of a Down(LB 1.00 ~0.998), My Chemical Romance(LB 1.00 ~0.546), NOFX(LB 1.00 ~0.448), Nine Inch Nails(LB 1.00 ~0.847), 10 Years(LB 1.00 ~0.969), Faith No More(LB 1.00 ~0.972), Anthrax(LB 1.00 ~0.900), KISS(LB 1.00 ~0.704), Korn(LB 1.00 ~0.990), Radiohead(LB 1.00 ~0.539), Nickelback(LB 1.00 ~0.895), Gorillaz(LB 1.00 ~0.644), Arctic Monkeys(LB 1.00 ~0.575), Coldplay(LB 1.00 ~0.418), The Beatles(LB 1.00 ~0.436), The Rolling Stones(LB 1.00 ~0.525), Scorpions(LB 1.00 ~0.682), Arch Enemy(LB 1.00 ~0.516), DragonForce(LB 1.00 ~0.408)
+  -> Because you like Slipknot  |  People who listen to Slipknot also play these  (12 rows)
+     System Of A Down — Toxicity   [alternative metal, pop 85, ~0.998]
+     Linkin Park — Numb   [alternative metal, pop 88, ~0.990]
+     Korn — Freak On a Leash   [funk metal, pop 80, ~0.990]
+     Evanescence — Bring Me To Life   [alternative metal, pop 86, ~0.972]
+     Faith No More — Epic   [funk metal, pop 68, ~0.972]
+     10 Years — Wasteland   [nu metal, pop 67, ~0.969]
+     Serj Tankian — Empty Walls   [alternative metal, pop 62, ~0.968]
+     Incubus — Drive   [funk metal, pop 79, ~0.956]
+     System Of A Down — Chop Suey!   [alternative metal, pop 85, ~0.998]
+     Linkin Park — In the End   [alternative metal, pop 88, ~0.990]
+     Korn — Coming Undone   [funk metal, pop 77, ~0.990]
+     Evanescence — Going Under   [alternative metal, pop 78, ~0.972]
+
+=== Arcade Fire  [region US]  liked-as "Arcade Fire"
+  seed in graph: Arcade Fire / CA / conf 0.94 / pop 19 / 52074ba6-e495-4ef3-9bb4-0703888a9f68
+  seed sound: yes
+    NB	Arcade Fire	Feist	LB	0.886	indie pop	people 1
+    NB	Arcade Fire	Crystal Castles	LB	0.595	bitpop	people 1
+    NB	Arcade Fire	Metric	LB	0.878	metropopolis	people 1
+    NB	Arcade Fire	Godspeed You! Black Emperor	LB	0.517	double drumming	people 1
+    NB	Arcade Fire	Radiohead	LB	0.825	rock	people 1
+    NB	Arcade Fire	Arctic Monkeys	LB	0.857	permanent wave	people 1
+    NB	Arcade Fire	The Killers	LB	0.845	permanent wave	people 1
+    NB	Arcade Fire	The Black Keys	LB	0.865	rock	people 1
+    NB	Arcade Fire	David Bowie	LB	0.584	rock	people 1
+    NB	Arcade Fire	R.E.M.	LB	0.832	athens indie	people 1
+    NB	Arcade Fire	Belle and Sebastian	LB	0.905	twee pop	people 1
+    NB	Arcade Fire	The Rolling Stones	LB	0.433	rock	people 1
+    NB	Arcade Fire	Björk	LB	0.735	art pop	people 1
+    NB	Arcade Fire	Led Zeppelin	LB	0.433	rock	people 1
+    NB	Arcade Fire	Red Hot Chili Peppers	LB	0.681	permanent wave	people 1
+    NB	Arcade Fire	Franz Ferdinand	LB	0.902	scottish rock	people 1
+    NB	Arcade Fire	Foo Fighters	LB	0.768	permanent wave	people 1
+    NB	Arcade Fire	Kings of Leon	LB	0.811	rock	people 1
+    NB	Arcade Fire	Talking Heads	LB	0.684	permanent wave	people 1
+    NB	Arcade Fire	The Cure	LB	0.662	uk post-punk	people 1
+    NB	Arcade Fire	U2	LB	0.747	irish rock	people 1
+    NB	Arcade Fire	Muse	LB	0.870	permanent wave	people 1
+    NB	Arcade Fire	Pixies	LB	0.803	alternative rock	people 1
+    NB	Arcade Fire	Vampire Weekend	LB	0.947	indie rock	people 1
+    NB	Arcade Fire	Joy Division	LB	0.740	uk post-punk	people 1
+    NB	Arcade Fire	Bob Dylan	LB	0.465	country rock	people 1
+  graph neighbours (26): Feist(LB 1.00 ~0.886), Crystal Castles(LB 1.00 ~0.595), Metric(LB 1.00 ~0.878), Godspeed You! Black Emperor(LB 1.00 ~0.517), Radiohead(LB 1.00 ~0.825), Arctic Monkeys(LB 1.00 ~0.857), The Killers(LB 1.00 ~0.845), The Black Keys(LB 1.00 ~0.865), David Bowie(LB 1.00 ~0.584), R.E.M.(LB 1.00 ~0.832), Belle and Sebastian(LB 1.00 ~0.905), The Rolling Stones(LB 1.00 ~0.433), Björk(LB 1.00 ~0.735), Led Zeppelin(LB 1.00 ~0.433), Red Hot Chili Peppers(LB 1.00 ~0.681), Franz Ferdinand(LB 1.00 ~0.902), Foo Fighters(LB 1.00 ~0.768), Kings of Leon(LB 1.00 ~0.811), Talking Heads(LB 1.00 ~0.684), The Cure(LB 1.00 ~0.662), U2(LB 1.00 ~0.747), Muse(LB 1.00 ~0.870), Pixies(LB 1.00 ~0.803), Vampire Weekend(LB 1.00 ~0.947), Joy Division(LB 1.00 ~0.740), Bob Dylan(LB 1.00 ~0.465)
+  -> Because you like Arcade Fire  |  People who listen to Arcade Fire also play these  (12 rows)
+     Vampire Weekend — A-Punk   [indie rock, pop 68, ~0.947]
+     Belle and Sebastian — The Boy With the Arab Strap   [twee pop, pop 57, ~0.905]
+     Franz Ferdinand — Take Me Out   [scottish rock, pop 83, ~0.902]
+     Feist — 1234   [indie pop, pop 61, ~0.886]
+     Metric — Black Sheep - Brie Larson Vocal Version   [metropopolis, pop 72, ~0.878]
+     Muse — Supermassive Black Hole   [permanent wave, pop 81, ~0.870]
+     The Black Keys — Lonely Boy - 2021 Remaster   [rock, pop 72, ~0.865]
+     Arctic Monkeys — I Wanna Be Yours   [permanent wave, pop 92, ~0.857]
+     Vampire Weekend — This Life   [indie rock, pop 61, ~0.947]
+     Belle and Sebastian — Get Me Away from Here, I'm Dying   [twee pop, pop 52, ~0.905]
+     Franz Ferdinand — This fffire - New Version   [scottish rock, pop 67, ~0.902]
+     Feist — One Evening   [indie pop, pop 55, ~0.886]
+
+=== Arcade Fire  [region CA]  liked-as "Arcade Fire"
+  seed in graph: Arcade Fire / CA / conf 0.94 / pop 19 / 52074ba6-e495-4ef3-9bb4-0703888a9f68
+  seed sound: yes
+    NB	Arcade Fire	Feist	LB	0.886	indie pop	people 1
+    NB	Arcade Fire	Crystal Castles	LB	0.595	bitpop	people 1
+    NB	Arcade Fire	Metric	LB	0.878	metropopolis	people 1
+    NB	Arcade Fire	Godspeed You! Black Emperor	LB	0.517	double drumming	people 1
+    NB	Arcade Fire	Radiohead	LB	0.825	rock	people 1
+    NB	Arcade Fire	Arctic Monkeys	LB	0.857	permanent wave	people 1
+    NB	Arcade Fire	The Killers	LB	0.845	permanent wave	people 1
+    NB	Arcade Fire	The Black Keys	LB	0.865	rock	people 1
+    NB	Arcade Fire	David Bowie	LB	0.584	rock	people 1
+    NB	Arcade Fire	R.E.M.	LB	0.832	athens indie	people 1
+    NB	Arcade Fire	Belle and Sebastian	LB	0.905	twee pop	people 1
+    NB	Arcade Fire	The Rolling Stones	LB	0.433	rock	people 1
+    NB	Arcade Fire	Björk	LB	0.735	art pop	people 1
+    NB	Arcade Fire	Led Zeppelin	LB	0.433	rock	people 1
+    NB	Arcade Fire	Red Hot Chili Peppers	LB	0.681	permanent wave	people 1
+    NB	Arcade Fire	Franz Ferdinand	LB	0.902	scottish rock	people 1
+    NB	Arcade Fire	Foo Fighters	LB	0.768	permanent wave	people 1
+    NB	Arcade Fire	Kings of Leon	LB	0.811	rock	people 1
+    NB	Arcade Fire	Talking Heads	LB	0.684	permanent wave	people 1
+    NB	Arcade Fire	The Cure	LB	0.662	uk post-punk	people 1
+    NB	Arcade Fire	U2	LB	0.747	irish rock	people 1
+    NB	Arcade Fire	Muse	LB	0.870	permanent wave	people 1
+    NB	Arcade Fire	Pixies	LB	0.803	alternative rock	people 1
+    NB	Arcade Fire	Vampire Weekend	LB	0.947	indie rock	people 1
+    NB	Arcade Fire	Joy Division	LB	0.740	uk post-punk	people 1
+    NB	Arcade Fire	Bob Dylan	LB	0.465	country rock	people 1
+  graph neighbours (26): Feist(LB 1.00 ~0.886), Crystal Castles(LB 1.00 ~0.595), Metric(LB 1.00 ~0.878), Godspeed You! Black Emperor(LB 1.00 ~0.517), Radiohead(LB 1.00 ~0.825), Arctic Monkeys(LB 1.00 ~0.857), The Killers(LB 1.00 ~0.845), The Black Keys(LB 1.00 ~0.865), David Bowie(LB 1.00 ~0.584), R.E.M.(LB 1.00 ~0.832), Belle and Sebastian(LB 1.00 ~0.905), The Rolling Stones(LB 1.00 ~0.433), Björk(LB 1.00 ~0.735), Led Zeppelin(LB 1.00 ~0.433), Red Hot Chili Peppers(LB 1.00 ~0.681), Franz Ferdinand(LB 1.00 ~0.902), Foo Fighters(LB 1.00 ~0.768), Kings of Leon(LB 1.00 ~0.811), Talking Heads(LB 1.00 ~0.684), The Cure(LB 1.00 ~0.662), U2(LB 1.00 ~0.747), Muse(LB 1.00 ~0.870), Pixies(LB 1.00 ~0.803), Vampire Weekend(LB 1.00 ~0.947), Joy Division(LB 1.00 ~0.740), Bob Dylan(LB 1.00 ~0.465)
+  -> Because you like Arcade Fire  |  People who listen to Arcade Fire also play these  (12 rows)
+     Vampire Weekend — A-Punk   [indie rock, pop 68, ~0.947]
+     Belle and Sebastian — The Boy With the Arab Strap   [twee pop, pop 57, ~0.905]
+     Franz Ferdinand — Take Me Out   [scottish rock, pop 83, ~0.902]
+     Feist — 1234   [indie pop, pop 61, ~0.886]
+     Metric — Black Sheep - Brie Larson Vocal Version   [metropopolis, pop 72, ~0.878]
+     Muse — Supermassive Black Hole   [permanent wave, pop 81, ~0.870]
+     The Black Keys — Lonely Boy - 2021 Remaster   [rock, pop 72, ~0.865]
+     Arctic Monkeys — I Wanna Be Yours   [permanent wave, pop 92, ~0.857]
+     Vampire Weekend — This Life   [indie rock, pop 61, ~0.947]
+     Belle and Sebastian — Get Me Away from Here, I'm Dying   [twee pop, pop 52, ~0.905]
+     Franz Ferdinand — This fffire - New Version   [scottish rock, pop 67, ~0.902]
+     Feist — One Evening   [indie pop, pop 55, ~0.886]
+
+=== Linkin Park  [region US]  liked-as "Linkin Park"
+  seed in graph: Linkin Park / US / conf 0.94 / pop 42 / f59c5520-5f46-4d2c-b2c4-822eabf53419
+  seed sound: yes
+    NB	Linkin Park	T.I.	LB	0.093	trap	people 2
+    NB	Linkin Park	Seether	LB	0.955	nu metal	people 1
+    NB	Linkin Park	Tom Petty and the Heartbreakers	LB	0.524	rock	people 1
+    NB	Linkin Park	Garbage	LB	0.600	permanent wave	people 1
+    NB	Linkin Park	No Doubt	LB	0.627	pop rock	people 1
+    NB	Linkin Park	Megadeth	LB	0.791	metal	people 1
+    NB	Linkin Park	Hans Zimmer	LB	0.046	soundtrack	people 1
+    NB	Linkin Park	The Doors	LB	0.548	rock	people 1
+    NB	Linkin Park	Brand New	LB	0.447	emo	people 1
+    NB	Linkin Park	Mastodon	LB	0.646	metal	people 1
+    NB	Linkin Park	Dr. Dre	LB	0.132	gangster rap	people 1
+    NB	Linkin Park	Dream Theater	LB	0.630	metal	people 1
+    NB	Linkin Park	Bob Marley	LB	0.169	roots reggae	people 1
+    NB	Linkin Park	ZZ Top	LB	0.599	rock	people 1
+    NB	Linkin Park	Cher	LB	0.251	junior songfestival	people 2
+    NB	Linkin Park	Stone Temple Pilots	LB	0.930	alternative rock	people 1
+    NB	Linkin Park	Green Day	LB	0.692	permanent wave	people 1
+    NB	Linkin Park	Red Hot Chili Peppers	LB	0.799	permanent wave	people 1
+    NB	Linkin Park	Foo Fighters	LB	0.860	permanent wave	people 1
+    NB	Linkin Park	Metallica	LB	0.769	hard rock	people 1
+    NB	Linkin Park	Evanescence	LB	0.966	alternative metal	people 1
+    NB	Linkin Park	The Killers	LB	0.651	permanent wave	people 1
+    NB	Linkin Park	Slipknot	LB	0.990	alternative metal	people 1
+    NB	Linkin Park	The White Stripes	LB	0.553	modern blues rock	people 1
+    NB	Linkin Park	The Alan Parsons Project	LB	0.376	art rock	people 1
+    NB	Linkin Park	Deep Purple	LB	0.685	album rock	people 1
+    NB	Linkin Park	Sia	LB	0.212	pop	people 1
+    NB	Linkin Park	Amorphis	LB	0.205	viking metal	people 1
+    NB	Linkin Park	Vangelis	LB	0.299	synthesizer	people 1
+    NB	Linkin Park	Rush	LB	0.643	album rock	people 1
+    NB	Linkin Park	Uriah Heep	LB	0.466	symphonic rock	people 1
+    NB	Linkin Park	Ludwig van Beethoven	LB	-0.031	early romantic era	people 1
+    NB	Linkin Park	Metric	LB	0.340	metropopolis	people 1
+    NB	Linkin Park	DIR EN GREY	LB	0.119	j-metal	people 1
+    NB	Linkin Park	Ayreon	LB	0.207	celtic metal	people 1
+  graph neighbours (37): T.I.(LB 1.00 ~0.093), Seether(LB 1.00 ~0.955), Tom Petty and the Heartbreakers(LB 1.00 ~0.524), Garbage(LB 1.00 ~0.600), No Doubt(LB 1.00 ~0.627), Megadeth(LB 1.00 ~0.791), Hans Zimmer(LB 1.00 ~0.046), The Doors(LB 1.00 ~0.548), Brand New(LB 1.00 ~0.447), Mastodon(LB 1.00 ~0.646), Dr. Dre(LB 1.00 ~0.132), Dream Theater(LB 1.00 ~0.630), Bob Marley(LB 1.00 ~0.169), ZZ Top(LB 1.00 ~0.599), Cher(LB 1.00 ~0.251), Stone Temple Pilots(LB 1.00 ~0.930), Green Day(LB 1.00 ~0.692), Red Hot Chili Peppers(LB 1.00 ~0.799), Foo Fighters(LB 1.00 ~0.860), Metallica(LB 1.00 ~0.769), Evanescence(LB 1.00 ~0.966), The Killers(LB 1.00 ~0.651), Slipknot(LB 1.00 ~0.990), The White Stripes(LB 1.00 ~0.553), The Alan Parsons Project(LB 1.00 ~0.376), Deep Purple(LB 1.00 ~0.685), Sia(LB 1.00 ~0.212), Amorphis(LB 1.00 ~0.205), 植松伸夫(LB 1.00 ~-nocat), Vangelis(LB 1.00 ~0.299), Alizée(LB 1.00 ~-nocat), Rush(LB 1.00 ~0.643), Uriah Heep(LB 1.00 ~0.466), Ludwig van Beethoven(LB 1.00 ~-0.031), Metric(LB 1.00 ~0.340), DIR EN GREY(LB 1.00 ~0.119), Ayreon(LB 1.00 ~0.207)
+  -> Because you like Linkin Park  |  People who listen to Linkin Park also play these  (12 rows)
+     Slipknot — Duality   [alternative metal, pop 83, ~0.990]
+     Evanescence — Bring Me To Life   [alternative metal, pop 86, ~0.966]
+     Seether — Fake It   [nu metal, pop 75, ~0.955]
+     Stone Temple Pilots — Interstate Love Song - 2019 Remaster   [alternative rock, pop 76, ~0.930]
+     Foo Fighters — Everlong   [permanent wave, pop 84, ~0.860]
+     Red Hot Chili Peppers — Can't Stop   [permanent wave, pop 86, ~0.799]
+     Megadeth — Symphony Of Destruction - Remastered 2012   [metal, pop 70, ~0.791]
+     Metallica — Enter Sandman   [hard rock, pop 81, ~0.769]
+     Slipknot — Psychosocial   [alternative metal, pop 79, ~0.990]
+     Evanescence — Going Under   [alternative metal, pop 78, ~0.966]
+     Seether — Broken   [nu metal, pop 73, ~0.955]
+     Stone Temple Pilots — Plush   [alternative rock, pop 70, ~0.930]
+
+=== cache check: findArtist(name, own country) on the US-warmed graph vs a graph that only saw that country
+
+SUMMARY (US pass): graph 16, sounds-like 8, none 0, seed-in-own-shelf rows 0, duplicate rows 0

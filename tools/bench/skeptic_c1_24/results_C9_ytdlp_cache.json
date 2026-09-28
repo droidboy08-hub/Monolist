@@ -1,0 +1,26 @@
+﻿[
+    {
+        "run":  1,
+        "exit":  0,
+        "ms":  4061,
+        "playerDownloads":  1,
+        "jscLines":  "[debug] [youtube] [jsc] JS Challenge Providers: bun (unavailable), deno, node (unavailable), quickjs (unavailable)",
+        "cacheFiles":  ""
+    },
+    {
+        "run":  2,
+        "exit":  0,
+        "ms":  3042,
+        "playerDownloads":  1,
+        "jscLines":  "[debug] [youtube] [jsc] JS Challenge Providers: bun (unavailable), deno, node (unavailable), quickjs (unavailable)",
+        "cacheFiles":  ""
+    },
+    {
+        "run":  3,
+        "exit":  0,
+        "ms":  5056,
+        "playerDownloads":  2,
+        "jscLines":  "[debug] [youtube] [jsc] JS Challenge Providers: bun (unavailable), deno, node (unavailable), quickjs (unavailable) || [youtube] [jsc:deno] Solving JS challenges using deno || [debug] [youtube] [jsc:deno] Using challenge solver lib script v0.8.0 (source: python package, variant: minified) || [debug] [youtube] [jsc:deno] Using challenge solver core script v0.8.0 (source: python package, variant: minified) || [debug] [youtube] [jsc:deno] Running deno: \u0027C:\\dev\\monolist-build\\release\\tools\\deno.exe\u0027 run --ext=js --no-code-cache --no-prompt --no-remote --no-lock --node-modules-dir=none --no-config --no-npm --cached-only -",
+        "cacheFiles":  "\\youtube-sigfuncs\\7460dd14-main-113.json"
+    }
+]

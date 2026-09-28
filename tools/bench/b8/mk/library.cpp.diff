@@ -1,0 +1,27 @@
+--- a/src/library.cpp
++++ b/src/library.cpp
+@@ -1,6 +1,7 @@
+ #include "library.h"
+ #include "appdatabase.h"
+ #include "innertube.h"
++#include "benchlog.h"
+ 
+ #include <QClipboard>
+ #include <QGuiApplication>
+@@ -865,11 +866,15 @@ void Library::setSaved(const QVariantMap &page, bool saved)
+ 
+ void Library::reloadHistory()
+ {
++    benchMark(QStringLiteral("reloadHistory start"));
+     QSqlQuery q(AppDatabase::connection());
+     q.exec(QStringLiteral(
+         "SELECT video_id, title, artist, album, artwork, duration_ms, is_video FROM recent"
+         " ORDER BY played_at DESC, rowid DESC LIMIT 200"));
+-    m_history.replace(readSongs(q, /*withEntryId=*/false));
++    const QList<SearchResultModel::Item> rows = readSongs(q, /*withEntryId=*/false);
++    benchMark(QStringLiteral("reloadHistory read %1 rows").arg(rows.size()));
++    m_history.replace(rows);
++    benchMark(QStringLiteral("reloadHistory model replaced"));
+ }
+ 
+ void Library::clearHistory()

@@ -1,0 +1,30 @@
+﻿ 1 Hey Jude: q=/api/search?track_name=Hey%20Jude&artist_name=The%20Beatles res=20,20,20,20,20 -> Hey Jude | The Beatles | Remember...the 1960s | 426s
+ 2 Bohemian Rhapsody: q=/api/search?track_name=Bohemian%20Rhapsody&artist_name=Queen res=20,20,20,20,20 -> Bohemian Rhapsody | Queen | 500 Greatest Songs - Rolling Stone Magazines 2010 | 355s
+ 5 Smells Like Teen Spirit: q=/api/search?track_name=Smells%20Like%20Teen%20Spirit&artist_name=Nirvana res=20,20,20,20,20 -> Smells Like Teen Spirit | Nirvana | Nevermind (24kt Gold Remastered) | 302s
+ 6 Juicy (2005 Remaster): q=/api/search?track_name=Juicy&artist_name=Notorious%20B.I.G. res=20,20,20,20,20 -> Juicy | Notorious B.I.G. | Juicy | 303s
+ 7 Lose Yourself: q=/api/search?track_name=Lose%20Yourself&artist_name=Eminem res=20,20,20,20,20 -> Lose Yourself | Eminem | 8 Mile [Deluxe Edition] | 320s
+ 8 Get Lucky (feat. Pharrell Williams and Nile Rodgers): q=/api/search?track_name=Get%20Lucky&artist_name=Daft%20Punk res=20,20,20,20,20 -> Get Lucky | Daft Punk | Random Access Memories (10th Annyversary) | 370s
+ 9 Blinding Lights: q=/api/search?track_name=Blinding%20Lights&artist_name=The%20Weeknd res=20,20,20,20,20 -> Blinding Lights | The Weeknd | The Com-Bil-ation | 202s
+10 Flowers: q=/api/search?track_name=Flowers&artist_name=Miley%20Cyrus res=20,20,20,20,20 -> Flowers | Miley Cyrus | Made for Spatial Audio | 201s
+11 Not Like Us: q=/api/search?track_name=Not%20Like%20Us&artist_name=Kendrick%20Lamar res=20,20,20,20,20 -> Not Like Us | Kendrick Lamar | Mix - LOVE. | 275s
+12 Espresso: q=/api/search?track_name=Espresso&artist_name=Sabrina%20Carpenter res=20,20,20,20,20 -> Espresso | Sabrina Carpenter | Essentials | 176s
+13 Despacito: q=/api/search?track_name=Despacito&artist_name=Luis%20Fonsi res=20,20,20,20,20 -> Despacito | Luis Fonsi | Die Ultimative Chartshow - Die erfolgreichsten Hits für Kids | 229s
+14 Tití Me Preguntó: q=/api/search?track_name=Tit%C3%AD%20Me%20Pregunt%C3%B3&artist_name=Bad%20Bunny res=20,20,20,20,20 -> Tití Me Preguntó | Bad Bunny | Billboard Hot 100 Single Charts 2026.03 | 244s
+15 La Bamba (Single Version): q=/api/search?track_name=La%20Bamba%20%28Single%20Version%29&artist_name=Ritchie%20Valens res=17,17,17,17,17 -> La Bamba (Single Version) | Ritchie Valens | All Out 50s | 127s
+16 Hasta la Raíz: q=/api/search?track_name=Hasta%20la%20Ra%C3%ADz&artist_name=Natalia%20Lafourcade res=20,20,20,20,20 -> Hasta la Raíz | Natalia Lafourcade | Hasta la Raíz (Dolby Atmos) | 222s
+17 Tum Hi Ho: q=/api/search?track_name=Tum%20Hi%20Ho&artist_name=Arijit%20Singh res=20,20,20,20,20 -> Tum Hi Ho | Arijit Singh | Rising Star - Mithoon | 262s
+18 Chaiyya Chaiyya: q=/api/search?track_name=Chaiyya%20Chaiyya&artist_name=Sukhwinder%20Singh res=20,20,20,20,20 -> chaiyya chaiyya | sukhwinder singh | dil se | 407s
+19 Brown Munde: q=/api/search?track_name=Brown%20Munde&artist_name=AP%20Dhillon res=20,20,20,20,20 -> Brown Munde | AP Dhillon | Related to Excuses | 255s
+20 Spring Day: q=/api/search?track_name=Spring%20Day&artist_name=BTS res=20,20,20,20,20 -> Spring Day | BTS | The Most Beautiful Moment in Life, Pt. 2 | 275s
+21 Gangnam Style: q=/api/search?track_name=Gangnam%20Style&artist_name=PSY res=20,20,20,20,20 -> Gangnam Style | PSY | Club Sounds: Volume 64 | 220s
+22 Hype Boy: q=/api/search?track_name=Hype%20Boy&artist_name=NewJeans res=20,20,20,20,20 -> hype boy | newjeans | melon top 100 | 180s
+23 Lemon: q=/api/search?track_name=Lemon&artist_name=Kenshi%20Yonezu res=20,20,20,20,20 -> Lemon | Kenshi Yonezu | Kenshi Yonezu | 256s
+24 アイドル: q=/api/search?track_name=%E3%82%A2%E3%82%A4%E3%83%89%E3%83%AB&artist_name=YOASOBI res=20,20,20,20,20 -> アイドル | YOASOBI | Singles | 214s
+25 上を向いて歩こう - Sukiyaki: q=/api/search?track_name=%E4%B8%8A%E3%82%92%E5%90%91%E3%81%84%E3%81%A6%E6%AD%A9%E3%81%93%E3%81%86%20-%20Sukiyaki&artist_name=Kyu%20Sakamoto res=3,3,3,3,3 -> 上を向いて歩こう - Sukiyaki | Kyu Sakamoto | Best 9! | 189s
+26 La Vie En Rose: q=/api/search?track_name=La%20Vie%20En%20Rose&artist_name=Edith%20Piaf res=20,20,20,20,20 -> La Vie En Rose | Edith Piaf | Grandes Voix De La Chanson Française | 188s
+27 99 Luftballons: q=/api/search?track_name=99%20Luftballons&artist_name=Nena res=20,20,20,20,20 -> 99 Luftballons [99 Luftballons, 1984] | Nena | Mixone 2024 | 232s
+28 Tamally Maak: q=/api/search?track_name=Tamally%20Maak&artist_name=Amr%20Diab res=20,20,20,20,20 -> Tamally Maak | Amr Diab | Amr Diab | 272s
+29 Clair De Lune: q=/api/search?track_name=Clair%20De%20Lune&artist_name=Claude%20Debussy res=20,20,20,20,20 -> Clair De Lune | Claude Debussy | Best Of Classic Music Vol.3 (2018) | 248s
+30 Sandstorm: q=/api/search?track_name=Sandstorm&artist_name=Darude res=20,20,20,20,20 -> -
+ 3 Dreams (2004 Remaster): q=/api/search?track_name=Dreams&artist_name=Fleetwood%20Mac res=20,20,20,20 -> Dreams | Fleetwood Mac | Rumours [2013, Warner Bros. Records, 8122796778, XE] | 258s
+ 4 Billie Jean: q=/api/search?track_name=Billie%20Jean&artist_name=Michael%20Jackson res=20 -> Billie Jean | Michael Jackson | Thriller [25th Anniversary Edition Alternate Cover] | 294s

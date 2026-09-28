@@ -1,0 +1,421 @@
+loaded yes
+
+=== Lil Darkie  [region US]  liked-as "Lil Darkie"
+  seed in graph: NOT FOUND
+  -> Sounds like Lil Darkie  |  Artists whose sound sits closest to theirs  (12 rows)
+     SoFaygo — Knock Knock   [rage rap, pop 66, ~0.984]
+     yvngxchris — excuse me?   [plugg, pop 41, ~0.979]
+     Summrs — Bloods Always Thicker - Radio Edit   [glitchcore, pop 54, ~0.978]
+     Hi-C — If U Must Kno   [plugg, pop 43, ~0.976]
+     BBY GOYARD — TH13TEEN GHOSTS   [pluggnb, pop 40, ~0.975]
+     Autumn! — Louis V Everything!   [glitchcore, pop 57, ~0.974]
+     LOAT! — carleen   [aesthetic rap, pop 44, ~0.972]
+     TOKYO’S REVENGE — BULLETPROOF   [viral rap, pop 49, ~0.972]
+     MrHeadA$$Trendy — Average Man   [aesthetic rap, pop 39, ~0.972]
+     lilbubblegum — lose it   [aesthetic rap, pop 40, ~0.971]
+     Khalil? — Don't Think   [aesthetic rap, pop 51, ~0.971]
+     XANAKIN SKYWOK — LOVESHOTS   [aesthetic rap, pop 53, ~0.970]
+
+=== Ghostemane  [region US]  liked-as "Ghostemane"
+  seed in graph: NOT FOUND
+  -> Sounds like Ghostemane  |  Artists whose sound sits closest to theirs  (12 rows)
+     Oliver Francis — DEAD OR ALIVE FREESTYLE   [cloud rap, pop 41, ~0.996]
+     6 Dogs — Faygo Dreams   [dark trap, pop 57, ~0.993]
+     Burgos — I Like   [dark trap, pop 38, ~0.990]
+     convolk — Swan Dive   [cloud rap, pop 44, ~0.990]
+     Lil Tracy — Uh Oh   [melodic rap, pop 47, ~0.990]
+     Brennan Savage — Dreams of You   [emo rap, pop 52, ~0.989]
+     Germ — For the Win   [dark trap, pop 49, ~0.989]
+     Warlord Colossus — D.O.A   [dark trap, pop 54, ~0.989]
+     Istasha — The Fennecs Name is Defiance   [dark trap, pop 45, ~0.989]
+     Unaverage Gang — Deep End   [dark trap, pop 44, ~0.989]
+     The Virus and Antidote — MyTimeIsTooGreatToBeWasted   [dark trap, pop 36, ~0.989]
+     Wifisfuneral — Somebody Watching Me   [florida rap, pop 37, ~0.988]
+
+=== $uicideboy$  [region US]  liked-as "$uicideboy$"
+  seed in graph: NOT FOUND
+  -> Sounds like $uicideboy$  |  Artists whose sound sits closest to theirs  (12 rows)
+     Xavier Wulf — Mobile Suit Woe   [dark trap, pop 65, ~0.996]
+     $NOT — DRESScode   [underground hip hop, pop 57, ~0.994]
+     Chris Travis — Bring It Back   [dark trap, pop 64, ~0.994]
+     Pouya — Death by Dishonor   [aesthetic rap, pop 59, ~0.993]
+     Black Smurf — Fully Hydrated   [underground hip hop, pop 47, ~0.993]
+     Robb Bank$ — It's Lifted   [underground hip hop, pop 45, ~0.992]
+     SpaceGhostPurrp — Underground   [miami hip hop, pop 36, ~0.991]
+     A$AP ANT — Pudge Rodriguez   [drill, pop 45, ~0.990]
+     Burgos — Miles Away   [dark trap, pop 41, ~0.989]
+     Taz — Nights by the Lawn   [dark trap, pop 39, ~0.989]
+     BLCKK — MY CRIB   [dark trap, pop 39, ~0.989]
+     Sect Unit — Hearse   [dark trap, pop 36, ~0.989]
+
+=== Bones  [region US]  liked-as "Bones"
+  seed in graph: NOT FOUND
+  -> Sounds like Bones  |  Artists whose sound sits closest to theirs  (12 rows)
+     Yunggoth✰ — Love Me Again   [emo rap, pop 54, ~0.994]
+     Teddy — Foreign Banz   [cloud rap, pop 35, ~0.993]
+     Scrim — who saves the savior   [cloud rap, pop 54, ~0.993]
+     Craig Xen — Wassup Bro!   [cloud rap, pop 42, ~0.993]
+     SpaceMan Zack — Crying Tonight   [emo rap, pop 36, ~0.992]
+     Jaxxon D. Silva — A Swollen Song   [cloud rap, pop 42, ~0.991]
+     Brennan Savage — Look at Me Now   [emo rap, pop 64, ~0.991]
+     fats'e — room to breathe   [cloud rap, pop 38, ~0.991]
+     VELVETEARS — Imma Lie   [cloud rap, pop 37, ~0.990]
+     6 Dogs — Someone   [dark trap, pop 43, ~0.990]
+     guardin — Doormat   [cloud rap, pop 40, ~0.989]
+     Cold Hart — Bodybag   [cloud rap, pop 36, ~0.989]
+
+=== Pouya  [region US]  liked-as "Pouya"
+  seed in graph: NOT FOUND
+  -> Sounds like Pouya  |  Artists whose sound sits closest to theirs  (12 rows)
+     $NOT — DRESScode   [underground hip hop, pop 57, ~0.997]
+     Xavier Wulf — Mobile Suit Woe   [dark trap, pop 65, ~0.995]
+     $uicideboy$ — 1000 Blunts   [underground hip hop, pop 77, ~0.993]
+     SpaceGhostPurrp — Underground   [miami hip hop, pop 36, ~0.992]
+     Unaverage Gang — Underworld   [dark trap, pop 61, ~0.992]
+     Brennan Savage — Dreams of You   [emo rap, pop 52, ~0.991]
+     Robb Bank$ — It's Lifted   [underground hip hop, pop 45, ~0.991]
+     Burgos — Miles Away   [dark trap, pop 41, ~0.991]
+     TrippyThaKid — no!   [dark trap, pop 47, ~0.991]
+     Oliver Francis — DEAD OR ALIVE FREESTYLE   [cloud rap, pop 41, ~0.990]
+     6 Dogs — Faygo Dreams   [dark trap, pop 57, ~0.990]
+     BLCKK — MY CRIB   [dark trap, pop 39, ~0.990]
+
+=== Scarlxrd  [region US]  liked-as "Scarlxrd"
+  seed in graph: NOT FOUND
+  -> Sounds like Scarlxrd  |  Artists whose sound sits closest to theirs  (12 rows)
+     KAMAARA — GauzeValley   [scream rap, pop 48, ~0.996]
+     7xvn — PSYCHO   [dark trap, pop 40, ~0.996]
+     Kamiyada+ — Damage Critical   [scream rap, pop 38, ~0.995]
+     BRUHMANEGOD — i will make you see god   [dark trap, pop 36, ~0.995]
+     gizmo — Dying Dog   [dark trap, pop 36, ~0.993]
+     Fukkit — 30   [scream rap, pop 39, ~0.992]
+     Zotiyac — Drills in the Hills   [scream rap, pop 40, ~0.991]
+     Cameron Azi — WAR   [dark trap, pop 39, ~0.991]
+     PRXJEK — FACEPLANT   [dark trap, pop 40, ~0.990]
+     BVDLVD — BRATLAD   [dark trap, pop 44, ~0.990]
+     ONI INC. — Vampires United   [scream rap, pop 40, ~0.989]
+     KXLLSWXTCH — COSMO   [dark trap, pop 61, ~0.978]
+
+=== Scarlxrd  [region GB]  liked-as "Scarlxrd"
+  seed in graph: NOT FOUND
+  -> Sounds like Scarlxrd  |  Artists whose sound sits closest to theirs  (12 rows)
+     KAMAARA — GauzeValley   [scream rap, pop 48, ~0.996]
+     7xvn — PSYCHO   [dark trap, pop 40, ~0.996]
+     Kamiyada+ — Damage Critical   [scream rap, pop 38, ~0.995]
+     BRUHMANEGOD — i will make you see god   [dark trap, pop 36, ~0.995]
+     gizmo — Dying Dog   [dark trap, pop 36, ~0.993]
+     Fukkit — 30   [scream rap, pop 39, ~0.992]
+     Zotiyac — Drills in the Hills   [scream rap, pop 40, ~0.991]
+     Cameron Azi — WAR   [dark trap, pop 39, ~0.991]
+     PRXJEK — FACEPLANT   [dark trap, pop 40, ~0.990]
+     BVDLVD — BRATLAD   [dark trap, pop 44, ~0.990]
+     ONI INC. — Vampires United   [scream rap, pop 40, ~0.989]
+     KXLLSWXTCH — COSMO   [dark trap, pop 61, ~0.978]
+
+=== City Morgue  [region US]  liked-as "City Morgue"
+  seed in graph: NOT FOUND
+  -> Sounds like City Morgue  |  Artists whose sound sits closest to theirs  (12 rows)
+     99zed — SLACKJAW   [dark trap, pop 49, ~0.999]
+     Boobie Lootaveli — THE PHOENIX   [dark trap, pop 39, ~0.998]
+     Istasha — The Fly   [dark trap, pop 46, ~0.997]
+     Unaverage Gang — Cold Steel   [dark trap, pop 47, ~0.997]
+     Wavy Jone$ — Holographic Memory   [dark trap, pop 45, ~0.997]
+     Saliva Grey — Gimme a Second   [dark trap, pop 65, ~0.996]
+     Lil Toe — Gang Shit   [dark trap, pop 36, ~0.996]
+     Kay P — Never Dat!   [dark trap, pop 35, ~0.996]
+     Germ — Garden Tomb   [dark trap, pop 43, ~0.996]
+     CoaastGxd — Dear God...   [dark trap, pop 36, ~0.996]
+     Lil Revive — Tell the Reaper I'm Sorry   [dark trap, pop 52, ~0.995]
+     Burgos — HALOS   [dark trap, pop 43, ~0.995]
+
+=== Rich Brian  [region US]  liked-as "Rich Brian"
+  seed in graph: NOT FOUND
+  -> Sounds like Rich Brian  |  Artists whose sound sits closest to theirs  (12 rows)
+     Letto — Lubang Di Hati   [indonesian pop, pop 52, ~0.999]
+     Gigi — Menari-nari   [classic indonesian rock, pop 45, ~0.999]
+     Jikustik — Untuk Dikenang   [indonesian pop, pop 50, ~0.999]
+     Heidy Diana — Maafkan Diriku   [classic indo pop, pop 39, ~0.998]
+     Vagetoz — Kuatkan Aku   [indonesian pop rock, pop 46, ~0.998]
+     Andy Liany — Bukan Itu   [classic indonesian rock, pop 36, ~0.998]
+     Vicky Koga — Tapacik Dinan Sansai   [pop minang, pop 37, ~0.998]
+     Padi — Seperti Kekasihku   [classic indonesian rock, pop 52, ~0.998]
+     Meriam Bellina — Untuk Sebuah Nama   [classic indo pop, pop 46, ~0.998]
+     Ecko Show — Moneypulasi   [indonesian hip hop, pop 37, ~0.998]
+     Sidepony — Lebih Berarti - Original Mix   [pontianak indie, pop 4, ~0.998]
+     NANO — Sebatas Mimpi   [indonesian pop rock, pop 58, ~0.998]
+
+=== Rich Brian  [region ID]  liked-as "Rich Brian"
+  seed in graph: NOT FOUND
+  -> Sounds like Rich Brian  |  Artists whose sound sits closest to theirs  (12 rows)
+     Letto — Lubang Di Hati   [indonesian pop, pop 52, ~0.999]
+     Gigi — Menari-nari   [classic indonesian rock, pop 45, ~0.999]
+     Jikustik — Untuk Dikenang   [indonesian pop, pop 50, ~0.999]
+     Heidy Diana — Maafkan Diriku   [classic indo pop, pop 39, ~0.998]
+     Vagetoz — Kuatkan Aku   [indonesian pop rock, pop 46, ~0.998]
+     Andy Liany — Bukan Itu   [classic indonesian rock, pop 36, ~0.998]
+     Vicky Koga — Tapacik Dinan Sansai   [pop minang, pop 37, ~0.998]
+     Padi — Seperti Kekasihku   [classic indonesian rock, pop 52, ~0.998]
+     Meriam Bellina — Untuk Sebuah Nama   [classic indo pop, pop 46, ~0.998]
+     Ecko Show — Moneypulasi   [indonesian hip hop, pop 37, ~0.998]
+     Sidepony — Lebih Berarti - Original Mix   [pontianak indie, pop 4, ~0.998]
+     NANO — Sebatas Mimpi   [indonesian pop rock, pop 58, ~0.998]
+
+=== Dumbfoundead  [region US]  liked-as "Dumbfoundead"
+  seed in graph: NOT FOUND
+  -> NO ARTIST SHELF  (shelves: popular)
+
+=== Ruby Ibarra  [region US]  liked-as "Ruby Ibarra"
+  seed in graph: NOT FOUND
+  -> NO ARTIST SHELF  (shelves: popular)
+
+=== Jay Park  [region US]  liked-as "Jay Park"
+  seed in graph: NOT FOUND
+  -> Sounds like Jay Park  |  Artists whose sound sits closest to theirs  (12 rows)
+     Loco — Too Much (Feat. DEAN)   [korean r&b, pop 47, ~0.997]
+     Simon Dominic — GOTT (Feat. MOON & Woo & Jvcki Wai)   [k-rap, pop 36, ~0.995]
+     Tablo — Cave Me In   [k-rap, pop 44, ~0.989]
+     Zion.T — question mark (Feat. CHOIZA Of Dynamicduo, Zion.T)   [korean r&b, pop 50, ~0.989]
+     YURI — C’est La Vie (That’s LIFE!)   [k-pop, pop 23, ~0.956]
+     HYOLYN — SEE SEA   [korean r&b, pop 46, ~0.955]
+     WOODZ — Drowning   [korean r&b, pop 64, ~0.954]
+     DEAN — 21   [korean r&b, pop 59, ~0.954]
+     ZICO — actually   [korean r&b, pop 52, ~0.953]
+     Tiffany Young — Lips On Lips   [k-pop, pop 38, ~0.953]
+     BIBI — Feeling Lucky   [korean r&b, pop 59, ~0.952]
+     TAEYANG — Wedding Dress - English Version   [korean r&b, pop 46, ~0.952]
+
+=== Jay Park  [region KR]  liked-as "Jay Park"
+  seed in graph: NOT FOUND
+  -> Sounds like Jay Park  |  Artists whose sound sits closest to theirs  (12 rows)
+     Loco — Too Much (Feat. DEAN)   [korean r&b, pop 47, ~0.997]
+     Simon Dominic — GOTT (Feat. MOON & Woo & Jvcki Wai)   [k-rap, pop 36, ~0.995]
+     Tablo — Cave Me In   [k-rap, pop 44, ~0.989]
+     Zion.T — question mark (Feat. CHOIZA Of Dynamicduo, Zion.T)   [korean r&b, pop 50, ~0.989]
+     YURI — C’est La Vie (That’s LIFE!)   [k-pop, pop 23, ~0.956]
+     HYOLYN — SEE SEA   [korean r&b, pop 46, ~0.955]
+     WOODZ — Drowning   [korean r&b, pop 64, ~0.954]
+     DEAN — 21   [korean r&b, pop 59, ~0.954]
+     ZICO — actually   [korean r&b, pop 52, ~0.953]
+     Tiffany Young — Lips On Lips   [k-pop, pop 38, ~0.953]
+     BIBI — Feeling Lucky   [korean r&b, pop 59, ~0.952]
+     TAEYANG — Wedding Dress - English Version   [korean r&b, pop 46, ~0.952]
+
+=== Higher Brothers  [region US]  liked-as "Higher Brothers"
+  seed in graph: NOT FOUND
+  -> Sounds like Higher Brothers  |  Artists whose sound sits closest to theirs  (12 rows)
+     KnowKnow — Sometimes   [chinese hip hop, pop 41, ~0.998]
+     ICE杨长青 — Shadow   [sichuanese hip hop, pop 36, ~0.997]
+     艾蜜莉AMILI — 麻克與林送夫   [chinese melodic rap, pop 42, ~0.997]
+     Quanzo — 不老泉   [chinese melodic rap, pop 38, ~0.997]
+     汪佩蓉 — 比我對你更好的人   [taiwan singer-songwriter, pop 27, ~0.997]
+     張彬彬 — 一笑傾城 (演員版)   [chinese drama ost, pop 40, ~0.997]
+     thomeboydontkill — YOU   [sichuanese hip hop, pop 44, ~0.997]
+     王琪 — 为你放弃全世界   [chinese manyao, pop 44, ~0.997]
+     SNH48 — 私有物 - Control   [chinese idol pop, pop 26, ~0.997]
+     Asiaboy 禁藥王 ＆ Lizi 栗子 — 都關掉 Feat. BG8LOCC   [taiwan hip hop, pop 37, ~0.997]
+     就是南方凯 — 离别开出花 - DJ弹唱版   [chinese viral pop, pop 43, ~0.996]
+     Jocelyn 9.4.0 — 可是你知道嗎   [chinese r&b, pop 50, ~0.996]
+
+=== Higher Brothers  [region CN]  liked-as "Higher Brothers"
+  seed in graph: NOT FOUND
+  -> Sounds like Higher Brothers  |  Artists whose sound sits closest to theirs  (12 rows)
+     KnowKnow — Sometimes   [chinese hip hop, pop 41, ~0.998]
+     ICE杨长青 — Shadow   [sichuanese hip hop, pop 36, ~0.997]
+     艾蜜莉AMILI — 麻克與林送夫   [chinese melodic rap, pop 42, ~0.997]
+     Quanzo — 不老泉   [chinese melodic rap, pop 38, ~0.997]
+     汪佩蓉 — 比我對你更好的人   [taiwan singer-songwriter, pop 27, ~0.997]
+     張彬彬 — 一笑傾城 (演員版)   [chinese drama ost, pop 40, ~0.997]
+     thomeboydontkill — YOU   [sichuanese hip hop, pop 44, ~0.997]
+     王琪 — 为你放弃全世界   [chinese manyao, pop 44, ~0.997]
+     SNH48 — 私有物 - Control   [chinese idol pop, pop 26, ~0.997]
+     Asiaboy 禁藥王 ＆ Lizi 栗子 — 都關掉 Feat. BG8LOCC   [taiwan hip hop, pop 37, ~0.997]
+     就是南方凯 — 离别开出花 - DJ弹唱版   [chinese viral pop, pop 43, ~0.996]
+     Jocelyn 9.4.0 — 可是你知道嗎   [chinese r&b, pop 50, ~0.996]
+
+=== The Carter Family  [region US]  liked-as "The Carter Family"
+  seed in graph: NOT FOUND
+  -> Sounds like The Carter Family  |  Artists whose sound sits closest to theirs  (12 rows)
+     Fiddlin John Carson — The Little Old Log Cabin In The Lane   [appalachian folk, pop 18, ~0.974]
+     The Louvin Brothers — The Great Atomic Power   [western swing, pop 35, ~0.973]
+     Bradley Kincaid — Barbara Allen   [vintage old-time, pop 29, ~0.970]
+     The Delmore Brothers — Don’t You See That Train   [traditional country, pop 22, ~0.970]
+     The Blue Sky Boys — Turn Your Radio On   [old-time, pop 12, ~0.965]
+     Riley Puckett — Nobody's Business   [old-time, pop 14, ~0.964]
+     Sacred Harp Singers — Antioch   [sacred harp, pop 20, ~0.962]
+     United Sacred Harp Musical Association — Redemption   [sacred harp, pop 9, ~0.962]
+     Cristy Lane — One Day At A Time   [country gospel, pop 41, ~0.961]
+     2nd South Carolina String Band — Oh, I'm a Good Ol' Rebel   [early american folk, pop 33, ~0.958]
+     Western Massachusetts Sacred Harp Convention — Florida   [sacred harp, pop 9, ~0.957]
+     Cliff Carlisle — Goin' Down The Road Feelin' Bad   [appalachian folk, pop 20, ~0.956]
+
+=== Jimmie Rodgers  [region US]  liked-as "Jimmie Rodgers"
+  seed in graph: NOT FOUND
+  -> Sounds like Jimmie Rodgers  |  Artists whose sound sits closest to theirs  (12 rows)
+     Gene Autry — Rudolph the Red-Nosed Reindeer   [cowboy western, pop 51, ~0.987]
+     Claude King — Wolverton Mountain   [western swing, pop 38, ~0.987]
+     Faron Young — Live Fast, Love Hard, Die Young   [honky tonk, pop 37, ~0.987]
+     Bob Wills & Tommy Duncan with The Texas Playboys — Take Me Back To Tulsa   [western swing, pop 36, ~0.985]
+     Moon Mullican — Seven Nights To Rock   [country boogie, pop 23, ~0.985]
+     Ernest Tubb — Pass The Booze   [honky tonk, pop 40, ~0.985]
+     Takeo Ischi — Einen Jodler hör ich gern   [yodeling, pop 37, ~0.984]
+     Tennessee Ernie Ford — 16 Tons   [western swing, pop 42, ~0.983]
+     Hank Williams — Jambalaya (On The Bayou)   [honky tonk, pop 57, ~0.982]
+     Del Reeves — This Must Be The Bottom   [cowboy western, pop 36, ~0.981]
+     Eddy Arnold — It's a Sin   [traditional country, pop 49, ~0.981]
+     Red Foley — Chattanoogie Shoe Shine Boy - 1949 Single Version   [western swing, pop 36, ~0.980]
+
+=== Charlie Poole  [region US]  liked-as "Charlie Poole"
+  seed in graph: NOT FOUND
+  -> NO ARTIST SHELF  (shelves: popular)
+
+=== Doc Watson  [region US]  liked-as "Doc Watson"
+  seed in graph: NOT FOUND
+  -> Sounds like Doc Watson  |  Artists whose sound sits closest to theirs  (12 rows)
+     Doc & Merle Watson — Going Down The Road Feeling Bad   [appalachian folk, pop 35, ~0.986]
+     Pete Seeger — John Brown's Body   [banjo, pop 36, ~0.978]
+     Ola Belle Reed — I've Endured   [appalachian folk, pop 36, ~0.969]
+     John Hartford — In Tall Buildings   [bluegrass, pop 38, ~0.968]
+     The Almanac Singers — Get Thee Behind Me, Satan   [traditional folk, pop 22, ~0.966]
+     Yonder Mountain String Band — 40 Miles from Denver   [progressive bluegrass, pop 35, ~0.965]
+     Blue Highway — Lonesome Pine   [bluegrass gospel, pop 36, ~0.965]
+     Abigail Washburn — Nobody's Fault But Mine   [clawhammer banjo, pop 28, ~0.963]
+     Mimi And Richard Fariña — Reno Nevada   [mountain dulcimer, pop 23, ~0.962]
+     Steep Canyon Rangers — Call The Captain   [bluegrass, pop 37, ~0.961]
+     The Dillards — Dooley   [progressive bluegrass, pop 44, ~0.961]
+     J.D. Crowe & The New South — Old Home Place   [banjo, pop 38, ~0.961]
+
+=== Blood on the Dance Floor  [region US]  liked-as "Blood on the Dance Floor"
+  seed in graph: NOT FOUND
+  -> NO ARTIST SHELF  (shelves: popular)
+
+=== Brokencyde  [region US]  liked-as "Brokencyde"
+  seed in graph: NOT FOUND
+  -> Sounds like Brokencyde  |  Artists whose sound sits closest to theirs  (12 rows)
+     3OH!3 — DONTTRUSTME   [post-teen pop, pop 72, ~0.898]
+     Kevin Rudolf — Let It Rock   [pop rap, pop 41, ~0.819]
+     Post Malone — Guy For That (Feat. Luke Combs)   [melodic rap, pop 79, ~0.812]
+     Flo Rida — Hangover   [dance pop, pop 73, ~0.809]
+     Iyaz — Gonna Get This   [dance pop, pop 58, ~0.807]
+     Gym Class Heroes — The Fighter (feat. Ryan Tedder)   [dance pop, pop 57, ~0.805]
+     Cardi B — Bodak Yellow   [pop, pop 73, ~0.800]
+     Sleepwalk, A Robot — Lo-Fi Infidelity   [electropowerpop, pop 1, ~0.798]
+     The Relay Company — Marco Polo   [electropowerpop, pop 38, ~0.796]
+     Dot Dot Curve — Rocket Ship to the Moon   [electropowerpop, pop 35, ~0.795]
+     Hyper Crush — Rage   [electropowerpop, pop 44, ~0.795]
+     Taio Cruz — Break Your Heart   [dance pop, pop 70, ~0.791]
+
+=== Jeffree Star  [region US]  liked-as "Jeffree Star"
+  seed in graph: NOT FOUND
+  -> Sounds like Jeffree Star  |  Artists whose sound sits closest to theirs  (12 rows)
+     Priyanka — Shut It Down   [strut, pop 20, ~0.906]
+     Todrick Hall — RAININ’ FELLAS   [strut, pop 42, ~0.904]
+     Tom Aspaul — Better By Your Side   [strut, pop 46, ~0.903]
+     Rosé — I Drove All Night   [strut, pop 19, ~0.902]
+     Erika Jayne — XXPEN$IVE   [strut, pop 40, ~0.901]
+     Lemon — Come Through   [strut, pop 46, ~0.900]
+     Aja — Level Ya Pussy Up   [strut, pop 37, ~0.900]
+     The Cast of RuPaul's Drag Race, Season 13 — Phenomenon (Cast Version)   [strut, pop 36, ~0.898]
+     Bob the Drag Queen — Purse First (feat. DJ Mitch Ferrino)   [strut, pop 39, ~0.897]
+     The Cast of RuPaul's Drag Race UK, Season 2 — UK Hun? (United Kingdolls Version)   [strut, pop 38, ~0.895]
+     Alex Newell — Rescue Me (feat. Alex Newell)   [strut, pop 40, ~0.878]
+     Conchita Wurst — Rise Like a Phoenix   [strut, pop 44, ~0.864]
+
+=== 3OH!3  [region US]  liked-as "3OH!3"
+  seed in graph: NOT FOUND
+  -> Sounds like 3OH!3  |  Artists whose sound sits closest to theirs  (12 rows)
+     jxdn — TELL ME ABOUT TOMORROW   [social media pop, pop 48, ~0.906]
+     Lindsay Lohan — Bossy - Main Version Clean   [dance pop, pop 38, ~0.900]
+     Paris Hilton — Turn It Up   [dance pop, pop 40, ~0.900]
+     Kat Deluna — In The End   [dance pop, pop 37, ~0.900]
+     Brokencyde — Money Hungry Hoe   [crunk, pop 41, ~0.899]
+     Allstar Weekend — Not Your Birthday   [neon pop punk, pop 41, ~0.899]
+     Jessica Simpson — A Public Affair   [dance pop, pop 44, ~0.897]
+     Jay Sean — Eyes On You - Radio Mix   [pop, pop 45, ~0.897]
+     Savage Garden — I Want You   [boy band, pop 61, ~0.897]
+     Ashlee Simpson — Boyfriend   [dance pop, pop 45, ~0.896]
+     Iyaz — Solo   [dance pop, pop 67, ~0.895]
+     Ashley Tisdale — He Said She Said   [pop, pop 55, ~0.887]
+
+=== Salakavala  [region US]  liked-as "Salakavala"
+  seed in graph: NOT FOUND
+  -> NO ARTIST SHELF  (shelves: popular)
+
+=== Salakavala  [region FI]  liked-as "Salakavala"
+  seed in graph: NOT FOUND
+  -> NO ARTIST SHELF  (shelves: popular)
+
+=== Squoonk  [region US]  liked-as "Squoonk"
+  seed in graph: NOT FOUND
+  -> NO ARTIST SHELF  (shelves: popular)
+
+=== Squoonk  [region FI]  liked-as "Squoonk"
+  seed in graph: NOT FOUND
+  -> NO ARTIST SHELF  (shelves: popular)
+
+=== Merkules  [region US]  liked-as "Merkules"
+  seed in graph: NOT FOUND
+  -> Sounds like Merkules  |  Artists whose sound sits closest to theirs  (12 rows)
+     Snak The Ripper — I'm Good   [bc underground hip hop, pop 40, ~0.997]
+     Boslen — W.N.M   [indie hip hop, pop 41, ~0.995]
+     Eric Reprid — Cold World   [asian american hip hop, pop 57, ~0.987]
+     Roney — Alibi   [toronto rap, pop 39, ~0.987]
+     M V R K — No Time for That   [bc underground hip hop, pop 36, ~0.987]
+     6ixbuzz — 2 Cases   [canadian hip hop, pop 37, ~0.987]
+     NorthSideBenji — Money Showers   [canadian hip hop, pop 43, ~0.987]
+     Eazy Mac — Walking on the Moon   [alberta hip hop, pop 42, ~0.987]
+     Young Smoke — Days by Da Rabba   [canadian hip hop, pop 36, ~0.987]
+     Houdini — Levels   [canadian hip hop, pop 43, ~0.987]
+     Wasiu — Vile Delights   [canadian hip hop, pop 39, ~0.986]
+     lentra — turn it all the way up   [canadian hip hop, pop 40, ~0.986]
+
+=== Merkules  [region CA]  liked-as "Merkules"
+  seed in graph: NOT FOUND
+  -> Sounds like Merkules  |  Artists whose sound sits closest to theirs  (12 rows)
+     Snak The Ripper — I'm Good   [bc underground hip hop, pop 40, ~0.997]
+     Boslen — W.N.M   [indie hip hop, pop 41, ~0.995]
+     Eric Reprid — Cold World   [asian american hip hop, pop 57, ~0.987]
+     Roney — Alibi   [toronto rap, pop 39, ~0.987]
+     M V R K — No Time for That   [bc underground hip hop, pop 36, ~0.987]
+     6ixbuzz — 2 Cases   [canadian hip hop, pop 37, ~0.987]
+     NorthSideBenji — Money Showers   [canadian hip hop, pop 43, ~0.987]
+     Eazy Mac — Walking on the Moon   [alberta hip hop, pop 42, ~0.987]
+     Young Smoke — Days by Da Rabba   [canadian hip hop, pop 36, ~0.987]
+     Houdini — Levels   [canadian hip hop, pop 43, ~0.987]
+     Wasiu — Vile Delights   [canadian hip hop, pop 39, ~0.986]
+     lentra — turn it all the way up   [canadian hip hop, pop 40, ~0.986]
+
+=== Struggle Jennings  [region US]  liked-as "Struggle Jennings"
+  seed in graph: NOT FOUND
+  -> Sounds like Struggle Jennings  |  Artists whose sound sits closest to theirs  (12 rows)
+     Amigo the Devil — Perfect Wife   [country rap, pop 46, ~0.996]
+     sKitz Kraven — Session 9   [country rap, pop 44, ~0.991]
+     Scuzz Twittly — Party Like Charlie Sheen   [country rap, pop 45, ~0.985]
+     Cryptic Wisdom — Take You There   [military rap, pop 38, ~0.982]
+     Adam Calhoun — Clean Money   [country rap, pop 48, ~0.973]
+     Chris Hosier — God's Song   [redneck, pop 38, ~0.957]
+     Jawga Boyz — Hick Hop Thang (feat. Jawga Boyz)   [redneck, pop 49, ~0.956]
+     Upchurch — Turn up the Night   [redneck, pop 56, ~0.955]
+     CRUCIFIX — Used to the Fall   [redneck, pop 51, ~0.955]
+     Katie Noel — Blacked Out   [redneck, pop 46, ~0.954]
+     Overtime — One Lane Road   [redneck, pop 42, ~0.953]
+     Moonshine Bandits — Dive Bar Beauty Queen   [redneck, pop 45, ~0.953]
+
+=== Adam Calhoun  [region US]  liked-as "Adam Calhoun"
+  seed in graph: NOT FOUND
+  -> Sounds like Adam Calhoun  |  Artists whose sound sits closest to theirs  (12 rows)
+     Charlie Farley — Alcoholiday   [redneck, pop 42, ~0.985]
+     Chris Hosier — My Pain   [redneck, pop 42, ~0.985]
+     Big Matt — Long Road   [redneck, pop 47, ~0.985]
+     FJ Outlaw — Old Me   [redneck, pop 39, ~0.985]
+     Jawga Boyz — Hick Hop Thang (feat. Jawga Boyz)   [redneck, pop 49, ~0.984]
+     Katie Noel — Blacked Out   [redneck, pop 46, ~0.984]
+     Overtime — The Foundation   [redneck, pop 39, ~0.983]
+     Moonshine Bandits — Dive Bar Beauty Queen   [redneck, pop 45, ~0.983]
+     Demun Jones — Take Me Back   [redneck, pop 44, ~0.983]
+     Brabo Gator — By MySelf   [redneck, pop 38, ~0.983]
+     Bezz Believe — FCK The Rap Game (Diss)   [redneck, pop 37, ~0.983]
+     Who TF Is Justin Time? — I Don't Know   [redneck, pop 37, ~0.983]
+
+=== cache check: findArtist(name, own country) on the US-warmed graph vs a graph that only saw that country
+
+SUMMARY (US pass): graph 0, sounds-like 19, none 6, seed-in-own-shelf rows 0, duplicate rows 0

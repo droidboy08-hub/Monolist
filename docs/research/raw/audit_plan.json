@@ -1,0 +1,1163 @@
+﻿{
+    "overview":  "I merged about 140 raw findings from the 8 auditors into 74 items and checked each one against the Monolist source. Two claims were wrong. The project is already on GitHub: .git/config has origin git@github.com:droidboy08-hub/Monolist.git, HEAD is main, and refs/remotes/origin/main exists. The GNUInstallDirs complaint was also wrong. Everything else held up in the code, apart from a few marked \"partly\" because they need a real run to confirm, such as the Mac title bar and how scrolling feels.\n\n**Bugs the user runs into (priority 1):**\n- Every launch waits on three `--version` checks for yt-dlp, FFmpeg and Deno. Settings is built at startup and runs them on the main thread.\n- Autoplay, volume, shuffle and repeat are never saved. Turning off Settings\u0027 \"Autoplay similar songs\" quietly turns back on at the next launch.\n- When a network request is retried, it can replace a newer one. Search then spins forever, or autoplay sticks on \"Finding more songs…\".\n- The first song of every session is never recorded.\n- After Next, the old song keeps playing while the new one loads, and its end can skip the new track.\n- Below 1040 px the player bar loses its queue and Now Playing buttons.\n- Ctrl+F opens Search but does not put the cursor in the field.\n\n**Explicit user requests (priority 3):**\n- Retry with itag 18 only when a track actually fails to play.\n- Look into slow scrolling.\n- Finish the video placements (narrow Now Playing, fullscreen, mini panel).\n- The rest of the recommender: \"Not interested\", the missing rails, Play all / See all on shelves, rotation.\n\n**Core desktop features still missing (priorities 4–5):** artist pages, searching for albums, playlists and artists, loading long playlists past the first page, the output-device button, media keys and the system Now Playing controls, reordering playlists and the queue, and right-click menus outside track tables.\n\n**macOS (priority 6):** the C++ is mostly portable, but today the build would not give a working Mac app:\n- It builds a bare executable, not a Monolist.app.\n- libmpv will refuse to start because the number locale (LC_NUMERIC) is never reset.\n- The title bar code needs Qt 6.9, while CMake still allows 6.6.\n- Tools installed with Homebrew are not found when the app is opened from Finder.\n- There is no bundling, signing, menu bar or component updater for the Mac.\n\nSince the user said to keep the Mac \"in mind just in case\", the four small fixes can be done now on Windows without a Mac: the locale reset, the Qt 6.9 floor, tool lookup plus the python check, and the broken build-without-libmpv mode. The python check also fixes a Windows bug where the Store python.exe alias makes yt-dlp look installed. New features such as media keys, the output device and menus should be built with a macOS path from the start.",
+    "items":  [
+                  {
+                      "id":  "B01",
+                      "title":  "Every launch waits on three tool --version checks because Settings is built at startup",
+                      "category":  "bug",
+                      "verified":  "confirmed",
+                      "evidence":  "Main.qml:256-261 creates SettingsView inside a ViewFade with no Loader. Its Component.onCompleted (SettingsView.qml:23-29) calls About.refreshComponents() while main.cpp:243 loads QML, before window-\u003eshow() at main.cpp:249. appinfo.cpp:116-128 and 137-171 run yt-dlp, ffmpeg and deno --version one after another, each with waitForFinished(4000) on the main thread (up to about 12 s; yt-dlp is a Python start under x64 emulation). The comment at SettingsView.qml:25-26 says the opposite was intended. copyReport (appinfo.cpp:191-194) takes the same blocking path.",
+                      "done_looks_like":  "The version checks run in the background through QProcess signals and start only the first time Settings is shown. The window appears at once, and Settings shows \u0027Reading versions…\u0027 until the answers arrive.",
+                      "size":  "S",
+                      "priority":  1,
+                      "group":  "Bugs",
+                      "sources":  [
+                                      "ui-wiring",
+                                      "backend"
+                                  ]
+                  },
+                  {
+                      "id":  "B02",
+                      "title":  "A retried InnerTube request can replace a newer one: search spins forever, or autoplay sticks on \u0027Finding more songs…\u0027",
+                      "category":  "bug",
+                      "verified":  "confirmed",
+                      "evidence":  "innertube.cpp:461-487: after a failed attempt the slot is cleared and a 1.2 s timer calls send(), which writes the old request\u0027s new reply back into *slot (453-454). cancelSearch and cancelRadio (678-692) cannot stop that timer. The newer reply then fails the `*slot != reply` check (461) and is dropped without done() ever running. For search, MediaExtractor ignores the stale query (mediaextractor.cpp:93), so Extractor.busy never clears. For radio, m_radioSeed never clears, extendWithRadio keeps answering \u0027already on its way\u0027 (playbackcontroller.cpp:341-342), and advance() stays on \u0027Finding more songs…\u0027 (867-871).",
+                      "done_looks_like":  "Each slot carries a generation token. A pending retry checks it before sending, and cancelling or starting a new request bumps it, so an old retry can never replace or silence a newer search or radio request.",
+                      "size":  "S",
+                      "priority":  1,
+                      "group":  "Bugs",
+                      "sources":  [
+                                      "backend"
+                                  ]
+                  },
+                  {
+                      "id":  "B03",
+                      "title":  "Player settings, including Settings\u0027 Autoplay switch, reset on every launch",
+                      "category":  "bug",
+                      "verified":  "confirmed",
+                      "evidence":  "playbackcontroller.h:243-248 hard-codes m_autoplay=true, m_volume=0.65, m_shuffle=false and m_repeatMode=Off. Nothing reads or writes these to the settings table; the only setting keys used are region, profile name, video height, download options, recommendation folders and update.feed. The \u0027Autoplay similar songs\u0027 switch (SettingsView.qml:239-245) sets Player.autoplay, so turning it off comes back on at the next start. QML has no Settings persistence either (NowPlayingBar.qml:265-267 binds straight to Player.volume).",
+                      "done_looks_like":  "Volume, shuffle, repeat and autoplay are saved when they change and restored in main.cpp before QML loads.",
+                      "size":  "S",
+                      "priority":  1,
+                      "group":  "Player",
+                      "sources":  [
+                                      "backend"
+                                  ]
+                  },
+                  {
+                      "id":  "B04",
+                      "title":  "A song started with Play after launch, or reached with Next/Previous while paused, is never recorded; launching offline shows an error toast unprompted",
+                      "category":  "bug",
+                      "verified":  "confirmed",
+                      "evidence":  "main.cpp:134 calls loadModel, which runs beginTrack(autoPlay=false). History and play events are written only when autoPlay is true (playbackcontroller.cpp:655-658). play() only unpauses (824-834), and advance and previous use loadIndex while paused (878-881, 894-897). So the first song of every session never reaches Recently played, History or the recommender. The paused load also resolves at launch, and a failure emits playbackError when !wasGoingToPlay (773-777), which Main.qml:382 shows as a toast when offline.",
+                      "done_looks_like":  "The first time a paused-loaded track starts playing, it records history and opens its play event. A resolve failure for a track nobody asked to play only updates the status line.",
+                      "size":  "S",
+                      "priority":  1,
+                      "group":  "Bugs",
+                      "sources":  [
+                                      "backend",
+                                      "rec-spec"
+                                  ]
+                  },
+                  {
+                      "id":  "B05",
+                      "title":  "After Next or Previous the old song keeps playing until the new one resolves, and its end can skip or fail the new track",
+                      "category":  "bug",
+                      "verified":  "confirmed",
+                      "evidence":  "beginTrack (playbackcontroller.cpp:613-697) starts a resolve but never stops mpv; MpvEngine::stop (mpvengine.cpp:301-307) is never called anywhere. The old file\u0027s time-pos keeps overwriting m_position for the new track (playbackcontroller.cpp:59-64). drainEvents emits endOfFile or loadFailed for any END_FILE without matching it to the current loadfile (mpvengine.cpp:214-223). So an old end-of-file during a resolve runs handleEndOfFile→next() (806-820) and skips a song, and an old error reaches the loadFailed branch with m_streamTier=-1 (88-119) and marks the new track \u0027Playback failed\u0027.",
+                      "done_looks_like":  "Starting a new track stops or pauses the old file, and mpv events are matched to the current playlist_entry_id from MPV_EVENT_START_FILE. Nothing from the previous file reaches the new one, and position starts at 0.",
+                      "size":  "S",
+                      "priority":  1,
+                      "group":  "Player",
+                      "sources":  [
+                                      "backend"
+                                  ]
+                  },
+                  {
+                      "id":  "B06",
+                      "title":  "Player bar: the queue and Now Playing buttons vanish below 1040 px, volume has no fallback, and the queue button does nothing while Now Playing is open",
+                      "category":  "bug",
+                      "verified":  "confirmed",
+                      "evidence":  "NowPlayingBar.qml:9 sets showVolume to width \u003e= 1040, which hides rightControls (219-269). That group holds the Now Playing toggle (227-236), the queue toggle (237-246), the device button and volume. The window\u0027s minimum width is 480 (Main.qml:13), and no shortcut opens the queue or changes volume (Main.qml:426-446). The docked QueuePanel (Main.qml:148-166) is inside `shell`, which NowPlayingView covers completely (Main.qml:284-299, z 800), so in Now Playing the queue button only turns red.",
+                      "done_looks_like":  "The Now Playing and queue toggles stay visible at every width, and only volume collapses to a button with a popup slider and mute. In Now Playing the queue button switches the right pane to UP NEXT.",
+                      "size":  "S",
+                      "priority":  1,
+                      "group":  "Player",
+                      "sources":  [
+                                      "ui-wiring",
+                                      "design-parity"
+                                  ]
+                  },
+                  {
+                      "id":  "B07",
+                      "title":  "Ctrl+F and the Search nav item don\u0027t put the cursor in the search field, and the field has no clear button",
+                      "category":  "bug",
+                      "verified":  "confirmed",
+                      "evidence":  "The Find shortcut (Main.qml:435-441) only closes Now Playing and navigates. TopBar.qml:131 searchField is never focused; the only forceActiveFocus calls are PlaylistView.qml:51, SettingsView.qml:115 and Sidebar.qml:357. The search box (TopBar.qml:109-186) has no clear control; Melody had one (LumenViews.tsx:94).",
+                      "done_looks_like":  "TopBar.focusSearch() (forceActiveFocus plus selectAll) is called by the Find shortcut and the Search nav item. An X clears the text and suggestions and keeps focus in the field.",
+                      "size":  "S",
+                      "priority":  1,
+                      "group":  "Bugs",
+                      "sources":  [
+                                      "ui-wiring",
+                                      "melody-parity"
+                                  ]
+                  },
+                  {
+                      "id":  "B08",
+                      "title":  "A failed search\u0027s error stays on the Search page after the field is cleared",
+                      "category":  "bug",
+                      "verified":  "confirmed",
+                      "evidence":  "For an empty query, mediaextractor.cpp:201-205 returns before setLastError(QString()) at line 208. SearchView.qml:128-136 shows Extractor.lastError without checking root.term, so the red error sits under the suggestion shelves.",
+                      "done_looks_like":  "An empty query clears lastError, or the error Text also requires term.length \u003e 0.",
+                      "size":  "S",
+                      "priority":  1,
+                      "group":  "Bugs",
+                      "sources":  [
+                                      "ui-wiring"
+                                  ]
+                  },
+                  {
+                      "id":  "B09",
+                      "title":  "Track menu shows a greyed-out \u0027Downloading…\u0027 for failed downloads, and can\u0027t remove or show a finished one",
+                      "category":  "bug",
+                      "verified":  "confirmed",
+                      "evidence":  "TrackMenu.qml:51-58 labels any state other than empty or done \u0027Downloading…\u0027 and disables the item. downloadmanager.h:75 lists \u0027failed\u0027 as a state. DownloadButton.qml:121-126 already retries and reveals, but the only delete is the trash button in DownloadsView.qml:317-332. Melody\u0027s download toggle removed the file from any row (App.tsx:275-280).",
+                      "done_looks_like":  "A failed track shows \u0027Retry download\u0027 (Downloads.retry). A finished one shows \u0027Show in folder\u0027 and \u0027Remove download\u0027 with the two-step confirmation (Downloads.remove).",
+                      "size":  "S",
+                      "priority":  1,
+                      "group":  "Downloads",
+                      "sources":  [
+                                      "ui-wiring",
+                                      "melody-parity"
+                                  ]
+                  },
+                  {
+                      "id":  "B10",
+                      "title":  "Quitting while recommendations are being built can crash the app",
+                      "category":  "bug",
+                      "verified":  "confirmed",
+                      "evidence":  "~Recommender (recommender.cpp:325-329) calls m_thread.quit() and then wait(2000), ignoring the result. A build scans about 400k catalogue rows plus the graph shards over the network share and can run past 2 s. Destroying a running QThread is qFatal in Qt 6.",
+                      "done_looks_like":  "The worker checks a stop flag between scans, and the destructor waits until it stops, so quitting mid-build exits cleanly.",
+                      "size":  "S",
+                      "priority":  2,
+                      "group":  "Recommendations",
+                      "sources":  [
+                                      "backend"
+                                  ]
+                  },
+                  {
+                      "id":  "B11",
+                      "title":  "The recommender learns the wrong things: re-liked songs never count, skipped songs seed \u0027More like…\u0027, weekends use the UTC day",
+                      "category":  "bug",
+                      "verified":  "confirmed",
+                      "evidence":  "taste.cpp:162-183 skips every \u0027like\u0027 of a song that was ever unliked, whatever the order; shelves.cpp:406-427 gets this right by letting the newest like or unlike decide. shelves.cpp:651-660 seeds song rails from the newest \u0027play\u0027 events with no label or listened_ms check, so a song abandoned after 5 s (label 0.0, which counts against it in taste.cpp:76) becomes \u0027More like X — Because you played X\u0027 (670-673). isWeekend (taste.cpp:85-92) takes .date() of a UTC QDateTime (304-306).",
+                      "done_looks_like":  "The newest like or unlike per song decides. Only positively labelled plays seed song rails (label ≥0.6, liked, or unlabelled but heard for ≥30 s). The weekend check uses the local date.",
+                      "size":  "S",
+                      "priority":  2,
+                      "group":  "Recommendations",
+                      "sources":  [
+                                      "backend",
+                                      "rec-spec"
+                                  ]
+                  },
+                  {
+                      "id":  "B12",
+                      "title":  "Changing the country while Home is still loading is ignored",
+                      "category":  "bug",
+                      "verified":  "confirmed",
+                      "evidence":  "Catalog::load() (catalog.cpp:43-46) returns at once when m_pendingHome \u003e 0, and main.cpp:151 wires Library::regionChanged straight to Catalog::refresh. A country picked during a slow first load leaves Home and New releases on the old country.",
+                      "done_looks_like":  "A refresh asked for during a load is queued, as Recommender does with m_refreshQueued, or restarts the load with the new region.",
+                      "size":  "S",
+                      "priority":  2,
+                      "group":  "Bugs",
+                      "sources":  [
+                                      "backend"
+                                  ]
+                  },
+                  {
+                      "id":  "B13",
+                      "title":  "Downloads stay disabled after the tools are installed or updated, until restart",
+                      "category":  "bug",
+                      "verified":  "confirmed",
+                      "evidence":  "downloadmanager.cpp:31-32 checks for yt-dlp and FFmpeg once, and available and canConvert are CONSTANT (downloadmanager.h:39-40). enqueue returns silently when !m_available (downloadmanager.cpp:152). AppInfo::updateTools refreshes the component versions on success (appinfo.cpp:346-348) but never tells DownloadManager.",
+                      "done_looks_like":  "DownloadManager re-checks its tools after a tool update, and lazily on enqueue, through NOTIFY properties, so new tools work without a restart.",
+                      "size":  "S",
+                      "priority":  2,
+                      "group":  "Downloads",
+                      "sources":  [
+                                      "backend"
+                                  ]
+                  },
+                  {
+                      "id":  "U01",
+                      "title":  "The itag 18 fallback doesn\u0027t run when a track actually fails to play (user request)",
+                      "category":  "half-built",
+                      "verified":  "confirmed",
+                      "evidence":  "The user asked for itag 18 \u0027just for the failed track\u0027 (transcript line 6348). innertube.cpp:558-583 uses the progressive list only when no adaptive audio URL exists at resolve time. When mpv rejects the chosen adaptive URL, playbackcontroller.cpp:106-114 goes straight to the next tier (yt-dlp) and never retries that track\u0027s progressive format. The assistant noted the branch was never exercised (transcript line 6383).",
+                      "done_looks_like":  "When mpv fails on an InnerTube adaptive URL, the same track is retried once with its best progressive format (itag 18) before yt-dlp. This is exercised on a real track, with the itag logged.",
+                      "size":  "S",
+                      "priority":  3,
+                      "group":  "Player",
+                      "sources":  [
+                                      "user-requests"
+                                  ]
+                  },
+                  {
+                      "id":  "U02",
+                      "title":  "Slow-feeling scrolling was never investigated (user request)",
+                      "category":  "bug",
+                      "verified":  "partly",
+                      "evidence":  "The user said scrolling feels slow (transcript line 4196), and the Debug-versus-Release question went unanswered. No QML sets flickDeceleration or maximumFlickVelocity, or uses a WheelHandler (grep; the only wheel code is NowPlayingView.qml:73, which swallows wheel events). Every view is a plain Flickable (for example HomeView.qml:10-19 and SearchView.qml:9-27). How it feels was not checked.",
+                      "done_looks_like":  "Scrolling is compared on a Release build and natively on the Mac. If it is still sluggish, wheel step and flick velocity are tuned once in a shared scroll component used by every view.",
+                      "size":  "S",
+                      "priority":  3,
+                      "group":  "Polish",
+                      "sources":  [
+                                      "user-requests"
+                                  ]
+                  },
+                  {
+                      "id":  "U03",
+                      "title":  "Video works only in wide Now Playing: no switch in the narrow layout, no fullscreen or mini panel, and hidden video keeps decoding",
+                      "category":  "half-built",
+                      "verified":  "confirmed",
+                      "evidence":  "NowPlayingView.qml:21 sets wide to width \u003e= 980. The poster that holds VideoSurface and the video switch (77-165) shows only when wide, and the compact head (283-322) has neither. The only QML uses of videoWanted are NowPlayingView.qml:127 and 157, and mpvengine.cpp:320 leaves vid=auto after Now Playing closes, so video keeps streaming with nothing on screen. The placement plan the user chose (transcript 3928-3934, reopened at 4907) also had fullscreen and a mini panel. Neither exists; Main.qml:392-393 checks FullScreen only for the resize edges.",
+                      "done_looks_like":  "Narrow Now Playing gets the switch and a 16:9 plate, and hiding the last visible surface drops back to audio or shows a mini panel above the bar. F or double-click opens fullscreen video, and Esc leaves it.",
+                      "size":  "M",
+                      "priority":  3,
+                      "group":  "Video",
+                      "sources":  [
+                                      "user-requests",
+                                      "ui-wiring",
+                                      "design-parity"
+                                  ]
+                  },
+                  {
+                      "id":  "R01",
+                      "title":  "\u0027Not interested\u0027 is read by the taste profile, but nothing can record it",
+                      "category":  "half-built",
+                      "verified":  "confirmed",
+                      "evidence":  "taste.cpp:48 and 68 give kind \u0027notInterested\u0027 a negative weight, and appdatabase.cpp:137 reserves the kind. The only play_events writers are playbackcontroller.cpp:539 (\u0027play\u0027) and library.cpp:605 (\u0027like\u0027 and \u0027unliked\u0027). RecShelf.qml:108-109 rows have only a TapHandler, and TrackMenu.qml offers no such action. The iPhone app has it: NotInterestedStore.swift:26-137, with an undo toast at ExploreView.swift:1292-1320.",
+                      "done_looks_like":  "\u0027Not interested\u0027 appears on suggestion rows, in TrackMenu and in Now Playing. It records a notInterested event, removes the row, keeps the song out of shelves and autoplay radio, and can be undone from the toast.",
+                      "size":  "M",
+                      "priority":  3,
+                      "group":  "Recommendations",
+                      "sources":  [
+                                      "user-requests",
+                                      "backend",
+                                      "ios-parity",
+                                      "rec-spec"
+                                  ]
+                  },
+                  {
+                      "id":  "R02",
+                      "title":  "Search is missing rails and scoring: weekend and \u0027back to\u0027 rails, Liked/playlist/genre rails, and skipped songs never count against",
+                      "category":  "half-built",
+                      "verified":  "confirmed",
+                      "evidence":  "taste.cpp:242-262 builds weekend and earlier centroids, but buildShelves (shelves.cpp:629-796) reads only taste.positive and taste.recent (682-704). TasteProfile::score (taste.cpp:131-146), the only place the negative centroid is used, is called only by --rec-test (main.cpp:498). genreNeighbours (vectorsearch.cpp:369) is never called. Song rails stop at 3 (shelves.cpp:652) and artist rails at 2 (721), against the spec\u0027s larger counts. Spec: RECOMMENDATION_PORTING.md §1, §5.6 and §5.10.",
+                      "done_looks_like":  "Search shows \u0027Your weekend sound\u0027 and \u0027Back to a couple of months ago\u0027 when their minimum listening is met, plus \u0027More like your Liked songs\u0027, \u0027More like \u003cplaylist\u003e\u0027 and genre shelves. Taste shelves rank with profile.score, so sounds the user skips sink.",
+                      "size":  "M",
+                      "priority":  3,
+                      "group":  "Recommendations",
+                      "sources":  [
+                                      "user-requests",
+                                      "rec-spec"
+                                  ]
+                  },
+                  {
+                      "id":  "R03",
+                      "title":  "Suggestion shelves are tap-to-play only: no Play all, row menu, loading state or See all",
+                      "category":  "unwired-ui",
+                      "verified":  "confirmed",
+                      "evidence":  "RecShelf.qml:54-110 rows are text with a TapHandler that calls Recs.play (SearchView.qml:114). That runs one search and plays one song (recommender.cpp:443-463), with nothing on screen while it resolves. There is no shelf header action, right-click or dismiss. buildShelves takes no offset and is fixed at kPerShelf=12 (recommender.cpp:29), although the search functions in vectorsearch.h:89-102 accept offsets.",
+                      "done_looks_like":  "Each shelf header has Play all, which resolves the songs lazily in order, and See all, which loads more rows from the same source. Rows get TrackMenu on right-click and a spinner while resolving.",
+                      "size":  "M",
+                      "priority":  3,
+                      "group":  "Recommendations",
+                      "sources":  [
+                                      "rec-spec",
+                                      "ios-parity",
+                                      "user-requests"
+                                  ]
+                  },
+                  {
+                      "id":  "R04",
+                      "title":  "Suggestions never rotate, and they include songs the user already owns",
+                      "category":  "missing-feature",
+                      "verified":  "confirmed",
+                      "evidence":  "buildShelves always gives the same result for the same history. The rebuild check (recommender.cpp:415-426) covers only play_events and the region, so REBUILD (SettingsView.qml:347-354) returns an identical page, nothing expires with time, and Search has no refresh control. The only exclusion is heardKeys, built from play_events (shelves.cpp:58-67, used at 125 and 889). Songs in playlists, likes, saved albums or downloads that were never played can therefore be suggested; spec §4 filters owned songs.",
+                      "done_looks_like":  "A refresh on the Search page brings up different rows, and the page rebuilds after about 45 minutes. Songs in the library, playlists and downloads are left out, and that set is part of the rebuild check.",
+                      "size":  "M",
+                      "priority":  3,
+                      "group":  "Recommendations",
+                      "sources":  [
+                                      "rec-spec"
+                                  ]
+                  },
+                  {
+                      "id":  "A01",
+                      "title":  "Artist pages are not built, and artist names are never links",
+                      "category":  "missing-feature",
+                      "verified":  "confirmed",
+                      "evidence":  "HomeView.qml:33-34 sends artist cards to searchRequested(card.title), and README.md:308 lists this as a known gap. innertube.cpp:257-258 recognises MUSIC_PAGE_TYPE_ARTIST, but parseCollection (856-900) handles only albums and playlists. InnerTube::Track (innertube.h:34-44) carries no album or artist browse ID. TrackMenu.qml:22-58 has no Go to artist or Go to album. Artist names in TrackTable, PageView, NowPlayingView:187-195 and NowPlayingBar:71-87 are plain Text. The user skipped this item when choosing \u0027do 4-3-1\u0027 (transcript 2103).",
+                      "done_looks_like":  "An \u0027artist:\u003cUC id\u003e\u0027 view shows top songs, albums and singles, and related artists, with Play and Shuffle. Tracks carry artist and album browse IDs, so names link to those pages, and TrackMenu gains Go to artist and Go to album.",
+                      "size":  "L",
+                      "priority":  4,
+                      "group":  "Artist pages \u0026 search",
+                      "sources":  [
+                                      "user-requests",
+                                      "ui-wiring",
+                                      "backend",
+                                      "melody-parity",
+                                      "design-parity"
+                                  ]
+                  },
+                  {
+                      "id":  "A02",
+                      "title":  "Search returns only songs or videos, though the field says \u0027Artists, albums, tracks…\u0027",
+                      "category":  "missing-feature",
+                      "verified":  "confirmed",
+                      "evidence":  "The TopBar.qml:182 placeholder reads \u0027Artists, albums, tracks…\u0027. SearchView.qml:52-61 offers only SONGS and VIDEOS. innertube.h:77 has enum Filter { Songs, Videos }, and innertube.cpp:605 sends only those two filters. Albums and playlists can only be reached from Home. The Lumen design (app/views.jsx:47-55) and the iPhone app (SearchView.swift:160-174) both show more result types.",
+                      "done_looks_like":  "ALBUMS and PLAYLISTS filters, and ARTISTS once A01 exists, show card grids that open PageView. Until then the placeholder no longer promises them.",
+                      "size":  "M",
+                      "priority":  4,
+                      "group":  "Artist pages \u0026 search",
+                      "sources":  [
+                                      "ui-wiring",
+                                      "ios-parity",
+                                      "design-parity"
+                                  ]
+                  },
+                  {
+                      "id":  "A03",
+                      "title":  "Long YouTube Music playlists stop at the first page",
+                      "category":  "missing-feature",
+                      "verified":  "confirmed",
+                      "evidence":  "parseCollection reads only the first musicShelfRenderer or musicPlaylistShelfRenderer contents (innertube.cpp:876-899), and \u0027continuation\u0027 appears nowhere in src (grep). Opening, playing, saving or downloading all of a long playlist covers only its first ~100 rows.",
+                      "done_looks_like":  "Catalog::openPage follows continuation tokens, either as the user scrolls or up to a cap, so pageTracks holds the whole playlist.",
+                      "size":  "M",
+                      "priority":  4,
+                      "group":  "Artist pages \u0026 search",
+                      "sources":  [
+                                      "backend"
+                                  ]
+                  },
+                  {
+                      "id":  "P01",
+                      "title":  "The output-device button in the player bar does nothing",
+                      "category":  "unwired-ui",
+                      "verified":  "confirmed",
+                      "evidence":  "NowPlayingBar.qml:247-252: the \u0027monitor-speaker\u0027 IconButton has no onClicked and no tooltip. README.md:309 lists it as unwired. MpvEngine (mpvengine.h:38-55) has no audio-device API, and a grep for \u0027audio-device\u0027 finds nothing. The user\u0027s main goal was to make the design\u0027s player real rather than an empty mockup.",
+                      "done_looks_like":  "MpvEngine observes audio-device-list and sets audio-device. The button opens a menu of outputs (WASAPI on Windows, CoreAudio on macOS) with the current one marked, and the choice is saved.",
+                      "size":  "M",
+                      "priority":  4,
+                      "group":  "Player",
+                      "sources":  [
+                                      "user-requests",
+                                      "ui-wiring",
+                                      "backend",
+                                      "ios-parity",
+                                      "design-parity"
+                                  ]
+                  },
+                  {
+                      "id":  "P02",
+                      "title":  "No media keys and no system Now Playing (Windows media flyout, macOS Control Center, AirPods)",
+                      "category":  "missing-feature",
+                      "verified":  "confirmed",
+                      "evidence":  "The only transport shortcuts are in-window ones (Main.qml:426-446). A grep finds no Key_Media*, SystemMediaTransportControls, MPRemoteCommandCenter, MPNowPlayingInfoCenter or MPRIS, and CMakeLists.txt:188-200 has no APPLE branch or MediaPlayer framework. Melody got this for free from Electron\u0027s audio element. The iPhone app uses MPNowPlayingInfoCenter and MPRemoteCommandCenter (MusicPlayer.swift:1218-1246, 1363-1429), which also exist on macOS.",
+                      "done_looks_like":  "A small platform layer publishes title, artist, artwork and position, and handles play, pause, next, previous and seek. It uses the MediaPlayer framework through Objective-C++ on macOS and SMTC (or a WM_APPCOMMAND fallback) on Windows, with MPRIS later for Linux.",
+                      "size":  "L",
+                      "priority":  4,
+                      "group":  "Player",
+                      "sources":  [
+                                      "ui-wiring",
+                                      "backend",
+                                      "ios-parity",
+                                      "melody-parity",
+                                      "macos"
+                                  ]
+                  },
+                  {
+                      "id":  "L01",
+                      "title":  "Playlist songs and the play queue can\u0027t be reordered",
+                      "category":  "missing-feature",
+                      "verified":  "confirmed",
+                      "evidence":  "README.md:310 lists this. Library can add, remove and rename but has no move (library.h:71-82), even though playlist_tracks has a position column (appdatabase.cpp:176). QueueModel has no move either (queuemodel.h:61-67), and neither TrackTable.qml nor QueuePanel.qml has a DragHandler.",
+                      "done_looks_like":  "Drag handles, plus Alt+Up/Down, on playlist rows and upcoming queue rows. They are backed by Library.movePlaylistEntry and QueueModel::move, which keep the current index and shuffle order consistent.",
+                      "size":  "M",
+                      "priority":  4,
+                      "group":  "Library \u0026 playlists",
+                      "sources":  [
+                                      "ui-wiring",
+                                      "backend",
+                                      "ios-parity"
+                                  ]
+                  },
+                  {
+                      "id":  "L02",
+                      "title":  "Right-click and more menus exist only in track tables",
+                      "category":  "unwired-ui",
+                      "verified":  "confirmed",
+                      "evidence":  "TrackMenu is used only by TrackTable.qml (lines 53 and 260). Download rows (DownloadsView.qml:231-371), queue rows (QueuePanel.qml), suggestion rows (RecShelf.qml:108-109), sidebar playlists (PlaylistRow.qml:81-82) and album cards (AlbumCard.qml:111-112) respond to left-click only. Liked songs hides its more menu (PlaylistView.qml:259, visible: !root.liked).",
+                      "done_looks_like":  "Right-click and a more button open TrackMenu on download, queue and suggestion rows. Sidebar playlists get Play, Rename and Delete, saved cards get Remove from library, and Liked songs gets Add all to queue and Add all to playlist.",
+                      "size":  "M",
+                      "priority":  4,
+                      "group":  "Library \u0026 playlists",
+                      "sources":  [
+                                      "ui-wiring",
+                                      "ios-parity",
+                                      "melody-parity",
+                                      "design-parity"
+                                  ]
+                  },
+                  {
+                      "id":  "P03",
+                      "title":  "Music videos lose their video switch once liked, saved to a playlist or replayed from History",
+                      "category":  "missing-feature",
+                      "verified":  "confirmed",
+                      "evidence":  "The tracks, recent and playlist_tracks tables have no is_video column (appdatabase.cpp:68-79, 105-114, 172-184). Library and Catalog readers never set isVideo, and songs added by autoplay radio don\u0027t copy it (playbackcontroller.cpp:159-171). videoAvailable requires isVideo (playbackcontroller.cpp:949-953).",
+                      "done_looks_like":  "A migration adds is_video, every insert path writes it and every reader exposes it, so a video played from anywhere offers the switch.",
+                      "size":  "M",
+                      "priority":  4,
+                      "group":  "Video",
+                      "sources":  [
+                                      "backend"
+                                  ]
+                  },
+                  {
+                      "id":  "P04",
+                      "title":  "The queue, current song and position are not restored after a restart",
+                      "category":  "missing-feature",
+                      "verified":  "confirmed",
+                      "evidence":  "main.cpp:133-134 always queues the whole library from row 0, paused. Nothing saves the last queue, the current index or the position.",
+                      "done_looks_like":  "The last queue, current index and position are saved on quit and restored, paused, at launch.",
+                      "size":  "M",
+                      "priority":  5,
+                      "group":  "Player",
+                      "sources":  [
+                                      "backend"
+                                  ]
+                  },
+                  {
+                      "id":  "P05",
+                      "title":  "No menu for the song that is playing, and no sleep timer",
+                      "category":  "missing-feature",
+                      "verified":  "confirmed",
+                      "evidence":  "NowPlayingBar.qml:90-114 offers only like and download for the current song, and NowPlayingView.qml:212-272 has only the close chevron. A grep finds no sleep timer in QML or playbackcontroller.h. The iPhone app has both: NowPlayingView.swift:631-711 (More menu) and :814-853 (sleep sheet), with PlayerState.swift:1745-1766 scheduleSleep.",
+                      "done_looks_like":  "A more button on the player bar and in Now Playing opens TrackMenu for Player.currentTrack, plus a sleep timer (15, 30, 45 or 60 minutes, or end of song) shown as a countdown that pauses playback.",
+                      "size":  "S",
+                      "priority":  5,
+                      "group":  "Player",
+                      "sources":  [
+                                      "ios-parity"
+                                  ]
+                  },
+                  {
+                      "id":  "P06",
+                      "title":  "Buffering, streaming-versus-offline source and lyrics error reasons are never shown",
+                      "category":  "unwired-ui",
+                      "verified":  "confirmed",
+                      "evidence":  "No QML reads Player.buffering, Player.sourceLabel (playbackcontroller.h:52, 60) or Lyrics.error (lyrics.h:59). LyricsPane.qml:230 shows only a generic \u0027could not be fetched\u0027. README.md:63-64 claims sourceLabel is shown in the UI. Melody showed \u0027Streaming · 320 kbps\u0027 or \u0027Offline\u0027 (LumenUI.tsx:184-188).",
+                      "done_looks_like":  "The player bar\u0027s status line shows buffering and a small source label such as \u0027Offline · local file\u0027 or \u0027Streaming · InnerTube\u0027. The lyrics error says why it failed.",
+                      "size":  "S",
+                      "priority":  5,
+                      "group":  "Player",
+                      "sources":  [
+                                      "ui-wiring",
+                                      "backend",
+                                      "melody-parity"
+                                  ]
+                  },
+                  {
+                      "id":  "L03",
+                      "title":  "The song menu lacks Copy link, Open on YouTube, Remove from history and Remove from library",
+                      "category":  "missing-feature",
+                      "verified":  "confirmed",
+                      "evidence":  "TrackMenu.qml:22-58 has Play next, Add to queue, Like, Add to playlist, Remove from this playlist and Download. Nothing opens a track in the browser or copies its link (the only clipboard use is the build report, appinfo.cpp:195), and history can only be cleared as a whole (library.h:95). The iPhone app\u0027s menu has these (AuriaComponents.swift:642-710).",
+                      "done_looks_like":  "TrackMenu adds Copy link (music.youtube.com/watch?v=\u003cid\u003e), Open on YouTube, Remove from history (when shown in History) and Remove from library.",
+                      "size":  "S",
+                      "priority":  5,
+                      "group":  "Library \u0026 playlists",
+                      "sources":  [
+                                      "ios-parity"
+                                  ]
+                  },
+                  {
+                      "id":  "L04",
+                      "title":  "The library has no Songs or Artists view",
+                      "category":  "missing-feature",
+                      "verified":  "confirmed",
+                      "evidence":  "LibraryView.qml:84-94 offers only PLAYLISTS, ALBUMS and HISTORY. Library.tracks is exposed to QML but no QML file uses it (grep). The iPhone app (LibraryView.swift:105, 543-621) and Melody (LumenViews.tsx:36-42) both had Songs and Artists.",
+                      "done_looks_like":  "A SONGS tab lists every distinct liked, playlist and downloaded song with Shuffle all. An ARTISTS tab groups them, and an artist opens their songs, or the A01 artist page once it exists.",
+                      "size":  "M",
+                      "priority":  5,
+                      "group":  "Library \u0026 playlists",
+                      "sources":  [
+                                      "ios-parity",
+                                      "melody-parity"
+                                  ]
+                  },
+                  {
+                      "id":  "L05",
+                      "title":  "No filter or sort in the library, playlists or Downloads, and playlists can\u0027t be pinned or reordered",
+                      "category":  "missing-feature",
+                      "verified":  "confirmed",
+                      "evidence":  "LibraryView.qml, PlaylistView.qml and DownloadsView.qml:224-373 have no filter or sort. The column headers in TrackTable.qml:55-114 are static text. playlistmodel.cpp:63 always orders by position, and library.h has no move or pin. The Lumen design (views.jsx:275-283, components.jsx:249-263) and the iPhone app (LibraryView.swift:382-472, PlaylistDetailView.swift:46-86) have both.",
+                      "done_looks_like":  "A filter field and Recent / A–Z / Artist sort, remembered per view, on the library, playlists, Liked songs and Downloads, with clickable column headers. Playlists can be pinned and dragged into order, saved to playlists.position.",
+                      "size":  "M",
+                      "priority":  5,
+                      "group":  "Library \u0026 playlists",
+                      "sources":  [
+                                      "ios-parity",
+                                      "design-parity"
+                                  ]
+                  },
+                  {
+                      "id":  "D01",
+                      "title":  "The download queue is lost on quit, and partly downloaded files are deleted",
+                      "category":  "missing-feature",
+                      "verified":  "confirmed",
+                      "evidence":  "Pending, running and failed downloads live only in memory (downloadmanager.h:116-119). ~DownloadManager cancels running jobs and deletes their partial files (downloadmanager.cpp:53-65), and loadStored restores only finished rows.",
+                      "done_looks_like":  "Queued and failed downloads are stored in a table and queued again at launch.",
+                      "size":  "M",
+                      "priority":  5,
+                      "group":  "Downloads",
+                      "sources":  [
+                                      "backend"
+                                  ]
+                  },
+                  {
+                      "id":  "D02",
+                      "title":  "The download folder can\u0027t be changed",
+                      "category":  "missing-feature",
+                      "verified":  "confirmed",
+                      "evidence":  "downloadDirectory is a CONSTANT property (downloadmanager.h:36), fixed to \u003cMusic\u003e/Monolist (downloadmanager.cpp:37-42). Settings (SettingsView.qml:300-302) and the Downloads page only display it.",
+                      "done_looks_like":  "A \u0027Change…\u0027 action in Settings opens a native folder picker, saves the choice and rescans the stored files.",
+                      "size":  "M",
+                      "priority":  5,
+                      "group":  "Downloads",
+                      "sources":  [
+                                      "ui-wiring"
+                                  ]
+                  },
+                  {
+                      "id":  "L06",
+                      "title":  "Missing feedback and empty states: no page retry, silent download failures, a blank or bare Search page, \u0027Art\u0027 in an empty player bar",
+                      "category":  "unwired-ui",
+                      "verified":  "confirmed",
+                      "evidence":  "An album or playlist page error (PageView.qml:183-191) has no RETRY, unlike Home (HomeView.qml:107-117). Main.qml:366-383 has no Connections on Downloads, so failed(videoId, reason) (downloadmanager.h:88) and \u0027Download all\u0027 both happen silently. About.copyReport (appinfo.cpp:191-197) gives no confirmation. With nothing typed and no catalogue, Search shows a single sentence (SearchView.qml:80-92). With only the graph loaded, available is true (recommender.h:71) but no shelves can be built (shelves.cpp:816-818), so the page is blank. Recs.personal is never shown. With no track, the player bar prints \u0027Art\u0027 and keeps a live heart (NowPlayingBar.qml:42, 90-100) that does nothing (playbackcontroller.cpp:292-293).",
+                      "done_looks_like":  "Page errors get RETRY. Download failures, \u0027Download all\u0027 and \u0027Copy for a bug report\u0027 each show a toast. Search explains an empty or not-yet-personal page. The empty player bar says \u0027Nothing playing\u0027, with the heart, download and transport controls disabled.",
+                      "size":  "M",
+                      "priority":  5,
+                      "group":  "Polish",
+                      "sources":  [
+                                      "ui-wiring",
+                                      "rec-spec",
+                                      "design-parity"
+                                  ]
+                  },
+                  {
+                      "id":  "N01",
+                      "title":  "Back and forward have no keyboard or mouse-button bindings, and never grey out",
+                      "category":  "unwired-ui",
+                      "verified":  "confirmed",
+                      "evidence":  "TopBar.qml:82-83: the arrows are always enabled. Main.qml:85-97 silently does nothing on empty history, which is kept in plain var arrays nothing can bind to. A grep finds no StandardKey.Back/Forward, Alt+Left/Right, Cmd+[ / Cmd+] or mouse back/forward button handling.",
+                      "done_looks_like":  "Shortcuts and the mouse\u0027s side buttons go back and forward, and the arrows dim when there is nowhere to go.",
+                      "size":  "S",
+                      "priority":  5,
+                      "group":  "Polish",
+                      "sources":  [
+                                      "ui-wiring",
+                                      "design-parity"
+                                  ]
+                  },
+                  {
+                      "id":  "S01",
+                      "title":  "Recommendation folders must be typed by hand: no picker, no ~ expansion, no default location",
+                      "category":  "missing-feature",
+                      "verified":  "confirmed",
+                      "evidence":  "SettingsView.qml:329-345 and 375-389 are bare TextFields, and the project has no FolderDialog (grep). cleanPath (recommender.cpp:51-57) only converts file:/// URLs, so typing \u0027~/Music/EmbeddingData\u0027 on a Mac fails. dataDirectory() returns only the stored setting (recommender.cpp:336-339).",
+                      "done_looks_like":  "A \u0027Choose…\u0027 button opens a native folder picker, a leading ~ is expanded, and with nothing set the app looks in its data folder and beside the executable (Contents/Resources in a Mac bundle).",
+                      "size":  "S",
+                      "priority":  5,
+                      "group":  "Settings",
+                      "sources":  [
+                                      "user-requests",
+                                      "ui-wiring",
+                                      "rec-spec"
+                                  ]
+                  },
+                  {
+                      "id":  "A04",
+                      "title":  "Shelves have no See all or Play all, cards can\u0027t be played without opening them, and Recently played has no Show all",
+                      "category":  "missing-feature",
+                      "verified":  "confirmed",
+                      "evidence":  "CardShelf.qml:83-103 only pages sideways. InnerTube::Shelf (innertube.h:57-62) keeps no \u0027more\u0027 link to follow. HomeView.qml:30-38 openCard can only open a page or play a single song. Catalog.recent is capped at 10 (catalog.cpp:132) with no link to the full History (Library → History); Phono had \u0027SHOW ALL →\u0027 there. The iPhone app has these (ExploreView.swift:604-627, SectionDetailView.swift:279-352).",
+                      "done_looks_like":  "A shelf header opens a full view that loads more pages. Song shelves get Play all, album and playlist cards get a hover play button, and Recently played links to library:history.",
+                      "size":  "M",
+                      "priority":  5,
+                      "group":  "Artist pages \u0026 search",
+                      "sources":  [
+                                      "ios-parity",
+                                      "design-parity"
+                                  ]
+                  },
+                  {
+                      "id":  "A05",
+                      "title":  "Search with nothing typed has no recent searches or moods \u0026 genres",
+                      "category":  "missing-feature",
+                      "verified":  "confirmed",
+                      "evidence":  "TopBar.qml:15-19 shows only live suggestions while typing, and nothing stores past searches (grep for recent_search or searchHistory finds nothing). Without a catalogue, which is the default because the catalogue isn\u0027t shipped, SearchView.qml:80-92 shows a single instruction line. The Lumen design (app/views.jsx:57-84) and the iPhone app (SearchView.swift:188-234) both show recent searches and moods for this state.",
+                      "done_looks_like":  "Recent searches (capped at about 50, each removable, with Clear all) appear under the empty field and on an idle Search page, along with YouTube Music\u0027s moods \u0026 genres as cards. The recommender shelves sit above them when a catalogue is set.",
+                      "size":  "M",
+                      "priority":  5,
+                      "group":  "Artist pages \u0026 search",
+                      "sources":  [
+                                      "ios-parity",
+                                      "design-parity"
+                                  ]
+                  },
+                  {
+                      "id":  "A06",
+                      "title":  "Home is blank at every launch and when offline, because the feed isn\u0027t cached",
+                      "category":  "missing-feature",
+                      "verified":  "confirmed",
+                      "evidence":  "Catalog (catalog.cpp:43-124) keeps shelves only in memory. Every launch starts from \u0027Loading YouTube Music…\u0027 (HomeView.qml:83-91), and offline Home shows only the error and RETRY (93-118). The iPhone app shows a cached feed while refreshing (RecommendationEngine.swift:100-165).",
+                      "done_looks_like":  "The last good Home result is saved, shown immediately at launch and refreshed in the background, and it stays on screen when the network fails.",
+                      "size":  "S",
+                      "priority":  5,
+                      "group":  "Artist pages \u0026 search",
+                      "sources":  [
+                                      "ios-parity"
+                                  ]
+                  },
+                  {
+                      "id":  "R05",
+                      "title":  "Every suggestion press searches YouTube, even for songs already in the library, and the answer isn\u0027t remembered",
+                      "category":  "missing-feature",
+                      "verified":  "confirmed",
+                      "evidence":  "Recommender::play (recommender.cpp:443-463) always runs a new InnerTube search and never checks the library or downloads first. The chosen result isn\u0027t cached, so pressing the same row again costs another search. Spec §4 checks the library first, and §6 describes a cache of looked-up songs.",
+                      "done_looks_like":  "play() first plays a library or download copy of the song if one exists. Otherwise it searches and caches the pick for a while, and later presses and Play all use the cache.",
+                      "size":  "M",
+                      "priority":  5,
+                      "group":  "Recommendations",
+                      "sources":  [
+                                      "rec-spec"
+                                  ]
+                  },
+                  {
+                      "id":  "R06",
+                      "title":  "No \u0027Recommended\u0027 section on playlist pages, and queue radio never uses the recommender",
+                      "category":  "missing-feature",
+                      "verified":  "confirmed",
+                      "evidence":  "PlaylistView.qml has no recommendations section, and vectorsearch.h:89-102 has none of the playlist-based search that spec §5.7 and §5.9 describe (iPhone: RecommendationEngine.swift:1154-1321, PlaylistDetailView.swift:131-184). extendWithRadio (playbackcontroller.cpp:339-354) always seeds YouTube Music radio from the last song. It has no fallback when the radio fails (190-201), does not filter out songs marked not interested or already owned (160-174), and has no limit on how many batches it adds.",
+                      "done_looks_like":  "A playlist page ends with a Recommended list that is exactly what plays after it. A queue started from a playlist continues with a mix drawn from several of its songs, and falls back to the catalogue when YouTube doesn\u0027t answer.",
+                      "size":  "L",
+                      "priority":  5,
+                      "group":  "Recommendations",
+                      "sources":  [
+                                      "user-requests",
+                                      "ios-parity",
+                                      "rec-spec"
+                                  ]
+                  },
+                  {
+                      "id":  "B14",
+                      "title":  "Album and playlist pages read only one of YouTube\u0027s two header formats",
+                      "category":  "bug",
+                      "verified":  "partly",
+                      "evidence":  "parseCollection takes the title, artist and artwork only from musicResponsiveHeaderRenderer (innertube.cpp:860-862). The iPhone parser also reads musicDetailHeaderRenderer because YouTube serves either one (YouTubeAccountSync.swift:496-507). The failure was not reproduced here; pages load today.",
+                      "done_looks_like":  "parseCollection falls back to musicDetailHeaderRenderer and the top-level header, so pages keep their title, artist and cover whichever form YouTube sends.",
+                      "size":  "S",
+                      "priority":  5,
+                      "group":  "Bugs",
+                      "sources":  [
+                                      "ios-parity"
+                                  ]
+                  },
+                  {
+                      "id":  "M01",
+                      "title":  "libmpv will refuse to start on macOS because LC_NUMERIC is never reset to \u0027C\u0027",
+                      "category":  "platform-macos",
+                      "verified":  "confirmed",
+                      "evidence":  "QGuiApplication is created at main.cpp:47, and on Unix, macOS included, Qt sets the locale from the environment. MpvEngine is then created at main.cpp:111 and calls mpv_create() (mpvengine.cpp:32). There is no setlocale or LC_NUMERIC call anywhere in src (grep). libmpv\u0027s mpv_create() refuses a non-C number locale, which gives \u0027mpv_create() failed\u0027 (mpvengine.cpp:34) and no audio. Windows is unaffected, which is why it works today.",
+                      "done_looks_like":  "std::setlocale(LC_NUMERIC, \"C\") is called right after QGuiApplication and before MpvEngine, and audio plays on macOS when launched from both Terminal and Finder.",
+                      "size":  "S",
+                      "priority":  6,
+                      "group":  "macOS build",
+                      "sources":  [
+                                      "backend",
+                                      "macos"
+                                  ]
+                  },
+                  {
+                      "id":  "M02",
+                      "title":  "The macOS title-bar flags need Qt 6.9, but CMake and the README allow 6.6",
+                      "category":  "platform-macos",
+                      "verified":  "confirmed",
+                      "evidence":  "windowchrome.cpp:99-100 uses Qt::ExpandedClientAreaHint and Qt::NoTitleBarBackgroundHint, which arrived in Qt 6.9 (they replace MaximizeUsingFullscreenGeometryHint, qnamespace.h:247-252). CMakeLists.txt:17-19 asks for Qt6 6.6, and README.md:173 says \u0027Requires Qt 6.6+\u0027. A Mac build against Qt 6.6-6.8 fails to compile.",
+                      "done_looks_like":  "CMake requires 6.9 on APPLE and the README says so, or the flags are guarded with QT_VERSION_CHECK(6,9,0) and fall back to the standard title bar.",
+                      "size":  "S",
+                      "priority":  6,
+                      "group":  "macOS build",
+                      "sources":  [
+                                      "user-requests",
+                                      "backend",
+                                      "macos"
+                                  ]
+                  },
+                  {
+                      "id":  "M03",
+                      "title":  "yt-dlp, FFmpeg and Deno aren\u0027t found when the app is opened from Finder, and any python3 makes yt-dlp look installed (Windows too)",
+                      "category":  "platform-macos",
+                      "verified":  "confirmed",
+                      "evidence":  "toolDirectories (ytdlp.cpp:255-268) checks MONOLIST_TOOLS_DIR, \u003cexe\u003e/tools, \u003cexe\u003e/tools/yt-dlp and the app directory, then PATH. An app opened from Finder or the Dock has only /usr/bin:/bin:/usr/sbin:/sbin on PATH, so the Homebrew tools the README installs (README.md:227) are missed. locate() (ytdlp.cpp:308-316) then accepts any python3 or python as `-m yt_dlp` without checking the module exists, so isAvailable() returns true (321-324). The \u0027needs yt-dlp\u0027 hint stays hidden (DownloadsView.qml:71-73), every resolve fails, and on some Macs /usr/bin/python3 pops up the developer-tools installer. Windows\u0027 Store python.exe alias causes the same false positive. The missing-tool messages mention only the Windows script (ytdlp.cpp:396-398, DownloadsView.qml:73, main.cpp:158-162).",
+                      "done_looks_like":  "On macOS the lookup also searches the bundle\u0027s tools folder, ~/Library/Application Support/Monolist/tools, /opt/homebrew/bin and /usr/local/bin. The python fallback is used only if `-m yt_dlp --version` succeeds, and missing-tool messages give the right step for each platform.",
+                      "size":  "S",
+                      "priority":  6,
+                      "group":  "macOS build",
+                      "sources":  [
+                                      "user-requests",
+                                      "backend",
+                                      "macos",
+                                      "melody-parity",
+                                      "design-parity",
+                                      "ui-wiring"
+                                  ]
+                  },
+                  {
+                      "id":  "M04",
+                      "title":  "The build-without-libmpv option (-DMONOLIST_NO_MPV=ON) no longer compiles",
+                      "category":  "bug",
+                      "verified":  "confirmed",
+                      "evidence":  "mpvengine_stub.cpp:26 defines load(const QString\u0026, bool), but mpvengine.h:38-40 declares a five-parameter load(). The stub also lacks setVideoEnabled (mpvengine.h:50), which PlaybackController calls. videosurface.cpp:8-9 always includes the mpv headers, and CMakeLists.txt:110-111 always compiles it. README.md:210-215 advertises this mode, which is the natural first step when bringing the app up on a new Mac.",
+                      "done_looks_like":  "The stub matches the header and VideoSurface\u0027s mpv code is guarded, so a NO_MPV build compiles and shows \u0027Built without libmpv\u0027.",
+                      "size":  "S",
+                      "priority":  6,
+                      "group":  "macOS build",
+                      "sources":  [
+                                      "backend",
+                                      "macos"
+                                  ]
+                  },
+                  {
+                      "id":  "M05",
+                      "title":  "The Mac build is a bare executable, not a Monolist.app",
+                      "category":  "platform-macos",
+                      "verified":  "confirmed",
+                      "evidence":  "qt_add_executable(monolist …) (CMakeLists.txt:32-66) sets no MACOSX_BUNDLE, bundle identifier, version keys, Info.plist or icon; only WIN32_EXECUTABLE is set (196-200). install() names a BUNDLE destination (202-206) that is never produced. The lowercase target name would also be the name shown in the menu bar.",
+                      "done_looks_like":  "On APPLE, CMake sets MACOSX_BUNDLE and OUTPUT_NAME Monolist and uses a cmake/Info.plist.in (bundle ID, version from PROJECT_VERSION, build number, minimum macOS, Music category, icon). cmake --build then produces a Monolist.app that opens from Finder.",
+                      "size":  "M",
+                      "priority":  6,
+                      "group":  "macOS build",
+                      "sources":  [
+                                      "user-requests",
+                                      "melody-parity",
+                                      "macos"
+                                  ]
+                  },
+                  {
+                      "id":  "M06",
+                      "title":  "No macOS setup or build script, and the README\u0027s Mac recipe is three lines",
+                      "category":  "platform-macos",
+                      "verified":  "confirmed",
+                      "evidence":  "scripts/ holds only setup-windows.ps1 and build-windows.ps1. The QML lint check (build-windows.ps1:124-137), deploy (166-173) and tool placement (175-200) exist only for Windows. README.md:224-230 leaves out pkgconf, although FindMpv.cmake:24-28 relies on pkg-config to find libmpv, and gives no run, deploy or tool steps.",
+                      "done_looks_like":  "scripts/setup-macos.sh installs pinned Qt, CMake, Ninja, pkgconf and libmpv, plus arm64 yt-dlp_macos, ffmpeg/ffprobe and deno, with checksum checks. scripts/build-macos.sh configures, builds, runs the QML lint check, deploys into Monolist.app and supports --run. The README documents both.",
+                      "size":  "M",
+                      "priority":  6,
+                      "group":  "macOS build",
+                      "sources":  [
+                                      "user-requests",
+                                      "macos"
+                                  ]
+                  },
+                  {
+                      "id":  "M07",
+                      "title":  "Nothing turns the Mac build into a self-contained, signed .app or .dmg",
+                      "category":  "platform-macos",
+                      "verified":  "confirmed",
+                      "evidence":  "CMakeLists.txt:202-206 has only install(TARGETS): no macdeployqt, deploy script or DMG packaging step. Homebrew\u0027s libmpv loads many /opt/homebrew libraries by absolute path, so the app would run only on a Mac with those packages installed. The Windows tool layout (an unpacked yt-dlp folder, build-windows.ps1:184-195) can\u0027t simply move into Contents/MacOS under code signing, and the macOS download is named yt-dlp_macos, which findTool(\"yt-dlp\") won\u0027t match.",
+                      "done_looks_like":  "The build script runs macdeployqt with -qmldir, copies libmpv and its libraries into Contents/Frameworks, places ffmpeg, ffprobe, deno and yt-dlp where code signing allows, signs the app (ad-hoc or Developer ID, per the decision), and writes Monolist-\u003cversion\u003e-arm64.dmg that runs on a clean Mac.",
+                      "size":  "L",
+                      "priority":  6,
+                      "group":  "macOS build",
+                      "sources":  [
+                                      "user-requests",
+                                      "melody-parity",
+                                      "macos"
+                                  ]
+                  },
+                  {
+                      "id":  "M08",
+                      "title":  "The Mac title bar has never been run: fixed 78 px inset, traffic lights off the 64 px bar, a gap in full screen, and double-click ignores the system setting",
+                      "category":  "platform-macos",
+                      "verified":  "partly",
+                      "evidence":  "windowchrome.cpp:66-69 hard-codes a 78 px inset, used at TopBar.qml:73, Sidebar.qml:42 and NowPlayingView.qml:225. The bar is 64 px tall (Theme.qml:70), while the traffic lights stay in the native strip of about 28 pt, and the inset is still applied in full screen when the lights are hidden. WindowDragArea.qml:15-36 always maximises on double-click, and right-click calls showSystemMenu, which does nothing off Windows (windowchrome.cpp:106-134). README.md:311 says macOS has never been run.",
+                      "done_looks_like":  "On a Mac, the inset comes from QWindow::safeAreaMargins and disappears in full screen. The traffic lights are centred in the bar with a small Objective-C++ helper, or the bar\u0027s contents line up with them. Double-click follows the system\u0027s double-click setting, checked with a screenshot.",
+                      "size":  "M",
+                      "priority":  6,
+                      "group":  "macOS build",
+                      "sources":  [
+                                      "user-requests",
+                                      "macos",
+                                      "design-parity",
+                                      "ui-wiring"
+                                  ]
+                  },
+                  {
+                      "id":  "M09",
+                      "title":  "No Mac menu bar or Cmd shortcuts, and closing the window quits and stops the music",
+                      "category":  "platform-macos",
+                      "verified":  "confirmed",
+                      "evidence":  "A grep finds no MenuBar, Qt.labs.platform or StandardKey.Preferences/Quit anywhere. main.cpp:47 never calls setQuitOnLastWindowClosed or handles reopening from the Dock. With the native window buttons (windowchrome.cpp:57-64), the red button closes the only window and the app quits. Melody kept running on macOS after its window closed (main.js:107-109).",
+                      "done_looks_like":  "Native menus: App (About, Settings… Cmd+,, Quit), Controls (Play, Next, Previous) and Window (Minimize, Zoom). Closing the window hides it while music keeps playing, a Dock click brings it back, and Cmd+W and Cmd+M work.",
+                      "size":  "M",
+                      "priority":  6,
+                      "group":  "macOS build",
+                      "sources":  [
+                                      "ui-wiring",
+                                      "melody-parity",
+                                      "macos"
+                                  ]
+                  },
+                  {
+                      "id":  "M10",
+                      "title":  "\u0027Update components\u0027 only works from the Windows development folder",
+                      "category":  "platform-macos",
+                      "verified":  "confirmed",
+                      "evidence":  "setupScriptPath (appinfo.cpp:276-288) exists only under Q_OS_WIN and finds setup-windows.ps1 only in the source folder the app was built from, or beside the exe, where build-windows.ps1 never copies it. updateTools runs powershell.exe (appinfo.cpp:317-322). The button is therefore disabled on macOS and on any Windows copy off the development machine (SettingsView.qml:575-589). Tools inside a signed .app can\u0027t be replaced without breaking the signature, and toolDirectories has no user-writable folder.",
+                      "done_looks_like":  "A cross-platform updater downloads yt-dlp, FFmpeg and Deno for the current OS and architecture, with checksums, into a writable tools folder in the app\u0027s data folder that is searched before the bundled copies. A Homebrew development install instead suggests \u0027brew upgrade\u0027.",
+                      "size":  "M",
+                      "priority":  6,
+                      "group":  "macOS build",
+                      "sources":  [
+                                      "user-requests",
+                                      "ui-wiring",
+                                      "macos"
+                                  ]
+                  },
+                  {
+                      "id":  "X01",
+                      "title":  "No library export or import (the iPhone app\u0027s backup JSON)",
+                      "category":  "missing-feature",
+                      "verified":  "confirmed",
+                      "evidence":  "The iPhone app writes and reads a versioned JSON file of playlists and liked songs (LibraryBackup.swift:18-35, 117-158), offered in its Settings (SettingsView.swift:863-954). Monolist\u0027s library.h has no export or import, and SettingsView.qml has no Library section.",
+                      "done_looks_like":  "Settings exports playlists and likes in the iPhone\u0027s format and imports such a file, with a Merge or Replace choice and a result toast.",
+                      "size":  "M",
+                      "priority":  7,
+                      "group":  "Library \u0026 playlists",
+                      "sources":  [
+                                      "ios-parity"
+                                  ]
+                  },
+                  {
+                      "id":  "X02",
+                      "title":  "No local music files",
+                      "category":  "missing-feature",
+                      "verified":  "confirmed",
+                      "evidence":  "The iPhone app imports local audio files (LocalImport.swift:12-65). Monolist can already play local paths (playbackcontroller.cpp:673-684), but there is no file or folder picker anywhere (grep FileDialog: none), so only downloads become local songs.",
+                      "done_looks_like":  "\u0027Add files…\u0027 and \u0027Add folder…\u0027 open native dialogs, read tags and cover art with ffprobe, add the songs to the library, and show a playable \u0027Local files\u0027 collection.",
+                      "size":  "L",
+                      "priority":  7,
+                      "group":  "Library \u0026 playlists",
+                      "sources":  [
+                                      "ios-parity"
+                                  ]
+                  },
+                  {
+                      "id":  "X03",
+                      "title":  "No way to import a playlist from a YouTube, YouTube Music or Spotify link",
+                      "category":  "missing-feature",
+                      "verified":  "confirmed",
+                      "evidence":  "The iPhone app imports playlists from links (ImportPlaylistView.swift:84-114, PlaylistImporter.swift:5-60 and 347-400). Monolist accepts no URLs; the only route is \u0027Add all to playlist\u0027 on an open YouTube Music page (PageView.qml:45-49).",
+                      "done_looks_like":  "An Import playlist dialog takes a YouTube Music playlist link (loading every page) or a Spotify playlist or album link, matches each song by title, artist and length, creates a playlist, and lists the songs it couldn\u0027t find.",
+                      "size":  "L",
+                      "priority":  7,
+                      "group":  "Library \u0026 playlists",
+                      "sources":  [
+                                      "ios-parity"
+                                  ]
+                  },
+                  {
+                      "id":  "X04",
+                      "title":  "Playlists have no description and no \u0027Add songs\u0027 panel",
+                      "category":  "missing-feature",
+                      "verified":  "confirmed",
+                      "evidence":  "The playlists table has no description column (appdatabase.cpp:54-58). The PlaylistView.qml:79-100 menu has only Add all to queue, Rename and Delete. The iPhone app has both (PlaylistEditView.swift:5-96, PlaylistAddSongsView.swift:3-37).",
+                      "done_looks_like":  "An editable description appears under the playlist title, and an Add songs panel on the playlist page searches the library and YouTube and adds or removes songs in place.",
+                      "size":  "M",
+                      "priority":  7,
+                      "group":  "Library \u0026 playlists",
+                      "sources":  [
+                                      "ios-parity"
+                                  ]
+                  },
+                  {
+                      "id":  "X05",
+                      "title":  "No in-app log, and release builds have no console",
+                      "category":  "missing-feature",
+                      "verified":  "confirmed",
+                      "evidence":  "There is no message handler (qInstallMessageHandler). Release Windows builds have no console (WIN32_EXECUTABLE, CMakeLists.txt:196-199), and neither does a Mac app opened from Finder. \u0027Copy for a bug report\u0027 (appinfo.cpp:173-196) holds only version numbers. The iPhone app attaches its playback log to problem reports (PlaybackReport.swift, LiveConsoleView.swift).",
+                      "done_looks_like":  "A message handler keeps recent log lines in memory and in a rotating log file in the app\u0027s data folder. About adds \u0027Copy playback log\u0027 and \u0027Open log folder\u0027.",
+                      "size":  "M",
+                      "priority":  7,
+                      "group":  "Settings",
+                      "sources":  [
+                                      "ios-parity"
+                                  ]
+                  },
+                  {
+                      "id":  "X06",
+                      "title":  "Missing small preferences: start page, prefer video, confirm before clearing the queue, reset all data",
+                      "category":  "missing-feature",
+                      "verified":  "confirmed",
+                      "evidence":  "Main.qml:21 always starts on Home. The video switch lasts for one track only (playbackcontroller.h:63-65). The queue\u0027s CLEAR empties it immediately (QueuePanel.qml), and there is no reset option (grep). The iPhone app has all four (SettingsState.swift:24-76, SettingsView.swift:435-446 and 1041-1046).",
+                      "done_looks_like":  "Settings adds a start-page choice, \u0027Prefer video when available\u0027, \u0027Confirm before clearing queue\u0027 and a two-step \u0027Reset all data\u0027 that keeps downloaded files.",
+                      "size":  "M",
+                      "priority":  7,
+                      "group":  "Settings",
+                      "sources":  [
+                                      "ios-parity"
+                                  ]
+                  },
+                  {
+                      "id":  "X07",
+                      "title":  "Video and fallback search results aren\u0027t re-ranked or cleaned of junk",
+                      "category":  "missing-feature",
+                      "verified":  "confirmed",
+                      "evidence":  "Results from the VIDEOS filter, the youtube.com fallback and yt-dlp are shown in the order they arrive (MediaExtractor::finishSearch). The iPhone app re-ranks them and pushes covers, live, nightcore and reaction uploads down (SearchRanking.swift:10-69). The same kind of term list already exists in pickResult (recommender.cpp:90-129).",
+                      "done_looks_like":  "A shared ranking step, reusing pickResult\u0027s term list, reorders video and fallback results. YouTube Music\u0027s own song results keep their order.",
+                      "size":  "S",
+                      "priority":  7,
+                      "group":  "Artist pages \u0026 search",
+                      "sources":  [
+                                      "ios-parity"
+                                  ]
+                  },
+                  {
+                      "id":  "X08",
+                      "title":  "Home has no charts and no moods \u0026 genres",
+                      "category":  "missing-feature",
+                      "verified":  "confirmed",
+                      "evidence":  "Home loads only YouTube Music\u0027s home feed and new releases (FEmusic_home and FEmusic_new_releases, catalog.cpp:51 and 80), and genre chips are skipped. The iPhone app builds country charts and moods \u0026 genres shelves (YouTubeShelfProvider.swift:19-130).",
+                      "done_looks_like":  "Home adds chart shelves for the current country and a Moods \u0026 genres row whose chips open category shelves.",
+                      "size":  "M",
+                      "priority":  7,
+                      "group":  "Artist pages \u0026 search",
+                      "sources":  [
+                                      "ios-parity"
+                                  ]
+                  },
+                  {
+                      "id":  "X09",
+                      "title":  "The iPhone\u0027s listening history (play_events.jsonl) can\u0027t be imported",
+                      "category":  "missing-feature",
+                      "verified":  "confirmed",
+                      "evidence":  "Spec §6 says the JSONL file lets a port start with an already-trained taste profile, and taste.h:12-14 keeps PlayEvent separate for exactly that. Nothing in the project reads a .jsonl file.",
+                      "done_looks_like":  "Settings imports play_events.jsonl into play_events, skipping duplicates by title, artist and time, then rebuilds suggestions. Exporting in the same format is optional.",
+                      "size":  "M",
+                      "priority":  7,
+                      "group":  "Recommendations",
+                      "sources":  [
+                                      "rec-spec"
+                                  ]
+                  },
+                  {
+                      "id":  "G01",
+                      "title":  "The app has no icon on any platform",
+                      "category":  "missing-feature",
+                      "verified":  "confirmed",
+                      "evidence":  "There is no .ico, .icns, .png, .svg, .rc or .plist file anywhere in Monolist Player (glob). CMake\u0027s resources (CMakeLists.txt:160-169) are just the fonts and Icons.js, and nothing calls setWindowIcon. The taskbar, Alt-Tab and the Dock show a generic icon.",
+                      "done_looks_like":  "An icon made from the \u0027MONOLIST.\u0027 wordmark ships as .ico on Windows (via an .rc file), .icns in the Mac bundle, and PNG for the window icon.",
+                      "size":  "S",
+                      "priority":  8,
+                      "group":  "Distribution",
+                      "sources":  [
+                                      "melody-parity",
+                                      "design-parity",
+                                      "macos"
+                                  ]
+                  },
+                  {
+                      "id":  "G02",
+                      "title":  "No Windows build that can be given to someone else",
+                      "category":  "missing-feature",
+                      "verified":  "confirmed",
+                      "evidence":  "build-windows.ps1:166-200 produces a development folder in C:\\dev\\monolist-build whose tools\\ folder only links back into C:\\dev\\monolist-deps (a junction and hard links). There is no zip or installer step. Melody shipped an NSIS installer and a portable build (package.json:13-34).",
+                      "done_looks_like":  "A -Package option, or an Inno Setup/CPack step, produces a self-contained zip or installer with real copies of the tools, a Start-menu shortcut and the icon.",
+                      "size":  "M",
+                      "priority":  8,
+                      "group":  "Distribution",
+                      "sources":  [
+                                      "melody-parity"
+                                  ]
+                  },
+                  {
+                      "id":  "G03",
+                      "title":  "No licence notices for bundled components, and no credit for the recommendation data",
+                      "category":  "docs",
+                      "verified":  "confirmed",
+                      "evidence":  "Settings\u0027 About (SettingsView.qml:613-616) has a one-line credit, and only fonts/OFL.txt ships. A distributed build bundles Qt (LGPL), libmpv and FFmpeg (often GPL), yt-dlp, Deno and Lucide icons (README.md:138, 343-347). The recommendation data is CC BY-NC (README.md:348-350), but no QML mentions Embeat or MusicBrainz. The iPhone app has an Acknowledgements screen (SettingsView.swift:1260-1310).",
+                      "done_looks_like":  "About → Acknowledgements lists every component with its licence text, and the texts ship in the Windows package and inside the Mac app. A credit line for the data appears whenever a catalogue or graph is loaded.",
+                      "size":  "S",
+                      "priority":  8,
+                      "group":  "Distribution",
+                      "sources":  [
+                                      "ios-parity",
+                                      "rec-spec"
+                                  ]
+                  },
+                  {
+                      "id":  "G04",
+                      "title":  "Font weights and tooltips may look different on macOS",
+                      "category":  "bug",
+                      "verified":  "partly",
+                      "evidence":  "Font.Bold (weight 700) is used 34 times across 21 QML files (for example TopBar.qml:97 and SettingsView.qml:73), but only the Regular, SemiBold and ExtraBold faces are bundled (main.cpp:64-68; Theme.qml:29-31). Each platform\u0027s font engine picks a nearby face or fakes bold in its own way. Tooltips use the Basic style, and the app never sets a window font or palette, so they appear in Segoe UI or SF with a 1 px frame. The two Settings TextFields (SettingsView.qml:329-345, 375-389) don\u0027t set selection colours like the other inputs. The Mac rendering was not seen.",
+                      "done_looks_like":  "Font.Bold becomes Theme.weightMedium or Theme.weightBlack (or a Bold face is bundled). The window sets the font and a palette from Theme, or a styled tooltip component is used, and the two TextFields match the other inputs.",
+                      "size":  "S",
+                      "priority":  8,
+                      "group":  "Polish",
+                      "sources":  [
+                                      "design-parity"
+                                  ]
+                  },
+                  {
+                      "id":  "G05",
+                      "title":  "Home\u0027s \u0027Open album\u0027 button shows a play icon",
+                      "category":  "bug",
+                      "verified":  "confirmed",
+                      "evidence":  "HomeView.qml:78-79 labels the button \u0027Open album\u0027 and it only navigates. PosterHero.qml:69 passes no icon, so PosterButton.qml:10 draws its default \u0027play\u0027 glyph. The featured release may also be a single.",
+                      "done_looks_like":  "The button shows an arrow, or actually plays the release, and its label follows the release type.",
+                      "size":  "S",
+                      "priority":  8,
+                      "group":  "Polish",
+                      "sources":  [
+                                      "design-parity"
+                                  ]
+                  },
+                  {
+                      "id":  "G06",
+                      "title":  "Six InnerTube instances each download youtube.com at startup for a visitor ID only one of them uses",
+                      "category":  "bug",
+                      "verified":  "confirmed",
+                      "evidence":  "InnerTube\u0027s constructor calls fetchVisitorData() (innertube.cpp:355-367), which downloads https://www.youtube.com/. The app holds six instances (mediaextractor.h:114, catalog.h:68, lyrics.h:110, recommender.h:111, playbackcontroller.h:212, streamresolver.h:141), but only the Player client\u0027s requests send the visitor ID (innertube.cpp:429-443).",
+                      "done_looks_like":  "The visitor ID is fetched only by the instance that resolves streams, or shared, so it is downloaded once per session.",
+                      "size":  "S",
+                      "priority":  8,
+                      "group":  "Polish",
+                      "sources":  [
+                                      "backend"
+                                  ]
+                  },
+                  {
+                      "id":  "G07",
+                      "title":  "The self-tests can\u0027t fail, and there are no automated tests",
+                      "category":  "half-built",
+                      "verified":  "confirmed",
+                      "evidence":  "--play, --rec-test, --graph-test, --artist-test, --content-test, --library-test, --net-test and --lyrics all end with QCoreApplication::quit(), exit code 0, whatever they print (main.cpp:353, 530, 655, 786, 891, 928, 977, 1074). CMakeLists.txt has no enable_testing or CTest. catalog.cpp:2-4 mentions match_key_golden.tsv, but no such test exists.",
+                      "done_looks_like":  "Each self-test exits non-zero when an expectation fails. A CTest target checks the golden match keys, a taste profile built from fixed events, and fixed search results when a catalogue path is given, and GitHub CI can run it.",
+                      "size":  "M",
+                      "priority":  8,
+                      "group":  "Polish",
+                      "sources":  [
+                                      "backend",
+                                      "rec-spec"
+                                  ]
+                  },
+                  {
+                      "id":  "G08",
+                      "title":  "If the database can\u0027t be opened, the app fails silently",
+                      "category":  "bug",
+                      "verified":  "confirmed",
+                      "evidence":  "main.cpp:82-86 logs \u0027running with in-memory data only\u0027, but AppDatabase::open (appdatabase.cpp:35-48) never falls back to an in-memory database. Every query then fails quietly, and likes, playlists and settings are lost with no message.",
+                      "done_looks_like":  "The app falls back to an in-memory database and tells the user that the library couldn\u0027t be opened, where the file is, and that changes won\u0027t be kept.",
+                      "size":  "S",
+                      "priority":  8,
+                      "group":  "Polish",
+                      "sources":  [
+                                      "backend"
+                                  ]
+                  },
+                  {
+                      "id":  "DOC1",
+                      "title":  "The README describes the old source order and leaves out Settings, the recommender, video and macOS",
+                      "category":  "docs",
+                      "verified":  "confirmed",
+                      "evidence":  "README.md:25 and 50-64 list yt-dlp as tier 0 and say the Piped/Invidious race is kept. In the code InnerTube is tier 0 (streamresolver.h:43-49) and both instance lists ship empty (streamresolver.cpp:38-72). README.md:63-64 says sourceLabel is shown, which it isn\u0027t. The layout and singleton lists (128-169) leave out recommender.*, rec/, appinfo.*, videosurface.*, SettingsView and the About and Recs singletons. The self-test list (261-284) leaves out --rec-test, --graph-test and --events. Known gaps (306-311) leave out Connections and media keys, and 300-304 still says streaming goes through yt-dlp. The code is already pushed to GitHub (origin droidboy08-hub/Monolist).",
+                      "done_looks_like":  "The README matches the code: the source order, singletons, layout, self-tests, the recommender data and its licence, Known gaps, and the macOS build.",
+                      "size":  "S",
+                      "priority":  9,
+                      "group":  "Docs",
+                      "sources":  [
+                                      "user-requests",
+                                      "backend",
+                                      "melody-parity",
+                                      "rec-spec",
+                                      "macos"
+                                  ]
+                  },
+                  {
+                      "id":  "DOC2",
+                      "title":  "DESIGN.md and some code comments disagree with the code",
+                      "category":  "docs",
+                      "verified":  "partly",
+                      "evidence":  "innertube.h:25-26 says streams are still resolved by yt-dlp, contradicting InnerTube::player (innertube.cpp:501-592). DESIGN.md has no written exception for the looping download icon (DownloadGlyph.qml:90), the lyrics fades (LyricsPane.qml:176-178), the red SYNC button (LyricsPane.qml:200), the hover plates on the window buttons or the queue\u0027s reflow animation. It describes only the Windows title bar. The comment at LikeButton.qml:7-13 and the unused Theme ghostHover and ghostActive tokens are stale. The DESIGN.md text itself was checked only through the auditor\u0027s citations.",
+                      "done_looks_like":  "Each deliberate exception is written into DESIGN.md with its reason (or the code changes), the macOS title bar is described, and the stale comments and tokens are fixed.",
+                      "size":  "S",
+                      "priority":  9,
+                      "group":  "Docs",
+                      "sources":  [
+                                      "design-parity",
+                                      "backend"
+                                  ]
+                  }
+              ],
+    "decisions_for_user":  [
+                               "Connections: should YouTube Music sign-in (a cookie file kept in the Mac Keychain or Windows Credential Manager) and/or Last.fm scrobbling be built now, later, or should the \u0027Designed, not built\u0027 section be hidden until then? (SettingsView.qml:393-431)",
+                               "Update checks: the code is already on GitHub as droidboy08-hub/Monolist. Is that repo public, or will it be, and will you publish GitHub Releases there? A private repo can\u0027t be checked without a token. If yes, api.github.com/repos/droidboy08-hub/Monolist/releases/latest becomes the built-in update feed (appinfo.cpp:214-221).",
+                               "Country shelf title: keep \u0027From \u003ccountry\u003e\u0027 (current; the list is ranked by MusicBrainz ratings, not plays, shelves.h:61-69) or go back to \u0027Popular in \u003ccountry\u003e\u0027 as you first asked? The Settings note (SettingsView.qml:371) will be changed to match either way.",
+                               "Should Burzum be added to the suggestion block list (suitable.cpp:73), and do you want a \u0027Hide explicit titles\u0027 setting (suitable.h:29)?",
+                               "Should \u0027Clear history\u0027 also reset recommendations by deleting the listening events, or keep them and add a separate \u0027Reset recommendations\u0027? Today it clears only Recently played and History (library.cpp:697-705), so Search still says \u0027Because you played…\u0027 for cleared songs.",
+                               "When you click a search result, should the app keep queueing all the results (SearchView.qml:155-156), or play just that song and continue with similar songs like the iPhone app does?",
+                               "Appearance: stay a single paper-and-ink theme by design, or add a dark theme that follows the system? A Mac in dark mode currently gets a light app.",
+                               "iPhone and desktop libraries: is a JSON backup file enough (export on one, import on the other), or do you want live sync? iCloud sync needs a signed Mac app, and Windows would need a web service or your own server.",
+                               "Mac distribution: personal use only (ad-hoc signed, opened with right-click → Open), or shareable with others (Apple Developer ID at $99 a year plus notarization)?",
+                               "Mac architecture: Apple Silicon only (simplest, matches your Mac) or universal with Intel Macs (needs universal Qt, libmpv and tools)?",
+                               "The two untracked extracted folders (\u0027Desktop Multiplatorm Music Player\u0027 and \u0027Spotify-inspired desktop player\u0027) and their .zip files are still at the repo root. They are not in git. Will you delete them from Finder (deleting on the network share is permanent), and should the zips go too?",
+                               "Will Monolist stay non-commercial? The recommendation catalogue is licensed CC BY-NC 4.0, which forbids commercial use and requires a credit in the app."
+                           ],
+    "not_worth_doing":  [
+                            "Refuted: \u0027the GitHub upload hasn\u0027t happened, there is no remote, and the branch is master\u0027. .git/config has origin git@github.com:droidboy08-hub/Monolist.git, HEAD is refs/heads/main, and refs/remotes/origin/main exists, so the push has already happened.",
+                            "Refuted: \u0027CMAKE_INSTALL_BINDIR is used without include(GNUInstallDirs)\u0027. qt_standard_project_setup() at CMakeLists.txt:30 already includes GNUInstallDirs.",
+                            "The looping download-arrow hover animation (DownloadGlyph.qml:90): the user asked for the download animation, so record it as a DESIGN.md exception (DOC2) rather than remove it.",
+                            "Design-rule nits: the lyrics gradient fades, the red SYNC button, RecShelf\u0027s 2px lines, missing hover fade and bold titles, the page cross-fade and toast easing curves, the varying disabled opacity (0.3, 0.4, 0.45), and the NavItem cursor. These are cosmetic. RecShelf is restyled anyway in R03, and the rest belong as DESIGN.md exceptions.",
+                            "Unused backend code (MpvEngine setSpeed and metadataChanged, Extractor.resolve and available, playTracks, the YtDlp override helpers): removing it is a refactor with no user impact. B05 will start using MpvEngine::stop.",
+                            "A \u0027Normalize volume\u0027 toggle: ReplayGain is already on (mpvengine.cpp:104), so a switch adds little.",
+                            "The history table nobody reads, the resolver caches that are never pruned, and the unused featured, track_count and playlist_id columns: the cost per session is negligible.",
+                            "The empty Piped and Invidious server lists with command-line-only settings: this is deliberate and documented (streamresolver.cpp:38-63). Only the README needs fixing, which DOC1 covers.",
+                            "Extra context columns in play_events (shelf title, region, MusicBrainz IDs): useful only for offline evaluation. Revisit alongside the G07 tests.",
+                            "Importing Melody\u0027s downloads: there is no C:\\Users\\droid\\Music\\Melody on this machine, so this only matters if Melody downloads exist on another computer.",
+                            "iPhone-only features: app icon picker, haptics, splash screen, the account panel animation, custom menu and tab-bar styles, and CarPlay/lock-screen art. The iPhone\u0027s stream workarounds (PoTokenMinter, NSigSolver, the HLS and stream loaders, the consent cookie) are replaced here by yt-dlp with Deno, InnerTube /player and mpv.",
+                            "Autoplay radio batch size and number of extensions compared with the spec (25 per batch and unlimited here, against 20 × 3): this is tuning, folded into R06.",
+                            "Duplicates folded into other items: volume and mute keys into B06; Recently played \u0027Show all\u0027 into A04; the missing like button and menu on Downloads rows into L02; the current-song menu into P05; the Settings note saying \u0027Popular in\u0027 into the country-shelf decision; the empty update feed into the update-check decision; the dormant stream fallbacks into DOC1.",
+                            "The focus ring on page buttons (ActionButton, PosterButton) is listed under accessibility in coverage_gaps rather than as a one-off fix."
+                        ],
+    "coverage_gaps":  [
+                          "Accessibility: nothing in the project sets Accessible.name or Accessible.role (grep finds none). Nobody checked keyboard navigation inside lists, visible focus on page buttons, or how the app works with VoiceOver on macOS or Narrator on Windows.",
+                          "Window size and position are not remembered: Main.qml:11-12 opens at a fixed 1512×945, and no window-geometry saving was found. Behaviour across multiple monitors and mixed display scaling was not checked.",
+                          "Running the app twice: there is no single-instance guard (no QLockFile or QLocalServer), so a second launch opens another window on the same SQLite database and a second libmpv.",
+                          "Localisation: no qsTr anywhere, so every string is hard-coded English. Date and number formats were not checked.",
+                          "EU consent page: fetchVisitorData downloads www.youtube.com (innertube.cpp:371-405). In EU countries that can redirect to consent.youtube.com with no visitor ID, which would push most tracks off the fast tier. The iPhone app has a YouTubeConsentCookie for this, and nobody tested it here.",
+                          "Performance with large libraries and long queues: whether track lists render only visible rows, memory use, and the cost of the artwork cache were not examined.",
+                          "Playback features a desktop user might expect were not assessed: gapless playback (designed in Lumen), crossfade, an equalizer and playback speed.",
+                          "Drag and drop (songs onto sidebar playlists), selecting several songs at once, desktop notifications on track change, and a system tray or mini-player window were not examined.",
+                          "Real macOS behaviour: the app has never been run on a Mac. Unchecked: the software video renderer on Metal, CoreAudio device switching, App Nap slowing timers while the window is hidden, and Gatekeeper and privacy prompts when opening data folders on ~/Desktop.",
+                          "Linux (planned later): the frameless window and resize-edge path, Wayland startSystemMove, MPRIS and packaging were only touched in passing.",
+                          "Build automation: there is no GitHub Actions workflow for Windows or macOS builds now that the code is on GitHub, and no script builds a native Windows ARM64 version (it runs under x64 emulation).",
+                          "Security and privacy: how a downloaded tool update would be verified, safe storage for future sign-in secrets, and the arguments passed to yt-dlp were not reviewed.",
+                          "Database robustness: recovery after a crash mid-write, repeated migrations, and backup of monolist.db were not examined.",
+                          "The reference apps were read only through the auditors\u0027 citations. RECOMMENDATION_PORTING.md and the chat transcript were not re-read during this synthesis, so the quotes of user requests rely on the user-requests auditor."
+                      ]
+}

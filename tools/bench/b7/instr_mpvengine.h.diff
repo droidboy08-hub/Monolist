@@ -1,0 +1,23 @@
+﻿diff --git a/b3base/Monolist Player/src/mpvengine.h b/../src-b3/src/mpvengine.h
+index 2fe06d1..4901591 100644
+--- a/b3base/Monolist Player/src/mpvengine.h	
++++ b/../src-b3/src/mpvengine.h
+@@ -76,6 +76,12 @@ public:
+     QSize videoSize() const { return m_videoSize; }
+     mpv_handle *handle() const { return m_mpv; }
+ 
++    // BENCH: prints `text` into mpv's own log (and log-file) through
++    // print-text, synchronously, so it carries mpv's timestamp.
++    void benchPrint(const QByteArray &text);
++    // BENCH: one line of mpv's cache state (cache-speed, demuxer-cache-state).
++    QString benchCacheSample();
++
+ Q_SIGNALS:
+     void positionChanged(qint64 ms);
+     void durationChanged(qint64 ms);
+@@ -117,4 +123,5 @@ private:
+     QSize m_videoSize;
+     qint64 m_duration = 0;
+     QVariantList m_audioDevices;
++    bool m_benchFirstPos = false;   // BENCH: first time-pos > 0 of the latest load logged
+ };

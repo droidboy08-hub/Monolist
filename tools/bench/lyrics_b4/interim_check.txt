@@ -1,0 +1,36 @@
+﻿Per track, over passes cold01 cold02 cold03 cold04 cold05
+  #1  {"exact":5}
+  #2  {"exact":5}
+  #3  {"exact":5}
+  #4  {"exact":5}
+  #5  {"exact":5}
+  #6  {"exact":5}
+  #7  {"exact":5}
+  #8  {"exact":5}
+  #9  {"exact":5}
+  #10 {"exact":5}
+  #11 {"exact":5}
+  #12 {"exact":5}
+  #13 {"exact":5}
+  #14 {"exact":5}
+  #15 {"exact":5}
+  #16 {"search text":5}
+  #17 {"exact":5}
+  #18 {"exact":5}
+  #19 {"exact":5}
+  #20 {"exact":5}
+  #21 {"exact":5}
+  #22 {"exact":5}
+  #23 {"exact":5}
+  #24 {"exact":5}
+  #25 {"exact":5}
+  #26 {"exact":5}
+  #27 {"exact":5}
+  #28 {"exact":5}
+  #29 {"instrumental":5}
+  #30 {"instrumental":5}
+Vocal tracks whose stored text was the right song's in every pass: 28/28
+Vocal tracks with the exact (/api/get) text in every pass: 27/28
+LRCLIB bytes per first lookup: n=150 median=11544 p90=22458 min=357 max=36274
+/api/get answer after sent: n=150 median=197 p90=256
+Search asked as well because /api/get was slow: 25 of 150 first lookups
