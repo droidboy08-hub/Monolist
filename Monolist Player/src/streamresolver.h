@@ -17,6 +17,7 @@
 class QNetworkAccessManager;
 class QNetworkReply;
 class YtDlpRequest;
+class YtmSession;
 
 // Turns a video id into a playable audio URL, trying progressively less
 // reliable sources until one answers.
@@ -51,6 +52,16 @@ class YtDlpRequest;
 // late answer is kept for the next time the song is played. The ladder is
 // untouched underneath, and is where a JioSaavn link mpv refuses falls back
 // to.
+//
+// One rung is used only when needed: the YouTube Music account
+// (TierSignedIn), for a song YouTube will not play signed out. It is never
+// walked in order: a song goes to it only after an anonymous rung was
+// refused for a reason an account can answer (LOGIN_REQUIRED, which is how
+// "Sign in to confirm you're not a bot" arrives; an age check; a content
+// check), and then next, before the rest of the ladder, which stays below
+// it as it was. Never ahead of time (prefetch), never without a session
+// YouTube Music has confirmed and "Play with my account when needed" on
+// (followAccount), and at most setAccountLimit songs an hour.
 class StreamResolver : public QObject
 {
     Q_OBJECT
@@ -71,7 +82,12 @@ public:
         TierExhausted,
         // Not a rung of the ladder: the other catalogue, raced against it by
         // resolveTrack. Kept out of the numbering the ladder walks.
-        TierJioSaavn = 100
+        TierJioSaavn = 100,
+        // yt-dlp with the YouTube Music account's cookies: a rung, but one a
+        // resolve goes to only when an anonymous rung was refused for want
+        // of an account (see above), so it too is kept out of the numbering
+        // a plain walk down the ladder counts through.
+        TierSignedIn = 101
     };
     Q_ENUM(Tier)
 
@@ -127,7 +143,9 @@ public:
     void setSaavnIndiaHeaders(bool on, bool forgetNoMatches = true);
     bool saavnIndiaHeaders() const { return m_saavn.indiaHeaders(); }
     // Walks exactly these tiers, in this order: how the player retries a
-    // track whose stream it could not open (see afterRefusal).
+    // track whose stream it could not open (see afterRefusal). The account's
+    // rung too is walked only where it is listed: a refused signed-in link is
+    // not asked for again unless the caller says so.
     //
     // `homeTier` is the rung the song was playing from before the refusal.
     // A link found on any other rung below InnerTube is a rescue link: the
@@ -215,6 +233,26 @@ public:
     void setYtDlpOneAtATime(bool on);
     bool ytdlpOneAtATime() const { return m_ytdlpOneAtATime; }
 
+    // The YouTube Music account TierSignedIn plays with: its cookies, lent
+    // to one yt-dlp lookup at a time in a file of their own, and whether it
+    // may be used (YtmSession::accountForPlayback). Set once at start
+    // (main.cpp); with none, the rung is never used. Every link fetched with
+    // the account is forgotten whenever the session changes, and a lookup
+    // with it under way stops once the account may no longer be used.
+    void followAccount(YtmSession *account);
+    // How many songs an hour may be asked for with the account: past it a
+    // song goes on down the anonymous ladder. 120 unless the setting
+    // ytmusic.plays_per_hour says otherwise: yt-dlp's wiki puts what an
+    // account may ask for at about 2,000 videos an hour, and warns that an
+    // account asking too much is banned; a listener hears about 17 songs an
+    // hour.
+    void setAccountLimit(int perHour);
+    int accountLimit() const { return m_accountLimit; }
+    // Whether a rung's refusal is one an account can answer: LOGIN_REQUIRED
+    // (how "Sign in to confirm you're not a bot" and a private video arrive
+    // at /player), an age or content check, or yt-dlp's words for the same.
+    static bool accountWouldHelp(const QString &reason);
+
     // Instance lists rot — hosts disappear every few months. They are settable
     // so a config update can fix playback without shipping a new binary.
     void setPipedInstances(const QStringList &hosts);
@@ -259,6 +297,13 @@ private:
         int homeTier = -1;
         // Since it asked for yt-dlp and found another lookup running.
         QElapsedTimer waitingForYtDlp;
+        // An anonymous rung was refused for want of an account
+        // (accountWouldHelp); whether TierSignedIn was then put next, or
+        // ruled out, which happens once a job; and whether this job may add
+        // it at all (resolveVia's walk is exactly what it was given).
+        bool accountWanted = false;
+        bool accountDecided = false;
+        bool mayAddAccount = true;
     };
 
     // A resolved URL stays valid for hours (YouTube signs an expiry into it),
@@ -271,13 +316,29 @@ private:
     };
     static QDateTime expiryOf(const QString &url);
 
-    void start(const QString &videoId, QList<int> tiers, int homeTier = -1);
+    // `exact`: the walk is these tiers and no other (resolveVia), so the
+    // account's rung is never added to it.
+    void start(const QString &videoId, QList<int> tiers, int homeTier = -1, bool exact = false);
     // The ladder's own job for this song, without the race around it.
     void cancelJob(const QString &videoId);
     void startTier(Job *job, int tier);
     void startInnerTube(Job *job);
     void startYtDlp(Job *job);
     void startMuxed(Job *job);
+    // The account's rung: whether it may run, then its turn at yt-dlp, then
+    // (launchSignedIn) its cookies file and its lookup.
+    void startSignedIn(Job *job);
+    void launchSignedIn(Job *job);
+    // After `job`'s rung was refused with `reason`: TierSignedIn next, when
+    // the reason is one an account answers and the account may be used.
+    void considerAccount(Job *job, const QString &reason);
+    // The session changed, or may no longer be used for playback.
+    void accountChanged();
+    // The songs asked for with the account in the last hour, counted as
+    // each lookup starts: whether the limit is reached.
+    bool accountLimitReached();
+    // yt-dlp said, on stderr, that the account's cookies no longer work.
+    void checkAccountWarning(const YtDlpRequest *request);
     // One yt-dlp at a time (setYtDlpOneAtATime): a job on the yt-dlp or the
     // muxed rung asks for the turn, and its lookup starts once it has it.
     void queueYtDlp(Job *job);
@@ -373,6 +434,16 @@ private:
     Job *m_ytdlpHolder = nullptr;      // whose lookup runs
     QList<Job *> m_ytdlpWaiting;       // in the order they asked
     bool m_foreground = false;         // last said to YtDlp::setPlaybackResolving
+    // The account (followAccount), and its lookups: one at a time whatever
+    // ytdlp.resolves says, since each writes the rotated cookies back and two
+    // at once would each undo the other's; and when each of the last hour's
+    // began, on m_accountClock.
+    QPointer<YtmSession> m_account;
+    int m_accountLimit = 120;
+    Job *m_accountHolder = nullptr;
+    QList<Job *> m_accountWaiting;
+    QElapsedTimer m_accountClock;
+    QList<qint64> m_accountUses;
     QHash<QString, CacheEntry> m_cache;
     // The rescue links of the play under way (see resolveVia), apart from
     // the songs' own links above.

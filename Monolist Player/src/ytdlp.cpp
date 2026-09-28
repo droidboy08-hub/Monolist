@@ -31,6 +31,7 @@
 namespace {
 
 QString g_executableOverride;
+QStringList g_overridePrefix;
 bool g_cancelWaits = false;
 
 // The resolvers resolving a song someone is waiting for, and what waits for
@@ -329,6 +330,7 @@ void YtDlpRequest::handleFinished(int exitCode, QProcess::ExitStatus status)
         settleFailed(QStringLiteral("yt-dlp terminated unexpectedly."));
         return;
     }
+    m_exitedOnItsOwn = true;
 
     if (exitCode != 0) {
         // Prefer yt-dlp's own "ERROR: [youtube] <id>: <reason>", reduced to the
@@ -391,9 +393,10 @@ void YtDlpRequest::cancel()
 
 // ----------------------------------------------------------------------- YtDlp
 
-void YtDlp::setExecutableOverride(const QString &path)
+void YtDlp::setExecutableOverride(const QString &path, const QStringList &prefixArgs)
 {
     g_executableOverride = path;
+    g_overridePrefix = path.isEmpty() ? QStringList() : prefixArgs;
 }
 
 void YtDlp::setCancelWaits(bool wait)
@@ -515,7 +518,7 @@ YtDlp::Invocation YtDlp::locate()
     };
 
     if (!g_executableOverride.isEmpty() && QFileInfo::exists(g_executableOverride)) {
-        accept(g_executableOverride);
+        accept(g_executableOverride, g_overridePrefix);
         return invocation;
     }
 
@@ -640,6 +643,25 @@ YtDlpRequest *YtDlp::resolveAudio(const QString &videoIdOrUrl, QObject *parent)
         QStringLiteral("--no-playlist"),
         // Usually Opus at ~130-160 kb/s, which beats the ~128 kb/s AAC stream;
         // mpv plays either directly.
+        QStringLiteral("-f"), QStringLiteral("bestaudio/best")
+    };
+    return run(args, /*expectJson=*/true, parent);
+}
+
+YtDlpRequest *YtDlp::resolveAudioSignedIn(const QString &videoIdOrUrl, const QString &cookieFile, QObject *parent)
+{
+    const QStringList args = {
+        normaliseToUrl(videoIdOrUrl),
+        QStringLiteral("--dump-single-json"),
+        QStringLiteral("--no-playlist"),
+        // Read at the start, and the jar written back into it at exit.
+        QStringLiteral("--cookies"), QDir::toNativeSeparators(cookieFile),
+        // yt-dlp's clients for an account (web_embedded, tv_downgraded,
+        // web) without the web client, which needs a PO token for its
+        // streams unless the account pays for Premium. Neither of these two
+        // needs one; both post to www.youtube.com, and both answer with a
+        // signature and an n parameter to solve, which is what Deno is for.
+        QStringLiteral("--extractor-args"), QStringLiteral("youtube:player_client=tv_downgraded,web_embedded"),
         QStringLiteral("-f"), QStringLiteral("bestaudio/best")
     };
     return run(args, /*expectJson=*/true, parent);

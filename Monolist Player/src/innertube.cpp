@@ -14,9 +14,11 @@
 #include <QNetworkCookieJar>
 #include <QNetworkReply>
 #include <QNetworkRequest>
+#include <QRandomGenerator>
 #include <QRegularExpression>
 #include <QThread>
 #include <QTimer>
+#include <QUrlQuery>
 
 #include <algorithm>
 #include <initializer_list>
@@ -88,6 +90,10 @@ constexpr int kPlayerDeadlineMs = 3000;
 // would share the stalled connection. Once a call, and never more: more
 // /player traffic is how a client gets flagged as a bot.
 constexpr int kPlayerHedgeMs = 1200;
+
+// A listen reported to the account's history (reportPlayback): one small
+// GET, and nothing waits on it.
+constexpr int kReportTimeoutMs = 10000;
 
 // The visionOS app's versions, as /player is asked. 1.02 answered every call
 // measured (96 of 96, September 2026). 0.1 answered the same twelve test
@@ -1490,6 +1496,9 @@ QNetworkReply *InnerTube::post(Client client, const QString &endpoint, QJsonObje
     }
     if (session)
         *session = account;
+    // Only as the account, or not at all.
+    if (auth == Auth::Required && account == 0)
+        return nullptr;
     body.insert(QStringLiteral("context"), context);
     return (network ? network : m_network)->post(request, QJsonDocument(body).toJson(QJsonDocument::Compact));
 }
@@ -1512,6 +1521,14 @@ void InnerTube::send(Client client, const QString &endpoint, const QJsonObject &
 {
     quint64 account = 0;
     QNetworkReply *reply = post(client, endpoint, body, timeoutMs, auth, &account, network);
+    if (!reply) {
+        // Auth::Required with no session to carry: not asked at all. Said
+        // later, as an answer always comes.
+        QTimer::singleShot(0, this, [done]() {
+            done({}, QStringLiteral("no signed-in session to ask with"));
+        });
+        return;
+    }
     // The request this attempt belongs to. Its retries carry it forward, and
     // whichever of them finds the slot moved on stops there.
     const quint64 generation = slot ? slot->generation : 0;
@@ -1554,13 +1571,21 @@ void InnerTube::send(Client client, const QString &endpoint, const QJsonObject &
                     // is asked again without the account.
                     const bool redirected = status >= 300 && status < 400;
                     if (status == 400 || status == 401 || status == 403 || redirected) {
-                        if ((status == 401 || status == 403) && g_account.rejected)
-                            g_account.rejected(account, status);
+                        if (status == 401 || status == 403) {
+                            if (auth == Auth::Required) {
+                                if (g_account.doubted)
+                                    g_account.doubted(account, status);
+                            } else if (g_account.rejected) {
+                                g_account.rejected(account, status);
+                            }
+                        }
                         if (superseded())
                             return;
                         // YtmSession's check wants the verdict, not an
-                        // anonymous answer standing in for it.
-                        if (auth == Auth::Checking) {
+                        // anonymous answer standing in for it; nor has a
+                        // call that means anything only as the account
+                        // any use for one.
+                        if (auth == Auth::Checking || auth == Auth::Required) {
                             done({}, redirected ? QStringLiteral("YouTube Music answered with a redirect (HTTP %1)")
                                                       .arg(status)
                                                 : reply->errorString());
@@ -1893,6 +1918,140 @@ void InnerTube::playerRefused(Client client, const QString &why, std::shared_ptr
     qInfo("innertube: %s not resolved in %lld ms: %s", qPrintable(ask->videoId), (long long)ask->clock.elapsed(),
           qPrintable(all));
     finishPlayer(ask, {}, 0, all);
+}
+
+// ---------------------------------------------------------------- listen reports
+
+bool InnerTube::isPlaybackReportUrl(const QUrl &url)
+{
+    const QString host = url.host().toLower();
+    return url.isValid() && url.scheme() == QLatin1String("https") && url.userInfo().isEmpty()
+           && (url.port() == -1 || url.port() == 443)
+           && (host == CookieImport::kStatsHost || host == CookieImport::kWwwHost || host == CookieImport::kMusicHost)
+           && url.path() == QLatin1String("/api/stats/playback");
+}
+
+void InnerTube::playbackTracking(const QString &videoId,
+                                 std::function<void(const QString &url, const QString &error)> done)
+{
+    // As YouTube Music's web player asks for a song it is about to play.
+    // Only the reporting address is read: the streams, which that client
+    // could not fetch without a PO token anyway, are left alone.
+    const QJsonObject body{
+        { QStringLiteral("videoId"), videoId },
+        { QStringLiteral("contentCheckOk"), true },
+        { QStringLiteral("racyCheckOk"), true }
+    };
+    send(Client::Music, QStringLiteral("player"), body, kPlayerTimeoutMs, /*slot=*/nullptr,
+         [done](const QJsonObject &root, const QString &error) {
+             if (!error.isEmpty()) {
+                 done({}, error);
+                 return;
+             }
+             // Answered as nobody: its address would report the listen to
+             // nobody, or to the wrong visitor.
+             if (parseLoggedIn(root) == QLatin1String("0")) {
+                 done({}, QStringLiteral("YouTube Music answered as if signed out (logged_in=0)"));
+                 return;
+             }
+             const QString url = dig(root, { "playbackTracking", "videostatsPlaybackUrl", "baseUrl" }).toString();
+             if (url.isEmpty()) {
+                 done({}, QStringLiteral("the answer names no address to report the listen to"));
+                 return;
+             }
+             done(url, QString());
+         },
+         /*retries=*/0, Auth::Required);
+}
+
+void InnerTube::reportPlayback(const QString &trackingUrl, std::function<void(int status, const QString &error)> done)
+{
+    // Said later, as an answer always comes.
+    const auto fail = [this, done](const QString &why) {
+        QTimer::singleShot(0, this, [done, why]() { done(0, why); });
+    };
+    QUrl url(trackingUrl);
+    if (!isPlaybackReportUrl(url)) {
+        fail(QStringLiteral("not an address a listen is reported to"));
+        return;
+    }
+    // What YouTube Music's player adds to the address: the protocol's
+    // version, the client, and a playback nonce of its own, 16 of the 64
+    // URL-safe characters.
+    static const char kNonce[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_";
+    QString cpn;
+    for (int i = 0; i < 16; ++i)
+        cpn += QLatin1Char(kNonce[QRandomGenerator::global()->bounded(64)]);
+    QUrlQuery query(url);
+    for (const QString &name : { QStringLiteral("ver"), QStringLiteral("c"), QStringLiteral("cpn") })
+        query.removeAllQueryItems(name);
+    query.addQueryItem(QStringLiteral("ver"), QStringLiteral("2"));
+    query.addQueryItem(QStringLiteral("c"), QStringLiteral("WEB_REMIX"));
+    query.addQueryItem(QStringLiteral("cpn"), cpn);
+    url.setQuery(query);
+
+    // What a browser signed in to YouTube Music sends that host and path,
+    // from YouTube Music's page: the cookies it has for them, and the SID
+    // hashes for the page's origin (the stand-in's, in a self-test).
+    const QString origin = g_testServer.isEmpty() ? QStringLiteral("https://music.youtube.com") : g_testServer;
+    AccountRequest asked;
+    asked.auth = Auth::Required;
+    asked.host = url.host().toLower();
+    asked.path = url.path();
+    asked.origin = origin.toUtf8();
+    AccountHeaders carried;
+    const quint64 account = g_account.headers ? g_account.headers(asked, &carried) : 0;
+    if (account == 0 || carried.cookie.isEmpty()) {
+        fail(QStringLiteral("no signed-in session to report with"));
+        return;
+    }
+
+    // In a self-test the stand-in is asked, at the same path and query.
+    QUrl target = url;
+    if (!g_testServer.isEmpty()) {
+        target = QUrl(g_testServer);
+        target.setPath(url.path());
+        target.setQuery(url.query(QUrl::FullyEncoded));
+    }
+    QNetworkRequest request(target);
+    request.setHeader(QNetworkRequest::UserAgentHeader, kUserAgent);
+    request.setRawHeader("Origin", origin.toUtf8());
+    request.setRawHeader("Referer", (origin + QLatin1Char('/')).toUtf8());
+    request.setTransferTimeout(kReportTimeoutMs);
+    // As post() carries the account: never through the shared jar either
+    // way, and never after a redirect, which would take the cookies with it.
+    request.setAttribute(QNetworkRequest::CookieLoadControlAttribute, QNetworkRequest::Manual);
+    request.setAttribute(QNetworkRequest::CookieSaveControlAttribute, QNetworkRequest::Manual);
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::ManualRedirectPolicy);
+    request.setRawHeader("Cookie", carried.cookie);
+    if (!carried.authorization.isEmpty())
+        request.setRawHeader("Authorization", carried.authorization);
+    request.setRawHeader("X-Origin", origin.toUtf8());
+    request.setRawHeader("X-Goog-AuthUser", carried.authUser.isEmpty() ? QByteArray("0") : carried.authUser);
+    if (!g_visitor.session.isEmpty())
+        request.setRawHeader("X-Goog-Visitor-Id", g_visitor.session.toUtf8());
+
+    QNetworkReply *reply = m_network->get(request);
+    const QString host = asked.host;
+    connect(reply, &QNetworkReply::finished, this, [reply, done, account, host]() {
+        reply->deleteLater();
+        const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        const QList<QNetworkCookie> rotated =
+            reply->header(QNetworkRequest::SetCookieHeader).value<QList<QNetworkCookie>>();
+        if (!rotated.isEmpty() && g_account.cookies)
+            g_account.cookies(account, host, rotated);
+        if (status >= 300 && status < 400) {
+            done(status, QStringLiteral("answered with a redirect (HTTP %1), which is not followed").arg(status));
+            return;
+        }
+        // Never Qt's own words for it, which quote the whole address.
+        if (reply->error() != QNetworkReply::NoError || status < 200 || status >= 300) {
+            done(status, status > 0 ? QStringLiteral("answered HTTP %1").arg(status)
+                                    : QStringLiteral("no answer (network error %1)").arg(int(reply->error())));
+            return;
+        }
+        done(status, QString());
+    });
 }
 
 void InnerTube::search(const QString &query, Filter filter)

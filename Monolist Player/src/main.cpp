@@ -72,6 +72,17 @@
 
 int main(int argc, char *argv[])
 {
+    // --fake-yt-dlp <folder> ...: this program standing in for yt-dlp, for
+    // --account-play-test (ytmselftest.cpp), which runs it in yt-dlp's place.
+    // Before anything else, and with no window: it answers as the folder
+    // says and exits.
+    for (int i = 1; i < argc; ++i) {
+        if (qstrcmp(argv[i], "--fake-yt-dlp") == 0) {
+            QCoreApplication core(argc, argv);
+            return runFakeYtDlp(core.arguments());
+        }
+    }
+
     QGuiApplication app(argc, argv);
     // Qt sets the process locale from the environment on macOS and Linux, and
     // libmpv refuses to start under any numeric locale but "C" — mpv_create()
@@ -181,6 +192,11 @@ int main(int argc, char *argv[])
         // Home's feed as that account, against the same stand-in.
         if (arguments.contains(QStringLiteral("--home-account-test")))
             return runHomeAccountSelfTest(&library) == 0 ? 0 : 1;
+        // Playback with that account when a song needs it, and listens
+        // reported to its history, against the same stand-in, with this
+        // program standing in for yt-dlp.
+        if (arguments.contains(QStringLiteral("--account-play-test")))
+            return runAccountPlaySelfTest(&library) == 0 ? 0 : 1;
         // The one visitor id every InnerTube shares, against the same
         // stand-in, with its store in memory.
         if (arguments.contains(QStringLiteral("--visitor-test")))
@@ -340,6 +356,21 @@ int main(int argc, char *argv[])
         qInfo("resolver: ytdlp.resolves=parallel: yt-dlp resolves run side by side and downloads never wait, "
               "as before");
     }
+    // A song YouTube refuses signed out (LOGIN_REQUIRED, an age or content
+    // check) is asked for once more through yt-dlp with the YouTube Music
+    // account, while a session is confirmed and Settings allows it ("Play
+    // with my account when needed", on; off is the switch back); never
+    // ahead of time, and at most ytmusic.plays_per_hour songs an hour (120).
+    resolver.followAccount(&ytmSession);
+    {
+        bool ok = false;
+        const int perHour = library.settingValue(QStringLiteral("ytmusic.plays_per_hour")).toInt(&ok);
+        if (ok && perHour > 0) {
+            resolver.setAccountLimit(perHour);
+            qInfo("resolver: ytmusic.plays_per_hour=%d: at most that many songs an hour asked for with the account",
+                  perHour);
+        }
+    }
 
     DownloadManager downloads;
     // With High sound quality, a song JioSaavn certainly has is downloaded
@@ -368,6 +399,11 @@ int main(int argc, char *argv[])
 
     PlaybackController player(&engine, &resolver, &downloads);
     player.setLibrary(&library);
+    // A listen that counts (the Scrobbler's rule) is reported to the YouTube
+    // Music account's history, as YouTube Music's own player reports it,
+    // while a session is confirmed and Settings allows it ("Send my listens
+    // to YouTube history", on); otherwise nothing is sent.
+    QObject::connect(&player, &PlaybackController::listenQualified, &ytmSession, &YtmSession::listenQualified);
     // Volume, shuffle, repeat and autoplay as they were left: before the
     // queue below is built, so a shuffle left on shuffles it, and before QML
     // reads any of them.

@@ -678,7 +678,7 @@ ScrollPage {
                 "Choose the file, or paste into the box below. It is read once, encrypted with your Windows sign-in (the Keychain on a Mac), and never written to the music database or to any log.",
                 "Monolist then asks YouTube Music, over the internet, whether the sign-in works: that is the only way to know. It says Connected only once YouTube Music does.",
                 "Close the private window without using it again. Monolist offers to delete the exported file as soon as it has read it, and never deletes it by itself.",
-                "A session lasts days to weeks; when it ends Monolist says so and keeps playing signed out. It buys none of the speed: playback, search, lyrics and radio always stay signed out."
+                "A session lasts days to weeks; when it ends Monolist says so and keeps playing signed out. Songs play without it, except one YouTube will not play signed out; search, lyrics and radio always stay signed out. The switches below say what it is used for."
             ]
             // The last refusal's reason belongs to the last try: a panel
             // opened or closed starts clean.
@@ -808,6 +808,34 @@ ScrollPage {
                   + "anyone would see."
             checked: Account.useForHome
             onToggled: Account.useForHome = !Account.useForHome
+        }
+
+        // On by default, as the owner chose: a song the account can play is
+        // better played than skipped. Only ever for a song YouTube refuses
+        // signed out, and never ahead of time.
+        ToggleRow {
+            visible: Account.state === "active" || Account.state === "checking" || Account.state === "unreachable"
+            width: parent.width
+            label: "Play with my account when needed"
+            hint: "A song YouTube will not play signed out (one it keeps behind an age check, or holds back to ask "
+                  + "whether you are a bot) is asked for once more with your account, through yt-dlp. Every other "
+                  + "song plays signed out, and at most 120 an hour go through the account. Off, such a song is "
+                  + "skipped."
+            checked: Account.playWhenNeeded
+            onToggled: Account.playWhenNeeded = !Account.playWhenNeeded
+        }
+
+        // On by default, as the owner chose: it is what the account's
+        // recommendations learn from.
+        ToggleRow {
+            visible: Account.state === "active" || Account.state === "checking" || Account.state === "unreachable"
+            width: parent.width
+            label: "Send my listens to YouTube history"
+            hint: "Each song you hear for half its length, or four minutes, is added to your YouTube history, as "
+                  + "YouTube Music's own player adds it, so your recommendations there learn from what you play "
+                  + "here. Off, YouTube is told nothing of what you play."
+            checked: Account.reportListens
+            onToggled: Account.reportListens = !Account.reportListens
         }
 
         HRule { width: parent.width }
@@ -994,9 +1022,10 @@ ScrollPage {
                       + (Player.saavnEnabled ? ", and the sound from JioSaavn where it has the same song. " : ". ")
                       + (Scrobbler.state === "connected" || Account.state === "active"
                          || Account.state === "checking" || Account.state === "unreachable"
-                         ? (Account.state === "active" && Account.useForHome
-                            ? "They are fetched without an account, but for Home's own feed, which is your YouTube "
-                              + "Music account's; what a connected account is told is set out under Connections."
+                         ? (Account.state === "active"
+                            && (Account.useForHome || Account.playWhenNeeded || Account.reportListens)
+                            ? "They are fetched without an account, but for what Connections says your YouTube "
+                              + "Music account is used for; what a connected account is told is set out there."
                             : "They are fetched without an account; what a connected account is told is set out "
                               + "under Connections.")
                          : "Nothing is signed in: no account, and nothing about you leaves this computer.")

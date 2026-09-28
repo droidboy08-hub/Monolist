@@ -91,6 +91,9 @@ QString tierLabel(int tier)
     case StreamResolver::TierPiped:     return QStringLiteral("Piped");
     case StreamResolver::TierInvidious: return QStringLiteral("Invidious");
     case StreamResolver::TierJioSaavn:  return QStringLiteral("JioSaavn");
+    // Played with the YouTube Music account, because YouTube would not
+    // play it signed out: said, so nobody wonders why it took longer.
+    case StreamResolver::TierSignedIn:  return QStringLiteral("YouTube · signed in");
     default:                            return QStringLiteral("Stream");
     }
 }

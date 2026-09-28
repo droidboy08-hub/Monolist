@@ -5,10 +5,15 @@
 
 #include <QCryptographicHash>
 #include <QDateTime>
+#include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QNetworkCookie>
 #include <QNetworkInformation>
+#include <QRandomGenerator>
+#include <QRegularExpression>
+#include <QStandardPaths>
+#include <QTimeZone>
 
 #include <algorithm>
 #include <limits>
@@ -17,10 +22,23 @@
 namespace {
 
 // The jar's name in SecretStore, and the settings: the account's name, and
-// whether Home uses the account. Nothing secret is ever written to settings.
+// what the account is used for. Nothing secret is ever written to settings.
 const QString kSecretName = QStringLiteral("ytmusic.cookies");
 const QString kNameKey = QStringLiteral("ytmusic.account_name");
 const QString kHomeKey = QStringLiteral("ytmusic.use_for_home");
+const QString kPlayKey = QStringLiteral("ytmusic.play_when_needed");
+const QString kReportKey = QStringLiteral("ytmusic.report_listens");
+
+// yt-dlp's cookies files: their folder, and their names, which nothing else
+// in it has.
+const QString kCookieFolderName = QStringLiteral("yt-dlp-cookies");
+const QString kCookieFilePattern = QStringLiteral("cookies-*.txt");
+// A deleted file still held open (Windows) is tried again this many times,
+// a second apart.
+constexpr int kDeleteAttempts = 5;
+// yt-dlp saying the cookies are no longer valid has the session checked, at
+// most this often.
+constexpr qint64 kDoubtEveryMs = 10 * 60 * 1000;
 
 // Far above any cookies.txt worth reading; a file this size is something else.
 constexpr qint64 kMaxFileBytes = 16 * 1024 * 1024;
@@ -91,8 +109,13 @@ YtmSession::YtmSession(Library *library, QObject *parent)
     m_saveTimer.setSingleShot(true);
     connect(&m_saveTimer, &QTimer::timeout, this, &YtmSession::save);
     // On until the user turns it off: someone who signs in has asked for
-    // what the account knows, and Home is the first of it.
+    // what the account knows, and Home is the first of it. The other two
+    // are on by default by the owner's choice: a song the account can play
+    // is better played than skipped, and the listens are what the account's
+    // recommendations learn from.
     m_useForHome = !m_library || m_library->settingValue(kHomeKey) != QLatin1String("0");
+    m_playWhenNeeded = !m_library || m_library->settingValue(kPlayKey) != QLatin1String("0");
+    m_reportListens = !m_library || m_library->settingValue(kReportKey) != QLatin1String("0");
     updateStatus();
 }
 
@@ -108,6 +131,32 @@ void YtmSession::setUseForHome(bool use)
     Q_EMIT useForHomeChanged();
 }
 
+void YtmSession::setPlayWhenNeeded(bool play)
+{
+    if (play == m_playWhenNeeded)
+        return;
+    m_playWhenNeeded = play;
+    if (m_library)
+        m_library->setSetting(kPlayKey, play ? QStringLiteral("1") : QStringLiteral("0"));
+    qInfo("ytmusic: a song YouTube will not play signed out %s",
+          play ? "is asked for with the account while one is signed in" : "stays signed out, and is skipped");
+    updateStatus();
+    Q_EMIT playWhenNeededChanged();
+}
+
+void YtmSession::setReportListens(bool report)
+{
+    if (report == m_reportListens)
+        return;
+    m_reportListens = report;
+    if (m_library)
+        m_library->setSetting(kReportKey, report ? QStringLiteral("1") : QStringLiteral("0"));
+    qInfo("ytmusic: listens %s", report ? "are reported to the account's YouTube history while one is signed in"
+                                        : "are not reported to YouTube");
+    updateStatus();
+    Q_EMIT reportListensChanged();
+}
+
 bool YtmSession::accountForHome() const
 {
     // What the hook asks of an IfSignedIn call (authHeaders), so what Home
@@ -121,6 +170,11 @@ YtmSession::~YtmSession()
     // process.
     if (m_dirty)
         save();
+    // A cookies file a lookup still had when the app closed: its yt-dlp is
+    // being ended with the app, and the file goes now, or with the next
+    // launch's sweep should it still be held.
+    for (const QString &path : std::as_const(m_cookieFiles))
+        QFile::remove(path);
     if (m_hooked) {
         InnerTube::setAccountHook({});
         InnerTube::setSessionVisitorData(QString());
@@ -139,6 +193,11 @@ void YtmSession::installHook()
     hook.rejected = [self](quint64 session, int status) {
         if (self)
             self->reportRejected(session, status);
+    };
+    hook.doubted = [self](quint64 session, int status) {
+        if (self && session != 0 && session == self->m_generation)
+            self->doubt(QStringLiteral("YouTube Music refused a listen report's call with the account (HTTP %1)")
+                            .arg(status));
     };
     hook.cookies = [self](quint64 session, const QString &host, const QList<QNetworkCookie> &cookies) {
         if (self)
@@ -174,6 +233,10 @@ InnerTube *YtmSession::innerTube()
 void YtmSession::start()
 {
     installHook();
+    // What an earlier run lent yt-dlp and never saw deleted (a crash, a
+    // kill mid-lookup): a copy of the session in plain text, so it goes
+    // first, whatever the state of the session now.
+    sweepCookieFiles();
     const QString remembered = m_library ? m_library->settingValue(kNameKey) : QString();
     QByteArray json;
     QString error;
@@ -273,18 +336,34 @@ void YtmSession::updateStatus()
     case State::Checking:
         line = QStringLiteral("Checking the sign-in%1 with YouTube Music…").arg(who);
         break;
-    case State::Active:
-        line = m_useForHome
-            ? QStringLiteral("YouTube Music confirms the sign-in. Home shows your own feed; your library comes "
-                             "next. Playback, search, lyrics and radio always stay signed out.")
-            : QStringLiteral("YouTube Music confirms the sign-in. Nothing uses it while Home is set to stay "
-                             "signed out; your library comes next. Playback, search, lyrics and radio always "
-                             "stay signed out.");
+    case State::Active: {
+        // What the switches under the row let it be used for, and nothing
+        // it is not.
+        QStringList uses;
+        if (m_useForHome)
+            uses << QStringLiteral("Home shows your own feed");
+        if (m_playWhenNeeded)
+            uses << QStringLiteral("a song YouTube will not play signed out is asked for with it");
+        if (m_reportListens)
+            uses << QStringLiteral("what you play is added to your YouTube history");
+        line = QStringLiteral("YouTube Music confirms the sign-in. ");
+        if (uses.isEmpty()) {
+            line += QStringLiteral("Nothing uses it: Home stays signed out, songs play without it, and what you "
+                                   "play is not reported. ");
+        } else {
+            QString said = uses.join(QStringLiteral("; "));
+            said[0] = said.at(0).toUpper();
+            line += said + QStringLiteral(". ");
+            if (!m_useForHome)
+                line += QStringLiteral("Home stays signed out. ");
+        }
+        line += QStringLiteral("Your library comes next. Search, lyrics and radio always stay signed out.");
         if (m_memoryOnly) {
             line += QStringLiteral(" It is forgotten when Monolist closes: %1")
                         .arg(SecretStore::unavailableReason().toHtmlEscaped());
         }
         break;
+    }
     case State::Unreachable:
         line = QStringLiteral("YouTube Music could not be reached to check the sign-in%1, so it is not used "
                               "yet. Monolist asks again later, and plays signed out meanwhile.").arg(who);
@@ -383,6 +462,8 @@ bool YtmSession::importResult(const CookieImport::Result &result, const QString 
     m_zeroes = 0;
     m_failures = 0;
     m_confirmed = false;
+    // Doubts about the last session are not this one's.
+    m_lastDoubt.invalidate();
     // Whose session this is, YouTube Music says; a name kept from before
     // may be another account's.
     m_name.clear();
@@ -714,6 +795,7 @@ quint64 YtmSession::authHeaders(const InnerTube::AccountRequest &request, InnerT
     case InnerTube::Auth::Anonymous:
         return 0;
     case InnerTube::Auth::IfSignedIn:
+    case InnerTube::Auth::Required:
         if (m_state != State::Active)
             return 0;
         break;
@@ -744,7 +826,8 @@ void YtmSession::reportRejected(quint64 session, int httpStatus)
         Q_EMIT checked(QStringLiteral("rejected"));
 }
 
-void YtmSession::absorbCookies(quint64 session, const QString &host, const QList<QNetworkCookie> &cookies)
+void YtmSession::absorbCookies(quint64 session, const QString &host, const QList<QNetworkCookie> &cookies,
+                               const char *from)
 {
     if (session == 0 || session != m_generation || m_jar.isEmpty() || host.isEmpty())
         return;
@@ -815,7 +898,7 @@ void YtmSession::absorbCookies(quint64 session, const QString &host, const QList
     // At most this long after the first change not yet saved.
     if (!m_saveTimer.isActive())
         m_saveTimer.start(m_timing.saveDelayMs);
-    qInfo("ytmusic: YouTube Music rotated the session: %d updated (%s), %d removed%s; saving within %d s",
+    qInfo("ytmusic: %s rotated the session: %d updated (%s), %d removed%s; saving within %d s", from,
           int(updated.size()), qPrintable(updated.join(QStringLiteral(", "))), int(removed.size()),
           removed.isEmpty() ? "" : qPrintable(QStringLiteral(" (") + removed.join(QStringLiteral(", ")) + QLatin1Char(')')),
           m_timing.saveDelayMs / 1000);
@@ -836,6 +919,263 @@ void YtmSession::save()
               qPrintable(describe(m_info)), int(json.size()));
     else
         qWarning("ytmusic: could not save the rotated session: %s", qPrintable(error));
+}
+
+// ---------------------------------------------------------------- playing with the account
+
+bool YtmSession::accountForPlayback(QString *why) const
+{
+    const auto because = [why](const char *reason) {
+        if (why)
+            *why = QString::fromLatin1(reason);
+        return false;
+    };
+    if (m_jar.isEmpty())
+        return because("no YouTube Music session is signed in");
+    if (m_state != State::Active)
+        return because("the YouTube Music session is not confirmed yet");
+    if (!m_playWhenNeeded)
+        return because("\"Play with my account when needed\" is off");
+    return true;
+}
+
+QString YtmSession::cookieFolder()
+{
+    // Local, never roaming: a copy of the session has no business being
+    // carried to other computers with a Windows profile.
+    QString base = qEnvironmentVariable("MONOLIST_DATA_DIR");
+    if (base.isEmpty())
+        base = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+    return base.isEmpty() ? QString() : QDir(base).filePath(kCookieFolderName);
+}
+
+int YtmSession::sweepCookieFiles(int sparedSecs)
+{
+    const QString folder = cookieFolder();
+    if (folder.isEmpty())
+        return 0;
+    const QDir dir(folder);
+    if (!dir.exists())
+        return 0;
+    const QDateTime spare = QDateTime::currentDateTimeUtc().addSecs(-qMax(0, sparedSecs));
+    int gone = 0;
+    int kept = 0;
+    for (const QFileInfo &file : dir.entryInfoList({ kCookieFilePattern }, QDir::Files | QDir::Hidden | QDir::System)) {
+        if (sparedSecs > 0 && file.lastModified().toUTC() > spare) {
+            ++kept;
+            continue;
+        }
+        if (QFile::remove(file.absoluteFilePath()))
+            ++gone;
+    }
+    if (gone > 0 || kept > 0)
+        qInfo("ytmusic: deleted %d cookies file(s) an earlier run lent yt-dlp%s", gone,
+              kept > 0 ? qPrintable(QStringLiteral("; %1 written in the last %2 s left, which may be another "
+                                                   "running copy's").arg(kept).arg(sparedSecs))
+                       : "");
+    return gone;
+}
+
+quint64 YtmSession::openCookieFile(QString *path, QString *error)
+{
+    path->clear();
+    QString why;
+    if (!accountForPlayback(&why)) {
+        *error = why;
+        return 0;
+    }
+    int written = 0;
+    const QByteArray text = CookieImport::toNetscape(m_jar, 0, &written);
+    if (written == 0) {
+        *error = QStringLiteral("the session has no youtube.com cookies to lend yt-dlp");
+        return 0;
+    }
+    const QString folder = cookieFolder();
+    if (folder.isEmpty() || !QDir().mkpath(folder)) {
+        *error = QStringLiteral("there is nowhere to write the cookies for yt-dlp");
+        return 0;
+    }
+#ifdef Q_OS_UNIX
+    // This user's alone, the folder as well as the file.
+    QFile::setPermissions(folder, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
+#endif
+    // A name nobody can guess, and a file made new: never one opened over
+    // something already there.
+    const QString name = QStringLiteral("cookies-%1.txt")
+                             .arg(QRandomGenerator::system()->generate64(), 16, 16, QLatin1Char('0'));
+    const QString file = QDir(folder).filePath(name);
+    QFile out(file);
+    if (!out.open(QIODevice::WriteOnly | QIODevice::NewOnly, QFileDevice::ReadOwner | QFileDevice::WriteOwner)
+        || out.write(text) != text.size() || !out.flush()) {
+        *error = QStringLiteral("could not write the cookies for yt-dlp: %1").arg(out.errorString());
+        out.close();
+        QFile::remove(file);
+        return 0;
+    }
+    out.close();
+    m_cookieFiles.insert(file);
+    *path = file;
+    qInfo("ytmusic: lent yt-dlp the session's %d youtube.com cookies for one lookup (%s)", written, qPrintable(name));
+    return m_generation;
+}
+
+void YtmSession::closeCookieFile(quint64 session, const QString &path, bool readBack)
+{
+    if (path.isEmpty())
+        return;
+    const QString name = QFileInfo(path).fileName();
+    QByteArray text;
+    if (readBack) {
+        QFile in(path);
+        if (in.open(QIODevice::ReadOnly) && in.size() <= kMaxFileBytes)
+            text = in.readAll();
+        else
+            qInfo("ytmusic: yt-dlp's cookies file %s could not be read back: %s", qPrintable(name),
+                  qPrintable(in.errorString()));
+    }
+    // Gone first: it is a copy of the session in plain text, and nothing
+    // below needs it on disk.
+    deleteCookieFile(path);
+    if (text.isEmpty())
+        return;
+    if (session == 0 || session != m_generation || m_jar.isEmpty()) {
+        qInfo("ytmusic: yt-dlp's cookies were for a session that has since ended or changed; nothing is taken "
+              "from them");
+        return;
+    }
+    const CookieImport::Result back = CookieImport::parse(text);
+    if (!back.ok()) {
+        // The error names what is missing, never a value.
+        qInfo("ytmusic: what yt-dlp wrote back is not a signed-in session (%s); nothing is taken from it",
+              qPrintable(back.error));
+        if (back.missing.contains(QStringLiteral("LOGIN_INFO")))
+            doubt(QStringLiteral("yt-dlp's lookup ended without the session's LOGIN_INFO"));
+        return;
+    }
+    // Only what changed, and only what yt-dlp could have been sent: it talks
+    // to www.youtube.com, so a cookie only another host could set is one it
+    // was lent, whatever it wrote. A cookie missing from what it wrote is
+    // not taken as deleted: the server deleting it is the only reason worth
+    // following, and a jar that lost a line some other way must not cost
+    // the session a cookie.
+    QList<QNetworkCookie> changed;
+    for (const Cookie &cookie : back.cookies) {
+        if (cookie.hostOnly && cookie.domain != CookieImport::kWwwHost)
+            continue;
+        bool same = false;
+        for (const Cookie &held : std::as_const(m_jar)) {
+            if (held.name == cookie.name && held.domain == cookie.domain && held.hostOnly == cookie.hostOnly
+                && held.path == cookie.path) {
+                same = held.value == cookie.value && held.expires == cookie.expires;
+                break;
+            }
+        }
+        if (same)
+            continue;
+        QNetworkCookie received(cookie.name, cookie.value);
+        // As a Set-Cookie would say it: a Domain attribute exactly when the
+        // cookie is not the answering host's alone.
+        if (!cookie.hostOnly)
+            received.setDomain(QLatin1Char('.') + cookie.domain);
+        received.setPath(cookie.path);
+        received.setSecure(cookie.secure);
+        received.setHttpOnly(cookie.httpOnly);
+        if (cookie.expires > 0)
+            received.setExpirationDate(QDateTime::fromSecsSinceEpoch(cookie.expires, QTimeZone::UTC));
+        changed << received;
+    }
+    qInfo("ytmusic: yt-dlp gave back %d cookies, %d of them new or changed", int(back.cookies.size()),
+          int(changed.size()));
+    if (!changed.isEmpty())
+        absorbCookies(session, CookieImport::kWwwHost, changed, "yt-dlp's lookup");
+}
+
+void YtmSession::deleteCookieFile(const QString &path, int attempt)
+{
+    if (!QFile::exists(path) || QFile::remove(path)) {
+        m_cookieFiles.remove(path);
+        return;
+    }
+    if (attempt + 1 >= kDeleteAttempts) {
+        qWarning("ytmusic: could not delete yt-dlp's cookies file %s; the next launch will",
+                 qPrintable(QFileInfo(path).fileName()));
+        return;
+    }
+    // Most likely yt-dlp, or a process it started, still has it open while
+    // it is being ended.
+    QTimer::singleShot(1000, this, [this, path, attempt]() { deleteCookieFile(path, attempt + 1); });
+}
+
+void YtmSession::doubt(const QString &why)
+{
+    if (m_jar.isEmpty())
+        return;
+    if (m_lastDoubt.isValid() && m_lastDoubt.elapsed() < kDoubtEveryMs) {
+        qInfo("ytmusic: %s; the session was checked for that %lld s ago, and is not asked again yet", qPrintable(why),
+              (long long)(m_lastDoubt.elapsed() / 1000));
+        return;
+    }
+    m_lastDoubt.start();
+    qInfo("ytmusic: %s; checking the session now", qPrintable(why));
+    checkNow();
+}
+
+// ---------------------------------------------------------------- listens
+
+void YtmSession::listenQualified(const QVariantMap &track, qint64 startedAt, bool chosenByUser)
+{
+    Q_UNUSED(startedAt)
+    Q_UNUSED(chosenByUser)
+    // A YouTube video id, or nothing to report: a file of the user's own.
+    static const QRegularExpression videoIdShape(QStringLiteral("^[A-Za-z0-9_-]{11}$"));
+    const QString videoId = track.value(QStringLiteral("sourceId")).toString();
+    if (!videoIdShape.match(videoId).hasMatch())
+        return;
+    if (!m_reportListens || m_state != State::Active || m_jar.isEmpty()) {
+        // Said only where there is a session the listen would have gone to.
+        if (m_reportListens && !m_jar.isEmpty())
+            qInfo("ytmusic: %s not reported to YouTube history: the session is not confirmed", qPrintable(videoId));
+        Q_EMIT listenReported(videoId, QStringLiteral("skipped"));
+        return;
+    }
+    reportListen(videoId);
+}
+
+void YtmSession::reportListen(const QString &videoId)
+{
+    const quint64 session = m_generation;
+    const QPointer<YtmSession> self(this);
+    QElapsedTimer clock;
+    clock.start();
+    innerTube()->playbackTracking(videoId, [self, videoId, session, clock](const QString &url, const QString &error) {
+        if (!self)
+            return;
+        if (url.isEmpty()) {
+            qInfo("ytmusic: %s not reported to YouTube history: %s", qPrintable(videoId), qPrintable(error));
+            Q_EMIT self->listenReported(videoId, QStringLiteral("failed"));
+            return;
+        }
+        // Signed out, or another account, while the address was asked for.
+        if (session != self->m_generation || !self->m_reportListens) {
+            Q_EMIT self->listenReported(videoId, QStringLiteral("skipped"));
+            return;
+        }
+        // The host, never the address: it names this visit of the account.
+        const QString host = QUrl(url).host();
+        self->innerTube()->reportPlayback(url, [self, videoId, host, clock](int status, const QString &error) {
+            if (!self)
+                return;
+            if (!error.isEmpty()) {
+                qInfo("ytmusic: %s not reported to YouTube history: %s (%s)", qPrintable(videoId), qPrintable(error),
+                      qPrintable(host));
+                Q_EMIT self->listenReported(videoId, QStringLiteral("failed"));
+                return;
+            }
+            qInfo("ytmusic: %s reported to the account's YouTube history (%s, HTTP %d, %lld ms)", qPrintable(videoId),
+                  qPrintable(host), status, (long long)clock.elapsed());
+            Q_EMIT self->listenReported(videoId, QStringLiteral("reported"));
+        });
+    });
 }
 
 // ---------------------------------------------------------------- demonstration

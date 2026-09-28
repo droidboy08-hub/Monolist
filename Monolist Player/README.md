@@ -121,6 +121,37 @@ How long a song may take to resolve is bounded too:
   first, and a prefetch's lookup is stopped for it and started again after.
   While such a song resolves no new download starts; running ones carry on.
 
+One rung is used only when a song needs it: the **YouTube Music account**
+(`TierSignedIn`, Settings → Connections → "Play with my account when needed",
+on by default while a session is confirmed). When an anonymous rung is
+refused for a reason an account answers (`LOGIN_REQUIRED`, which is how
+"Sign in to confirm you're not a bot" and a private video arrive, an age or a
+content check, or yt-dlp's words for the same), the song is asked for once
+more, next, through yt-dlp with `--cookies` and
+`player_client=tv_downgraded,web_embedded`; the rest of the ladder stays
+below it. The cookies go in a `cookies-<random>.txt` file of their own under
+the app's local data (`yt-dlp-cookies`, readable by this user alone),
+youtube.com's only, written for that one lookup, read back afterwards for the
+cookies yt-dlp rotated (taken into the session) and deleted; leftovers are
+swept at start. Never ahead of time, one lookup with the account at a time,
+at most 120 songs an hour (`ytmusic.plays_per_hour`), and the link goes to
+mpv without a Cookie header. yt-dlp's answer is never logged (it can carry
+the cookies), and "cookies are no longer valid" has the session checked. It
+plays as "YouTube · signed in". Signing out, or turning the switch off,
+forgets every link fetched with the account and stops a lookup under way. A
+refused signed-in link is followed by the anonymous rungs, not the account
+again. Signed out, nothing changes.
+
+With the same session, a listen that counts (the Scrobbler's rule: half the
+song or four minutes) is reported to the account's YouTube history, as
+YouTube Music's own player reports it ("Send my listens to YouTube history",
+on by default): the account's WEB_REMIX `/player` answer names
+`playbackTracking.videostatsPlaybackUrl`, and a GET of it with `ver=2`,
+`c=WEB_REMIX` and a fresh 16-character `cpn`, carrying what a browser sends
+that host and path, reports it (ytmusicapi's `add_history_item` does the
+same). Only `https://{s,www,music}.youtube.com/api/stats/playback`, never a
+redirect, never without a confirmed session.
+
 Each newer part has a switch back in the settings table (`--set <key>
 <value>`): `playback.refused=muxed` puts the muxed stream straight after a
 refused InnerTube link, `playback.rescue_link=keep` keeps a rescue link as
@@ -129,6 +160,8 @@ the song's link, and `playback.early_end=next` takes an early end as the end;
 `youtube.player_deadline=off` asks /player as before (8 s a request and one
 retry, no hedge, no limit on the whole), and `ytdlp.resolves=parallel` runs
 yt-dlp resolves side by side with downloads never waiting.
+`ytmusic.play_when_needed=0` and `ytmusic.report_listens=0` (the two
+Connections switches) keep playback and listens signed out.
 
 ### JioSaavn
 
@@ -748,7 +781,9 @@ first failure`.
                                                     and s.youtube.com byte for byte; x-goog-authuser and the
                                                     visitor id from a copied request; the stored JSON (v1,
                                                     v2); the cookies.txt written for yt-dlp (never
-                                                    google.com); and the SAPISIDHASH known answers
+                                                    google.com), and read back as yt-dlp writes it (an
+                                                    empty expiry for a session cookie); and the
+                                                    SAPISIDHASH known answers
     monolist --ytm-session-test                     the YouTube Music session against a stand-in server on
                                                     this computer: signed-out requests byte for byte, each
                                                     host's own cookies, X-Goog-AuthUser, the account's
@@ -761,6 +796,15 @@ first failure`.
                                                     new releases never; "Use my account for Home" off and on;
                                                     a sign-out and a 403 with the feed on its way; a launch
                                                     with a stored session; no value in the log
+    monolist --account-play-test                    the account where a song needs it, and listens reported
+                                                    to its history, against the same stand-in with this
+                                                    program standing in for yt-dlp (--fake-yt-dlp): the
+                                                    account asked only after a refusal it answers, never
+                                                    ahead of time, switched off or past the hour's limit;
+                                                    the cookies file (youtube.com's only, read back,
+                                                    deleted, swept at start); no Cookie to mpv; a refused
+                                                    signed-in link; sign-out; the listen report's /player,
+                                                    GET, cookies and refusals; no value in the log
     monolist --visitor-test                         the one visitor id every InnerTube shares, against the
                                                     same stand-in: one fetch, a stored id used at once, the
                                                     30-day limit, LOGIN_REQUIRED renewed and asked once
@@ -835,7 +879,7 @@ be, for a look at a state:
 
 `MONOLIST_DATA_DIR` keeps the database somewhere else, so a test never touches
 the real library; the scrobbling tests, `--ytm-session-test`,
-`--home-account-test`, `--download-cleanup-test` and `--library-edit-test` refuse to run without it,
+`--home-account-test`, `--account-play-test`, `--download-cleanup-test` and `--library-edit-test` refuse to run without it,
 since they empty the scrobble queue, replace the stored session, open the
 downloads on that database or write playlists and likes into it. It moves downloads too, to `downloads` inside it, so a test never
 writes to the real Music folder. `MONOLIST_DOWNLOAD_DIR` names the download
@@ -855,6 +899,7 @@ only ever go to ws.audioscrobbler.com.
     database          <AppData>/monolist.db  (library, playlists, history, lyrics, settings)
     recommendations   <AppData>/recommendations/v1  (downloaded from Settings; Remove deletes it)
     secrets           <AppData>/secrets  (sign-in keys, encrypted with DPAPI for the Windows user)
+    yt-dlp cookies    <LocalAppData>/yt-dlp-cookies  (one lookup's copy of the session, deleted after it)
     artwork           <Cache>/artwork  (256 MB cap)
 
 On a Mac, `<Music>` is `~/Music`, `<AppData>` is

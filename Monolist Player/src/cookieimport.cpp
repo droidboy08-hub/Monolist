@@ -212,8 +212,13 @@ void readNetscape(const QByteArray &text, Collector &collector)
         // Some exporters write the expiry with a fraction of a second. It is
         // turned into a whole number below, which for a value no qint64 can
         // hold (1e300, inf, nan: this is a file from outside) is undefined,
-        // so anything past the end of the year 9999 is refused first.
-        const double expires = fields.at(4).trimmed().toDouble(&numeric);
+        // so anything past the end of the year 9999 is refused first. An
+        // empty one is a session cookie, as Python's cookie jar writes it,
+        // and so as yt-dlp writes its jar back (curl writes 0).
+        const QByteArray expiry = fields.at(4).trimmed();
+        const double expires = expiry.isEmpty() ? 0.0 : expiry.toDouble(&numeric);
+        if (expiry.isEmpty())
+            numeric = true;
         const QByteArray name = fields.at(5).trimmed();
         if (domain.isEmpty() || domain.contains(' ') || subdomains < 0 || secure < 0 || !numeric
             || !std::isfinite(expires) || expires < 0 || expires > kLastExpiry || name.isEmpty()) {

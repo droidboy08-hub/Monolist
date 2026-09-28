@@ -17,6 +17,7 @@
 
 class QNetworkAccessManager;
 class QNetworkReply;
+class QUrl;
 
 // YouTube Music's own API (InnerTube): the one music.youtube.com itself calls.
 //
@@ -226,9 +227,14 @@ public:
     // before there were accounts, byte for byte. IfSignedIn carries the
     // account while a session is active, and is otherwise Anonymous.
     // Checking is YtmSession's own check of a session it holds but has not
-    // confirmed yet; nothing else uses it. Only the Music client ever carries
-    // the account: playback (Player), youtube.com's search and yt-dlp never do.
-    enum class Auth { Anonymous, IfSignedIn, Checking };
+    // confirmed yet; nothing else uses it. Required is for what only means
+    // anything as the account (a listen reported to its history): it carries
+    // the account while a session is active, and is never sent without it,
+    // nor sent again without it once refused. Only the Music client ever
+    // carries the account: playback (Player) and youtube.com's search never
+    // do; yt-dlp does only for a song YouTube will not play signed out
+    // (StreamResolver's TierSignedIn), with a cookies file of its own.
+    enum class Auth { Anonymous, IfSignedIn, Checking, Required };
 
     // The account, as the calls see it. Static for the same reason as the
     // region: there are several InnerTube objects, each with its own network
@@ -259,6 +265,10 @@ public:
         std::function<quint64(const AccountRequest &request, AccountHeaders *headers)> headers;
         // The server refused that session outright (401, 403).
         std::function<void(quint64 session, int httpStatus)> rejected;
+        // A call with Auth::Required was refused (401, 403). A listen report
+        // is a background nicety and must never be what ends a session, so
+        // this is only a reason to check it; the check decides.
+        std::function<void(quint64 session, int httpStatus)> doubted;
         // Set-Cookie on an answer from `host` to that session: its cookies,
         // rotated. One without a Domain is `host`'s alone.
         std::function<void(quint64 session, const QString &host, const QList<QNetworkCookie> &cookies)> cookies;
@@ -459,6 +469,33 @@ public:
     void player(const QString &videoId,
                 std::function<void(const QString &url, int itag, const QString &error)> done);
 
+    // — a listen, reported to the account's YouTube history —
+    //
+    // What YouTube Music's own web player does once a song plays, and what
+    // teaches the account's feed what it likes: its /player answer, asked as
+    // the account, says where to report the listen
+    // (playbackTracking.videostatsPlaybackUrl), and a GET of that address
+    // reports it. ytmusicapi (MIT) does the same in get_song and
+    // add_history_item.
+    //
+    // The account's /player answer for a song, asked as YouTube Music's web
+    // client (WEB_REMIX) with Auth::Required, for its reporting address
+    // alone: no stream is taken from it. `done` gets that address, or an
+    // error; with no session, or one refused, the call is not made (or not
+    // made again) without the account, and `done` says so.
+    void playbackTracking(const QString &videoId, std::function<void(const QString &url, const QString &error)> done);
+    // The report itself: a GET of that address with ver=2, c=WEB_REMIX and
+    // a cpn of its own (16 random characters), carrying what a browser
+    // signed in to YouTube Music would send its host and path (its cookies
+    // for them, the SAPISID hashes for music.youtube.com, X-Goog-AuthUser).
+    // Only an https address on s.youtube.com, www.youtube.com or
+    // music.youtube.com with the path /api/stats/playback is ever asked
+    // (isPlaybackReportUrl); a redirect is never followed, and nothing goes
+    // without the account. `done` gets the HTTP status, and an error unless
+    // it was 2xx.
+    void reportPlayback(const QString &trackingUrl, std::function<void(int status, const QString &error)> done);
+    static bool isPlaybackReportUrl(const QUrl &url);
+
 Q_SIGNALS:
     void searchFinished(const QString &query, const QList<InnerTube::Track> &tracks);
     void searchFailed(const QString &query, const QString &reason);
@@ -486,7 +523,9 @@ private:
 
     // `session` is set to the account's session when the request carries it,
     // and to 0 when it goes anonymous. `network` is the manager it goes
-    // through: this object's own unless another is given.
+    // through: this object's own unless another is given. With
+    // Auth::Required and no account to carry, nothing is sent and the answer
+    // is null.
     QNetworkReply *post(Client client, const QString &endpoint, QJsonObject body, int timeoutMs,
                         Auth auth, quint64 *session, QNetworkAccessManager *network = nullptr);
     // One request, its answer as JSON. A dropped connection or a timeout is

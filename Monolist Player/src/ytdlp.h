@@ -35,6 +35,13 @@ public:
 
     void cancel();
     bool isRunning() const;
+    // Whether yt-dlp ended by itself (with any exit code) rather than being
+    // stopped or crashing: only then has it written what it writes at exit,
+    // a --cookies file's cookie jar among them.
+    bool exitedOnItsOwn() const { return m_exitedOnItsOwn; }
+    // What yt-dlp said on stderr (its warnings, and the error), the last
+    // 64 KB of it, for a caller that looks for one warning in particular.
+    QString errorOutput() const { return QString::fromUtf8(m_stderr + m_stderrLine); }
 
     // Emits failed() once and schedules deletion. Public so the factory can
     // report a missing binary without depending on friend access from a lambda.
@@ -76,6 +83,7 @@ private:
     QVariantMap m_metadata;
     bool m_expectJson = true;
     bool m_settled = false;
+    bool m_exitedOnItsOwn = false;
 };
 
 // Locates and drives the yt-dlp binary and the tools it depends on.
@@ -101,7 +109,10 @@ class YtDlp
 public:
     static bool isAvailable();
     static QString resolvedDescription();
-    static void setExecutableOverride(const QString &path);
+    // Runs `path` in yt-dlp's place, with `prefixArgs` before yt-dlp's own
+    // arguments; empty is yt-dlp again. For the self-tests, which run this
+    // program itself as a stand-in (--fake-yt-dlp, ytmselftest.cpp).
+    static void setExecutableOverride(const QString &path, const QStringList &prefixArgs = {});
     // The switch back for cancelling a lookup (a stream, a search): true
     // waits, on the calling thread, until its processes have gone, as every
     // cancel once did. Downloads always wait. Set once at start, from the
@@ -147,6 +158,16 @@ public:
 
     // Full metadata for one video, including a direct bestaudio URL.
     static YtDlpRequest *resolveAudio(const QString &videoIdOrUrl, QObject *parent);
+
+    // The same, asked with the YouTube Music account, for a song YouTube
+    // will not play signed out (StreamResolver's TierSignedIn): the
+    // session's cookies from `cookieFile`, a cookies.txt file written for
+    // this one lookup, which yt-dlp writes its cookie jar back into as it
+    // exits (rotated cookies included); and the two clients that take an
+    // account without a PO token, TV (downgraded) and the embedded player,
+    // which is yt-dlp's own choice for an account minus the web client.
+    static YtDlpRequest *resolveAudioSignedIn(const QString &videoIdOrUrl, const QString &cookieFile,
+                                              QObject *parent);
 
     // The muxed stream alone — itag 18, the sound with a small picture in one
     // file, or failing that the best other stream that carries both — for a

@@ -4,12 +4,15 @@
 #include "innertube.h"
 
 #include <QByteArray>
+#include <QElapsedTimer>
 #include <QList>
 #include <QObject>
 #include <QPointer>
+#include <QSet>
 #include <QString>
 #include <QTimer>
 #include <QUrl>
+#include <QVariantMap>
 
 class Library;
 class QNetworkCookie;
@@ -44,6 +47,7 @@ class QNetworkCookie;
 //
 //   logged_in=1, or a name from the menu     Active
 //   401 or 403 on any call with the account   Rejected at once
+//     (but a listen report's, which is only a reason to check now)
 //   logged_in=0                               asked once more; twice is Rejected
 //   no answer, or one that says nothing       Unreachable: kept, asked again later
 //
@@ -51,14 +55,29 @@ class QNetworkCookie;
 // carries on signed out, and the Settings row asks for a new import. The
 // account's name stays, to say whose session ended.
 //
-// Only a few calls ever carry the account: InnerTube's Auth::IfSignedIn,
-// while the session is Active, on the Music client. Today that is Home's
-// feed (Catalog), while "Use my account for Home" is on; its new releases
-// stay anonymous. Playback, search, lyrics, radio and yt-dlp never do.
-// The cookies go through a static hook
-// (InnerTube::setAccountHook), since there are several InnerTube objects and
-// all of them must agree; Set-Cookie on their answers rotates the jar, which
-// is saved again 30 seconds after the last change.
+// Only a few calls ever carry the account, and only while the session is
+// Active, each behind a switch of its own in Settings → Connections, all on
+// by default:
+//
+//  - Home's feed (Catalog, InnerTube's Auth::IfSignedIn), "Use my account for
+//    Home"; its new releases stay anonymous.
+//  - A song YouTube will not play signed out, "Play with my account when
+//    needed": when the anonymous rungs are refused with LOGIN_REQUIRED (how
+//    "Sign in to confirm you're not a bot" comes), an age check or a content
+//    check, StreamResolver asks yt-dlp once more with the session's cookies
+//    (TierSignedIn), in a cookies.txt file written for that one lookup
+//    (openCookieFile), read back for the cookies yt-dlp rotated, and deleted
+//    (closeCookieFile). Never ahead of time, and at most 120 songs an hour.
+//  - A listen that counts (the Scrobbler's rule: half the song or four
+//    minutes), "Send my listens to YouTube history": reported to the
+//    account's history as YouTube Music's own player does (listenQualified,
+//    InnerTube::playbackTracking and reportPlayback), which is what its
+//    recommendations learn from.
+//
+// Search, lyrics, radio and everything else never carry it. The cookies go
+// through a static hook (InnerTube::setAccountHook), since there are several
+// InnerTube objects and all of them must agree; Set-Cookie on their answers
+// rotates the jar, which is saved again 30 seconds after the last change.
 //
 // Exposed to QML as the "Account" singleton.
 class YtmSession : public QObject
@@ -81,6 +100,13 @@ class YtmSession : public QObject
     // the account. On unless turned off (the setting ytmusic.use_for_home,
     // "0" for off); it says nothing while there is no session.
     Q_PROPERTY(bool useForHome READ useForHome WRITE setUseForHome NOTIFY useForHomeChanged)
+    // "Play with my account when needed": whether a song YouTube will not
+    // play signed out is asked for with the account (ytmusic.play_when_needed,
+    // "0" for off; on by default).
+    Q_PROPERTY(bool playWhenNeeded READ playWhenNeeded WRITE setPlayWhenNeeded NOTIFY playWhenNeededChanged)
+    // "Send my listens to YouTube history" (ytmusic.report_listens, "0" for
+    // off; on by default).
+    Q_PROPERTY(bool reportListens READ reportListens WRITE setReportListens NOTIFY reportListensChanged)
 
 public:
     enum class State { SignedOut, Checking, Active, Unreachable, Rejected };
@@ -119,6 +145,51 @@ public:
     // now: the setting on, and a session YouTube Music has confirmed.
     // Changes only with sessionChanged or useForHomeChanged.
     bool accountForHome() const;
+    bool playWhenNeeded() const { return m_playWhenNeeded; }
+    void setPlayWhenNeeded(bool play);
+    bool reportListens() const { return m_reportListens; }
+    void setReportListens(bool report);
+
+    // — playback with the account (StreamResolver's TierSignedIn) —
+    //
+    // Whether a song may be asked for with the account now: the setting on,
+    // and a session YouTube Music has confirmed. `why`, when given, says
+    // what stands in the way otherwise. Changes only with sessionChanged or
+    // playWhenNeededChanged.
+    bool accountForPlayback(QString *why = nullptr) const;
+    // The session's cookies as a cookies.txt file for one yt-dlp lookup,
+    // youtube.com's only (CookieImport::toNetscape), in a folder of its own
+    // under the app's local data (cookieFolder), readable by this user
+    // alone where the system can say so. Returns the session it was written
+    // for and sets `path`; 0, with `error` saying why, when there is none to
+    // write or it could not be written. The path, the count and the names
+    // are all the log gets.
+    quint64 openCookieFile(QString *path, QString *error);
+    // yt-dlp is done with it. With `readBack` (it exited on its own, so its
+    // jar was written back whole) what it brought back is taken into the
+    // session as rotation from www.youtube.com, if the session is still the
+    // one it was written for; either way the file is deleted, and tried
+    // again for a few seconds should something still hold it.
+    void closeCookieFile(quint64 session, const QString &path, bool readBack);
+    // yt-dlp said the account's cookies are no longer valid: the session is
+    // checked now, at most once in ten minutes. The check is what decides.
+    void doubt(const QString &why);
+    // Where those files are written: "yt-dlp-cookies" under the app's local
+    // (never roaming) data folder, or under MONOLIST_DATA_DIR when that is
+    // set, so a self-test never touches the real one.
+    static QString cookieFolder();
+    // Deletes what an earlier run left there (a crash, a kill mid-lookup):
+    // every file but those written in the last `sparedSecs` seconds, which
+    // may be another running copy's. Returns how many went. Done by start().
+    static int sweepCookieFiles(int sparedSecs = 120);
+
+public Q_SLOTS:
+    // PlaybackController::listenQualified: the song is reported to the
+    // account's YouTube history, while "Send my listens to YouTube history"
+    // is on and a session is confirmed; otherwise nothing is sent at all.
+    void listenQualified(const QVariantMap &track, qint64 startedAt, bool chosenByUser);
+
+public:
 
     // A cookies.txt file (the URL a file dialog gives, or a plain path), or
     // pasted text: a Cookie header or a request copied as cURL. False, with
@@ -155,8 +226,10 @@ public:
     void reportRejected(quint64 session, int httpStatus);
     // Set-Cookie from `host` on an answer to `session`, merged as a browser
     // would: a cookie replaces the one with its name, domain and path, and
-    // one for a domain `host` may not set is ignored.
-    void absorbCookies(quint64 session, const QString &host, const QList<QNetworkCookie> &cookies);
+    // one for a domain `host` may not set is ignored. `from` names who
+    // brought them, for the log.
+    void absorbCookies(quint64 session, const QString &host, const QList<QNetworkCookie> &cookies,
+                       const char *from = "YouTube Music");
 
     // — for the self-tests and screenshots —
     void setTiming(const Timing &timing);
@@ -179,6 +252,14 @@ Q_SIGNALS:
     // again when that changes whose feed it is.
     void sessionChanged();
     void useForHomeChanged();
+    // StreamResolver listens to both, and forgets every link it fetched with
+    // the account when the account may no longer be used for playback.
+    void playWhenNeededChanged();
+    void reportListensChanged();
+    // A listen was reported to the account's history, or could not be:
+    // "reported", "failed", or "skipped" (the setting off, or no session
+    // confirmed). For the self-test.
+    void listenReported(const QString &videoId, const QString &outcome);
     // A check came to a verdict: "active", "again", "unreachable" or "rejected".
     void checked(const QString &outcome);
 
@@ -200,6 +281,11 @@ private:
     // whenever the jar or what is known of it changes.
     void publishVisitor();
     InnerTube *innerTube();
+    // Deletes a cookies file, trying again a few times a second apart should
+    // something still hold it; the next launch's sweep takes what is left.
+    void deleteCookieFile(const QString &path, int attempt = 0);
+    // The listen report itself (listenQualified), for one song.
+    void reportListen(const QString &videoId);
 
     Library *m_library = nullptr;
     Timing m_timing;
@@ -214,6 +300,12 @@ private:
     quint64 m_generation = 1;
     bool m_memoryOnly = false;
     bool m_useForHome = true;
+    bool m_playWhenNeeded = true;
+    bool m_reportListens = true;
+    // The cookies files this run has lent yt-dlp and not yet seen deleted.
+    QSet<QString> m_cookieFiles;
+    // When yt-dlp last cast doubt on the session (doubt()).
+    QElapsedTimer m_lastDoubt;
     QString m_name;
     QString m_statusLine;
     QString m_importError;

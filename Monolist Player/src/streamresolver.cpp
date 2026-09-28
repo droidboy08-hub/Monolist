@@ -1,10 +1,13 @@
 #include "streamresolver.h"
 #include "appdatabase.h"
 #include "ytdlp.h"
+#include "ytmsession.h"
 
+#include <QFile>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QRegularExpression>
 #include <QSqlQuery>
 #include <QTimeZone>
 #include <QUrlQuery>
@@ -60,9 +63,13 @@ const char *tierName(int tier)
     case StreamResolver::TierMuxed:     return "its muxed stream";
     case StreamResolver::TierPiped:     return "Piped";
     case StreamResolver::TierInvidious: return "Invidious";
+    case StreamResolver::TierSignedIn:  return "yt-dlp with the account";
     default:                            return "another source";
     }
 }
+
+// An hour, for the account's limit (setAccountLimit).
+constexpr qint64 kAccountWindowMs = 60 * 60 * 1000;
 
 QNetworkRequest makeRequest(const QUrl &url)
 {
@@ -119,6 +126,7 @@ StreamResolver::StreamResolver(QObject *parent)
     , m_piped(defaultPipedInstances())
     , m_invidious(defaultInvidiousInstances())
 {
+    m_accountClock.start();
 }
 
 StreamResolver::~StreamResolver()
@@ -199,16 +207,17 @@ void StreamResolver::resolveVia(const QString &videoId, const QList<int> &tiers,
             return;
         }
     }
-    start(videoId, tiers, homeTier);
+    start(videoId, tiers, homeTier, /*exact=*/true);
 }
 
-void StreamResolver::start(const QString &videoId, QList<int> tiers, int homeTier)
+void StreamResolver::start(const QString &videoId, QList<int> tiers, int homeTier, bool exact)
 {
     cancelJob(videoId);
 
     auto *job = new Job;
     job->videoId = videoId;
     job->homeTier = homeTier;
+    job->mayAddAccount = !exact;
     m_jobs.insert(videoId, job);
     armDeadline(videoId);
     foregroundChanged();
@@ -225,7 +234,10 @@ void StreamResolver::start(const QString &videoId, QList<int> tiers, int homeTie
 // last either way. Before all of them, the caller may ask the refused tier
 // once more (PlaybackController's loadFailed): a refusal is often the link's
 // alone, and InnerTube's next one costs a fifth of a second where the muxed
-// stream costs three.
+// stream costs three. After the account's link, the anonymous rungs below
+// it, yt-dlp first: googlevideo refusing a link is about the link, not the
+// account, and the song may yet play signed out. The account's rung is in
+// none of these: a song goes to it only when YouTube refuses it signed out.
 QList<int> StreamResolver::afterRefusal(int tier)
 {
     switch (tier) {
@@ -233,6 +245,7 @@ QList<int> StreamResolver::afterRefusal(int tier)
     case TierYtDlp:     return { TierMuxed, TierPiped, TierInvidious };
     case TierMuxed:     return { TierYtDlp, TierPiped, TierInvidious };
     case TierPiped:     return { TierInvidious };
+    case TierSignedIn:  return { TierYtDlp, TierMuxed, TierPiped, TierInvidious };
     default:            return {};
     }
 }
@@ -374,6 +387,7 @@ void StreamResolver::startTier(Job *job, int tier)
     case TierMuxed:      startMuxed(job);         break;
     case TierPiped:      startPipedRace(job);     break;
     case TierInvidious:  startInvidiousRace(job); break;
+    case TierSignedIn:   startSignedIn(job);      break;
     default: {
         const QString reason = job->errors.isEmpty()
             ? QStringLiteral("No source could resolve this track.")
@@ -485,6 +499,10 @@ void StreamResolver::startMuxed(Job *job)
 // or the muxed stream (TierMuxed).
 void StreamResolver::launchYtDlp(Job *job)
 {
+    if (job->tier == TierSignedIn) {
+        launchSignedIn(job);
+        return;
+    }
     const bool muxed = job->tier == TierMuxed;
     // When each lookup starts: with one at a time, the log is where a wait
     // for the turn shows.
@@ -599,6 +617,10 @@ void StreamResolver::preemptYtDlp()
     ++held->generation;
     if (QPointer<YtDlpRequest> request = std::exchange(held->ytdlp, {}); request && request->isRunning())
         request->cancel();
+    // Its turn with the account too, should it have had one (a song whose
+    // YouTube leg carried on unheard once JioSaavn won its race).
+    if (m_accountHolder == held)
+        m_accountHolder = nullptr;
     qInfo("resolver: %s's yt-dlp lookup, ahead of time, stopped for a song someone is waiting for; "
           "it waits its turn", qPrintable(held->videoId));
     held->waitingForYtDlp.start();
@@ -609,6 +631,19 @@ void StreamResolver::releaseYtDlp(Job *job)
 {
     m_ytdlpWaiting.removeAll(job);
     job->waitingForYtDlp.invalidate();
+    // The account's turn, held or awaited, goes with it; the next lookup
+    // waiting for it (ytdlp.resolves=parallel only) starts, on the next turn
+    // of the event loop, as below.
+    m_accountWaiting.removeAll(job);
+    if (m_accountHolder == job) {
+        m_accountHolder = nullptr;
+        if (!m_accountWaiting.isEmpty()) {
+            QMetaObject::invokeMethod(this, [this]() {
+                if (!m_accountHolder && !m_accountWaiting.isEmpty())
+                    launchSignedIn(m_accountWaiting.takeFirst());
+            }, Qt::QueuedConnection);
+        }
+    }
     if (m_ytdlpHolder != job)
         return;
     m_ytdlpHolder = nullptr;
@@ -647,6 +682,237 @@ void StreamResolver::foregroundChanged()
         return;
     m_foreground = foreground;
     YtDlp::setPlaybackResolving(this, foreground);
+}
+
+// ------------------------------------------------------------ the account
+
+bool StreamResolver::accountWouldHelp(const QString &reason)
+{
+    // /player's statuses as InnerTube reports them ("VISIONOS 1.02:
+    // LOGIN_REQUIRED: Sign in to confirm you're not a bot"), and yt-dlp's
+    // own words for the same refusals ("Sign in to confirm your age. This
+    // video may be inappropriate for some users.", "Private video. Sign in
+    // if you've been granted access to this video"). A song that is simply
+    // gone ("Video unavailable") is not one of them: no account brings it
+    // back.
+    static const QRegularExpression wanted(
+        QStringLiteral("LOGIN_REQUIRED|AGE_VERIFICATION_REQUIRED|AGE_CHECK_REQUIRED|CONTENT_CHECK_REQUIRED"
+                       "|not a bot|confirm your age|age[- ]restricted|inappropriate for some users|\\bsign in\\b"),
+        QRegularExpression::CaseInsensitiveOption);
+    return wanted.match(reason).hasMatch();
+}
+
+void StreamResolver::followAccount(YtmSession *account)
+{
+    if (m_account)
+        m_account->disconnect(this);
+    m_account = account;
+    if (!account)
+        return;
+    connect(account, &YtmSession::sessionChanged, this, &StreamResolver::accountChanged);
+    connect(account, &YtmSession::playWhenNeededChanged, this, &StreamResolver::accountChanged);
+}
+
+void StreamResolver::setAccountLimit(int perHour)
+{
+    m_accountLimit = qMax(1, perHour);
+}
+
+void StreamResolver::accountChanged()
+{
+    // A link fetched with the account serves no play once the session it
+    // came with has changed, ended, or may not be used: every one goes,
+    // and the song is asked for afresh the next time it plays.
+    int dropped = 0;
+    for (QHash<QString, CacheEntry> *links : { &m_cache, &m_rescueLinks }) {
+        for (auto it = links->begin(); it != links->end();) {
+            if (it->tier == TierSignedIn) {
+                it = links->erase(it);
+                ++dropped;
+            } else {
+                ++it;
+            }
+        }
+    }
+    if (dropped > 0)
+        qInfo("resolver: the account changed; %d link(s) fetched with it forgotten", dropped);
+    QString why;
+    if (m_account && m_account->accountForPlayback(&why))
+        return;
+    // A lookup with it under way stops, and its song goes on down the
+    // anonymous ladder.
+    QStringList stopped;
+    for (const Job *job : std::as_const(m_jobs)) {
+        if (job->tier == TierSignedIn && !job->settled)
+            stopped << job->videoId;
+    }
+    for (const QString &videoId : std::as_const(stopped)) {
+        if (Job *job = m_jobs.value(videoId); job && job->tier == TierSignedIn && !job->settled) {
+            qInfo("resolver: %s: its lookup with the account stops: %s", qPrintable(videoId),
+                  qPrintable(why.isEmpty() ? QStringLiteral("no account is followed") : why));
+            tierExhausted(job, QStringLiteral("signed in: ") + why);
+        }
+    }
+}
+
+bool StreamResolver::accountLimitReached()
+{
+    const qint64 now = m_accountClock.elapsed();
+    while (!m_accountUses.isEmpty() && now - m_accountUses.first() >= kAccountWindowMs)
+        m_accountUses.removeFirst();
+    return m_accountUses.size() >= m_accountLimit;
+}
+
+void StreamResolver::considerAccount(Job *job, const QString &reason)
+{
+    // Refused for want of an account by one of the anonymous rungs: a
+    // refusal of the account's own says nothing new.
+    if (job->tier < TierExhausted && accountWouldHelp(reason))
+        job->accountWanted = true;
+    // Once a job; never ahead of time, which may be for a song that never
+    // plays (a prefetch taken over by a resolve decides at its next
+    // refusal); never in a walk the caller laid out itself.
+    if (!job->accountWanted || job->accountDecided || job->prefetch || !job->mayAddAccount
+        || job->next.contains(TierSignedIn))
+        return;
+    job->accountDecided = true;
+    QString why = QStringLiteral("no account is followed");
+    if (m_account && m_account->accountForPlayback(&why)) {
+        qInfo("resolver: %s: refused signed out (%s); asking with the account next", qPrintable(job->videoId),
+              qPrintable(reason.left(160)));
+        job->next.prepend(TierSignedIn);
+        return;
+    }
+    qInfo("resolver: %s: refused signed out (%s), and %s; it goes on signed out", qPrintable(job->videoId),
+          qPrintable(reason.left(160)), qPrintable(why));
+}
+
+// The rung itself, and what may stop it at once: each time it is reached,
+// since a session can end and the hour fill between a song being put here
+// and its turn.
+void StreamResolver::startSignedIn(Job *job)
+{
+    QString why;
+    if (job->prefetch) {
+        why = QStringLiteral("never ahead of time");
+    } else if (!m_account) {
+        why = QStringLiteral("no account is followed");
+    } else if (!m_account->accountForPlayback(&why)) {
+        // `why` says
+    } else if (!YtDlp::isAvailable()) {
+        why = QStringLiteral("yt-dlp not installed");
+    } else if (accountLimitReached()) {
+        why = QStringLiteral("%1 songs were asked for with the account in the last hour, the most it may be")
+                  .arg(m_accountLimit);
+    }
+    if (!why.isEmpty()) {
+        qInfo("resolver: %s: not asked with the account: %s", qPrintable(job->videoId), qPrintable(why));
+        tierExhausted(job, QStringLiteral("signed in: ") + why);
+        return;
+    }
+    queueYtDlp(job);
+}
+
+void StreamResolver::launchSignedIn(Job *job)
+{
+    // Only with ytdlp.resolves=parallel is another lookup running now; with
+    // one yt-dlp at a time the account's turn is always free here.
+    if (m_accountHolder && m_accountHolder != job) {
+        if (!m_accountWaiting.contains(job))
+            m_accountWaiting.append(job);
+        qInfo("resolver: %s waits its turn with the account: %s's lookup is running", qPrintable(job->videoId),
+              qPrintable(m_accountHolder->videoId));
+        return;
+    }
+    QString cookieFile;
+    QString error;
+    const quint64 session = m_account ? m_account->openCookieFile(&cookieFile, &error) : 0;
+    if (session == 0 || cookieFile.isEmpty()) {
+        qInfo("resolver: %s: not asked with the account: %s", qPrintable(job->videoId), qPrintable(error));
+        tierExhausted(job, QStringLiteral("signed in: ") + error);
+        return;
+    }
+    m_accountHolder = job;
+    m_accountUses.append(m_accountClock.elapsed());
+    qInfo("resolver: %s: yt-dlp asked for the sound with the account (%d of %d this hour)", qPrintable(job->videoId),
+          int(m_accountUses.size()), m_accountLimit);
+    YtDlpRequest *request = YtDlp::resolveAudioSignedIn(job->videoId, cookieFile, this);
+    job->ytdlp = request;
+
+    // The cookies file goes with the lookup, however it ends: read back
+    // first when yt-dlp exited on its own (only then was its jar written
+    // back whole), deleted either way. Nothing here is this object's, which
+    // may be going when the lookup does.
+    const QPointer<YtmSession> account = m_account;
+    auto closed = std::make_shared<bool>(false);
+    const auto close = [account, closed, session, cookieFile](bool readBack) {
+        if (std::exchange(*closed, true))
+            return;
+        if (account)
+            account->closeCookieFile(session, cookieFile, readBack);
+        else
+            QFile::remove(cookieFile);
+    };
+    connect(request, &YtDlpRequest::succeededJson, request, [close, request]() { close(request->exitedOnItsOwn()); });
+    connect(request, &YtDlpRequest::failed, request, [close, request]() { close(request->exitedOnItsOwn()); });
+    connect(request, &QObject::destroyed, [close]() { close(false); });
+
+    const QString videoId = job->videoId;
+    const int generation = job->generation;
+    // The same bound as yt-dlp's own rung, for the same reasons.
+    QTimer::singleShot(kYtDlpTimeoutMs, this, [this, videoId, generation]() {
+        Job *job = m_jobs.value(videoId);
+        if (job && !job->settled && job->generation == generation && job->tier == TierSignedIn)
+            tierExhausted(job, QStringLiteral("signed in: yt-dlp timed out"));
+    });
+
+    // Its answer is read, never logged: yt-dlp's info JSON may carry the
+    // cookies it was given (GHSA-v8mc-9377-rwjj). The itag and the client
+    // are all the log gets.
+    connect(request, &YtDlpRequest::succeededJson, this,
+            [this, videoId, generation, request](const QJsonDocument &document) {
+                checkAccountWarning(request);
+                Job *job = m_jobs.value(videoId);
+                if (!job || job->settled || job->generation != generation)
+                    return;
+                const QJsonObject root = document.object();
+                const QString url = root.value(QStringLiteral("url")).toString();
+                if (url.isEmpty()) {
+                    tierExhausted(job, QStringLiteral("signed in: yt-dlp returned no audio url"));
+                    return;
+                }
+                // Fetched as the client that asked for it (see resolveVideo),
+                // but never with a cookie: googlevideo takes none, and the
+                // account's go nowhere but YouTube itself.
+                QVariantMap headers = root.value(QStringLiteral("http_headers")).toObject().toVariantMap();
+                for (auto it = headers.begin(); it != headers.end();) {
+                    if (it.key().compare(QLatin1String("Cookie"), Qt::CaseInsensitive) == 0)
+                        it = headers.erase(it);
+                    else
+                        ++it;
+                }
+                const QString client = QUrlQuery(QUrl(url)).queryItemValue(QStringLiteral("c"));
+                qInfo("resolver: %s resolved with the account as itag %s (%s)", qPrintable(videoId),
+                      qPrintable(root.value(QStringLiteral("format_id")).toString()),
+                      qPrintable(client.isEmpty() ? QStringLiteral("client not named") : client));
+                succeed(job, url, headers);
+            });
+
+    connect(request, &YtDlpRequest::failed, this, [this, videoId, generation, request](const QString &reason) {
+        checkAccountWarning(request);
+        Job *job = m_jobs.value(videoId);
+        if (job && !job->settled && job->generation == generation)
+            tierExhausted(job, QStringLiteral("signed in: %1").arg(reason));
+    });
+}
+
+void StreamResolver::checkAccountWarning(const YtDlpRequest *request)
+{
+    // yt-dlp's warning when YouTube answered its signed-in requests as
+    // signed out: "The provided YouTube account cookies are no longer
+    // valid." The session's own check decides whether that is so.
+    if (m_account && request->errorOutput().contains(QLatin1String("cookies are no longer valid"), Qt::CaseInsensitive))
+        m_account->doubt(QStringLiteral("yt-dlp says the account's cookies are no longer valid"));
 }
 
 // ------------------------------------------------------------ the deadline
@@ -858,6 +1124,7 @@ void StreamResolver::tierExhausted(Job *job, const QString &reason)
         return;
     job->errors.append(reason);
     abortPending(job);
+    considerAccount(job, reason);
     startTier(job, job->next.isEmpty() ? int(TierExhausted) : job->next.takeFirst());
 }
 

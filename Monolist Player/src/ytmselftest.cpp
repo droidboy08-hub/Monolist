@@ -6,8 +6,11 @@
 #include "innertube.h"
 #include "library.h"
 #include "secretstore.h"
+#include "streamresolver.h"
+#include "ytdlp.h"
 #include "ytmsession.h"
 
+#include <QCoreApplication>
 #include <QDateTime>
 #include <QDir>
 #include <QElapsedTimer>
@@ -25,8 +28,10 @@
 #include <QSqlQuery>
 #include <QTcpServer>
 #include <QTcpSocket>
+#include <QThread>
 #include <QTimer>
 #include <QUrl>
+#include <QUrlQuery>
 
 #include <functional>
 #include <iterator>
@@ -707,6 +712,15 @@ int runCookieImportSelfTest()
         int none = -1;
         t.check(CookieImport::toNetscape({}, kNow, &none).startsWith("# Netscape HTTP Cookie File\n") && none == 0,
                 QStringLiteral("an empty jar is the header lines alone"));
+        // What yt-dlp writes back: Python's cookie jar leaves a session
+        // cookie's expiry empty, where curl and this file write 0.
+        QByteArray pythons = file;
+        pythons.replace("\t/\tTRUE\t0\tYSC\t", "\t/\tTRUE\t\tYSC\t");
+        const Result python = CookieImport::parse(pythons, kNow);
+        t.check(pythons != file && python.ok() && sameJar(python.cookies, lf.cookies) && python.unreadable == 0
+                    && find(python.cookies, "YSC").expires == 0,
+                QStringLiteral("read back as yt-dlp writes it, an empty expiry is a session cookie (0)"),
+                counts(python));
     }
 
     // — SAPISIDHASH: known answers, each SHA-1 computed apart from this code
@@ -843,7 +857,8 @@ private:
         }
         if (answer.hold)
             return;
-        const QByteArray reason = answer.status == 200 ? "OK" : answer.status == 400 ? "Bad Request"
+        const QByteArray reason = answer.status == 200 ? "OK" : answer.status == 204 ? "No Content"
+                                : answer.status == 302 ? "Found" : answer.status == 400 ? "Bad Request"
                                 : answer.status == 401 ? "Unauthorized" : answer.status == 403 ? "Forbidden"
                                                                                                 : "Error";
         QByteArray out = "HTTP/1.1 " + QByteArray::number(answer.status) + ' ' + reason + "\r\n"
@@ -1803,8 +1818,12 @@ int runHomeAccountSelfTest(Library *library)
                     && shown() == anonymousHome && catalog->feedLoggedIn() == QLatin1String("0"),
                 QStringLiteral("and the feed is asked again byte for byte as signed out; new releases are kept"), shown());
     }
-    t.check(library->settingValue(homeKey) == QLatin1String("0") && session->statusLine().contains(QLatin1String("Nothing uses it")),
-            QStringLiteral("kept as ytmusic.use_for_home=0, and the status line says nothing uses the sign-in"),
+    // The other uses of the account (playback when needed, listen reports)
+    // are on by default, so the line says Home alone stays signed out.
+    t.check(library->settingValue(homeKey) == QLatin1String("0")
+                && session->statusLine().contains(QLatin1String("Home stays signed out"))
+                && !session->statusLine().contains(QLatin1String("Home shows your own feed")),
+            QStringLiteral("kept as ytmusic.use_for_home=0, and the status line says Home stays signed out"),
             session->statusLine());
     {
         YtmSession probe(library);   // never started: reads the setting, sends nothing
@@ -2994,5 +3013,853 @@ int runPlayerClientSelfTest()
     InnerTube::setVisitorStore({});
     InnerTube::setTestServer(QString());
     settle(50);
+    return t.finish();
+}
+
+// ---------------------------------------------------------------- the account where a song needs it
+
+namespace {
+
+// The songs the stand-in knows, each eleven characters as YouTube's ids are.
+const QString kAgeGated = QStringLiteral("TESTAGEGATE");   // /player: LOGIN_REQUIRED, "confirm your age"
+const QString kBotWall = QStringLiteral("TESTBOTWALL");    // /player: LOGIN_REQUIRED, "not a bot"
+const QString kAppOnly = QStringLiteral("TESTAPPONLY");    // /player: UNPLAYABLE; yt-dlp signed out: "not a bot"
+const QString kGone = QStringLiteral("TESTGONE123");       // everywhere: "Video unavailable"
+const QString kPlain = QStringLiteral("TESTPLAIN01");      // plays signed out at once
+const QString kDoubted = QStringLiteral("TESTDOUBT01");    // with the account, and yt-dlp doubts the cookies
+const QString kSlow = QStringLiteral("TESTSLOW001");       // with the account, yt-dlp takes 4 s
+// For the listen reports: where the account's /player says to report them.
+const QString kEvilHost = QStringLiteral("TESTEVILHST");   // another host
+const QString kWrongPath = QStringLiteral("TESTWRONGPT");  // another path
+const QString kAnonAnswer = QStringLiteral("TESTANONANS"); // answered logged_in=0
+
+// Where the account's /player (WEB_REMIX) says to report a listen of `id`.
+QString trackingUrlOf(const QString &videoId)
+{
+    if (videoId == kEvilHost)
+        return QStringLiteral("https://evil.example/api/stats/playback?docid=%1&ns=yt").arg(videoId);
+    if (videoId == kWrongPath)
+        return QStringLiteral("https://s.youtube.com/api/stats/watchtime?docid=%1&ns=yt").arg(videoId);
+    return QStringLiteral("https://s.youtube.com/api/stats/playback?cl=812345678&docid=%1&ei=TESTEI&ns=yt"
+                          "&plid=TESTPLID&el=detailpage&len=213&of=TESTOF&vm=TESTVM").arg(videoId);
+}
+
+QByteArray remixPlayer(const QByteArray &loggedIn, const QString &trackingUrl)
+{
+    const QJsonObject root{
+        { QStringLiteral("responseContext"), QJsonObject{ { QStringLiteral("serviceTrackingParams"), QJsonArray{
+              QJsonObject{ { QStringLiteral("service"), QStringLiteral("GFEEDBACK") },
+                           { QStringLiteral("params"), QJsonArray{ QJsonObject{
+                                 { QStringLiteral("key"), QStringLiteral("logged_in") },
+                                 { QStringLiteral("value"), QString::fromLatin1(loggedIn) } } } } } } } } },
+        { QStringLiteral("playabilityStatus"), QJsonObject{ { QStringLiteral("status"), QStringLiteral("OK") } } },
+        { QStringLiteral("playbackTracking"), QJsonObject{
+              { QStringLiteral("videostatsPlaybackUrl"), QJsonObject{ { QStringLiteral("baseUrl"), trackingUrl } } },
+              { QStringLiteral("videostatsWatchtimeUrl"),
+                QJsonObject{ { QStringLiteral("baseUrl"), QStringLiteral("https://s.youtube.com/api/stats/watchtime?ns=yt") } } } } },
+    };
+    return QJsonDocument(root).toJson(QJsonDocument::Compact);
+}
+
+QByteArray refusalOf(const char *status, const QString &reason)
+{
+    const QJsonObject root{ { QStringLiteral("playabilityStatus"),
+                              QJsonObject{ { QStringLiteral("status"), QString::fromLatin1(status) },
+                                           { QStringLiteral("reason"), reason } } } };
+    return QJsonDocument(root).toJson(QJsonDocument::Compact);
+}
+
+// The link yt-dlp answers with the account, per song.
+QString signedUrlOf(const QString &videoId)
+{
+    static const qint64 expire = QDateTime::currentSecsSinceEpoch() + 6 * 3600;
+    return QStringLiteral("https://rr1---sn-signedin.googlevideo.com/videoplayback?expire=%1&id=%2&itag=251"
+                          "&source=youtube&c=TVHTML5").arg(expire).arg(videoId);
+}
+
+// yt-dlp's answer with the account, as --dump-single-json gives it, with a
+// Cookie among its headers and the cookies it was given (as an older yt-dlp
+// put them), and a marker to show the answer never reaches the log.
+QByteArray signedAnswerOf(const QString &videoId)
+{
+    const QJsonObject root{
+        { QStringLiteral("id"), videoId },
+        { QStringLiteral("title"), QStringLiteral("TESTINFOJSON marker") },
+        { QStringLiteral("format_id"), QStringLiteral("251") },
+        { QStringLiteral("url"), signedUrlOf(videoId) },
+        { QStringLiteral("http_headers"), QJsonObject{ { QStringLiteral("User-Agent"), QStringLiteral("Mozilla/5.0 (TEST)") },
+                                                       { QStringLiteral("Accept"), QStringLiteral("*/*") },
+                                                       { QStringLiteral("Cookie"), QStringLiteral("SID=TESTVAL-sid-youtube-6") } } },
+        { QStringLiteral("cookies"), QStringLiteral("SID=TESTVAL-sid-youtube-6; Domain=.youtube.com; Path=/") },
+    };
+    return QJsonDocument(root).toJson(QJsonDocument::Compact);
+}
+
+// One run of the stand-in yt-dlp, as it recorded it.
+struct FakeCall {
+    QString mode;   // signed, muxed or anon
+    QString id;
+    QStringList args;
+    QString cookieFile;
+    bool cookieFileExisted = false;
+    QByteArray cookies;
+    QString argAfter(const QString &name) const
+    {
+        const int at = int(args.indexOf(name));
+        return at >= 0 ? args.value(at + 1) : QString();
+    }
+};
+
+QList<FakeCall> fakeCalls(const QString &folder)
+{
+    QList<FakeCall> calls;
+    QFile file(QDir(folder).filePath(QStringLiteral("calls.jsonl")));
+    if (!file.open(QIODevice::ReadOnly))
+        return calls;
+    for (const QByteArray &line : file.readAll().split('\n')) {
+        if (line.trimmed().isEmpty())
+            continue;
+        const QJsonObject object = QJsonDocument::fromJson(line).object();
+        FakeCall call;
+        call.mode = object.value(QStringLiteral("mode")).toString();
+        call.id = object.value(QStringLiteral("id")).toString();
+        for (const QJsonValue &arg : object.value(QStringLiteral("args")).toArray())
+            call.args << arg.toString();
+        call.cookieFile = object.value(QStringLiteral("cookieFile")).toString();
+        call.cookieFileExisted = object.value(QStringLiteral("cookieFileExisted")).toBool();
+        call.cookies = object.value(QStringLiteral("cookies")).toString().toLatin1();
+        calls << call;
+    }
+    return calls;
+}
+
+// The runs since `from`, as "anon muxed signed".
+QString modesSince(const QString &folder, int from)
+{
+    QStringList modes;
+    const QList<FakeCall> calls = fakeCalls(folder);
+    for (int i = from; i < calls.size(); ++i)
+        modes << calls.at(i).mode;
+    return modes.join(QLatin1Char(' '));
+}
+
+int cookieFilesLeft()
+{
+    const QDir dir(YtmSession::cookieFolder());
+    return dir.exists() ? int(dir.entryList({ QStringLiteral("cookies-*.txt") }, QDir::Files).size()) : 0;
+}
+
+bool loggedSince(const QStringList &captured, int from, const QString &text)
+{
+    for (int i = from; i < captured.size(); ++i) {
+        if (captured.at(i).contains(text))
+            return true;
+    }
+    return false;
+}
+
+QByteArray readAll(const QString &path)
+{
+    QFile file(path);
+    return file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray();
+}
+
+}
+
+int runFakeYtDlp(const QStringList &arguments)
+{
+    const int at = int(arguments.indexOf(QStringLiteral("--fake-yt-dlp")));
+    const QDir folder(arguments.value(at + 1));
+    const QStringList args = arguments.mid(at + 2);
+    QString url;
+    QString cookies;
+    QString format;
+    for (int i = 0; i < args.size(); ++i) {
+        const QString &arg = args.at(i);
+        if (arg == QLatin1String("--cookies"))
+            cookies = args.value(++i);
+        else if (arg == QLatin1String("-f"))
+            format = args.value(++i);
+        else if (arg.startsWith(QLatin1String("https://www.youtube.com/watch?v=")))
+            url = arg;
+    }
+    const QString id = QUrlQuery(QUrl(url)).queryItemValue(QStringLiteral("v"));
+    const QString mode = !cookies.isEmpty() ? QStringLiteral("signed")
+                       : format == QLatin1String("18/b") ? QStringLiteral("muxed")
+                                                         : QStringLiteral("anon");
+    // The cookies file as it was given: invented values only, in the test's
+    // own folder.
+    QByteArray seen;
+    bool existed = false;
+    if (!cookies.isEmpty()) {
+        QFile given(cookies);
+        existed = given.open(QIODevice::ReadOnly);
+        seen = given.readAll();
+    }
+    {
+        QFile record(folder.filePath(QStringLiteral("calls.jsonl")));
+        if (record.open(QIODevice::WriteOnly | QIODevice::Append)) {
+            const QJsonObject call{
+                { QStringLiteral("mode"), mode },
+                { QStringLiteral("id"), id },
+                { QStringLiteral("args"), QJsonArray::fromStringList(args) },
+                { QStringLiteral("cookieFile"), cookies },
+                { QStringLiteral("cookieFileExisted"), existed },
+                { QStringLiteral("cookies"), QString::fromLatin1(seen) },
+            };
+            record.write(QJsonDocument(call).toJson(QJsonDocument::Compact) + '\n');
+        }
+    }
+    const QString base = folder.filePath(id + QLatin1Char('.') + mode);
+    const int delay = readAll(base + QStringLiteral(".delay")).trimmed().toInt();
+    if (delay > 0)
+        QThread::msleep(ulong(delay));
+    // As yt-dlp does at exit: its cookie jar, written back over the file.
+    const QString writeback = folder.filePath(QStringLiteral("writeback.txt"));
+    if (!cookies.isEmpty() && QFile::exists(writeback)) {
+        QFile jar(cookies);
+        if (jar.open(QIODevice::WriteOnly | QIODevice::Truncate))
+            jar.write(readAll(writeback));
+    }
+    QFile err;
+    if (!err.open(stderr, QIODevice::WriteOnly))
+        return 2;
+    err.write(readAll(base + QStringLiteral(".warn")));
+    if (QFile::exists(base + QStringLiteral(".json"))) {
+        QFile out;
+        if (!out.open(stdout, QIODevice::WriteOnly))
+            return 2;
+        out.write(readAll(base + QStringLiteral(".json")));
+        out.flush();
+        err.flush();
+        return 0;
+    }
+    QByteArray error = readAll(base + QStringLiteral(".err"));
+    if (error.isEmpty())
+        error = "ERROR: [youtube] " + id.toLatin1() + ": Video unavailable\n";
+    err.write(error);
+    err.flush();
+    return 1;
+}
+
+int runAccountPlaySelfTest(Library *library)
+{
+    Checks t("account");
+    const QString data = qEnvironmentVariable("MONOLIST_DATA_DIR");
+    if (data.isEmpty()) {
+        t.check(false, QStringLiteral("MONOLIST_DATA_DIR is set"),
+                QStringLiteral("refusing to run: this test replaces the stored YouTube Music session"));
+        return t.finish();
+    }
+    const QString secretName = QStringLiteral("ytmusic.cookies");
+    const QString nameKey = QStringLiteral("ytmusic.account_name");
+    const QString playKey = QStringLiteral("ytmusic.play_when_needed");
+    const QString reportKey = QStringLiteral("ytmusic.report_listens");
+
+    QStringList captured;
+    g_captured = &captured;
+    g_previousHandler = qInstallMessageHandler(captureMessage);
+
+    StandIn standIn;
+    if (!t.check(standIn.listen(), QStringLiteral("a stand-in server on this computer"))) {
+        qInstallMessageHandler(g_previousHandler);
+        g_captured = nullptr;
+        return t.finish();
+    }
+    // Before the resolver is made, so its InnerTube warms nothing up.
+    InnerTube::setTestServer(standIn.base());
+    InnerTube::setRegion(QString());
+
+    // yt-dlp is this program, answering from a folder of the test's own.
+    const QString fake = QDir(data).filePath(QStringLiteral("selftest-fake-yt-dlp"));
+    QDir(fake).removeRecursively();
+    QDir().mkpath(fake);
+    YtDlp::setExecutableOverride(QCoreApplication::applicationFilePath(), { QStringLiteral("--fake-yt-dlp"), fake });
+    t.note(QStringLiteral("every request goes to ") + standIn.base()
+           + QStringLiteral(", none to YouTube; yt-dlp is this program answering from ") + QDir::toNativeSeparators(fake));
+    const auto answerFile = [&fake](const QString &name, const QByteArray &bytes) {
+        QFile file(QDir(fake).filePath(name));
+        if (file.open(QIODevice::WriteOnly | QIODevice::Truncate))
+            file.write(bytes);
+    };
+    const QByteArray ageError = "ERROR: [youtube] TESTAGEGATE: Sign in to confirm your age. This video may be "
+                                "inappropriate for some users. Use --cookies-from-browser or --cookies for the "
+                                "authentication.\n";
+    const QByteArray botError = "ERROR: [youtube] %1: Sign in to confirm you\xE2\x80\x99re not a bot. Use "
+                                "--cookies-from-browser or --cookies for the authentication.\n";
+    answerFile(kAgeGated + QStringLiteral(".anon.err"), ageError);
+    answerFile(kAgeGated + QStringLiteral(".muxed.err"), ageError);
+    answerFile(kAgeGated + QStringLiteral(".signed.json"), signedAnswerOf(kAgeGated));
+    answerFile(kBotWall + QStringLiteral(".anon.err"), QByteArray(botError).replace("%1", kBotWall.toLatin1()));
+    answerFile(kBotWall + QStringLiteral(".muxed.err"), QByteArray(botError).replace("%1", kBotWall.toLatin1()));
+    answerFile(kBotWall + QStringLiteral(".signed.json"), signedAnswerOf(kBotWall));
+    answerFile(kAppOnly + QStringLiteral(".anon.err"), QByteArray(botError).replace("%1", kAppOnly.toLatin1()));
+    answerFile(kAppOnly + QStringLiteral(".signed.json"), signedAnswerOf(kAppOnly));
+    answerFile(kDoubted + QStringLiteral(".signed.json"), signedAnswerOf(kDoubted));
+    answerFile(kDoubted + QStringLiteral(".signed.warn"),
+               "WARNING: [youtube] The provided YouTube account cookies are no longer valid. They have likely been "
+               "rotated in the browser as a security measure.\n");
+    answerFile(kSlow + QStringLiteral(".signed.json"), signedAnswerOf(kSlow));
+    answerFile(kSlow + QStringLiteral(".signed.delay"), "4000");
+
+    // /player as VISIONOS asks it (the anonymous rung), per song; the
+    // account's WEB_REMIX /player, for the listen reports; and the check's
+    // calls.
+    QHash<QString, QByteArray> vision;
+    vision.insert(kAgeGated, refusalOf("LOGIN_REQUIRED", QStringLiteral("Sign in to confirm your age")));
+    vision.insert(kBotWall, refusalOf("LOGIN_REQUIRED", QStringLiteral("Sign in to confirm you\u2019re not a bot")));
+    vision.insert(kAppOnly, refusalOf("UNPLAYABLE", QStringLiteral("This video is not available on this app")));
+    vision.insert(kGone, refusalOf("ERROR", QStringLiteral("Video unavailable")));
+    vision.insert(kDoubted, refusalOf("LOGIN_REQUIRED", QStringLiteral("Sign in to confirm your age")));
+    vision.insert(kSlow, refusalOf("LOGIN_REQUIRED", QStringLiteral("Sign in to confirm your age")));
+    vision.insert(kPlain, answerWith(listedAll(kIPeJ7iM55hc)));
+    int remixStatus = 200;
+    int pingStatus = 204;
+    standIn.respond = [&](const StandIn::Request &request) {
+        StandIn::Answer answer;
+        const bool authed = request.authed();
+        if (request.path.startsWith("/sw.js_data")) {
+            answer.body = swJsData(QStringLiteral("TESTVISITORanon0001"));
+            return answer;
+        }
+        if (request.path.startsWith("/api/stats/")) {
+            answer.status = pingStatus;
+            answer.body = QByteArray();
+            if (pingStatus == 302)
+                answer.extra << "Location: " + standIn.base().toUtf8() + "/elsewhere";
+            return answer;
+        }
+        if (request.path.contains("account/account_menu")) {
+            answer.body = authed ? menuAnswer(QStringLiteral("Monolist Test")) : kSignedOutMenu;
+            return answer;
+        }
+        const QJsonObject body = request.json();
+        const QString videoId = body.value(QStringLiteral("videoId")).toString();
+        const QString client = body.value(QStringLiteral("context")).toObject().value(QStringLiteral("client"))
+                                   .toObject().value(QStringLiteral("clientName")).toString();
+        if (request.path.contains("/youtubei/v1/player")) {
+            if (client == QLatin1String("WEB_REMIX")) {
+                if (authed && remixStatus != 200) {
+                    answer.status = remixStatus;
+                    answer.body = R"({"error":{"code":403,"status":"PERMISSION_DENIED"}})";
+                    return answer;
+                }
+                answer.body = remixPlayer(authed && videoId != kAnonAnswer ? "1" : "0", trackingUrlOf(videoId));
+                return answer;
+            }
+            answer.body = vision.value(videoId, refusalOf("ERROR", QStringLiteral("Video unavailable")));
+            return answer;
+        }
+        answer.body = trackingAnswer(authed ? "1" : "0");
+        return answer;
+    };
+
+    // — the pieces —
+    SecretStore::remove(secretName);
+    for (const QString &key : { nameKey, playKey, reportKey })
+        library->setSetting(key, QString());
+    std::unique_ptr<YtmSession> session;
+    YtmSession::Timing timing;
+    timing.launchCheckMs = 100;
+    timing.recheckMs = 300;
+    timing.retryMinMs = 10 * 60 * 1000;   // never within the test
+    timing.saveDelayMs = 60 * 60 * 1000;  // kept pending, so a rotation can be seen waiting
+    QStringList verdicts;
+    QHash<QString, QString> listens;      // song -> how its report went
+    StreamResolver resolver;
+    const auto newSession = [&]() {
+        session = std::make_unique<YtmSession>(library);
+        session->setTiming(timing);
+        QObject::connect(session.get(), &YtmSession::checked, session.get(),
+                         [&verdicts](const QString &outcome) { verdicts << outcome; });
+        QObject::connect(session.get(), &YtmSession::listenReported, session.get(),
+                         [&listens](const QString &videoId, const QString &outcome) { listens.insert(videoId, outcome); });
+        session->start();
+        resolver.followAccount(session.get());
+    };
+    const QByteArray fixture = QByteArray(netscapeFixture()).replace("\n", "\r\n");
+    const auto signIn = [&]() {
+        const int before = int(verdicts.size());
+        const bool imported = session->importText(QString::fromUtf8(fixture));
+        waitUntil([&verdicts, before]() { return verdicts.size() > before; }, 15000);
+        return imported && session->state() == QLatin1String("active");
+    };
+
+    struct Outcome {
+        bool done = false;
+        bool ok = false;
+        QString url;
+        int tier = -1;
+        bool fromCache = false;
+        QString error;
+    };
+    QHash<QString, Outcome> outcomes;
+    QObject::connect(&resolver, &StreamResolver::resolved, &resolver,
+                     [&outcomes](const QString &id, const QString &url, int tier, bool fromCache) {
+                         outcomes.insert(id, Outcome{ true, true, url, tier, fromCache, QString() });
+                     });
+    QObject::connect(&resolver, &StreamResolver::failed, &resolver, [&outcomes](const QString &id, const QString &reason) {
+        Outcome outcome;
+        outcome.done = true;
+        outcome.error = reason;
+        outcomes.insert(id, outcome);
+    });
+    const auto wait = [&outcomes](const QString &id) {
+        waitUntil([&outcomes, id]() { return outcomes.value(id).done; }, 40000);
+        return outcomes.value(id);
+    };
+    const auto resolveNow = [&](const QString &id) {
+        outcomes.remove(id);
+        resolver.resolve(id);
+        return wait(id);
+    };
+    const auto viaNow = [&](const QString &id, const QList<int> &tiers, int home) {
+        outcomes.remove(id);
+        resolver.resolveVia(id, tiers, home);
+        return wait(id);
+    };
+    const auto calls = [&fake]() { return int(fakeCalls(fake).size()); };
+    const auto requestsTo = [&standIn](const char *path, int from) {
+        QList<StandIn::Request> found;
+        for (int i = from; i < standIn.requests.size(); ++i) {
+            if (standIn.requests.at(i).path.contains(path))
+                found << standIn.requests.at(i);
+        }
+        return found;
+    };
+    const auto remixPlayers = [&standIn](int from) {
+        QList<StandIn::Request> found;
+        for (int i = from; i < standIn.requests.size(); ++i) {
+            const StandIn::Request &request = standIn.requests.at(i);
+            if (request.path.contains("/youtubei/v1/player")
+                && request.json().value(QStringLiteral("context")).toObject().value(QStringLiteral("client")).toObject()
+                           .value(QStringLiteral("clientName")).toString() == QLatin1String("WEB_REMIX"))
+                found << request;
+        }
+        return found;
+    };
+    const auto describe = [](const Outcome &o) {
+        return o.ok ? QStringLiteral("resolved, tier %1%2").arg(o.tier).arg(o.fromCache ? QStringLiteral(", from cache") : QString())
+                    : QStringLiteral("failed: %1").arg(o.error.left(200));
+    };
+
+    // — 1. what an earlier run left is swept at start —
+    {
+        const QString folder = YtmSession::cookieFolder();
+        t.check(QDir::cleanPath(folder).startsWith(QDir::cleanPath(data)),
+                QStringLiteral("the cookies folder is under MONOLIST_DATA_DIR in a test (the app's local data otherwise)"),
+                QDir::toNativeSeparators(folder));
+        QDir().mkpath(folder);
+        const QString old = QDir(folder).filePath(QStringLiteral("cookies-00000000000000aa.txt"));
+        const QString fresh = QDir(folder).filePath(QStringLiteral("cookies-00000000000000bb.txt"));
+        for (const QString &path : { old, fresh }) {
+            QFile file(path);
+            if (file.open(QIODevice::WriteOnly | QIODevice::Truncate))
+                file.write("# Netscape HTTP Cookie File\n.youtube.com\tTRUE\t/\tTRUE\t0\tSID\tTESTVAL-sid-youtube-6\n");
+        }
+        {
+            QFile file(old);
+            if (file.open(QIODevice::ReadWrite))
+                file.setFileTime(QDateTime::currentDateTimeUtc().addSecs(-3600), QFileDevice::FileModificationTime);
+        }
+        newSession();
+        t.check(!QFile::exists(old) && QFile::exists(fresh),
+                QStringLiteral("at start, a cookies file an earlier run left is deleted; one written in the last two "
+                               "minutes (maybe another running copy's) is left"));
+        QFile::remove(fresh);
+        t.check(session->state() == QLatin1String("signedOut") && session->playWhenNeeded() && session->reportListens(),
+                QStringLiteral("nothing stored: signed out, and both switches on by default"), session->state());
+    }
+
+    // — 2. signed out: the ladder as it was —
+    {
+        int from = calls();
+        const Outcome plain = resolveNow(kPlain);
+        t.check(plain.ok && plain.tier == StreamResolver::TierInnerTube && calls() == from,
+                QStringLiteral("a song that plays signed out plays from InnerTube, with yt-dlp never asked"),
+                describe(plain));
+        from = calls();
+        int logFrom = int(captured.size());
+        const Outcome aged = resolveNow(kAgeGated);
+        t.check(!aged.ok && modesSince(fake, from) == QLatin1String("anon muxed"),
+                QStringLiteral("signed out, a song refused for its age walks the anonymous ladder as before (yt-dlp, "
+                               "its muxed stream) and fails; the account's rung is not tried"),
+                modesSince(fake, from) + QStringLiteral("; ") + describe(aged));
+        t.check(loggedSince(captured, logFrom, QStringLiteral("no YouTube Music session is signed in; it goes on signed out")),
+                QStringLiteral("the log says it wanted an account and there was none"));
+        t.check(cookieFilesLeft() == 0, QStringLiteral("and no cookies file was written"));
+    }
+
+    // — 3. signed in: the account next, after the refusal that asks for it —
+    QByteArray lent;
+    {
+        t.check(signIn(), QStringLiteral("a session imports and is confirmed"), session->state());
+        lent = CookieImport::toNetscape(session->jar());
+        // What yt-dlp writes back at exit: SIDCC rotated, a new cookie, one of
+        // google.com's (never taken), and a session cookie's expiry left
+        // empty, as Python writes it.
+        QByteArray writeback = lent;
+        writeback.replace("\tSIDCC\tTESTVAL-sidcc-9", "\tSIDCC\tTESTROTATED-sidcc");
+        writeback.replace("\t0\tYSC\t", "\t\tYSC\t");
+        writeback += ".youtube.com\tTRUE\t/\tTRUE\t1830000000\t__Secure-ROTATED\tTESTROTATED-new\n";
+        writeback += ".google.com\tTRUE\t/\tTRUE\t1830000000\tSID\tTESTVAL-google-extra\n";
+        answerFile(QStringLiteral("writeback.txt"), writeback);
+        const int jarBefore = int(session->jar().size());
+
+        const int from = calls();
+        const int logFrom = int(captured.size());
+        const Outcome aged = resolveNow(kAgeGated);
+        const QList<FakeCall> made = fakeCalls(fake).mid(from);
+        t.check(aged.ok && aged.tier == StreamResolver::TierSignedIn && aged.url == signedUrlOf(kAgeGated)
+                    && modesSince(fake, from) == QLatin1String("signed"),
+                QStringLiteral("signed in, a song /player refuses for its age is asked with the account next, before "
+                               "yt-dlp signed out, and plays from that link"),
+                modesSince(fake, from) + QStringLiteral("; ") + describe(aged));
+        const FakeCall call = made.value(0);
+        t.check(call.argAfter(QStringLiteral("--extractor-args")) == QLatin1String("youtube:player_client=tv_downgraded,web_embedded")
+                    && call.argAfter(QStringLiteral("-f")) == QLatin1String("bestaudio/best")
+                    && call.args.contains(QStringLiteral("--dump-single-json")),
+                QStringLiteral("yt-dlp is asked as tv_downgraded,web_embedded, for the best audio"),
+                call.args.join(QLatin1Char(' ')).left(400));
+        t.check(QDir::cleanPath(QFileInfo(call.cookieFile).absolutePath()) == QDir::cleanPath(YtmSession::cookieFolder())
+                    && QFileInfo(call.cookieFile).fileName().startsWith(QLatin1String("cookies-")),
+                QStringLiteral("its --cookies file is one of its own, in the cookies folder"),
+                QDir::toNativeSeparators(call.cookieFile) + QStringLiteral(" / ") + call.mode + QStringLiteral(" / ")
+                    + call.args.join(QLatin1Char(' ')).right(300));
+        t.check(call.cookieFileExisted && call.cookies == lent && !call.cookies.contains("google.com"),
+                QStringLiteral("and holds exactly the session's youtube.com cookies (CookieImport::toNetscape), never "
+                               "google.com's"));
+        const QVariantMap headers = resolver.headersFor(kAgeGated, aged.url);
+        bool cookieHeader = false;
+        for (auto it = headers.cbegin(); it != headers.cend(); ++it)
+            cookieHeader = cookieHeader || it.key().compare(QLatin1String("Cookie"), Qt::CaseInsensitive) == 0;
+        t.check(headers.value(QStringLiteral("User-Agent")).toString() == QLatin1String("Mozilla/5.0 (TEST)") && !cookieHeader,
+                QStringLiteral("the link goes to mpv with yt-dlp's headers, but never a Cookie"),
+                QStringList(headers.keys()).join(QStringLiteral(", ")));
+        waitUntil([]() { return cookieFilesLeft() == 0; }, 8000);
+        t.check(cookieFilesLeft() == 0 && !QFile::exists(call.cookieFile),
+                QStringLiteral("the cookies file is deleted once yt-dlp is done with it"));
+        QByteArray sidcc;
+        bool rotatedNew = false;
+        bool google = false;
+        for (const Cookie &cookie : session->jar()) {
+            if (cookie.name == "SIDCC" && cookie.domain == QLatin1String("youtube.com"))
+                sidcc = cookie.value;
+            rotatedNew = rotatedNew || cookie.name == "__Secure-ROTATED";
+            google = google || !CookieImport::isYouTubeDomain(cookie.domain);
+        }
+        t.check(sidcc == "TESTROTATED-sidcc" && rotatedNew && !google && session->jar().size() == jarBefore + 1
+                    && session->savePending(),
+                QStringLiteral("what yt-dlp rotated is taken into the session and kept (a changed SIDCC, a new "
+                               "cookie), and google.com's is not"),
+                QStringLiteral("%1 cookies, was %2").arg(session->jar().size()).arg(jarBefore));
+        t.check(loggedSince(captured, logFrom, QStringLiteral("asking with the account next"))
+                    && loggedSince(captured, logFrom, QStringLiteral("resolved with the account as itag 251 (TVHTML5)"))
+                    && loggedSince(captured, logFrom, QStringLiteral("yt-dlp gave back")),
+                QStringLiteral("the log says why the account was asked, what it gave and what came back, in names and "
+                               "counts"));
+        // The rest of the test lends the session as it now is.
+        lent = CookieImport::toNetscape(session->jar());
+        answerFile(QStringLiteral("writeback.txt"), lent);
+
+        const int cachedFrom = calls();
+        const Outcome cached = resolveNow(kAgeGated);
+        t.check(cached.ok && cached.fromCache && cached.tier == StreamResolver::TierSignedIn && calls() == cachedFrom,
+                QStringLiteral("played again while its link lasts: the link, with nobody asked"), describe(cached));
+    }
+
+    // — 4. which refusals send a song to the account —
+    {
+        int from = calls();
+        const Outcome appOnly = resolveNow(kAppOnly);
+        t.check(appOnly.ok && appOnly.tier == StreamResolver::TierSignedIn
+                    && modesSince(fake, from) == QLatin1String("anon signed"),
+                QStringLiteral("refused by /player for another reason, then by yt-dlp signed out as a bot: the account "
+                               "next, before the muxed stream"),
+                modesSince(fake, from) + QStringLiteral("; ") + describe(appOnly));
+        from = calls();
+        const Outcome gone = resolveNow(kGone);
+        t.check(!gone.ok && modesSince(fake, from) == QLatin1String("anon muxed"),
+                QStringLiteral("a song that is simply gone (\"Video unavailable\") never goes to the account"),
+                modesSince(fake, from) + QStringLiteral("; ") + describe(gone));
+        const bool words = StreamResolver::accountWouldHelp(QStringLiteral("VISIONOS 1.02: LOGIN_REQUIRED: Sign in"))
+                           && StreamResolver::accountWouldHelp(QStringLiteral("AGE_CHECK_REQUIRED"))
+                           && StreamResolver::accountWouldHelp(QStringLiteral("CONTENT_CHECK_REQUIRED: x"))
+                           && StreamResolver::accountWouldHelp(QStringLiteral("AGE_VERIFICATION_REQUIRED"))
+                           && StreamResolver::accountWouldHelp(QStringLiteral("Sign in to confirm you\u2019re not a bot"))
+                           && StreamResolver::accountWouldHelp(QStringLiteral("Private video. Sign in if you've been granted access"))
+                           && !StreamResolver::accountWouldHelp(QStringLiteral("Video unavailable"))
+                           && !StreamResolver::accountWouldHelp(QStringLiteral("yt-dlp timed out"))
+                           && !StreamResolver::accountWouldHelp(QStringLiteral("no plain audio stream offered"));
+        t.check(words, QStringLiteral("the reasons an account answers: LOGIN_REQUIRED, the age and content checks, a "
+                                      "bot check, a private video; not a gone song or a timeout"));
+    }
+
+    // — 5. never ahead of time —
+    {
+        const int from = calls();
+        resolver.prefetch(kBotWall);
+        waitUntil([&]() { return modesSince(fake, from).contains(QLatin1String("muxed")); }, 40000);
+        settle(500);
+        t.check(modesSince(fake, from) == QLatin1String("anon muxed"),
+                QStringLiteral("a song fetched ahead of time is never asked with the account, whatever it is refused for"),
+                modesSince(fake, from));
+        const int playFrom = calls();
+        const Outcome played = resolveNow(kBotWall);
+        t.check(played.ok && played.tier == StreamResolver::TierSignedIn && modesSince(fake, playFrom) == QLatin1String("signed"),
+                QStringLiteral("played, the same song goes to the account after /player's bot check"),
+                modesSince(fake, playFrom) + QStringLiteral("; ") + describe(played));
+    }
+
+    // — 6. the switch —
+    {
+        const int logFrom = int(captured.size());
+        session->setPlayWhenNeeded(false);
+        t.check(library->settingValue(playKey) == QLatin1String("0") && !session->accountForPlayback()
+                    && !session->statusLine().contains(QLatin1String("asked for with it")),
+                QStringLiteral("\"Play with my account when needed\" off: kept as ytmusic.play_when_needed=0, and the "
+                               "status line no longer says it"),
+                session->statusLine());
+        t.check(loggedSince(captured, logFrom, QStringLiteral("fetched with it forgotten")),
+                QStringLiteral("turned off, every link fetched with the account is forgotten"));
+        const int from = calls();
+        const Outcome aged = resolveNow(kAgeGated);
+        t.check(!aged.ok && modesSince(fake, from) == QLatin1String("anon muxed"),
+                QStringLiteral("off, a song refused for its age goes on signed out, as before, and fails"),
+                modesSince(fake, from) + QStringLiteral("; ") + describe(aged));
+        {
+            YtmSession probe(library);   // never started: reads the settings, sends nothing
+            t.check(!probe.playWhenNeeded() && probe.reportListens(), QStringLiteral("a new session reads it back off"));
+        }
+        session->setPlayWhenNeeded(true);
+        t.check(library->settingValue(playKey) == QLatin1String("1") && session->accountForPlayback()
+                    && session->statusLine().contains(QLatin1String("asked for with it")),
+                QStringLiteral("on again: ytmusic.play_when_needed=1, and the status line says so"), session->statusLine());
+    }
+
+    // — 7. the hour's limit —
+    {
+        // Three lookups with the account so far: the age-gated song, the
+        // app-only one and the bot wall.
+        resolver.setAccountLimit(3);
+        const int from = calls();
+        const int logFrom = int(captured.size());
+        const Outcome aged = resolveNow(kAgeGated);
+        t.check(!aged.ok && modesSince(fake, from) == QLatin1String("anon muxed")
+                    && loggedSince(captured, logFrom, QStringLiteral("3 songs were asked for with the account in the last hour")),
+                QStringLiteral("with the hour's limit reached, the song goes on signed out"),
+                modesSince(fake, from) + QStringLiteral("; ") + describe(aged));
+        resolver.setAccountLimit(120);
+    }
+
+    // — 8. yt-dlp doubting the cookies has the session checked —
+    {
+        const int menus = int(requestsTo("account/account_menu", 0).size());
+        const int logFrom = int(captured.size());
+        const int before = int(verdicts.size());
+        const Outcome doubted = resolveNow(kDoubted);
+        waitUntil([&]() { return verdicts.size() > before; }, 15000);
+        t.check(doubted.ok && doubted.tier == StreamResolver::TierSignedIn
+                    && int(requestsTo("account/account_menu", 0).size()) > menus
+                    && loggedSince(captured, logFrom, QStringLiteral("cookies are no longer valid; checking the session now"))
+                    && session->state() == QLatin1String("active"),
+                QStringLiteral("\"cookies are no longer valid\" from yt-dlp: the session is checked at once (and, "
+                               "confirmed, stays)"),
+                describe(doubted) + QStringLiteral("; ") + session->state());
+    }
+
+    // — 9. after a refusal: exactly the walk the player lays out —
+    {
+        const QList<int> after = StreamResolver::afterRefusal(StreamResolver::TierSignedIn);
+        t.check(after == QList<int>{ StreamResolver::TierYtDlp, StreamResolver::TierMuxed, StreamResolver::TierPiped,
+                                     StreamResolver::TierInvidious },
+                QStringLiteral("after a refused signed-in link: yt-dlp, the muxed stream, Piped, Invidious"));
+        int from = calls();
+        const Outcome refused = viaNow(kAgeGated, after, StreamResolver::TierSignedIn);
+        t.check(!refused.ok && modesSince(fake, from) == QLatin1String("anon muxed"),
+                QStringLiteral("a refused signed-in link is not asked for again: the walk below it never adds the "
+                               "account"),
+                modesSince(fake, from) + QStringLiteral("; ") + describe(refused));
+        from = calls();
+        const Outcome listed = viaNow(kAgeGated, QList<int>{ StreamResolver::TierSignedIn } + after, StreamResolver::TierSignedIn);
+        t.check(listed.ok && listed.tier == StreamResolver::TierSignedIn && modesSince(fake, from) == QLatin1String("signed"),
+                QStringLiteral("where the walk lists it (a stale link, a stream cut short), the account is asked again"),
+                modesSince(fake, from) + QStringLiteral("; ") + describe(listed));
+    }
+
+    // — 10. signing out —
+    {
+        const int logFrom = int(captured.size());
+        session->signOut();
+        t.check(loggedSince(captured, logFrom, QStringLiteral("fetched with it forgotten")),
+                QStringLiteral("signed out, every link fetched with the account is forgotten"));
+        const int from = calls();
+        const Outcome aged = resolveNow(kAgeGated);
+        t.check(!aged.ok && !aged.fromCache && modesSince(fake, from) == QLatin1String("anon muxed"),
+                QStringLiteral("and the song goes down the anonymous ladder, not to its signed-in link"),
+                modesSince(fake, from) + QStringLiteral("; ") + describe(aged));
+
+        t.check(signIn(), QStringLiteral("signed in again"), session->state());
+        answerFile(QStringLiteral("writeback.txt"), CookieImport::toNetscape(session->jar()));
+        const int slowFrom = calls();
+        const int slowLog = int(captured.size());
+        outcomes.remove(kSlow);
+        resolver.resolve(kSlow);
+        waitUntil([&]() { return modesSince(fake, slowFrom) == QLatin1String("signed"); }, 20000);
+        settle(300);
+        const bool started = modesSince(fake, slowFrom) == QLatin1String("signed");
+        session->signOut();
+        const Outcome slow = wait(kSlow);
+        waitUntil([]() { return cookieFilesLeft() == 0; }, 8000);
+        t.check(started && !(slow.ok && slow.tier == StreamResolver::TierSignedIn)
+                    && loggedSince(captured, slowLog, QStringLiteral("its lookup with the account stops"))
+                    && cookieFilesLeft() == 0,
+                QStringLiteral("signed out while a lookup with the account runs: it stops, its cookies file is "
+                               "deleted, and the song goes on signed out"),
+                modesSince(fake, slowFrom) + QStringLiteral("; ") + describe(slow)
+                    + QStringLiteral("; %1 cookies files").arg(cookieFilesLeft()));
+    }
+
+    // — 11. listens, reported to the account's history —
+    {
+        t.check(signIn(), QStringLiteral("signed in again, for the listens"), session->state());
+        const auto track = [](const QString &id) {
+            return QVariantMap{ { QStringLiteral("sourceId"), id }, { QStringLiteral("title"), QStringLiteral("Test song") },
+                                { QStringLiteral("artist"), QStringLiteral("Test Artist") },
+                                { QStringLiteral("durationMs"), 213000 } };
+        };
+        const auto listen = [&](const QString &id) {
+            listens.remove(id);
+            session->listenQualified(track(id), QDateTime::currentSecsSinceEpoch() - 120, true);
+            waitUntil([&listens, id]() { return listens.contains(id); }, 15000);
+            return listens.value(id);
+        };
+
+        int from = int(standIn.requests.size());
+        const QString reported = listen(kAgeGated);
+        const QList<StandIn::Request> players = remixPlayers(from);
+        const QList<StandIn::Request> pings = requestsTo("/api/stats/", from);
+        t.check(reported == QLatin1String("reported") && players.size() == 1 && pings.size() == 1,
+                QStringLiteral("a listen that counts: the account's /player, then one report"),
+                QStringLiteral("%1; %2 /player, %3 reports").arg(reported).arg(players.size()).arg(pings.size()));
+        const StandIn::Request player = players.value(0);
+        t.check(player.authed()
+                    && player.header("cookie")
+                           == CookieImport::header(session->jar(), CookieImport::kMusicHost, QStringLiteral("/youtubei/v1/player"))
+                    && player.json().value(QStringLiteral("videoId")).toString() == kAgeGated,
+                QStringLiteral("the /player is YouTube Music's web client's (WEB_REMIX), as the account, for the song"));
+        const StandIn::Request ping = pings.value(0);
+        const QUrl pinged(QStringLiteral("http://127.0.0.1") + QString::fromLatin1(ping.path));
+        const QUrlQuery query(pinged);
+        static const QRegularExpression cpnShape(QStringLiteral("^[A-Za-z0-9_-]{16}$"));
+        t.check(pinged.path() == QLatin1String("/api/stats/playback") && query.queryItemValue(QStringLiteral("ver")) == QLatin1String("2")
+                    && query.queryItemValue(QStringLiteral("c")) == QLatin1String("WEB_REMIX")
+                    && cpnShape.match(query.queryItemValue(QStringLiteral("cpn"))).hasMatch()
+                    && query.queryItemValue(QStringLiteral("docid")) == kAgeGated
+                    && query.queryItemValue(QStringLiteral("el")) == QLatin1String("detailpage"),
+                QStringLiteral("the report is a GET of the address /player gave, with ver=2, c=WEB_REMIX and a cpn of "
+                               "16 URL-safe characters added, and the address's own parameters kept"),
+                QString::fromLatin1(ping.path).left(300));
+        const QByteArray statsCookie =
+            CookieImport::header(session->jar(), CookieImport::kStatsHost, QStringLiteral("/api/stats/playback"));
+        t.check(ping.header("cookie") == statsCookie && statsCookie.contains("STATSONLY=") && statsCookie.contains("STATSPATH=")
+                    && ping.header("authorization").startsWith("SAPISIDHASH ")
+                    && ping.header("x-goog-authuser") == "0" && ping.header("origin") == standIn.base().toUtf8(),
+                QStringLiteral("carrying what a browser sends s.youtube.com's /api/stats/playback (its own cookies "
+                               "among them), the SID hashes and X-Goog-AuthUser"));
+
+        from = int(standIn.requests.size());
+        const QString evil = listen(kEvilHost);
+        const QString path = listen(kWrongPath);
+        t.check(evil == QLatin1String("failed") && path == QLatin1String("failed") && requestsTo("/api/stats/", from).isEmpty()
+                    && requestsTo("/elsewhere", from).isEmpty(),
+                QStringLiteral("an address on another host, or another path, is never asked"),
+                evil + QStringLiteral(", ") + path);
+
+        from = int(standIn.requests.size());
+        pingStatus = 302;
+        const QString redirected = listen(kPlain);
+        pingStatus = 204;
+        t.check(redirected == QLatin1String("failed") && requestsTo("/api/stats/", from).size() == 1
+                    && requestsTo("/elsewhere", from).isEmpty(),
+                QStringLiteral("a redirect from the report is not followed"), redirected);
+
+        from = int(standIn.requests.size());
+        pingStatus = 500;
+        const QString broken = listen(kPlain);
+        pingStatus = 204;
+        t.check(broken == QLatin1String("failed") && requestsTo("/api/stats/", from).size() == 1,
+                QStringLiteral("a report answered with an error is not sent again (and its address stays out of the "
+                               "log, below)"),
+                broken);
+
+        from = int(standIn.requests.size());
+        const QString anonymous = listen(kAnonAnswer);
+        t.check(anonymous == QLatin1String("failed") && requestsTo("/api/stats/", from).isEmpty(),
+                QStringLiteral("an answer made as if signed out (logged_in=0) reports nothing"), anonymous);
+
+        from = int(standIn.requests.size());
+        session->setReportListens(false);
+        const QString off = listen(kPlain);
+        t.check(off == QLatin1String("skipped") && library->settingValue(reportKey) == QLatin1String("0")
+                    && standIn.requests.size() == from
+                    && !session->statusLine().contains(QLatin1String("YouTube history")),
+                QStringLiteral("\"Send my listens to YouTube history\" off: kept as ytmusic.report_listens=0, and "
+                               "nothing is sent"),
+                off);
+        session->setReportListens(true);
+
+        from = int(standIn.requests.size());
+        session->listenQualified(track(QString()), QDateTime::currentSecsSinceEpoch(), true);
+        session->listenQualified(track(QStringLiteral("C:/Music/a song.mp3")), QDateTime::currentSecsSinceEpoch(), true);
+        settle(300);
+        t.check(standIn.requests.size() == from, QStringLiteral("a song with no YouTube id (a file of your own) is never reported"));
+
+        from = int(standIn.requests.size());
+        const int verdictsBefore = int(verdicts.size());
+        remixStatus = 403;
+        const QString refused = listen(kPlain);
+        remixStatus = 200;
+        waitUntil([&]() { return verdicts.size() > verdictsBefore; }, 15000);
+        t.check(refused == QLatin1String("failed") && remixPlayers(from).size() == 1 && requestsTo("/api/stats/", from).isEmpty()
+                    && !requestsTo("account/account_menu", from).isEmpty() && session->state() == QLatin1String("active"),
+                QStringLiteral("the account's /player refused (403): nothing is asked again without the account, and "
+                               "the session is checked rather than ended (confirmed here, it stays)"),
+                refused + QStringLiteral("; ") + session->state());
+
+        session->signOut();
+        from = int(standIn.requests.size());
+        const QString signedOut = listen(kPlain);
+        t.check(signedOut == QLatin1String("skipped") && standIn.requests.size() == from,
+                QStringLiteral("without a confirmed session nothing is sent"), signedOut);
+    }
+
+    // — 12. the log —
+    {
+        g_captured = nullptr;
+        qInstallMessageHandler(g_previousHandler);
+        QStringList found;
+        for (const QString &line : std::as_const(captured)) {
+            found << leaks(line);
+            if (line.contains(QLatin1String("TESTINFOJSON")) || line.contains(QLatin1String("googlevideo.com/videoplayback"))
+                || line.contains(QLatin1String("/api/stats/playback?")) || line.contains(QLatin1String("TESTROTATED")))
+                found << line.left(80);
+        }
+        t.check(found.isEmpty(),
+                QStringLiteral("none of %1 lines logged holds a cookie value, a hash, yt-dlp's answer, a link or a "
+                               "report address").arg(captured.size()),
+                found.join(QStringLiteral(" | ")));
+    }
+
+    session->signOut();
+    resolver.followAccount(nullptr);
+    session.reset();
+    SecretStore::remove(secretName);
+    for (const QString &key : { nameKey, playKey, reportKey })
+        library->setSetting(key, QString());
+    YtDlp::setExecutableOverride(QString());
+    InnerTube::setTestServer(QString());
+    settle(200);
+    QDir(fake).removeRecursively();
     return t.finish();
 }

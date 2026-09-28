@@ -1,5 +1,7 @@
 #pragma once
 
+#include <QStringList>
+
 class Library;
 
 // Self-tests for the YouTube Music sign-in, run from the command line
@@ -47,6 +49,36 @@ int runYtmSessionSelfTest(Library *library);
 // account's); no cookie value in the log. Refuses to run without
 // MONOLIST_DATA_DIR, as --ytm-session-test does.
 int runHomeAccountSelfTest(Library *library);
+
+// --account-play-test: the account where a song needs it, and listens
+// reported to its history, against the same stand-in, with this program
+// standing in for yt-dlp (runFakeYtDlp). Signed out, a song YouTube refuses
+// signed out goes down the anonymous ladder as before and the account's rung
+// is never tried; signed in, it is asked with the account next (never before
+// an anonymous refusal that names a reason an account answers, never ahead
+// of time, never with the switch off or the hour's limit reached), through
+// a cookies.txt file that holds youtube.com's cookies alone, is read back for
+// what yt-dlp rotated and deleted, with tv_downgraded,web_embedded, and its
+// link goes to mpv without a Cookie header; leftovers are swept at start;
+// "cookies are no longer valid" has the session checked; a refused signed-in
+// link is not asked for again unless the walk lists it; signing out forgets
+// every signed-in link and stops a lookup under way. A qualified listen is
+// reported as YouTube Music's player does (the account's WEB_REMIX /player,
+// then a GET of its videostatsPlaybackUrl with ver=2, c=WEB_REMIX and a cpn,
+// with s.youtube.com's own cookies and the SID hashes), and never to another
+// host or path, after a redirect, from a signed-out answer, with the switch
+// off, or without a confirmed session. No cookie value, info JSON or link in
+// the log. Refuses to run without MONOLIST_DATA_DIR.
+int runAccountPlaySelfTest(Library *library);
+// --fake-yt-dlp <folder> <yt-dlp's arguments>: this program in yt-dlp's
+// place, for the test above. It writes each run to <folder>/calls.jsonl (the
+// arguments, and the cookies file as it was given), sleeps
+// <id>.<mode>.delay ms, writes <folder>/writeback.txt over the cookies file
+// as yt-dlp writes its jar back at exit, prints <id>.<mode>.warn to stderr,
+// then answers <id>.<mode>.json on stdout, or <id>.<mode>.err (else "Video
+// unavailable") on stderr with exit code 1. <mode> is "signed" with
+// --cookies, "muxed" for -f 18/b, "anon" otherwise.
+int runFakeYtDlp(const QStringList &arguments);
 
 // --visitor-test: the one visitor id every InnerTube shares, against the same
 // stand-in: one sw.js_data fetch however many ask, a stored id used with no
