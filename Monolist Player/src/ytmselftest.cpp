@@ -74,8 +74,9 @@ using Format = CookieImport::Format;
 // A cookies.txt file as a browser extension writes it for a private window
 // signed in to YouTube Music, with what else such a file holds: google.com's
 // cookies of the same names, a cookie for www.youtube.com alone, one for
-// another path, one expired, a duplicate on a more specific domain, a line of
-// six fields, and a line that is not a cookie at all.
+// s.youtube.com alone, two for other paths, two for other parts of YouTube,
+// one expired, a second copy of a name on a more specific domain, the same
+// cookie twice, a line of six fields, and a line that is not a cookie at all.
 const char *const kNetscapeLines[] = {
     "# Netscape HTTP Cookie File",
     "# https://curl.se/docs/http-cookies.html",
@@ -98,17 +99,32 @@ const char *const kNetscapeLines[] = {
     ".youtube.com\tTRUE\t/\tTRUE\t1830000000\tEMPTYVAL",
     "www.youtube.com\tFALSE\t/\tTRUE\t1830000000\tWWWONLY\tTESTVAL-www-12",
     ".youtube.com\tTRUE\t/watch\tTRUE\t1830000000\tWATCHPATH\tTESTVAL-watch-13",
+    "s.youtube.com\tFALSE\t/\tTRUE\t1830000000\tSTATSONLY\tTESTVAL-stats-17",
+    ".youtube.com\tTRUE\t/api/stats\tTRUE\t1830000000\tSTATSPATH\tTESTVAL-statspath-18",
+    "accounts.youtube.com\tFALSE\t/\tTRUE\t1830000000\tACCOUNTSONLY\tTESTVAL-accounts-19",
+    ".m.youtube.com\tTRUE\t/\tTRUE\t1830000000\tMOBILEONLY\tTESTVAL-mobile-20",
+    ".youtube.com\tTRUE\t/\tFALSE\t1830000000\tAPISID\tTESTVAL-apisid-dup-21",
     ".google.com\tTRUE\t/\tTRUE\t1830000000\tSID\tTESTVAL-sid-google-14",
     "#HttpOnly_.google.com\tTRUE\t/\tTRUE\t1830000000\tLOGIN_INFO\tTESTVAL-google-login-15",
     ".youtube.com\tTRUE\t/\tTRUE\t1600000000\tOLDCOOKIE\tTESTVAL-expired-16",
     "this line is not a cookie at all",
 };
+// The cookie lines above.
+constexpr int kFixtureCookies = 25;
 
-// What of it is kept, in order, and what SIDCC and SID must hold.
+// What of it is kept, in order: both SIDCCs (one for youtube.com, one for
+// music.youtube.com alone), and the cookies for www's and s's own.
 const char *const kKeptNames[] = {
     "PREF", "LOGIN_INFO", "APISID", "SAPISID", "__Secure-1PAPISID", "__Secure-3PAPISID", "HSID", "SSID",
-    "SID", "__Secure-1PSID", "__Secure-3PSID", "SIDCC", "YSC", "EMPTYVAL",
+    "SID", "__Secure-1PSID", "__Secure-3PSID", "SIDCC", "YSC", "SIDCC", "EMPTYVAL", "WWWONLY", "WATCHPATH",
+    "STATSONLY", "STATSPATH",
 };
+
+// What the session says of itself in the tests: invented ids, marked TEST.
+const QString kCopiedVisitor = QStringLiteral("TESTVISITORcopied0001%3D");
+const QString kSignedInVisitor = QStringLiteral("TESTVISITORsignedin0001%3D%3D");
+const QString kBrandSync = QStringLiteral("TESTDELEGATED0001||TESTUSERSYNC0001");
+const QString kOwnSync = QStringLiteral("TESTUSERSYNC0001||");
 
 // Every value above and below, for the checks that none reaches a message or
 // the log.
@@ -117,7 +133,11 @@ const char *const kValues[] = {
     "TESTSECURE3PAPISID789", "TESTVAL-hsid-4", "TESTVAL-ssid-5", "TESTVAL-sid-youtube-6", "TESTVAL-1psid-7",
     "TESTVAL-3psid-8", "TESTVAL-sidcc-9", "TESTVAL-ysc-10", "TESTVAL-sidcc-music-11", "TESTVAL-www-12",
     "TESTVAL-watch-13", "TESTVAL-sid-google-14", "TESTVAL-google-login-15", "TESTVAL-expired-16",
-    "TESTVAL-sid-dup", "TESTVAL-login%&x", "TESTROTATED-sidcc", "TESTROTATED-new",
+    "TESTVAL-stats-17", "TESTVAL-statspath-18", "TESTVAL-accounts-19", "TESTVAL-mobile-20",
+    "TESTVAL-apisid-dup-21", "TESTVAL-sid-dup", "TESTVAL-login%&x", "TESTROTATED-sidcc", "TESTROTATED-new",
+    "TESTVAL-broken", "TESTVAL-google-extra",
+    // The session's own ids: not cookies, but they name the account.
+    "TESTVISITORcopied", "TESTVISITORsignedin", "TESTDELEGATED", "TESTUSERSYNC",
     // The known answers' digests: an Authorization header is as good as the cookie.
     "f4b52ff9a48e3c8447cf5c2dc974c2c9b0a1e946", "b872625234e084a7ffe7f8544bc00cff94e62daa",
     "31dcc68e15800ea041c83c1cbb49e65ba892eddf",
@@ -235,10 +255,11 @@ int runCookieImportSelfTest()
     const Result lf = keep(CookieImport::parse(netscape, kNow));
     t.check(lf.ok() && lf.format == Format::Netscape, QStringLiteral("a cookies.txt file (LF) is a signed-in session"),
             lf.error);
-    t.check(lf.read == 20 && lf.cookies.size() == 14 && lf.otherSites == 2 && lf.elsewhere == 2 && lf.expired == 1
-                && lf.duplicates == 1 && lf.unreadable == 1 && lf.spaced == 0,
-            QStringLiteral("counts: 20 read, 14 kept, 2 other sites, 2 elsewhere on YouTube, 1 expired, 1 duplicate, "
+    t.check(lf.read == kFixtureCookies && lf.cookies.size() == 19 && lf.otherSites == 2 && lf.elsewhere == 2
+                && lf.expired == 1 && lf.duplicates == 1 && lf.unreadable == 1 && lf.spaced == 0,
+            QStringLiteral("counts: 25 read, 19 kept, 2 other sites, 2 elsewhere on YouTube, 1 expired, 1 duplicate, "
                            "1 unreadable"), counts(lf));
+    t.check(lf.info.isEmpty(), QStringLiteral("a cookies.txt file says nothing of the session beside its cookies"));
     {
         QStringList expected;
         for (const char *name : kKeptNames)
@@ -255,16 +276,33 @@ int runCookieImportSelfTest()
         t.check(!find(lf.cookies, "SAPISID").httpOnly && find(lf.cookies, "HSID").httpOnly
                     && !find(lf.cookies, "HSID").secure,
                 QStringLiteral("HttpOnly and Secure are read per line"));
-        const Cookie sidcc = find(lf.cookies, "SIDCC");
-        t.check(sidcc.value == "TESTVAL-sidcc-music-11" && sidcc.domain == QLatin1String("music.youtube.com") && sidcc.hostOnly,
-                QStringLiteral("SIDCC on .youtube.com and on music.youtube.com: the more specific copy wins"));
+        int sidccs = 0;
+        bool bothSidcc = true;
+        for (const Cookie &cookie : lf.cookies) {
+            if (cookie.name != "SIDCC")
+                continue;
+            ++sidccs;
+            bothSidcc = bothSidcc
+                        && (cookie.domain == QLatin1String("music.youtube.com")
+                                ? cookie.hostOnly && cookie.value == "TESTVAL-sidcc-music-11"
+                                : cookie.domain == QLatin1String("youtube.com") && !cookie.hostOnly
+                                      && cookie.value == "TESTVAL-sidcc-9");
+        }
+        t.check(sidccs == 2 && bothSidcc,
+                QStringLiteral("SIDCC on .youtube.com and on music.youtube.com: two cookies, both kept (each host "
+                               "is sent its own below)"));
         t.check(find(lf.cookies, "SID").value == "TESTVAL-sid-youtube-6",
                 QStringLiteral("SID on google.com is left out, and YouTube's own copy kept"));
+        t.check(find(lf.cookies, "APISID").value == "TESTVAL-apisid-3",
+                QStringLiteral("the same cookie twice (name, domain and path): the first stays"));
         t.check(find(lf.cookies, "YSC").expires == 0, QStringLiteral("a session cookie (expiry 0) is kept"));
         t.check(has(lf.cookies, "EMPTYVAL") && find(lf.cookies, "EMPTYVAL").value.isEmpty(),
                 QStringLiteral("a line of six fields is a cookie with an empty value"));
-        t.check(!has(lf.cookies, "WWWONLY") && !has(lf.cookies, "WATCHPATH") && !has(lf.cookies, "OLDCOOKIE"),
-                QStringLiteral("www.youtube.com's own, /watch's, and expired cookies are left out"));
+        t.check(has(lf.cookies, "WWWONLY") && has(lf.cookies, "WATCHPATH") && has(lf.cookies, "STATSONLY")
+                    && has(lf.cookies, "STATSPATH"),
+                QStringLiteral("www.youtube.com's own, s.youtube.com's own, /watch's and /api/stats's are kept"));
+        t.check(!has(lf.cookies, "ACCOUNTSONLY") && !has(lf.cookies, "MOBILEONLY") && !has(lf.cookies, "OLDCOOKIE"),
+                QStringLiteral("accounts.youtube.com's, m.youtube.com's and expired cookies are left out"));
     }
 
     // Line ends, and a byte-order mark.
@@ -301,7 +339,7 @@ int runCookieImportSelfTest()
         QByteArray spaced = netscape;
         spaced.replace('\t', ' ');
         const Result r = keep(CookieImport::parse(spaced, kNow));
-        t.check(!r.ok() && r.format == Format::Netscape && r.spaced == 20 && r.cookies.isEmpty()
+        t.check(!r.ok() && r.format == Format::Netscape && r.spaced == kFixtureCookies && r.cookies.isEmpty()
                     && r.error.contains(QLatin1String("tabs")),
                 QStringLiteral("spaces where the tabs go: refused, and it says so"), counts(r) + QStringLiteral("; ") + r.error);
         // One spaced line among good ones is skipped, and the rest still count.
@@ -309,7 +347,8 @@ int runCookieImportSelfTest()
         oneSpaced.replace(".youtube.com\tTRUE\t/\tTRUE\t1830000000\tPREF\tTESTVAL-pref-1",
                           ".youtube.com TRUE / TRUE 1830000000 PREF TESTVAL-pref-1");
         const Result mixed = keep(CookieImport::parse(oneSpaced, kNow));
-        t.check(mixed.ok() && mixed.spaced == 1 && !has(mixed.cookies, "PREF") && mixed.cookies.size() == 13,
+        t.check(mixed.ok() && mixed.spaced == 1 && !has(mixed.cookies, "PREF")
+                    && mixed.cookies.size() == lf.cookies.size() - 1,
                 QStringLiteral("one spaced line among good ones is skipped, the rest kept"), counts(mixed));
     }
 
@@ -378,6 +417,22 @@ int runCookieImportSelfTest()
                 QStringLiteral("a header without LOGIN_INFO: refused"), header.error);
         const Result words = keep(CookieImport::parse("hello there", kNow));
         t.check(!words.ok() && words.format == Format::Header, QStringLiteral("plain words: refused"), words.error);
+
+        // What a copied request says of the session beside its cookies.
+        const QByteArray withSession = ":authority: music.youtube.com\r\nx-goog-authuser: 1\r\nx-goog-visitor-id: "
+                                       + kCopiedVisitor.toLatin1() + "\r\n"
+                                       + QByteArray(kHeader).replace("Cookie:", "cookie:") + "\r\n";
+        const Result session = keep(CookieImport::parse(withSession, kNow));
+        t.check(session.ok() && sameJar(session.cookies, r.cookies) && session.info.authUser == 1
+                    && session.info.visitorData == kCopiedVisitor && session.info.dataSyncId.isEmpty(),
+                QStringLiteral("request headers copied whole: x-goog-authuser and x-goog-visitor-id are read too"),
+                session.error);
+        t.check(r.info.isEmpty() && bare.info.isEmpty(), QStringLiteral("a Cookie header alone says nothing more"));
+        const Result odd = keep(CookieImport::parse(
+            ":authority: music.youtube.com\r\nx-goog-authuser: 1a\r\nx-goog-visitor-id: two words\r\n" + kHeader, kNow));
+        t.check(odd.ok() && odd.info.isEmpty(),
+                QStringLiteral("an x-goog-authuser that is no number from 0 to 99, a visitor id with a space: ignored"),
+                odd.error);
     }
 
     // — cURL —
@@ -406,6 +461,15 @@ int runCookieImportSelfTest()
         const Result rh = keep(CookieImport::parse(header, kNow));
         t.check(rh.ok() && rh.cookies.size() == 7, QStringLiteral("cURL with -H 'Cookie: ...' (Firefox's copy)"),
                 counts(rh) + QStringLiteral("; ") + rh.error);
+
+        const QByteArray withSession = "curl 'https://music.youtube.com/youtubei/v1/browse?prettyPrint=false' \\\n"
+                                       "  -H 'x-goog-authuser: 2' \\\n"
+                                       "  -H 'X-Goog-Visitor-Id: " + kCopiedVisitor.toLatin1() + "' \\\n"
+                                       "  -b 'LOGIN_INFO=TESTVAL-login-info-2; SAPISID=TESTSAPISID123'";
+        const Result rs = keep(CookieImport::parse(withSession, kNow));
+        t.check(rs.ok() && rs.info.authUser == 2 && rs.info.visitorData == kCopiedVisitor,
+                QStringLiteral("cURL: the x-goog-authuser and x-goog-visitor-id headers are read too"), rs.error);
+        t.check(r.info.isEmpty() && rh.info.isEmpty(), QStringLiteral("a cURL copy without them says nothing more"));
 
         // $'...': what Chrome writes when a header holds a quote or a '!'.
         const QByteArray ansi = "curl 'https://music.youtube.com/' -H $'cookie: PREF=it\\'s; "
@@ -470,33 +534,178 @@ int runCookieImportSelfTest()
 
     // — the jar as stored —
     {
+        using Info = CookieImport::SessionInfo;
         const QByteArray json = CookieImport::toJson(lf.cookies);
         QList<Cookie> back;
-        t.check(CookieImport::fromJson(json, &back) && sameJar(back, lf.cookies),
+        Info backInfo;
+        backInfo.authUser = 5;
+        t.check(CookieImport::fromJson(json, &back, &backInfo) && sameJar(back, lf.cookies) && backInfo.isEmpty(),
                 QStringLiteral("the jar round-trips through its JSON (%1 bytes)").arg(json.size()));
+        t.check(json.contains("\"version\":1") && !json.contains("\"session\""),
+                QStringLiteral("with nothing known beside the cookies it is written as version 1, as before"));
         QList<Cookie> high = lf.cookies;
         high[0].value = QByteArray("\x01\x7f\x80\xff", 4);
         QList<Cookie> highBack;
         t.check(CookieImport::fromJson(CookieImport::toJson(high), &highBack) && sameJar(highBack, high),
                 QStringLiteral("every byte of a value survives it"));
+
+        Info info;
+        info.authUser = 2;
+        info.visitorData = kSignedInVisitor;
+        info.dataSyncId = kBrandSync;
+        const QByteArray v2 = CookieImport::toJson(lf.cookies, info);
+        QList<Cookie> back2;
+        Info info2;
+        t.check(v2.contains("\"version\":2") && CookieImport::fromJson(v2, &back2, &info2) && sameJar(back2, lf.cookies)
+                    && info2 == info,
+                QStringLiteral("with the session's index, visitor id and DATASYNC_ID: version 2, and they round-trip"));
+        // A stored part that does not pass is not known; the cookies stay.
+        const QByteArray odd = QByteArray(v2).replace(kSignedInVisitor.toLatin1(), "bad id\\r\\nX-Evil: 1")
+                                   .replace("\"authUser\":2", "\"authUser\":300");
+        QList<Cookie> back3;
+        Info info3;
+        t.check(CookieImport::fromJson(odd, &back3, &info3) && sameJar(back3, lf.cookies) && info3.visitorData.isEmpty()
+                    && info3.authUser == -1 && info3.dataSyncId == kBrandSync,
+                QStringLiteral("a stored visitor id with a line break, an index of 300: dropped, the rest kept"));
+
         QList<Cookie> refused = lf.cookies;
-        t.check(!CookieImport::fromJson("{\"version\":2,\"cookies\":[]}", &refused) && refused.isEmpty()
-                    && !CookieImport::fromJson("not json", &refused)
+        Info refusedInfo = info;
+        t.check(!CookieImport::fromJson("{\"version\":3,\"cookies\":[]}", &refused, &refusedInfo) && refused.isEmpty()
+                    && refusedInfo.isEmpty() && !CookieImport::fromJson("not json", &refused)
                     && !CookieImport::fromJson(QByteArray(json).replace("youtube.com", "example.org"), &refused),
                 QStringLiteral("another version, not JSON, or another site's cookies: refused, and nothing returned"));
     }
 
-    // — the header sent —
+    // — what the session says of itself, checked before it is believed —
     {
-        const QByteArray expected =
-            "PREF=TESTVAL-pref-1; LOGIN_INFO=TESTVAL-login-info-2; APISID=TESTVAL-apisid-3; SAPISID=TESTSAPISID123; "
-            "__Secure-1PAPISID=TESTSECURE1PAPISID456; __Secure-3PAPISID=TESTSECURE3PAPISID789; HSID=TESTVAL-hsid-4; "
-            "SSID=TESTVAL-ssid-5; SID=TESTVAL-sid-youtube-6; __Secure-1PSID=TESTVAL-1psid-7; "
-            "__Secure-3PSID=TESTVAL-3psid-8; SIDCC=TESTVAL-sidcc-music-11; YSC=TESTVAL-ysc-10; EMPTYVAL=";
-        t.check(CookieImport::header(lf.cookies, kNow) == expected,
-                QStringLiteral("the Cookie header for music.youtube.com, byte for byte (compared, not shown)"));
-        t.check(CookieImport::header(lf.cookies, 1840000000) == "YSC=TESTVAL-ysc-10",
+        using Info = CookieImport::SessionInfo;
+        Info own;
+        own.dataSyncId = kOwnSync;
+        Info brand;
+        brand.dataSyncId = kBrandSync;
+        t.check(own.delegatedId().isEmpty() && brand.delegatedId() == QLatin1String("TESTDELEGATED0001")
+                    && Info().delegatedId().isEmpty(),
+                QStringLiteral("DATASYNC_ID \"<user>||\" names no brand channel; \"<delegated>||<user>\" names the first"));
+        t.check(CookieImport::dataSyncIdFrom(kOwnSync) == kOwnSync && CookieImport::dataSyncIdFrom(kBrandSync) == kBrandSync
+                    && CookieImport::dataSyncIdFrom(QStringLiteral("||")).isEmpty()
+                    && CookieImport::dataSyncIdFrom(QStringLiteral("a|b")).isEmpty()
+                    && CookieImport::dataSyncIdFrom(QStringLiteral("a||b||c")).isEmpty()
+                    && CookieImport::dataSyncIdFrom(QStringLiteral("a b||")).isEmpty(),
+                QStringLiteral("a DATASYNC_ID is two ids around \"||\", or nothing"));
+        t.check(CookieImport::authUserFrom("0") == 0 && CookieImport::authUserFrom(" 3 ") == 3
+                    && CookieImport::authUserFrom("99") == 99 && CookieImport::authUserFrom("100") == -1
+                    && CookieImport::authUserFrom("-1") == -1 && CookieImport::authUserFrom("1a") == -1
+                    && CookieImport::authUserFrom("") == -1,
+                QStringLiteral("X-Goog-AuthUser is a number from 0 to 99, or unknown"));
+        t.check(CookieImport::visitorDataFrom(kSignedInVisitor) == kSignedInVisitor
+                    && CookieImport::visitorDataFrom(QStringLiteral("TESTVISITOR\r\nX-Evil: 1")).isEmpty()
+                    && CookieImport::visitorDataFrom(QStringLiteral("short")).isEmpty(),
+                QStringLiteral("a visitor id is base64 and percent signs, or nothing: never a line break"));
+    }
+
+    // — the header sent, host by host —
+    {
+        // All but SIDCC is the same to each host that has it.
+        const auto common = [](const QByteArray &sidcc) {
+            return "PREF=TESTVAL-pref-1; LOGIN_INFO=TESTVAL-login-info-2; APISID=TESTVAL-apisid-3; "
+                   "SAPISID=TESTSAPISID123; __Secure-1PAPISID=TESTSECURE1PAPISID456; "
+                   "__Secure-3PAPISID=TESTSECURE3PAPISID789; HSID=TESTVAL-hsid-4; SSID=TESTVAL-ssid-5; "
+                   "SID=TESTVAL-sid-youtube-6; __Secure-1PSID=TESTVAL-1psid-7; __Secure-3PSID=TESTVAL-3psid-8; "
+                   "SIDCC=" + sidcc + "; YSC=TESTVAL-ysc-10; EMPTYVAL=";
+        };
+        // What the one-host jar sent before there were three, byte for byte.
+        const QByteArray music = common("TESTVAL-sidcc-music-11");
+        const QString api = CookieImport::kApiPath;
+        t.check(CookieImport::header(lf.cookies, CookieImport::kMusicHost, api + QStringLiteral("browse"), kNow) == music,
+                QStringLiteral("music.youtube.com: the Cookie header as before, byte for byte (compared, not shown); "
+                               "its own SIDCC, and none of www's, s's, /watch's or /api/stats's"));
+        t.check(CookieImport::header(lf.cookies, CookieImport::kMusicHost, api + QStringLiteral("account/account_menu"), kNow)
+                    == music,
+                QStringLiteral("the same for every call under /youtubei/v1/"));
+        const QByteArray www = common("TESTVAL-sidcc-9") + "; WWWONLY=TESTVAL-www-12";
+        t.check(CookieImport::header(lf.cookies, CookieImport::kWwwHost, api + QStringLiteral("player"), kNow) == www,
+                QStringLiteral("www.youtube.com: youtube.com's SIDCC, not music's, and its own cookie"));
+        t.check(CookieImport::header(lf.cookies, CookieImport::kWwwHost, QStringLiteral("/watch"), kNow)
+                    == "WATCHPATH=TESTVAL-watch-13; " + www,
+                QStringLiteral("www.youtube.com/watch: the /watch cookie too, first, as the longer path"));
+        t.check(CookieImport::header(lf.cookies, CookieImport::kStatsHost, QStringLiteral("/api/stats/playback"), kNow)
+                    == "STATSPATH=TESTVAL-statspath-18; " + common("TESTVAL-sidcc-9") + "; STATSONLY=TESTVAL-stats-17",
+                QStringLiteral("s.youtube.com/api/stats/playback: its own cookie and /api/stats's, the longer path first"));
+        t.check(CookieImport::header(lf.cookies, CookieImport::kStatsHost, QStringLiteral("/api/statsx"), kNow)
+                    == common("TESTVAL-sidcc-9") + "; STATSONLY=TESTVAL-stats-17",
+                QStringLiteral("a path is matched by whole segments: /api/stats is not sent to /api/statsx"));
+        t.check(CookieImport::header(lf.cookies, CookieImport::kMusicHost, api + QStringLiteral("browse"), 1840000000)
+                    == "YSC=TESTVAL-ysc-10",
                 QStringLiteral("cookies that have expired since are left out of it"));
+        const Result pasted = CookieImport::parse(kHeader, kNow);
+        const QByteArray pastedMusic = CookieImport::header(pasted.cookies, CookieImport::kMusicHost, api, kNow);
+        t.check(!pastedMusic.isEmpty()
+                    && CookieImport::header(pasted.cookies, CookieImport::kWwwHost, api, kNow) == pastedMusic
+                    && CookieImport::header(pasted.cookies, CookieImport::kStatsHost, QStringLiteral("/api/stats/playback"),
+                                            kNow) == pastedMusic,
+                QStringLiteral("a pasted Cookie header's cookies (.youtube.com, path /) go to all three alike"));
+    }
+
+    // — the jar as a cookies.txt file for yt-dlp —
+    {
+        QList<Cookie> jar = lf.cookies;
+        Cookie google;
+        google.name = "SID";
+        google.value = "TESTVAL-google-extra";
+        google.domain = QStringLiteral("google.com");
+        google.secure = true;
+        google.expires = 1830000000;
+        Cookie expired = google;
+        expired.name = "OLDCOOKIE";
+        expired.value = "TESTVAL-expired-16";
+        expired.domain = QStringLiteral("youtube.com");
+        expired.expires = 1600000000;
+        Cookie broken = expired;
+        broken.name = "BROKEN";
+        broken.value = "TESTVAL-broken\n.youtube.com\tTRUE\t/\tTRUE\t0\tINJECTED\tx";
+        broken.expires = 1830000000;
+        jar << google << expired << broken;
+        int written = -1;
+        const QByteArray file = CookieImport::toNetscape(jar, kNow, &written);
+        t.check(file.startsWith("# Netscape HTTP Cookie File\n") && written == lf.cookies.size(),
+                QStringLiteral("the file starts as Python's reader insists, and has one line a cookie (%1)").arg(written));
+        t.check(!file.contains("google.com") && !file.contains("TESTVAL-google-extra"),
+                QStringLiteral("never a google.com cookie, even one in the jar"));
+        t.check(!file.contains("OLDCOOKIE") && !file.contains("BROKEN") && !file.contains("INJECTED"),
+                QStringLiteral("nor an expired one, nor one whose value would break its line and start another"));
+        const Result back = CookieImport::parse(file, kNow);
+        t.check(back.ok() && back.format == Format::Netscape && sameJar(back.cookies, lf.cookies) && back.unreadable == 0
+                    && back.duplicates == 0 && back.otherSites == 0,
+                QStringLiteral("read back, it is the jar, cookie for cookie"), counts(back) + QStringLiteral("; ") + back.error);
+        // Python's MozillaCookieJar refuses a file whose second column is
+        // TRUE without a dot on the domain, or the other way about; and
+        // yt-dlp refuses an expiry that is not all digits.
+        bool consistent = true;
+        int lines = 0;
+        for (QByteArray line : file.split('\n')) {
+            if (line.startsWith("#HttpOnly_"))
+                line.remove(0, int(qstrlen("#HttpOnly_")));
+            else if (line.startsWith('#') || line.isEmpty())
+                continue;
+            const QList<QByteArray> fields = line.split('\t');
+            ++lines;
+            bool digits = !fields.value(4).isEmpty();
+            for (const char c : fields.value(4))
+                digits = digits && c >= '0' && c <= '9';
+            consistent = consistent && fields.size() == 7 && fields.at(0).startsWith('.') == (fields.at(1) == "TRUE")
+                         && (fields.at(3) == "TRUE" || fields.at(3) == "FALSE") && digits;
+        }
+        t.check(consistent && lines == written,
+                QStringLiteral("every line has seven columns, a dot exactly where the second says TRUE, and a numeric expiry"));
+        t.check(file.contains("#HttpOnly_.youtube.com\tTRUE\t/\tTRUE\t1830000000\tLOGIN_INFO\t")
+                    && file.contains("\nmusic.youtube.com\tFALSE\t/\tTRUE\t1830000000\tSIDCC\t")
+                    && file.contains("\n#HttpOnly_.youtube.com\tTRUE\t/\tTRUE\t0\tYSC\t")
+                    && file.contains("\n.youtube.com\tTRUE\t/\tTRUE\t1830000000\tEMPTYVAL\t\n"),
+                QStringLiteral("HttpOnly marked, a host-only cookie without its dot, a session cookie's expiry 0, "
+                               "an empty value kept"));
+        int none = -1;
+        t.check(CookieImport::toNetscape({}, kNow, &none).startsWith("# Netscape HTTP Cookie File\n") && none == 0,
+                QStringLiteral("an empty jar is the header lines alone"));
     }
 
     // — SAPISIDHASH: known answers, each SHA-1 computed apart from this code
@@ -663,13 +872,20 @@ void captureMessage(QtMsgType type, const QMessageLogContext &context, const QSt
         g_previousHandler(type, context, message);
 }
 
-QByteArray trackingAnswer(const QByteArray &loggedIn)
+// An answer's responseContext: logged_in when given, and the session's
+// visitor id and DATASYNC_ID when given, where YouTube puts them.
+QByteArray trackingAnswer(const QByteArray &loggedIn, const QString &visitorData = QString(),
+                          const QString &dataSyncId = QString())
 {
     const QByteArray params = loggedIn.isEmpty()
         ? QByteArray(R"({"key":"e","value":"1"})")
         : R"({"key":"logged_in","value":")" + loggedIn + R"("},{"key":"e","value":"1"})";
-    return R"({"responseContext":{"serviceTrackingParams":[{"service":"GFEEDBACK","params":[)" + params
-           + R"(]}]},"contents":{}})";
+    QByteArray context = R"("serviceTrackingParams":[{"service":"GFEEDBACK","params":[)" + params + "]}]";
+    if (!visitorData.isEmpty())
+        context += R"(,"visitorData":")" + visitorData.toUtf8() + '"';
+    if (!dataSyncId.isEmpty())
+        context += R"(,"mainAppWebResponseContext":{"datasyncId":")" + dataSyncId.toUtf8() + R"(","loggedOut":false})";
+    return R"({"responseContext":{)" + context + R"(},"contents":{}})";
 }
 
 const QByteArray kSignedOutMenu =
@@ -764,6 +980,9 @@ int runYtmSessionSelfTest(Library *library)
     bool dropAll = false;
     bool refuseJapan = false;
     bool redirectAuthed = false;
+    // What a signed-in answer's responseContext says of the session.
+    QString answerVisitor;
+    QString answerDataSync;
     standIn.respond = [&](const StandIn::Request &request) {
         StandIn::Answer answer;
         if (dropAll) {
@@ -794,7 +1013,7 @@ int runYtmSessionSelfTest(Library *library)
         if (request.path.contains("account/account_menu")) {
             answer.body = authed ? menuAnswer(QStringLiteral("Monolist Test")) : kSignedOutMenu;
         } else {
-            answer.body = trackingAnswer(authed ? homeLoggedIn : QByteArray("0"));
+            answer.body = authed ? trackingAnswer(homeLoggedIn, answerVisitor, answerDataSync) : trackingAnswer("0");
             if (authed && body.value(QStringLiteral("browseId")).toString() == QLatin1String("FEtest_rotate")) {
                 answer.extra << "Set-Cookie: SIDCC=TESTROTATED-sidcc; Domain=.youtube.com; Path=/; Secure; HttpOnly"
                              << "Set-Cookie: ROTATETEST=TESTROTATED-new; Path=/";
@@ -809,7 +1028,13 @@ int runYtmSessionSelfTest(Library *library)
     const QByteArray fixture = QByteArray(netscapeFixture()).replace("\n", "\r\n");
     const Result expected = CookieImport::parse(fixture);
     t.check(expected.ok(), QStringLiteral("the fixture is a session"), expected.error);
-    const QByteArray expectedCookie = CookieImport::header(expected.cookies);
+    // What a browser sends to music.youtube.com's calls; the stand-in's
+    // address is only where they really go.
+    const QByteArray expectedCookie =
+        CookieImport::header(expected.cookies, CookieImport::kMusicHost, CookieImport::kApiPath + QStringLiteral("browse"));
+    const auto contextOf = [](const StandIn::Request &request) {
+        return request.json().value(QStringLiteral("context")).toObject();
+    };
 
     // — 1. signed out, as before —
     InnerTube consumer;   // stands for Catalog, Lyrics and the rest
@@ -834,6 +1059,24 @@ int runYtmSessionSelfTest(Library *library)
         for (const auto &pair : baseline.headers)
             names << QString::fromLatin1(pair.first);
         t.note(QStringLiteral("anonymous headers: ") + names.join(QStringLiteral(", ")));
+        // The anonymous request as the build before the three-host jar sent
+        // it (engine step JS, 6ae7b2d, recorded from its own run of this
+        // test): these headers in this order, these values, and a context of
+        // the client alone. The checks below then hold every later anonymous
+        // call to this one, byte for byte.
+        const QString before = QStringLiteral("host, content-type, user-agent, origin, referer, content-length, "
+                                              "cookie, connection, accept-encoding, accept-language");
+        const QJsonObject context = contextOf(baseline);
+        QStringList clientKeys = context.value(QStringLiteral("client")).toObject().keys();
+        clientKeys.sort();
+        t.check(names.join(QStringLiteral(", ")) == before && baseline.header("content-type") == "application/json"
+                    && baseline.header("origin") == origin && baseline.header("referer") == origin + '/'
+                    && context.keys() == QStringList{ QStringLiteral("client") }
+                    && clientKeys == QStringList{ QStringLiteral("clientName"), QStringLiteral("clientVersion"),
+                                                  QStringLiteral("gl"), QStringLiteral("hl") },
+                QStringLiteral("signed out, a call's headers and context are the ones sent before this change"),
+                names.join(QStringLiteral(", ")) + QStringLiteral(" / ") + context.keys().join(QLatin1Char(','))
+                    + QStringLiteral(" / ") + clientKeys.join(QLatin1Char(',')));
     }
     const auto sameAsBaseline = [&baseline](const StandIn::Request &request) {
         return request.head == baseline.head && request.body == baseline.body;
@@ -893,12 +1136,17 @@ int runYtmSessionSelfTest(Library *library)
                 why += QStringLiteral(" authorization");
             if (request.header("x-origin") != origin || request.header("x-goog-authuser") != "0")
                 why += QStringLiteral(" x-origin/x-goog-authuser");
+            // Nothing is known of the session yet beside its cookies.
+            if (request.has("x-goog-visitor-id") || contextOf(request).contains(QStringLiteral("user"))
+                || contextOf(request).value(QStringLiteral("client")).toObject().contains(QStringLiteral("visitorData")))
+                why += QStringLiteral(" visitor/user");
             headersRight = headersRight && why.isEmpty();
         }
         t.check(menu == 1 && home == 1, QStringLiteral("the check asks account_menu and FEmusic_home, once each"),
                 QStringLiteral("%1 and %2").arg(menu).arg(home));
-        t.check(headersRight, QStringLiteral("both carry exactly the jar's Cookie (not the anonymous jar's), the three "
-                                             "SID hashes, X-Origin and X-Goog-AuthUser: 0"), why);
+        t.check(headersRight, QStringLiteral("both carry exactly music.youtube.com's Cookie from the jar (not the anonymous "
+                                             "jar's), the three SID hashes, X-Origin and X-Goog-AuthUser: 0; with "
+                                             "nothing more known, no visitor id and no user"), why);
     }
     if (storeHere) {
         QByteArray stored;
@@ -930,8 +1178,20 @@ int runYtmSessionSelfTest(Library *library)
     }
     t.check(find(session->jar(), "SIDCC").value == "TESTROTATED-sidcc" && find(session->jar(), "SIDCC").domain == QLatin1String("youtube.com")
                 && has(session->jar(), "ROTATETEST") && find(session->jar(), "ROTATETEST").hostOnly
-                && session->savePending(),
-            QStringLiteral("Set-Cookie on its answer rotates the session's jar (SIDCC replaced, ROTATETEST added)"));
+                && find(session->jar(), "ROTATETEST").domain == CookieImport::kMusicHost
+                && session->jar().size() == expected.cookies.size() + 1 && session->savePending(),
+            QStringLiteral("Set-Cookie on its answer rotates the session's jar (youtube.com's SIDCC replaced, "
+                           "ROTATETEST added for music.youtube.com alone)"));
+    {
+        // Set-Cookie for a domain the answering host may not set: a browser
+        // ignores it, and so does the jar.
+        const QList<QNetworkCookie> foreign = QNetworkCookie::parseCookies(
+            "WWWONLY=TESTROTATED-new; Domain=www.youtube.com; Path=/\nGOOGLEONE=TESTROTATED-new; Domain=.google.com; Path=/");
+        const QList<Cookie> jarBefore = session->jar();
+        session->absorbCookies(session->session(), CookieImport::kMusicHost, foreign);
+        t.check(foreign.size() == 2 && sameJar(session->jar(), jarBefore),
+                QStringLiteral("music.youtube.com setting a cookie for www.youtube.com, or for google.com: ignored"));
+    }
     browseNow(consumer, QStringLiteral("FEtest_anon"), InnerTube::Auth::Anonymous);
     t.check(sameAsBaseline(standIn.requests.last()),
             QStringLiteral("and none of it lands in the anonymous jar: the next anonymous call is unchanged"));
@@ -943,6 +1203,83 @@ int runYtmSessionSelfTest(Library *library)
         CookieImport::fromJson(stored, &jar);
         t.check(find(jar, "SIDCC").value == "TESTROTATED-sidcc" && has(jar, "ROTATETEST"),
                 QStringLiteral("the rotated jar is saved after the delay"));
+    }
+
+    // — 3b. each host its own cookies; and what the session says of itself —
+    {
+        const QString browsePath = CookieImport::kApiPath + QStringLiteral("browse");
+        const Answered hosts = browseNow(consumer, QStringLiteral("FEtest_hosts"), InnerTube::Auth::IfSignedIn);
+        const QByteArray sent = standIn.requests.last().header("cookie");
+        t.check(hosts.error.isEmpty() && sent == CookieImport::header(session->jar(), CookieImport::kMusicHost, browsePath)
+                    && sent.contains("SIDCC=TESTVAL-sidcc-music-11") && !sent.contains("TESTROTATED-sidcc")
+                    && sent.contains("ROTATETEST=") && !sent.contains("WWWONLY=") && !sent.contains("STATSONLY=")
+                    && !sent.contains("WATCHPATH=") && !sent.contains("STATSPATH="),
+                QStringLiteral("an account's call to music.youtube.com carries what a browser sends there: music's own "
+                               "SIDCC, and none of www's, s's, /watch's or /api/stats's cookies"));
+
+        // A check whose signed-in answer names the session's visitor id and
+        // a brand channel's DATASYNC_ID.
+        answerVisitor = kSignedInVisitor;
+        answerDataSync = kBrandSync;
+        int before = int(outcomes.size());
+        session->checkNow();
+        waitVerdict(before);
+        const CookieImport::SessionInfo learned = session->info();
+        t.check(session->state() == QLatin1String("active") && learned.visitorData == kSignedInVisitor
+                    && learned.dataSyncId == kBrandSync && learned.authUser == -1,
+                QStringLiteral("a check's signed-in answer gives the session's visitor id and DATASYNC_ID, kept with it"),
+                session->state());
+        browseNow(consumer, QStringLiteral("FEtest_brand"), InnerTube::Auth::IfSignedIn);
+        {
+            const StandIn::Request &request = standIn.requests.last();
+            const QJsonObject context = contextOf(request);
+            t.check(request.authed() && request.header("x-goog-visitor-id") == kSignedInVisitor.toUtf8()
+                        && context.value(QStringLiteral("client")).toObject().value(QStringLiteral("visitorData")).toString()
+                               == kSignedInVisitor
+                        && context.value(QStringLiteral("user")).toObject().value(QStringLiteral("onBehalfOfUser")).toString()
+                               == QLatin1String("TESTDELEGATED0001")
+                        && request.header("x-goog-authuser") == "0",
+                    QStringLiteral("then the account's calls name its visitor id (header and context), act for the brand "
+                                   "channel (context.user.onBehalfOfUser), and say X-Goog-AuthUser: 0 (no index known)"));
+        }
+        browseNow(consumer, QStringLiteral("FEtest_anon"), InnerTube::Auth::Anonymous);
+        t.check(sameAsBaseline(standIn.requests.last()),
+                QStringLiteral("with all of that known, an anonymous call is still byte for byte what it was signed out"));
+
+        answerDataSync = kOwnSync;
+        before = int(outcomes.size());
+        session->checkNow();
+        waitVerdict(before);
+        browseNow(consumer, QStringLiteral("FEtest_own"), InnerTube::Auth::IfSignedIn);
+        t.check(session->info().dataSyncId == kOwnSync && standIn.requests.last().authed()
+                    && !contextOf(standIn.requests.last()).contains(QStringLiteral("user")),
+                QStringLiteral("the account's own channel (\"<user>||\"): no user in the context at all"));
+
+        // An answer whose ids do not look right is not believed.
+        answerVisitor = QStringLiteral("not a visitor id");
+        answerDataSync = QStringLiteral("not||a||sync id");
+        const CookieImport::SessionInfo held = session->info();
+        before = int(outcomes.size());
+        session->checkNow();
+        waitVerdict(before);
+        t.check(session->state() == QLatin1String("active") && session->info() == held,
+                QStringLiteral("an answer with a spaced visitor id and a malformed DATASYNC_ID: neither taken"));
+
+        waitUntil([&session]() { return !session->savePending(); }, 5000);
+        if (storeHere) {
+            QByteArray stored;
+            QList<Cookie> jar;
+            CookieImport::SessionInfo info;
+            SecretStore::read(secretName, &stored);
+            t.check(CookieImport::fromJson(stored, &jar, &info) && info == session->info() && sameJar(jar, session->jar())
+                        && stored.contains("\"version\":2"),
+                    QStringLiteral("what was learned is saved with the jar (version 2 of its JSON)"));
+        }
+        t.check(settingsLeaks().isEmpty(), QStringLiteral("and none of it is in the settings table"),
+                settingsLeaks().join(QStringLiteral(", ")));
+        // The later steps learn a brand channel again.
+        answerVisitor = kSignedInVisitor;
+        answerDataSync = kBrandSync;
     }
 
     // — 4. a 400 on a call with the account never touches the country —
@@ -1019,7 +1356,7 @@ int runYtmSessionSelfTest(Library *library)
             QStringLiteral("IfSignedIn after the refusal: byte for byte the anonymous request"));
     {
         const QNetworkCookie late(QByteArrayLiteral("SIDCC"), QByteArrayLiteral("TESTROTATED-sidcc"));
-        session->absorbCookies(oldSession, { late });
+        session->absorbCookies(oldSession, CookieImport::kMusicHost, { late });
         session->reportRejected(oldSession, 401);
         t.check(session->jar().isEmpty() && session->state() == QLatin1String("rejected"),
                 QStringLiteral("a late answer for the old session changes nothing"));
@@ -1052,10 +1389,15 @@ int runYtmSessionSelfTest(Library *library)
     waitVerdict(outcomesBefore);
     dropAll = false;
     {
-        QByteArray cookie;
-        QByteArray authorization;
-        const bool ifSignedIn = session->authHeaders(InnerTube::Auth::IfSignedIn, origin, &cookie, &authorization) != 0;
-        const bool checking = session->authHeaders(InnerTube::Auth::Checking, origin, &cookie, &authorization) != 0;
+        InnerTube::AccountRequest asked;
+        asked.auth = InnerTube::Auth::IfSignedIn;
+        asked.host = CookieImport::kMusicHost;
+        asked.path = CookieImport::kApiPath + QStringLiteral("browse");
+        asked.origin = origin;
+        InnerTube::AccountHeaders carried;
+        const bool ifSignedIn = session->authHeaders(asked, &carried) != 0;
+        asked.auth = InnerTube::Auth::Checking;
+        const bool checking = session->authHeaders(asked, &carried) != 0;
         t.check(outcomes.value(outcomesBefore) == QLatin1String("unreachable") && session->state() == QLatin1String("unreachable")
                     && !session->jar().isEmpty() && !ifSignedIn && checking,
                 QStringLiteral("no answer: unreachable, the session kept but not used; only a check may carry it"),
@@ -1063,15 +1405,20 @@ int runYtmSessionSelfTest(Library *library)
         QByteArray stored;
         if (storeHere)
             t.check(SecretStore::read(secretName, &stored) == SecretStore::Status::Ok, QStringLiteral("and still stored"));
+        browseNow(consumer, QStringLiteral("FEtest_anon"), InnerTube::Auth::IfSignedIn);
+        t.check(sameAsBaseline(standIn.requests.last()),
+                QStringLiteral("IfSignedIn while unreachable: byte for byte the anonymous request"));
     }
     outcomesBefore = int(outcomes.size());
     session->checkNow();
     waitVerdict(outcomesBefore);
-    t.check(session->state() == QLatin1String("active"), QStringLiteral("asked again once it answers: active"), session->state());
+    t.check(session->state() == QLatin1String("active") && session->info().dataSyncId == kBrandSync,
+            QStringLiteral("asked again once it answers: active (and a brand channel learned again)"), session->state());
 
     // — 9. a restart —
     if (storeHere) {
         const QList<Cookie> before = session->jar();
+        const CookieImport::SessionInfo infoBefore = session->info();
         session.reset();
         session = std::make_unique<YtmSession>(library);
         session->setTiming(timing);
@@ -1081,8 +1428,15 @@ int runYtmSessionSelfTest(Library *library)
         t.check(session->state() == QLatin1String("checking") && sameJar(session->jar(), before)
                     && session->accountName() == QLatin1String("Monolist Test"),
                 QStringLiteral("a restart restores the session, and checks it before using it"), session->state());
+        t.check(!infoBefore.isEmpty() && session->info() == infoBefore,
+                QStringLiteral("with what was known of it: its visitor id and DATASYNC_ID"));
+        const int requestsBeforeCheck = int(standIn.requests.size());
         waitVerdict(outcomesBefore);
         t.check(session->state() == QLatin1String("active"), QStringLiteral("then active"), session->state());
+        bool named = standIn.requests.size() > requestsBeforeCheck;
+        for (int i = requestsBeforeCheck; i < standIn.requests.size(); ++i)
+            named = named && standIn.requests.at(i).header("x-goog-visitor-id") == infoBefore.visitorData.toUtf8();
+        t.check(named, QStringLiteral("and its first check already names the restored visitor id"));
     }
 
     // — 10. sign out —
@@ -1097,6 +1451,43 @@ int runYtmSessionSelfTest(Library *library)
     browseNow(consumer, QStringLiteral("FEtest_anon"), InnerTube::Auth::IfSignedIn);
     t.check(sameAsBaseline(standIn.requests.last()),
             QStringLiteral("IfSignedIn after sign-out: byte for byte the anonymous request"));
+
+    // — 10b. a copied request that says which account it was, and its visitor id —
+    {
+        answerVisitor.clear();
+        answerDataSync.clear();
+        const QByteArray copied = ":authority: music.youtube.com\r\nx-goog-authuser: 1\r\nx-goog-visitor-id: "
+                                  + kCopiedVisitor.toLatin1() + "\r\n"
+                                  + QByteArray(kHeader).replace("Cookie:", "cookie:") + "\r\n";
+        requestsBefore = int(standIn.requests.size());
+        outcomesBefore = int(outcomes.size());
+        t.check(session->importText(QString::fromUtf8(copied)), QStringLiteral("request headers copied whole import"),
+                session->importError());
+        waitVerdict(outcomesBefore);
+        bool named = standIn.requests.size() >= requestsBefore + 2;
+        for (int i = requestsBefore; i < standIn.requests.size(); ++i) {
+            const StandIn::Request &request = standIn.requests.at(i);
+            named = named && request.authed() && request.header("x-goog-authuser") == "1"
+                    && request.header("x-goog-visitor-id") == kCopiedVisitor.toUtf8()
+                    && !contextOf(request).contains(QStringLiteral("user"));
+        }
+        t.check(session->state() == QLatin1String("active") && session->info().authUser == 1
+                    && session->info().visitorData == kCopiedVisitor && session->info().dataSyncId.isEmpty() && named,
+                QStringLiteral("x-goog-authuser: 1 and a visitor id in the copy: the check sends X-Goog-AuthUser: 1 and "
+                               "that id, and nothing is kept of the session before"),
+                session->state());
+        browseNow(consumer, QStringLiteral("FEtest_index"), InnerTube::Auth::IfSignedIn);
+        t.check(standIn.requests.last().header("x-goog-authuser") == "1",
+                QStringLiteral("and so does every call that carries the account"));
+        browseNow(consumer, QStringLiteral("FEtest_anon"), InnerTube::Auth::Anonymous);
+        t.check(sameAsBaseline(standIn.requests.last()),
+                QStringLiteral("while an anonymous one is still byte for byte what it was signed out"));
+        session->signOut();
+        t.check(session->info().isEmpty(), QStringLiteral("sign out forgets it all"));
+        browseNow(consumer, QStringLiteral("FEtest_anon"), InnerTube::Auth::IfSignedIn);
+        t.check(sameAsBaseline(standIn.requests.last()),
+                QStringLiteral("IfSignedIn after that sign-out: byte for byte the anonymous request"));
+    }
 
     // — 11. a file, and the offer to delete it —
     {
@@ -1568,10 +1959,10 @@ int runVisitorSelfTest()
     // — 12. the account's own id, kept apart from the anonymous one —
     {
         InnerTube::AccountHook hook;
-        hook.headers = [](InnerTube::Auth auth, const QByteArray &, QByteArray *cookie, QByteArray *) -> quint64 {
-            if (auth == InnerTube::Auth::Anonymous)
+        hook.headers = [](const InnerTube::AccountRequest &request, InnerTube::AccountHeaders *headers) -> quint64 {
+            if (request.auth == InnerTube::Auth::Anonymous)
                 return 0;
-            *cookie = "SAPISID=TESTSAPISID123";
+            headers->cookie = "SAPISID=TESTSAPISID123";
             return 7;
         };
         InnerTube::setAccountHook(hook);

@@ -276,7 +276,7 @@ Seen by the agents that fixed B01–B13 and by their reviewers, and not yet fixe
 
 ## Connections
 
-Built so far (batch 2): Last.fm connect, listening-time tracking, offline scrobble queue and sending; YouTube Music session import (cookies file, header or cURL), SAPISIDHASH, signed-in browse requests; a DPAPI secret store. All tested against fakes only.
+Built so far (batch 2): Last.fm connect, listening-time tracking, offline scrobble queue and sending; YouTube Music session import (cookies file, header or cURL), SAPISIDHASH, signed-in browse requests; a DPAPI secret store. Engine step SI1 added the per-host jar, X-Goog-AuthUser, the account's visitor id, brand channels and the cookies.txt for yt-dlp (C06). All tested against fakes only.
 
 - [ ] **C01** Last.fm live test: needs the owner's API key in MONOLIST_LASTFM_API_KEY / MONOLIST_LASTFM_SHARED_SECRET; then connect, scrobble, revoke *(P3, S)*
   Done when: a real scrobble shows on the owner's profile and revoking gives the Reconnect state.
@@ -288,6 +288,8 @@ Built so far (batch 2): Last.fm connect, listening-time tracking, offline scrobb
   Done when: counts match the account.
 - [ ] **C05** macOS Keychain backend for the secret store (secretstore_mac.mm) — for the macOS session *(P6, M)*
   Done when: the secret-test self-test passes on a Mac.
+- [x] **C06** *(Engine step SI1, with no sign-in window: signing in stays the cookie import.)* Signed-in plumbing for the steps that use the account: the session's cookies kept for music, www and s.youtube.com, each call sent what a browser sends its host; X-Goog-AuthUser from a copied request (0 otherwise); the account's own visitor id, and a brand channel's onBehalfOfUser, learned from a signed-in answer and kept with the cookies; CookieImport::toNetscape writing youtube.com's cookies (never google.com's) for yt-dlp *(P4, M)*
+  Done when: --cookie-test and --ytm-session-test pass, signed-out requests byte for byte unchanged, and signed-out playback benchmarks unchanged. Not yet seen against the real YouTube Music: whether its answers carry the DATASYNC_ID, and whether a brand channel is then served (C02's live test).
 
 ## Decisions waiting on the owner
 

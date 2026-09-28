@@ -1,5 +1,7 @@
 #include "innertube.h"
 
+#include "cookieimport.h"
+
 #include <QCoreApplication>
 #include <QDate>
 #include <QDateTime>
@@ -520,6 +522,14 @@ QJsonObject clientContext(InnerTube::Client client)
         break;
     }
     return QJsonObject{ { QStringLiteral("client"), client_ } };
+}
+
+// The host a call as `client` is for, as a browser would name it, whatever
+// address it really goes to: which of the account's cookies it may carry
+// depends on it.
+QString accountHost(InnerTube::Client client)
+{
+    return client == InnerTube::Client::Music ? CookieImport::kMusicHost : CookieImport::kWwwHost;
 }
 
 // Cover art comes from googleusercontent.com with its size in the URL
@@ -1428,10 +1438,14 @@ QNetworkReply *InnerTube::post(Client client, const QString &endpoint, QJsonObje
     // anonymous call sends nothing more.
     quint64 account = 0;
     if (auth != Auth::Anonymous && client == Client::Music && g_account.headers) {
-        QByteArray cookie;
-        QByteArray authorization;
-        account = g_account.headers(auth, host.toUtf8(), &cookie, &authorization);
-        if (account != 0 && !cookie.isEmpty()) {
+        AccountRequest asked;
+        asked.auth = auth;
+        asked.host = accountHost(client);
+        asked.path = QStringLiteral("/youtubei/v1/") + endpoint;
+        asked.origin = host.toUtf8();
+        AccountHeaders carried;
+        account = g_account.headers(asked, &carried);
+        if (account != 0 && !carried.cookie.isEmpty()) {
             // Neither way through the network manager's own jar. How Qt
             // would mix a Cookie header set here with the jar's anonymous
             // cookies is not documented, and those must not ride along with
@@ -1446,16 +1460,29 @@ QNetworkReply *InnerTube::post(Client client, const QString &endpoint, QJsonObje
             // would be kept as music.youtube.com's. send() treats a redirect
             // as no answer.
             request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::ManualRedirectPolicy);
-            request.setRawHeader("Cookie", cookie);
-            if (!authorization.isEmpty())
-                request.setRawHeader("Authorization", authorization);
+            request.setRawHeader("Cookie", carried.cookie);
+            if (!carried.authorization.isEmpty())
+                request.setRawHeader("Authorization", carried.authorization);
             request.setRawHeader("X-Origin", host.toUtf8());
-            request.setRawHeader("X-Goog-AuthUser", "0");
-            // The account's own visitor id, once the sign-in work supplies
-            // one. Until then its calls name none, as they always have.
+            // Which of the browser's accounts the cookies are to act as: the
+            // one the session was copied from, when the copy said, and
+            // otherwise the first, as it always was.
+            request.setRawHeader("X-Goog-AuthUser", carried.authUser.isEmpty() ? QByteArray("0") : carried.authUser);
+            // The account's own visitor id, once the session knows it (from
+            // the copied request, or from a signed-in answer). Until then its
+            // calls name none, as they always have.
             if (!g_visitor.session.isEmpty()) {
                 nameVisitor(context, g_visitor.session);
                 request.setRawHeader("X-Goog-Visitor-Id", g_visitor.session.toUtf8());
+            }
+            // A brand channel acts through its account, so every call names
+            // it, as ytmusicapi does (yt-dlp sends the same id as
+            // X-Goog-PageId). The account's own channel is named by the
+            // cookies alone, and its calls carry no "user" at all.
+            if (!carried.onBehalfOfUser.isEmpty()) {
+                QJsonObject user = context.value(QStringLiteral("user")).toObject();
+                user.insert(QStringLiteral("onBehalfOfUser"), carried.onBehalfOfUser);
+                context.insert(QStringLiteral("user"), user);
             }
         } else {
             account = 0;
@@ -1512,7 +1539,7 @@ void InnerTube::send(Client client, const QString &endpoint, const QJsonObject &
                     const QList<QNetworkCookie> rotated =
                         reply->header(QNetworkRequest::SetCookieHeader).value<QList<QNetworkCookie>>();
                     if (!rotated.isEmpty() && g_account.cookies)
-                        g_account.cookies(account, rotated);
+                        g_account.cookies(account, accountHost(client), rotated);
 
                     // Refused with the account. 401 and 403 say the session
                     // is over; 400 may be the cookies as much as the country,
@@ -2070,6 +2097,16 @@ QString InnerTube::parseLoggedIn(const QJsonObject &root)
         }
     }
     return QString();
+}
+
+QString InnerTube::parseVisitorData(const QJsonObject &root)
+{
+    return dig(root, { "responseContext", "visitorData" }).toString();
+}
+
+QString InnerTube::parseDataSyncId(const QJsonObject &root)
+{
+    return dig(root, { "responseContext", "mainAppWebResponseContext", "datasyncId" }).toString();
 }
 
 std::function<void()> InnerTube::lyrics(const QString &videoId,

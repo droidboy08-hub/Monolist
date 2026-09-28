@@ -11,19 +11,30 @@ class Library;
 
 // --cookie-test: the import parser on synthetic fixtures (cookies.txt with LF
 // and CRLF, "#HttpOnly_" lines, spaces where the tabs go, duplicate names
-// across domains, a missing LOGIN_INFO; a Cookie header; cURL in bash and
-// cmd.exe quoting), the jar as it is stored, and the SAPISIDHASH known
-// answers. No network and no data folder.
+// across domains, cookies for www.youtube.com, s.youtube.com and other paths
+// kept, other parts of YouTube left out, a missing LOGIN_INFO; a Cookie
+// header; cURL in bash and cmd.exe quoting, with x-goog-authuser and
+// x-goog-visitor-id read beside the cookies), the Cookie header for each of
+// music, www and s.youtube.com byte for byte, the jar as it is stored
+// (versions 1 and 2), the jar as a cookies.txt file for yt-dlp (never a
+// google.com cookie, read back the same), and the SAPISIDHASH known answers.
+// No network and no data folder.
 int runCookieImportSelfTest();
 
 // --ytm-session-test: YtmSession and InnerTube's account path against a
 // stand-in server on this computer: signed-out requests byte for byte as
-// before, the account's headers only where asked for, the check (logged_in,
-// the account menu, twice-zero, no answer), Set-Cookie rotation kept out of
-// the anonymous jar, a 400 that never touches the country, 401/403, a
-// restart, sign-out, the offer to delete an imported file, and no cookie
-// value in the log. Refuses to run without MONOLIST_DATA_DIR, since it
-// replaces the stored session and the account setting.
+// before (their headers and context as the build before the three-host jar
+// sent them, and every later anonymous call identical to the first), the
+// account's headers only where asked for and music.youtube.com's cookies
+// alone on its calls, the check (logged_in, the account menu, twice-zero, no
+// answer), the session's visitor id and a brand channel learned from a
+// signed-in answer and sent as X-Goog-Visitor-Id and context.user.
+// onBehalfOfUser, X-Goog-AuthUser from a copied request (0 when not known),
+// Set-Cookie rotation kept out of the anonymous jar and refused for another
+// host, a 400 that never touches the country, 401/403, a restart, sign-out,
+// the offer to delete an imported file, and no cookie value or session id in
+// the log. Refuses to run without MONOLIST_DATA_DIR, since it replaces the
+// stored session and the account setting.
 int runYtmSessionSelfTest(Library *library);
 
 // --visitor-test: the one visitor id every InnerTube shares, against the same

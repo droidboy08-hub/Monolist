@@ -234,16 +234,34 @@ public:
     // region: there are several InnerTube objects, each with its own network
     // manager, and all of them must agree on whether there is an account.
     // Set once at start (main.cpp), before any request, to YtmSession's.
+    //
+    // A call asks as the host and path a browser would see
+    // ("music.youtube.com", "/youtubei/v1/browse"), which decide which of the
+    // session's cookies go, and hashes the SID cookies with the origin it is
+    // really sent to (the stand-in's, in a self-test).
+    struct AccountRequest {
+        Auth auth = Auth::Anonymous;
+        QString host;
+        QString path;
+        QByteArray origin;
+    };
+    // What such a call carries beside its body. The account's own visitor id
+    // is not here: it goes through setSessionVisitorData.
+    struct AccountHeaders {
+        QByteArray cookie;
+        QByteArray authorization;   // the SID hashes; empty with no SAPISID of any kind
+        QByteArray authUser = "0";  // X-Goog-AuthUser: the session's index, 0 when not known
+        QString onBehalfOfUser;     // a brand channel's id, for context.user; empty for the account's own
+    };
     struct AccountHook {
-        // Fills in the Cookie and Authorization headers for one call from
-        // `origin`, and returns the session they belong to; 0, with nothing
-        // filled in, when this call goes without.
-        std::function<quint64(Auth auth, const QByteArray &origin, QByteArray *cookie,
-                              QByteArray *authorization)> headers;
+        // Fills in what one call carries, and returns the session it belongs
+        // to; 0, with nothing filled in, when this call goes without.
+        std::function<quint64(const AccountRequest &request, AccountHeaders *headers)> headers;
         // The server refused that session outright (401, 403).
         std::function<void(quint64 session, int httpStatus)> rejected;
-        // Set-Cookie on an answer to that session: its cookies, rotated.
-        std::function<void(quint64 session, const QList<QNetworkCookie> &cookies)> cookies;
+        // Set-Cookie on an answer from `host` to that session: its cookies,
+        // rotated. One without a Domain is `host`'s alone.
+        std::function<void(quint64 session, const QString &host, const QList<QNetworkCookie> &cookies)> cookies;
     };
     static void setAccountHook(AccountHook hook);
 
@@ -272,10 +290,10 @@ public:
     // Clear history: the anonymous visitor id, its stored copy and YouTube's
     // anonymous cookies are dropped, and the next call is a first visit.
     static void forgetVisitorData();
-    // The signed-in account's own visitor id, for the sign-in work. It goes
-    // on the calls that carry the account, where it outranks the anonymous
-    // one, and on no other; the anonymous one never goes on those. Empty
-    // takes it away again.
+    // The signed-in account's own visitor id, set by YtmSession whenever the
+    // session in use changes. It goes on the calls that carry the account,
+    // where it outranks the anonymous one, and on no other; the anonymous one
+    // never goes on those. Empty takes it away again.
     static void setSessionVisitorData(const QString &visitorData);
 
     // `warmUp` opens the TLS connections, and has the one visitor id every
@@ -368,6 +386,13 @@ public:
     // that a call was answered as the account: bad cookies are usually
     // answered 200 OK with the signed-out feed.
     static QString parseLoggedIn(const QJsonObject &root);
+    // What any answer's responseContext says of the session it was made for:
+    // its visitor id (visitorData), and the account's DATASYNC_ID
+    // (mainAppWebResponseContext.datasyncId, "<user>||" or
+    // "<delegated>||<user>"). Empty when the answer does not say. Read as
+    // they come: CookieImport checks them before they are used.
+    static QString parseVisitorData(const QJsonObject &root);
+    static QString parseDataSyncId(const QJsonObject &root);
 
     // A song's lyrics as YouTube Music shows them: plain text, from a partner
     // it names ("Source: Musixmatch"). Two requests: the watch page says

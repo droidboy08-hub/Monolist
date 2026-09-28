@@ -23,6 +23,18 @@ class QNetworkCookie;
 // echoes it to the log. Nothing here logs a value: cookie names and counts
 // only.
 //
+// The jar is the session's cookies for music.youtube.com, www.youtube.com and
+// s.youtube.com, and each call is given what a browser would send to its own
+// host (CookieImport::header). Beside the cookies it keeps what the session
+// says of itself, where that is known (CookieImport::SessionInfo): which of
+// the browser's accounts it was (X-Goog-AuthUser, from a copied request), the
+// account's own visitor id and its DATASYNC_ID (from a copied request, or
+// learned from YouTube Music's answer to a check that confirmed it). The
+// calls that carry the account send the first as X-Goog-AuthUser (0 when not
+// known), the second as their visitor id, and name a brand channel, which the
+// third reveals, as context.user.onBehalfOfUser; the account's own channel is
+// never named. Calls without the account send none of it.
+//
 // A session is only believed once YouTube Music has said so. A bad cookie is
 // usually answered 200 OK with the generic, signed-out feed, so the status
 // code proves nothing; what does is `logged_in` in the answer's
@@ -113,28 +125,33 @@ public:
     Q_INVOKABLE bool deleteImportedFile();
     Q_INVOKABLE void keepImportedFile();
 
-    // The Authorization header for music.youtube.com's calls, as its own
+    // The Authorization header for a call from `origin`, as YouTube's own
     // pages compute it: for each of SAPISID (or __Secure-3PAPISID when it is
     // missing), __Secure-1PAPISID and __Secure-3PAPISID that is present,
     // "<scheme> <ts>_<lower-case hex SHA-1 of "<ts> <value> <origin>">",
     // space-separated, as yt-dlp sends them. Empty with none of the three.
-    static QByteArray authorization(const QList<CookieImport::Cookie> &jar, qint64 timestamp,
+    // `cookies` are the ones the call carries (CookieImport::forRequest), so
+    // the values hashed are the ones sent.
+    static QByteArray authorization(const QList<CookieImport::Cookie> &cookies, qint64 timestamp,
                                     const QByteArray &origin);
     // One scheme's part of it.
     static QByteArray sidHash(const QByteArray &scheme, qint64 timestamp, const QByteArray &sid,
                               const QByteArray &origin);
 
     // — the InnerTube hook (see InnerTube::AccountHook) —
-    quint64 authHeaders(InnerTube::Auth auth, const QByteArray &origin, QByteArray *cookie,
-                        QByteArray *authorization);
+    quint64 authHeaders(const InnerTube::AccountRequest &request, InnerTube::AccountHeaders *headers);
     void reportRejected(quint64 session, int httpStatus);
-    void absorbCookies(quint64 session, const QList<QNetworkCookie> &cookies);
+    // Set-Cookie from `host` on an answer to `session`, merged as a browser
+    // would: a cookie replaces the one with its name, domain and path, and
+    // one for a domain `host` may not set is ignored.
+    void absorbCookies(quint64 session, const QString &host, const QList<QNetworkCookie> &cookies);
 
     // — for the self-tests and screenshots —
     void setTiming(const Timing &timing);
     // The session the hook is handing out now; 0 when none.
     quint64 session() const { return m_jar.isEmpty() ? 0 : m_generation; }
     const QList<CookieImport::Cookie> &jar() const { return m_jar; }
+    const CookieImport::SessionInfo &info() const { return m_info; }
     bool savePending() const { return m_dirty; }
     // An invented account in a state, in memory only: no cookies, so
     // nothing is ever sent with it. "active", "checking", "unreachable" or
@@ -163,6 +180,11 @@ private:
     void scheduleCheck(qint64 ms);
     void save();
     void watchNetwork();
+    // What a confirmed check's answers say of the session, kept if it is new.
+    void learn(const CheckAnswers &answers);
+    // Hands the session's visitor id to InnerTube, or takes it away: called
+    // whenever the jar or what is known of it changes.
+    void publishVisitor();
     InnerTube *innerTube();
 
     Library *m_library = nullptr;
@@ -172,6 +194,7 @@ private:
 
     State m_state = State::SignedOut;
     QList<CookieImport::Cookie> m_jar;   // values never logged
+    CookieImport::SessionInfo m_info;    // nor these
     // Moves on with every import, sign-out and refusal, so an answer to a
     // call made for an earlier session cannot refuse or rotate this one.
     quint64 m_generation = 1;

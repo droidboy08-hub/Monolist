@@ -6,7 +6,9 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QRegularExpression>
+#include <QSet>
 
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 
@@ -17,11 +19,6 @@ using Result = CookieImport::Result;
 
 // 9999-12-31 23:59:59 UTC: the latest expiry a cookies.txt line may carry.
 constexpr double kLastExpiry = 253402300799.0;
-
-const QString kMusicHost = QStringLiteral("music.youtube.com");
-// Every call Monolist makes with the account is under this path, so a cookie
-// that would not be sent here is of no use to it.
-const QString kCallPath = QStringLiteral("/youtubei/v1/");
 
 // A cookies.txt TRUE/FALSE column: 1, 0, or -1 for neither.
 int flag(const QByteArray &field)
@@ -45,7 +42,7 @@ bool isToken(const QByteArray &name)
 
 // Which of two copies of a name a browser treats as the more specific: the
 // longer domain, then a host-only cookie over a domain one, then the longer
-// path. What is left is a tie, and the first copy read stays.
+// path. What is left is a tie, and the copy met first stays.
 bool moreSpecific(const Cookie &a, const Cookie &b)
 {
     if (a.domain.size() != b.domain.size())
@@ -55,12 +52,30 @@ bool moreSpecific(const Cookie &a, const Cookie &b)
     return a.path.size() > b.path.size();
 }
 
-// Where every cookie read goes: counted, then kept only if it is for YouTube
-// Music, has not expired, and is the most specific copy of its name.
+// RFC 6265 5.1.3, as a browser applies it: a host-only cookie goes to its own
+// host alone, a domain cookie to its domain and every host under it.
+bool domainMatches(const Cookie &cookie, const QString &host)
+{
+    return cookie.hostOnly ? cookie.domain == host
+                           : cookie.domain == host || host.endsWith(QLatin1Char('.') + cookie.domain);
+}
+
+// What makes a cookie the same cookie to a browser: a second one with all of
+// these the same replaces the first, where one differing in any of them is
+// another cookie.
+QString identity(const Cookie &cookie)
+{
+    return QString::fromLatin1(cookie.name) + QLatin1Char('\n') + cookie.domain + QLatin1Char('\n')
+           + (cookie.hostOnly ? QLatin1Char('h') : QLatin1Char('d')) + QLatin1Char('\n') + cookie.path;
+}
+
+// Where every cookie read goes: counted, then kept only if it would go to one
+// of the account's hosts, has not expired, and is not a second copy of a
+// cookie already kept.
 struct Collector {
     Result &result;
     qint64 now;
-    QHash<QByteArray, int> byName;
+    QSet<QString> kept;   // identity()
 
     void add(const Cookie &cookie)
     {
@@ -69,7 +84,7 @@ struct Collector {
             ++result.otherSites;
             return;
         }
-        if (!CookieImport::sentToMusic(cookie)) {
+        if (!CookieImport::sentToAccountHosts(cookie)) {
             ++result.elsewhere;
             return;
         }
@@ -77,18 +92,50 @@ struct Collector {
             ++result.expired;
             return;
         }
-        const auto found = byName.constFind(cookie.name);
-        if (found != byName.cend()) {
+        // The same cookie twice (a header naming it twice): the first stays,
+        // as it always has. Two copies of a name on different domains are
+        // two cookies, and header() chooses between them per host.
+        const QString key = identity(cookie);
+        if (kept.contains(key)) {
             ++result.duplicates;
-            Cookie &kept = result.cookies[*found];
-            if (moreSpecific(cookie, kept))
-                kept = cookie;
             return;
         }
-        byName.insert(cookie.name, int(result.cookies.size()));
+        kept.insert(key);
         result.cookies.append(cookie);
     }
 };
+
+// A request header copied with the cookies, for what it says of the session:
+// which of the browser's accounts (x-goog-authuser) and its visitor id
+// (x-goog-visitor-id). Anything that does not look right is ignored.
+void readSessionHeader(const QByteArray &line, CookieImport::SessionInfo &info)
+{
+    const int colon = int(line.indexOf(':', line.startsWith(':') ? 1 : 0));
+    if (colon <= 0)
+        return;
+    const QByteArray name = line.left(colon).trimmed().toLower();
+    const QByteArray value = line.mid(colon + 1).trimmed();
+    if (name == "x-goog-authuser") {
+        const int index = CookieImport::authUserFrom(value);
+        if (index >= 0)
+            info.authUser = index;
+    } else if (name == "x-goog-visitor-id") {
+        const QString id = CookieImport::visitorDataFrom(QString::fromLatin1(value));
+        if (!id.isEmpty())
+            info.visitorData = id;
+    }
+}
+
+// A byte that would end a line of a cookies.txt file, or start a new one.
+bool hasControl(const QByteArray &bytes)
+{
+    for (const char c : bytes) {
+        const uchar u = uchar(c);
+        if (u < 0x20 || u == 0x7f)
+            return true;
+    }
+    return false;
+}
 
 // A cookies.txt line whose tabs became spaces somewhere (an editor, a chat
 // window): six or seven words with TRUE/FALSE where the flags go. Worth
@@ -230,6 +277,7 @@ void readHeader(const QByteArray &text, Collector &collector)
     bool found = false;
     bool otherHeaders = false;
     static const QRegularExpression headerLine(QStringLiteral(R"(^\s*:?[A-Za-z][A-Za-z0-9-]*\s*:\s)"));
+    CookieImport::SessionInfo info;
     for (const QByteArray &line : lines(text)) {
         QByteArray value;
         if (cookieHeaderValue(line, &value)) {
@@ -237,10 +285,13 @@ void readHeader(const QByteArray &text, Collector &collector)
             readPairs(value, collector);
         } else if (headerLine.match(QString::fromLatin1(line)).hasMatch()) {
             otherHeaders = true;
+            readSessionHeader(line.trimmed(), info);
         }
     }
-    if (found)
+    if (found) {
+        collector.result.info = info;
         return;
+    }
     if (otherHeaders) {
         collector.result.error = QStringLiteral(
             "These request headers have no Cookie header among them. Copy them from a request to "
@@ -262,6 +313,7 @@ void readCurl(const QString &command, Collector &collector)
     const QStringList words = CookieImport::commandWords(command, windows);
     bool fromFile = false;
     bool found = false;
+    CookieImport::SessionInfo info;
     for (int i = 1; i < words.size(); ++i) {
         const QString &word = words.at(i);
         QString header;
@@ -279,6 +331,8 @@ void readCurl(const QString &command, Collector &collector)
         if (!header.isEmpty() && cookieHeaderValue(header.toUtf8(), &value)) {
             found = true;
             readPairs(value, collector);
+        } else if (!header.isEmpty()) {
+            readSessionHeader(header.toUtf8().trimmed(), info);
         } else if (!cookies.isEmpty()) {
             // Without '=', -b names a file to read cookies from.
             if (cookies.contains(QLatin1Char('='))) {
@@ -289,8 +343,10 @@ void readCurl(const QString &command, Collector &collector)
             }
         }
     }
-    if (found)
+    if (found) {
+        collector.result.info = info;
         return;
+    }
     collector.result.error = fromFile
         ? QStringLiteral("That cURL command reads its cookies from a file (-b with a file name), so they are "
                          "not in it. Copy the request from the browser's developer tools instead.")
@@ -522,37 +578,137 @@ QStringList CookieImport::commandWords(const QString &command, bool windows)
     return windows ? windowsWords(command) : posixWords(command);
 }
 
+const QString CookieImport::kMusicHost = QStringLiteral("music.youtube.com");
+const QString CookieImport::kWwwHost = QStringLiteral("www.youtube.com");
+const QString CookieImport::kStatsHost = QStringLiteral("s.youtube.com");
+const QString CookieImport::kApiPath = QStringLiteral("/youtubei/v1/");
+
 bool CookieImport::isYouTubeDomain(const QString &domain)
 {
     return domain == QLatin1String("youtube.com") || domain.endsWith(QLatin1String(".youtube.com"));
 }
 
-bool CookieImport::sentToMusic(const Cookie &cookie)
+bool CookieImport::sentTo(const Cookie &cookie, const QString &host, const QString &path)
 {
-    const bool domain = cookie.hostOnly
-        ? cookie.domain == kMusicHost
-        : cookie.domain == kMusicHost || kMusicHost.endsWith(QLatin1Char('.') + cookie.domain);
-    if (!domain)
+    if (!domainMatches(cookie, host))
         return false;
-    // RFC 6265's path match, against the one path the calls are under.
-    const QString &path = cookie.path;
-    if (path.isEmpty() || path == QLatin1String("/"))
+    // RFC 6265 5.1.4: the cookie's path is the request's, or a directory of it.
+    const QString &cookiePath = cookie.path;
+    if (cookiePath.isEmpty() || cookiePath == QLatin1String("/") || cookiePath == path)
         return true;
-    return kCallPath.startsWith(path)
-           && (path.endsWith(QLatin1Char('/')) || kCallPath.at(path.size()) == QLatin1Char('/'));
+    return path.startsWith(cookiePath)
+           && (cookiePath.endsWith(QLatin1Char('/')) || path.at(cookiePath.size()) == QLatin1Char('/'));
 }
 
-QByteArray CookieImport::header(const QList<Cookie> &cookies, qint64 now)
+bool CookieImport::sentToAccountHosts(const Cookie &cookie)
+{
+    // On any path: a cookie for /watch alone still goes with yt-dlp's page
+    // fetch, and header() leaves it off every call it does not belong on.
+    return domainMatches(cookie, kMusicHost) || domainMatches(cookie, kWwwHost) || domainMatches(cookie, kStatsHost);
+}
+
+QList<CookieImport::Cookie> CookieImport::forRequest(const QList<Cookie> &jar, const QString &host,
+                                                     const QString &path, qint64 now)
 {
     if (now <= 0)
         now = QDateTime::currentSecsSinceEpoch();
-    QList<QByteArray> pairs;
-    for (const Cookie &cookie : cookies) {
-        if (!sentToMusic(cookie) || (cookie.expires > 0 && cookie.expires <= now))
+    QList<Cookie> sent;
+    QHash<QByteArray, int> byName;
+    for (const Cookie &cookie : jar) {
+        if (!sentTo(cookie, host, path) || (cookie.expires > 0 && cookie.expires <= now))
             continue;
-        pairs << cookie.name + '=' + cookie.value;
+        // A browser would send both copies of a name. YouTube answers such a
+        // header as signed out, so only the more specific goes, in the place
+        // of the first: what a single-host jar has always sent.
+        const auto found = byName.constFind(cookie.name);
+        if (found != byName.cend()) {
+            Cookie &kept = sent[*found];
+            if (moreSpecific(cookie, kept))
+                kept = cookie;
+            continue;
+        }
+        byName.insert(cookie.name, int(sent.size()));
+        sent.append(cookie);
     }
+    // Longer paths first; otherwise the jar's order, which is the order the
+    // cookies were first had in (a rotated one keeps its place, as a browser
+    // keeps a replaced cookie's creation time).
+    std::stable_sort(sent.begin(), sent.end(), [](const Cookie &a, const Cookie &b) {
+        return a.path.size() > b.path.size();
+    });
+    return sent;
+}
+
+QByteArray CookieImport::header(const QList<Cookie> &jar, const QString &host, const QString &path, qint64 now)
+{
+    QList<QByteArray> pairs;
+    for (const Cookie &cookie : forRequest(jar, host, path, now))
+        pairs << cookie.name + '=' + cookie.value;
     return pairs.join("; ");
+}
+
+QByteArray CookieImport::toNetscape(const QList<Cookie> &jar, qint64 now, int *written)
+{
+    if (now <= 0)
+        now = QDateTime::currentSecsSinceEpoch();
+    // Python's reader refuses a file whose first line is not this one.
+    QByteArray out = "# Netscape HTTP Cookie File\n"
+                     "# A signed-in YouTube session, written by Monolist for yt-dlp.\n\n";
+    int lines = 0;
+    for (const Cookie &cookie : jar) {
+        const QByteArray domain = cookie.domain.toLatin1();
+        const QByteArray path = (cookie.path.isEmpty() ? QStringLiteral("/") : cookie.path).toLatin1();
+        if (!isYouTubeDomain(cookie.domain) || cookie.name.isEmpty() || (cookie.expires > 0 && cookie.expires <= now)
+            || hasControl(cookie.name) || hasControl(cookie.value) || hasControl(domain) || hasControl(path)
+            || domain.contains(' '))
+            continue;
+        if (cookie.httpOnly)
+            out += "#HttpOnly_";
+        out += (cookie.hostOnly ? domain : '.' + domain) + '\t' + (cookie.hostOnly ? "FALSE" : "TRUE") + '\t'
+               + path + '\t' + (cookie.secure ? "TRUE" : "FALSE") + '\t' + QByteArray::number(cookie.expires)
+               + '\t' + cookie.name + '\t' + cookie.value + '\n';
+        ++lines;
+    }
+    if (written)
+        *written = lines;
+    return out;
+}
+
+int CookieImport::authUserFrom(const QByteArray &text)
+{
+    const QByteArray digits = text.trimmed();
+    if (digits.isEmpty() || digits.size() > 2)
+        return -1;
+    for (const char c : digits) {
+        if (c < '0' || c > '9')
+            return -1;
+    }
+    return digits.toInt();
+}
+
+QString CookieImport::visitorDataFrom(const QString &text)
+{
+    static const QRegularExpression shape(QStringLiteral(R"(^[A-Za-z0-9_\-%=+/]{8,512}$)"));
+    const QString id = text.trimmed();
+    return shape.match(id).hasMatch() ? id : QString();
+}
+
+QString CookieImport::dataSyncIdFrom(const QString &text)
+{
+    static const QRegularExpression shape(QStringLiteral(R"(^[A-Za-z0-9_\-]{1,64}\|\|[A-Za-z0-9_\-]{0,64}$)"));
+    const QString id = text.trimmed();
+    return shape.match(id).hasMatch() ? id : QString();
+}
+
+QString CookieImport::SessionInfo::delegatedId() const
+{
+    // yt-dlp's reading of it: "<delegated>||<user>" on a brand channel,
+    // "<user>||" on the account's own.
+    const int bars = int(dataSyncId.indexOf(QLatin1String("||")));
+    if (bars <= 0)
+        return QString();
+    const QString second = dataSyncId.mid(bars + 2);
+    return second.isEmpty() ? QString() : dataSyncId.left(bars);
 }
 
 QByteArray CookieImport::value(const QList<Cookie> &cookies, const QByteArray &name)
@@ -610,7 +766,7 @@ QString CookieImport::Result::summary() const
     if (unreadable + spaced > 0)
         aside << plural(unreadable + spaced, "1 unreadable line skipped", "%1 unreadable lines skipped");
     const QString count = plural(int(cookies.size()), "1 cookie", "%1 cookies");
-    return QStringLiteral("%1 for YouTube Music from a %2%3")
+    return QStringLiteral("%1 for YouTube from a %2%3")
         .arg(count, formatName(format),
              aside.isEmpty() ? QString() : QStringLiteral(" (") + aside.join(QStringLiteral(", ")) + QLatin1Char(')'));
 }
@@ -657,6 +813,7 @@ CookieImport::Result CookieImport::parse(const QByteArray &input, qint64 now)
     }
     if (!result.error.isEmpty()) {
         result.cookies.clear();
+        result.info = {};
         return result;
     }
 
@@ -697,12 +854,14 @@ CookieImport::Result CookieImport::parse(const QByteArray &input, qint64 now)
                                           "window, after signing in.") + expiredNote;
         }
     }
-    if (!result.error.isEmpty())
+    if (!result.error.isEmpty()) {
         result.cookies.clear();
+        result.info = {};
+    }
     return result;
 }
 
-QByteArray CookieImport::toJson(const QList<Cookie> &cookies)
+QByteArray CookieImport::toJson(const QList<Cookie> &cookies, const SessionInfo &info)
 {
     QJsonArray list;
     for (const Cookie &cookie : cookies) {
@@ -717,18 +876,47 @@ QByteArray CookieImport::toJson(const QList<Cookie> &cookies)
             { QStringLiteral("secure"), cookie.secure },
             { QStringLiteral("httpOnly"), cookie.httpOnly } });
     }
-    const QJsonObject jar{ { QStringLiteral("version"), 1 }, { QStringLiteral("cookies"), list } };
+    QJsonObject jar{ { QStringLiteral("version"), 1 }, { QStringLiteral("cookies"), list } };
+    if (!info.isEmpty()) {
+        QJsonObject session;
+        if (info.authUser >= 0)
+            session.insert(QStringLiteral("authUser"), info.authUser);
+        if (!info.visitorData.isEmpty())
+            session.insert(QStringLiteral("visitorData"), info.visitorData);
+        if (!info.dataSyncId.isEmpty())
+            session.insert(QStringLiteral("dataSyncId"), info.dataSyncId);
+        jar.insert(QStringLiteral("version"), 2);
+        jar.insert(QStringLiteral("session"), session);
+    }
     return QJsonDocument(jar).toJson(QJsonDocument::Compact);
 }
 
-bool CookieImport::fromJson(const QByteArray &json, QList<Cookie> *cookies)
+QByteArray CookieImport::toJson(const QList<Cookie> &cookies)
+{
+    return toJson(cookies, SessionInfo());
+}
+
+bool CookieImport::fromJson(const QByteArray &json, QList<Cookie> *cookies, SessionInfo *info)
 {
     cookies->clear();
+    if (info)
+        *info = SessionInfo();
     const QJsonDocument document = QJsonDocument::fromJson(json);
     const QJsonObject jar = document.object();
-    if (!document.isObject() || jar.value(QStringLiteral("version")).toInt() != 1
-        || !jar.value(QStringLiteral("cookies")).isArray())
+    const int version = jar.value(QStringLiteral("version")).toInt();
+    if (!document.isObject() || (version != 1 && version != 2) || !jar.value(QStringLiteral("cookies")).isArray())
         return false;
+    // Checked as an answer's would be; a part that does not pass is simply
+    // not known, and the calls do without it.
+    SessionInfo known;
+    if (version == 2) {
+        const QJsonObject session = jar.value(QStringLiteral("session")).toObject();
+        const QJsonValue authUser = session.value(QStringLiteral("authUser"));
+        if (authUser.isDouble())
+            known.authUser = authUserFrom(QByteArray::number(authUser.toInt(-1)));
+        known.visitorData = visitorDataFrom(session.value(QStringLiteral("visitorData")).toString());
+        known.dataSyncId = dataSyncIdFrom(session.value(QStringLiteral("dataSyncId")).toString());
+    }
     QList<Cookie> read;
     for (const QJsonValue &entry : jar.value(QStringLiteral("cookies")).toArray()) {
         const QJsonObject object = entry.toObject();
@@ -746,5 +934,7 @@ bool CookieImport::fromJson(const QByteArray &json, QList<Cookie> *cookies)
         read.append(cookie);
     }
     *cookies = read;
+    if (info)
+        *info = known;
     return true;
 }

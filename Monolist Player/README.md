@@ -744,9 +744,15 @@ first failure`.
     monolist --cookie-test                          the YouTube Music import on invented cookies: cookies.txt
                                                     (LF, CRLF, #HttpOnly_, spaces for tabs), a Cookie header,
                                                     cURL in bash and cmd quoting, duplicates across domains,
-                                                    a missing LOGIN_INFO; and the SAPISIDHASH known answers
+                                                    a missing LOGIN_INFO; the Cookie header for music, www
+                                                    and s.youtube.com byte for byte; x-goog-authuser and the
+                                                    visitor id from a copied request; the stored JSON (v1,
+                                                    v2); the cookies.txt written for yt-dlp (never
+                                                    google.com); and the SAPISIDHASH known answers
     monolist --ytm-session-test                     the YouTube Music session against a stand-in server on
-                                                    this computer: signed-out requests byte for byte, the
+                                                    this computer: signed-out requests byte for byte, each
+                                                    host's own cookies, X-Goog-AuthUser, the account's
+                                                    visitor id and a brand channel (onBehalfOfUser), the
                                                     check, rotation, 400/401/403, restart, sign-out, the
                                                     offer to delete the imported file, no value in the log
     monolist --visitor-test                         the one visitor id every InnerTube shares, against the

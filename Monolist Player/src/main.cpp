@@ -1083,7 +1083,7 @@ int main(int argc, char *argv[])
                      ? "no session held"
                      : qPrintable(QStringLiteral("%1 cookies held (%2 bytes as stored): %3")
                                       .arg(ytmSession.jar().size())
-                                      .arg(CookieImport::toJson(ytmSession.jar()).size())
+                                      .arg(CookieImport::toJson(ytmSession.jar(), ytmSession.info()).size())
                                       .arg(CookieImport::names(ytmSession.jar()).join(QStringLiteral(", ")))));
         QSqlQuery waiting(AppDatabase::connection());
         waiting.exec(QStringLiteral("SELECT id, account, artist, track, started_at, chosen_by_user, attempts,"

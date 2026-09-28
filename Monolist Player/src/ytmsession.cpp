@@ -44,6 +44,24 @@ QString joinedNames(const QList<Cookie> &jar)
     return CookieImport::names(jar).join(QStringLiteral(", "));
 }
 
+// What is known of a session beside its cookies, for the log: which parts,
+// never their values (but for the account's index, a number from 0 to 99).
+QString describe(const CookieImport::SessionInfo &info)
+{
+    if (info.isEmpty())
+        return QString();
+    QStringList parts;
+    if (info.authUser >= 0)
+        parts << QStringLiteral("account index %1").arg(info.authUser);
+    if (!info.visitorData.isEmpty())
+        parts << QStringLiteral("its visitor id");
+    if (!info.dataSyncId.isEmpty()) {
+        parts << (info.delegatedId().isEmpty() ? QStringLiteral("its DATASYNC_ID (the account's own channel)")
+                                               : QStringLiteral("its DATASYNC_ID (a brand channel)"));
+    }
+    return QStringLiteral(", with ") + parts.join(QStringLiteral(", "));
+}
+
 }
 
 const QByteArray YtmSession::kOrigin = QByteArrayLiteral("https://music.youtube.com");
@@ -57,6 +75,10 @@ struct YtmSession::CheckAnswers {
     QString loggedIn;
     QString menuError;
     QString homeError;
+    // What the answers' responseContext says of the session (as they come;
+    // learn() checks them), the home feed's first and the menu's after.
+    QString visitorData;
+    QString dataSyncId;
 };
 
 YtmSession::YtmSession(Library *library, QObject *parent)
@@ -76,8 +98,10 @@ YtmSession::~YtmSession()
     // process.
     if (m_dirty)
         save();
-    if (m_hooked)
+    if (m_hooked) {
         InnerTube::setAccountHook({});
+        InnerTube::setSessionVisitorData(QString());
+    }
     // Before the members its answers would reach.
     delete m_innerTube.data();
 }
@@ -86,20 +110,28 @@ void YtmSession::installHook()
 {
     const QPointer<YtmSession> self(this);
     InnerTube::AccountHook hook;
-    hook.headers = [self](InnerTube::Auth auth, const QByteArray &origin, QByteArray *cookie,
-                          QByteArray *authorization) -> quint64 {
-        return self ? self->authHeaders(auth, origin, cookie, authorization) : 0;
+    hook.headers = [self](const InnerTube::AccountRequest &request, InnerTube::AccountHeaders *headers) -> quint64 {
+        return self ? self->authHeaders(request, headers) : 0;
     };
     hook.rejected = [self](quint64 session, int status) {
         if (self)
             self->reportRejected(session, status);
     };
-    hook.cookies = [self](quint64 session, const QList<QNetworkCookie> &cookies) {
+    hook.cookies = [self](quint64 session, const QString &host, const QList<QNetworkCookie> &cookies) {
         if (self)
-            self->absorbCookies(session, cookies);
+            self->absorbCookies(session, host, cookies);
     };
     InnerTube::setAccountHook(std::move(hook));
     m_hooked = true;
+    publishVisitor();
+}
+
+void YtmSession::publishVisitor()
+{
+    // Only while hooked: a YtmSession that never hands out the account (a
+    // test's second one) must not take the first one's id away.
+    if (m_hooked)
+        InnerTube::setSessionVisitorData(m_jar.isEmpty() ? QString() : m_info.visitorData);
 }
 
 void YtmSession::setTiming(const Timing &timing)
@@ -125,8 +157,9 @@ void YtmSession::start()
     switch (SecretStore::read(kSecretName, &json, &error)) {
     case SecretStore::Status::Ok: {
         QList<Cookie> jar;
+        CookieImport::SessionInfo info;
         m_name = remembered;
-        if (!CookieImport::fromJson(json, &jar) || !CookieImport::missingRequired(jar).isEmpty()) {
+        if (!CookieImport::fromJson(json, &jar, &info) || !CookieImport::missingRequired(jar).isEmpty()) {
             qWarning("ytmusic: the stored session is not one Monolist can use; it is deleted");
             SecretStore::remove(kSecretName);
             m_rejectReason = QStringLiteral("the stored copy could not be read");
@@ -134,9 +167,11 @@ void YtmSession::start()
             break;
         }
         m_jar = jar;
+        m_info = info;
+        publishVisitor();
         setState(State::Checking);
-        qInfo("ytmusic: restored a session of %d cookies (%s); checking it in %d s", int(m_jar.size()),
-              qPrintable(joinedNames(m_jar)), m_timing.launchCheckMs / 1000);
+        qInfo("ytmusic: restored a session of %d cookies (%s)%s; checking it in %d s", int(m_jar.size()),
+              qPrintable(joinedNames(m_jar)), qPrintable(describe(m_info)), m_timing.launchCheckMs / 1000);
         scheduleCheck(m_timing.launchCheckMs);
         break;
     }
@@ -292,7 +327,7 @@ bool YtmSession::importResult(const CookieImport::Result &result, const QString 
         return false;
     }
 
-    const QByteArray json = CookieImport::toJson(result.cookies);
+    const QByteArray json = CookieImport::toJson(result.cookies, result.info);
     QString error;
     const SecretStore::Status stored = SecretStore::write(kSecretName, json, &error);
     if (stored != SecretStore::Status::Ok && stored != SecretStore::Status::Unavailable) {
@@ -310,6 +345,10 @@ bool YtmSession::importResult(const CookieImport::Result &result, const QString 
     m_saveTimer.stop();
     m_dirty = false;
     m_jar = result.cookies;
+    // Only what the copy itself said: what an earlier session learned was
+    // another session's.
+    m_info = result.info;
+    publishVisitor();
     m_memoryOnly = stored == SecretStore::Status::Unavailable;
     m_importError.clear();
     m_notice.clear();
@@ -322,8 +361,8 @@ bool YtmSession::importResult(const CookieImport::Result &result, const QString 
     m_name.clear();
     if (m_library)
         m_library->setSetting(kNameKey, QString());
-    qInfo("ytmusic: imported %s, from %s: %s; %s, %d bytes", qPrintable(result.summary()), qPrintable(source),
-          qPrintable(joinedNames(m_jar)),
+    qInfo("ytmusic: imported %s%s, from %s: %s; %s, %d bytes", qPrintable(result.summary()),
+          qPrintable(describe(m_info)), qPrintable(source), qPrintable(joinedNames(m_jar)),
           m_memoryOnly ? "held in memory only (no secret store here)"
                        : qPrintable(QStringLiteral("kept encrypted (") + SecretStore::backendName() + QLatin1Char(')')),
           int(json.size()));
@@ -383,6 +422,8 @@ void YtmSession::signOut()
     m_dirty = false;
     const int held = int(m_jar.size());
     m_jar.clear();
+    m_info = {};
+    publishVisitor();
     QString error;
     const SecretStore::Status removed = SecretStore::remove(kSecretName, &error);
     m_name.clear();
@@ -444,16 +485,59 @@ void YtmSession::check()
     };
     qInfo("ytmusic: asking YouTube Music whether the session is signed in (%d cookies)", int(m_jar.size()));
     InnerTube *tube = innerTube();
+    // The home feed's word on the session is taken over the menu's, whichever
+    // answers first.
     tube->accountMenu(InnerTube::Auth::Checking, [answers, finish](const QJsonObject &root, const QString &error) {
         answers->menuError = error;
         answers->name = InnerTube::parseAccountName(root);
+        if (answers->visitorData.isEmpty())
+            answers->visitorData = InnerTube::parseVisitorData(root);
+        if (answers->dataSyncId.isEmpty())
+            answers->dataSyncId = InnerTube::parseDataSyncId(root);
         finish();
     });
     tube->browse(QStringLiteral("FEmusic_home"), [answers, finish](const QJsonObject &root, const QString &error) {
         answers->homeError = error;
         answers->loggedIn = InnerTube::parseLoggedIn(root);
+        const QString visitor = InnerTube::parseVisitorData(root);
+        const QString dataSync = InnerTube::parseDataSyncId(root);
+        if (!visitor.isEmpty())
+            answers->visitorData = visitor;
+        if (!dataSync.isEmpty())
+            answers->dataSyncId = dataSync;
         finish();
     }, InnerTube::Auth::Checking);
+}
+
+void YtmSession::learn(const CheckAnswers &answers)
+{
+    // Called only once the answers have confirmed the session, so they were
+    // made with it (a check is never asked again without it: see
+    // InnerTube::send); and only what looks as it should is kept.
+    CookieImport::SessionInfo info = m_info;
+    const QString visitor = CookieImport::visitorDataFrom(answers.visitorData);
+    const QString dataSync = CookieImport::dataSyncIdFrom(answers.dataSyncId);
+    if (!visitor.isEmpty())
+        info.visitorData = visitor;
+    if (!dataSync.isEmpty())
+        info.dataSyncId = dataSync;
+    if (info == m_info)
+        return;
+    QStringList what;
+    if (info.visitorData != m_info.visitorData)
+        what << QStringLiteral("visitor id");
+    if (info.dataSyncId != m_info.dataSyncId) {
+        what << (info.delegatedId().isEmpty() ? QStringLiteral("DATASYNC_ID (the account's own channel)")
+                                              : QStringLiteral("DATASYNC_ID (a brand channel)"));
+    }
+    m_info = info;
+    publishVisitor();
+    qInfo("ytmusic: learned the session's %s from YouTube Music's answer",
+          qPrintable(what.join(QStringLiteral(" and "))));
+    // Kept with the cookies, so the next launch starts with them.
+    m_dirty = true;
+    if (!m_saveTimer.isActive())
+        m_saveTimer.start(m_timing.saveDelayMs);
 }
 
 void YtmSession::checkFinished(const CheckAnswers &answers)
@@ -482,6 +566,7 @@ void YtmSession::checkFinished(const CheckAnswers &answers)
         qInfo("ytmusic: YouTube Music confirms the session (%s)%s",
               answers.loggedIn == QLatin1String("1") ? "logged_in=1" : "the account menu names it",
               m_name.isEmpty() ? "" : qPrintable(QStringLiteral(" as ") + m_name));
+        learn(answers);
         setState(State::Active);
         if (news)
             Q_EMIT sessionChanged();
@@ -532,6 +617,8 @@ void YtmSession::reject(const QString &reason)
     m_saveTimer.stop();
     m_dirty = false;
     m_jar.clear();
+    m_info = {};
+    publishVisitor();
     QString error;
     const SecretStore::Status removed = SecretStore::remove(kSecretName, &error);
     if (removed != SecretStore::Status::Ok && removed != SecretStore::Status::Unavailable)
@@ -574,11 +661,11 @@ QByteArray YtmSession::sidHash(const QByteArray &scheme, qint64 timestamp, const
     return scheme + ' ' + stamp + '_' + hash;
 }
 
-QByteArray YtmSession::authorization(const QList<Cookie> &jar, qint64 timestamp, const QByteArray &origin)
+QByteArray YtmSession::authorization(const QList<Cookie> &cookies, qint64 timestamp, const QByteArray &origin)
 {
-    const QByteArray sapisid = CookieImport::value(jar, "SAPISID");
-    const QByteArray firstParty = CookieImport::value(jar, "__Secure-1PAPISID");
-    const QByteArray thirdParty = CookieImport::value(jar, "__Secure-3PAPISID");
+    const QByteArray sapisid = CookieImport::value(cookies, "SAPISID");
+    const QByteArray firstParty = CookieImport::value(cookies, "__Secure-1PAPISID");
+    const QByteArray thirdParty = CookieImport::value(cookies, "__Secure-3PAPISID");
     // Without SAPISID, YouTube's own pages hash the third-party one in its
     // place (yt-dlp #393).
     const QByteArray primary = sapisid.isEmpty() ? thirdParty : sapisid;
@@ -592,12 +679,11 @@ QByteArray YtmSession::authorization(const QList<Cookie> &jar, qint64 timestamp,
     return parts.join(' ');
 }
 
-quint64 YtmSession::authHeaders(InnerTube::Auth auth, const QByteArray &origin, QByteArray *cookie,
-                                QByteArray *authorization)
+quint64 YtmSession::authHeaders(const InnerTube::AccountRequest &request, InnerTube::AccountHeaders *headers)
 {
     if (m_jar.isEmpty())
         return 0;
-    switch (auth) {
+    switch (request.auth) {
     case InnerTube::Auth::Anonymous:
         return 0;
     case InnerTube::Auth::IfSignedIn:
@@ -607,10 +693,17 @@ quint64 YtmSession::authHeaders(InnerTube::Auth auth, const QByteArray &origin, 
     case InnerTube::Auth::Checking:
         break;   // any session held: the check is what decides
     }
+    // What a browser would send to that host and path, and nothing else: a
+    // cookie for www.youtube.com alone never reaches YouTube Music.
     const qint64 now = nowSecs();
-    *cookie = CookieImport::header(m_jar, now);
-    *authorization = YtmSession::authorization(m_jar, now, origin);
-    return cookie->isEmpty() ? 0 : m_generation;
+    const QList<Cookie> sent = CookieImport::forRequest(m_jar, request.host, request.path, now);
+    if (sent.isEmpty())
+        return 0;
+    headers->cookie = CookieImport::header(sent, request.host, request.path, now);
+    headers->authorization = YtmSession::authorization(sent, now, request.origin);
+    headers->authUser = QByteArray::number(m_info.authUser >= 0 ? m_info.authUser : 0);
+    headers->onBehalfOfUser = m_info.delegatedId();
+    return m_generation;
 }
 
 void YtmSession::reportRejected(quint64 session, int httpStatus)
@@ -624,9 +717,9 @@ void YtmSession::reportRejected(quint64 session, int httpStatus)
         Q_EMIT checked(QStringLiteral("rejected"));
 }
 
-void YtmSession::absorbCookies(quint64 session, const QList<QNetworkCookie> &cookies)
+void YtmSession::absorbCookies(quint64 session, const QString &host, const QList<QNetworkCookie> &cookies)
 {
-    if (session == 0 || session != m_generation || m_jar.isEmpty())
+    if (session == 0 || session != m_generation || m_jar.isEmpty() || host.isEmpty())
         return;
     const qint64 now = nowSecs();
     QStringList updated;
@@ -638,7 +731,7 @@ void YtmSession::absorbCookies(quint64 session, const QList<QNetworkCookie> &coo
         QString domain = received.domain().toLower();
         if (domain.isEmpty()) {
             // No Domain attribute: the host that answered, and only it.
-            domain = QString::fromLatin1(kOrigin.mid(int(qstrlen("https://"))));
+            domain = host;
             cookie.hostOnly = true;
         } else if (domain.startsWith(QLatin1Char('.'))) {
             domain.remove(0, 1);
@@ -649,13 +742,21 @@ void YtmSession::absorbCookies(quint64 session, const QList<QNetworkCookie> &coo
         cookie.httpOnly = received.isHttpOnly();
         const QDateTime expiry = received.expirationDate();
         cookie.expires = expiry.isValid() ? expiry.toSecsSinceEpoch() : 0;
-        if (cookie.name.isEmpty() || !CookieImport::isYouTubeDomain(cookie.domain)
-            || !CookieImport::sentToMusic(cookie))
+        // A browser ignores a Domain the answering host does not belong to
+        // (RFC 6265 5.3, step 6): music.youtube.com may set a cookie for
+        // youtube.com, never for www.youtube.com.
+        const bool mayBeSet = cookie.hostOnly || host == domain || host.endsWith(QLatin1Char('.') + domain);
+        if (cookie.name.isEmpty() || !mayBeSet || !CookieImport::isYouTubeDomain(cookie.domain)
+            || !CookieImport::sentToAccountHosts(cookie))
             continue;
 
+        // The same cookie is the same name, domain and path; another domain
+        // or path makes another cookie, kept beside it.
         int index = -1;
         for (int i = 0; i < m_jar.size(); ++i) {
-            if (m_jar.at(i).name == cookie.name) {
+            const Cookie &held = m_jar.at(i);
+            if (held.name == cookie.name && held.domain == cookie.domain && held.hostOnly == cookie.hostOnly
+                && held.path == cookie.path) {
                 index = i;
                 break;
             }
@@ -701,10 +802,11 @@ void YtmSession::save()
         return;
     }
     m_dirty = false;
-    const QByteArray json = CookieImport::toJson(m_jar);
+    const QByteArray json = CookieImport::toJson(m_jar, m_info);
     QString error;
     if (SecretStore::write(kSecretName, json, &error) == SecretStore::Status::Ok)
-        qInfo("ytmusic: saved the rotated session (%d cookies, %d bytes)", int(m_jar.size()), int(json.size()));
+        qInfo("ytmusic: saved the session again (%d cookies%s, %d bytes)", int(m_jar.size()),
+              qPrintable(describe(m_info)), int(json.size()));
     else
         qWarning("ytmusic: could not save the rotated session: %s", qPrintable(error));
 }
@@ -718,6 +820,8 @@ void YtmSession::showDemo(const QString &demo)
     m_checking = false;
     m_checkTimer.stop();
     m_jar.clear();   // nothing to send, so nothing ever is
+    m_info = {};
+    publishVisitor();
     QString which = demo;
     if (which.endsWith(QLatin1String("+file"))) {
         which.chop(int(qstrlen("+file")));
