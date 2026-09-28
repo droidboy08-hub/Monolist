@@ -244,6 +244,24 @@ bool DownloadManager::queueOne(const QString &videoId, const QString &title, con
 
 void DownloadManager::pump()
 {
+    // Playback first: while a song someone is waiting for resolves, a new
+    // download waits for it, since its yt-dlp and the song's would each run
+    // several times slower side by side. Rarely for long: a song resolves in
+    // a fifth of a second unless it has gone to yt-dlp, and never past 20 s.
+    // Downloads already running are left alone; one stopped would start
+    // again from nothing.
+    if (!m_pending.isEmpty() && m_requests.size() < kMaxConcurrent && YtDlp::playbackResolving()) {
+        if (!m_waitingOnPlayback) {
+            m_waitingOnPlayback = true;
+            qInfo("downloads: %d waiting while a song resolves", int(m_pending.size()));
+            YtDlp::whenPlaybackResolved(this, [this]() {
+                m_waitingOnPlayback = false;
+                pump();
+            });
+        }
+        Q_EMIT queueChanged();
+        return;
+    }
     bool began = false;
     while (!m_pending.isEmpty() && m_requests.size() < kMaxConcurrent) {
         begin(m_pending.takeFirst());

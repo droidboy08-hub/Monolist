@@ -28,3 +28,23 @@ int runCancelSelfTest(const QString &videoId, int rounds);
 // costs the second client's round trip, or yt-dlp's seconds); VISIONOS 0.1
 // failing is the rung under it gone.
 int runPlayerCanary(const QStringList &videoIds);
+
+class Library;
+
+// --bounds-test [rounds] [--before]: how long a resolve may take, against a
+// stand-in YouTube on this computer, with yt-dlp either real or sent through
+// a proxy that never answers (a host gone dark). /player: a first request
+// that stalls is hedged at 1.2 s on a connection of its own, which answers;
+// one every request of which is slow gives up at 3 s, after two requests;
+// the switch back (youtube.player_deadline=off) does neither. Every /player
+// delayed 10 s: yt-dlp starts at ~3 s and answers (LrM_Y39Gmhk, real
+// yt-dlp and network, `rounds` times, 1 unless given). Everything dark: the
+// player's skip notice within 20 s, where playback.resolve_deadline=off is
+// still waiting. One yt-dlp at a time: a prefetch waits, a song someone is
+// waiting for stops a prefetch's lookup and goes first, downloads are held
+// only while such a song resolves, and ytdlp.resolves=parallel runs them
+// all at once. `before` also runs the delayed and the dark cases with every
+// switch back, for the numbers these bounds replace (not checks: notes). In
+// MONOLIST_DATA_DIR only (the player part uses the real mpv and the library
+// there); about a minute, two with `before`.
+int runBoundsSelfTest(Library *library, int rounds, bool before);

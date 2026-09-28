@@ -204,7 +204,7 @@ Seen by the agents that fixed B01–B13 and by their reviewers, and not yet fixe
   Done when: queued, downloading and processing tracks offer "Cancel download".
 - [ ] **F06** IconButton's iconSize has no effect: every glyph is drawn at the button's full size *(P4, S)*
   Done when: iconSize sets the glyph size and existing buttons look the same or better.
-- [ ] **F07** Network timeouts may never be retried: Qt reports a transfer timeout as a cancel, which InnerTube skips *(P4, S)*
+- [ ] **F07** *(Seen in engine batch B9: on Qt 6.11 a timed-out /player came back as "Operation timed out" and its retry did run, 8 + 1.2 + 8 s, in `--bounds-test --before`. /player no longer retries that way, but the other calls still do: check them before closing this.)* Network timeouts may never be retried: Qt reports a transfer timeout as a cancel, which InnerTube skips *(P4, S)*
   Done when: a timed-out InnerTube request is retried once, and a real cancel is not.
 - [ ] **F08** A country rejected during a Home load makes Home load twice, and Catalog's own retry timer survives a refresh *(P5, S)*
   Done when: one refresh at a time, whatever triggered it.
@@ -267,6 +267,8 @@ Seen by the agents that fixed B01–B13 and by their reviewers, and not yet fixe
   Done when: the last refusal goes through the same skip-or-stop as a failed resolve (PlaybackController::failTrack), and --recovery-test checks it.
 - [ ] **F37** A stored visitor id that googlevideo has turned against makes every song play from its muxed stream: every InnerTube link minted with it is refused with 403 on its first request, the fresh one B8 asks for included, so each song pays the muxed rescue (about 2.3 s more, then itag 18, 96-128 kbps AAC resampled to 48 kHz) until the id is replaced. Since B1 the id is kept across launches (renewed once it is a day old and something has played, used for up to 30 days), so one bad id can last a day. Seen on 2026-09-28 with an id fetched from sw.js_data during the B8 measurements: 8 of 8 launches on Tu7oq3VNgpY and two other songs refused, both links every time; the same songs played at once from InnerTube with a new id (`--set youtube.visitor_data_at 0`). /player itself answered OK throughout, so PP-03's LOGIN_REQUIRED renewal never fires *(P2, S)*
   Done when: a fresh InnerTube link refused after a first refusal of the same song renews the visitor id (as LOGIN_REQUIRED does), so at most one song pays for a bad id, checked against a stand-in that refuses one id's links.
+- [ ] **F38** The picture's yt-dlp lookups are outside B9's one-yt-dlp-at-a-time queue: with the video switch on, every song start runs `StreamResolver::resolveVideo` (a yt-dlp process, ~3 s of Python under emulation) beside the sound's resolve, and prefetchUpcoming runs one more for the next song's picture. When the sound also falls to yt-dlp, two or three extractions run at once, the slowdown the queue exists to avoid, and the picture lookups have no 20 s limit either *(P6, S)*
+  Done when: picture lookups take a turn in the same queue (the current song's sound first, then its picture, then anything ahead of time), measured with the video switch on and InnerTube failing (--bounds-test's stand-in).
 
 ## Connections
 

@@ -8,11 +8,14 @@
 #include <QJsonParseError>
 #include <QProcessEnvironment>
 #include <QDeadlineTimer>
+#include <QPointer>
 #include <QRegularExpression>
+#include <QSet>
 #include <QStandardPaths>
 #include <QThread>
 
 #include <utility>
+#include <vector>
 
 #if defined(Q_OS_WIN)
 #include <windows.h>
@@ -29,6 +32,11 @@ namespace {
 
 QString g_executableOverride;
 bool g_cancelWaits = false;
+
+// The resolvers resolving a song someone is waiting for, and what waits for
+// none to be (YtDlp::setPlaybackResolving).
+QSet<const void *> g_playbackResolving;
+std::vector<std::pair<QPointer<QObject>, std::function<void()>>> g_whenPlaybackResolved;
 
 // A cancelled lookup's processes, already told to end, and kept here until
 // they have. A skip cancels the lookup for the song it leaves, on the
@@ -391,6 +399,35 @@ void YtDlp::setExecutableOverride(const QString &path)
 void YtDlp::setCancelWaits(bool wait)
 {
     g_cancelWaits = wait;
+}
+
+void YtDlp::setPlaybackResolving(const void *who, bool resolving)
+{
+    if (resolving) {
+        g_playbackResolving.insert(who);
+        return;
+    }
+    if (!g_playbackResolving.remove(who) || !g_playbackResolving.isEmpty())
+        return;
+    const auto waiting = std::exchange(g_whenPlaybackResolved, {});
+    for (const auto &waiter : waiting) {
+        if (waiter.first)
+            QMetaObject::invokeMethod(waiter.first.data(), [then = waiter.second]() { then(); }, Qt::QueuedConnection);
+    }
+}
+
+bool YtDlp::playbackResolving()
+{
+    return !g_playbackResolving.isEmpty();
+}
+
+void YtDlp::whenPlaybackResolved(QObject *context, std::function<void()> then)
+{
+    if (g_playbackResolving.isEmpty()) {
+        QMetaObject::invokeMethod(context, [then = std::move(then)]() { then(); }, Qt::QueuedConnection);
+        return;
+    }
+    g_whenPlaybackResolved.emplace_back(context, std::move(then));
 }
 
 void YtDlp::extendSearchPath()

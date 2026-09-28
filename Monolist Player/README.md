@@ -107,10 +107,28 @@ the same second:
 * Three songs in a row that will not play stop the queue. The count starts
   again only once a song's sound starts, not when its link arrives.
 
+How long a song may take to resolve is bounded too:
+
+* **20 s for the whole resolve**, JioSaavn's part included; past it the
+  player says it could not play the song and moves on. Walked to its end,
+  the ladder could take ~49 s before.
+* **3 s for /player**, the whole call, the visitor id and the second client
+  included. A first request with no answer after 1.2 s (or one that fails
+  before then) is sent once more beside it, on a connection of its own: a
+  second network manager, so HTTP/2 cannot put it on the connection that
+  stalled. Past 3 s the song goes to yt-dlp, which used to wait 8 s or more.
+* **One yt-dlp resolve at a time**: the song someone is waiting for goes
+  first, and a prefetch's lookup is stopped for it and started again after.
+  While such a song resolves no new download starts; running ones carry on.
+
 Each newer part has a switch back in the settings table (`--set <key>
 <value>`): `playback.refused=muxed` puts the muxed stream straight after a
 refused InnerTube link, `playback.rescue_link=keep` keeps a rescue link as
-the song's link, and `playback.early_end=next` takes an early end as the end.
+the song's link, and `playback.early_end=next` takes an early end as the end;
+`playback.resolve_deadline=off` drops the 20 s limit,
+`youtube.player_deadline=off` asks /player as before (8 s a request and one
+retry, no hedge, no limit on the whole), and `ytdlp.resolves=parallel` runs
+yt-dlp resolves side by side with downloads never waiting.
 
 ### JioSaavn
 
@@ -710,6 +728,14 @@ first failure`.
     monolist --cancel-test [videoId] [rounds]       a skip while yt-dlp resolves: the cancel timed and this
                                                     thread watched every 5 ms, in turn as it is and with
                                                     ytdlp.cancel=wait, and each cancel's processes seen to end
+    monolist --bounds-test [rounds] [--before]      how long a resolve may take, against a stand-in YouTube,
+                                                    yt-dlp real or through a proxy that never answers: the
+                                                    1.2 s hedge on its own connection, /player's 3 s, yt-dlp
+                                                    at ~3 s with every /player 10 s late (real yt-dlp,
+                                                    `rounds` times), the skip notice within 20 s with all
+                                                    of it dark (real mpv), one yt-dlp at a time and the
+                                                    switches; --before also times the same with every switch
+                                                    back (needs MONOLIST_DATA_DIR)
     monolist --audio-devices [<videoId>]            the output menu: every device mpv lists, what the menu
                                                     offers (Auto, then the WASAPI or CoreAudio devices, then
                                                     a chosen one that is not connected), the kept choice and
@@ -749,7 +775,9 @@ be, for a look at a state:
                                                     plays the format with the highest bitrate, whatever
                                                     its codec, as before Opus came first; ytdlp.cancel
                                                     wait has a cancelled lookup wait for its processes,
-                                                    as before)
+                                                    as before; youtube.player_deadline off,
+                                                    playback.resolve_deadline off and ytdlp.resolves
+                                                    parallel undo the resolve's bounds, as before)
 
 `MONOLIST_DATA_DIR` keeps the database somewhere else, so a test never touches
 the real library; the scrobbling tests, `--ytm-session-test`,

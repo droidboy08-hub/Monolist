@@ -214,6 +214,12 @@ public:
     static void setPlayerClients(PlayerClients clients);
     static PlayerClients playerClients();
 
+    // Whether a player() call is bounded (see player()): on unless the
+    // setting youtube.player_deadline is "off", read once a launch like
+    // youtube.player_client; setting it here overrides that the same way.
+    static void setPlayerDeadline(bool on);
+    static bool playerDeadline();
+
     // Whether a call may carry the signed-in YouTube Music account.
     //
     // Anonymous is every call's default, and sends exactly what was sent
@@ -413,6 +419,15 @@ public:
     // no answer at all is not: the same server, asked again, would cost the
     // same wait again, and yt-dlp is what is left.
     //
+    // The whole call has 3 s, from the call to `done`: the visitor id, the
+    // second client and a renewed id included. A first request with no
+    // answer after 1.2 s, or that fails before then, is sent once more
+    // beside it on a connection of its own (a second network manager, so it
+    // cannot be queued behind the stalled one); whichever answers first is
+    // taken and the other dropped. youtube.player_deadline=off is the switch
+    // back: 8 s a request, one retry 1.2 s after a failure on the same
+    // connection, and no limit on the whole.
+    //
     // Deliberately not cancellable: unlike search or suggestions there is no
     // "newer one of the same kind", and giving it a slot would make a prefetch
     // and a foreground resolve abort each other.
@@ -445,9 +460,10 @@ private:
     static void release(Slot &slot);
 
     // `session` is set to the account's session when the request carries it,
-    // and to 0 when it goes anonymous.
+    // and to 0 when it goes anonymous. `network` is the manager it goes
+    // through: this object's own unless another is given.
     QNetworkReply *post(Client client, const QString &endpoint, QJsonObject body, int timeoutMs,
-                        Auth auth, quint64 *session);
+                        Auth auth, quint64 *session, QNetworkAccessManager *network = nullptr);
     // One request, its answer as JSON. A dropped connection or a timeout is
     // ordinary on a home connection, so it is tried once more before failing;
     // `slot`, where given, holds the reply so a newer request can cancel it,
@@ -457,7 +473,7 @@ private:
     void send(Client client, const QString &endpoint, const QJsonObject &body, int timeoutMs,
               Slot *slot,
               std::function<void(const QJsonObject &root, const QString &error)> done,
-              int retries = 1, Auth auth = Auth::Anonymous);
+              int retries = 1, Auth auth = Auth::Anonymous, QNetworkAccessManager *network = nullptr);
 
     static QList<Track> parseSearch(const QJsonObject &root);
     static QList<Track> parseYouTubeSearch(const QJsonObject &root);
@@ -475,8 +491,24 @@ private:
     struct PlayerAsk;
     // One /player request as `client`.
     void askPlayer(Client client, std::shared_ptr<PlayerAsk> ask);
+    // What `client` answered (`root`), or why it did not (`error`),
+    // with `visitor` the id the request named.
+    void playerAnswered(Client client, const QString &visitor, std::shared_ptr<PlayerAsk> ask,
+                        const QJsonObject &root, const QString &error);
     // `client` gave no plain stream (`why`): the next client, or the end.
     void playerRefused(Client client, const QString &why, std::shared_ptr<PlayerAsk> ask);
+    // A bounded call (see player()): one of its requests, the first or its
+    // hedge, sent; one of them come back; the hedge sent; the time up.
+    void sendPlayer(Client client, const QString &visitor, const QJsonObject &body,
+                    std::shared_ptr<PlayerAsk> ask, bool hedge);
+    void playerAttemptDone(Client client, const QString &visitor, const QJsonObject &body,
+                           std::shared_ptr<PlayerAsk> ask, bool hedge, const QJsonObject &root,
+                           const QString &error);
+    void hedgePlayer(Client client, const QString &visitor, const QJsonObject &body,
+                     std::shared_ptr<PlayerAsk> ask, const QString &why);
+    void playerDeadlinePassed(std::shared_ptr<PlayerAsk> ask);
+    // Calls the call's `done`, once, and lets go of what it held.
+    void finishPlayer(std::shared_ptr<PlayerAsk> ask, const QString &url, int itag, const QString &error);
 
     QNetworkAccessManager *m_network;
     Slot m_search;

@@ -13,6 +13,7 @@
 #include <QNetworkRequest>
 #include <QTimer>
 
+#include <algorithm>
 #include <memory>
 #include <utility>
 
@@ -42,7 +43,13 @@ constexpr int kPipedTimeoutMs = 8000;
 constexpr int kInvidiousTimeoutMs = 6000;
 // Roughly three times a healthy resolve on the slowest machine this is known
 // to run on. Past this, something is wrong and waiting longer helps nobody.
+// Counted from when the lookup starts, not while it waits its turn.
 constexpr int kYtDlpTimeoutMs = 12000;
+// A song someone is waiting for, from being asked for to its answer or its
+// failure (setDeadline). The rungs' own limits add up to far more: /player
+// has 3 s (InnerTube::player) and yt-dlp's two lookups 12 s each, so a song
+// that has not played by now is not going to, and the player moves on.
+constexpr int kResolveDeadlineMs = 20000;
 
 // A rung as the log names it.
 const char *tierName(int tier)
@@ -117,6 +124,7 @@ StreamResolver::StreamResolver(QObject *parent)
 StreamResolver::~StreamResolver()
 {
     cancelAll();
+    YtDlp::setPlaybackResolving(this, false);
 }
 
 void StreamResolver::setPipedInstances(const QStringList &hosts)
@@ -134,7 +142,7 @@ void StreamResolver::setInvidiousInstances(const QStringList &hosts)
 void StreamResolver::resolve(const QString &videoId, int firstTier)
 {
     if (videoId.isEmpty()) {
-        Q_EMIT failed(videoId, QStringLiteral("Empty video id."));
+        emitFailed(videoId, QStringLiteral("Empty video id."));
         return;
     }
 
@@ -152,6 +160,14 @@ void StreamResolver::resolve(const QString &videoId, int firstTier)
         // A prefetch already on its way: let it finish, and report this time.
         if (Job *running = m_jobs.value(videoId); running && running->prefetch) {
             running->prefetch = false;
+            armDeadline(videoId);
+            foregroundChanged();
+            // Waiting its turn for yt-dlp behind a lookup made ahead of
+            // time: someone is waiting for this one now, so it goes first.
+            if (m_ytdlpWaiting.contains(running) && m_ytdlpHolder && m_ytdlpHolder->prefetch) {
+                preemptYtDlp();
+                pumpYtDlp();
+            }
             return;
         }
     }
@@ -165,7 +181,7 @@ void StreamResolver::resolve(const QString &videoId, int firstTier)
 void StreamResolver::resolveVia(const QString &videoId, const QList<int> &tiers, int homeTier)
 {
     if (videoId.isEmpty()) {
-        Q_EMIT failed(videoId, QStringLiteral("Empty video id."));
+        emitFailed(videoId, QStringLiteral("Empty video id."));
         return;
     }
     // This play's rescue link, when the walk starts on its rung: the play
@@ -194,6 +210,8 @@ void StreamResolver::start(const QString &videoId, QList<int> tiers, int homeTie
     job->videoId = videoId;
     job->homeTier = homeTier;
     m_jobs.insert(videoId, job);
+    armDeadline(videoId);
+    foregroundChanged();
     const int first = tiers.isEmpty() ? int(TierExhausted) : tiers.takeFirst();
     job->next = tiers;
     startTier(job, first);
@@ -447,41 +465,7 @@ void StreamResolver::startYtDlp(Job *job)
         tierExhausted(job, QStringLiteral("yt-dlp not installed"));
         return;
     }
-
-    YtDlpRequest *request = YtDlp::resolveAudio(job->videoId, this);
-    job->ytdlp = request;
-    const QString videoId = job->videoId;
-    const int generation = job->generation;
-
-    // Nothing else bounds this. --socket-timeout is per socket operation, and
-    // yt-dlp's own retry budget lets one resolve legitimately run for minutes
-    // while the app sits on "Resolving source…" with no way out. The guard is
-    // the same shape as the lambdas below, so a job that has already settled
-    // or moved on ignores it; tierExhausted -> abortPending kills the process.
-    QTimer::singleShot(kYtDlpTimeoutMs, this, [this, videoId, generation]() {
-        Job *job = m_jobs.value(videoId);
-        if (job && !job->settled && job->generation == generation && job->tier == TierYtDlp)
-            tierExhausted(job, QStringLiteral("yt-dlp timed out"));
-    });
-
-    connect(request, &YtDlpRequest::succeededJson, this,
-            [this, videoId, generation](const QJsonDocument &document) {
-                Job *job = m_jobs.value(videoId);
-                if (!job || job->settled || job->generation != generation)
-                    return;
-                const QString url = document.object().value(QStringLiteral("url")).toString();
-                if (url.isEmpty())
-                    tierExhausted(job, QStringLiteral("yt-dlp returned no audio url"));
-                else
-                    succeed(job, url);
-            });
-
-    connect(request, &YtDlpRequest::failed, this,
-            [this, videoId, generation](const QString &reason) {
-                Job *job = m_jobs.value(videoId);
-                if (job && !job->settled && job->generation == generation)
-                    tierExhausted(job, QStringLiteral("yt-dlp: %1").arg(reason));
-            });
+    queueYtDlp(job);
 }
 
 // The muxed stream: itag 18 where it is offered, the best other stream with
@@ -494,26 +478,50 @@ void StreamResolver::startMuxed(Job *job)
         tierExhausted(job, QStringLiteral("yt-dlp not installed, so no muxed stream"));
         return;
     }
+    queueYtDlp(job);
+}
 
-    YtDlpRequest *request = YtDlp::resolveMuxed(job->videoId, this);
+// Both of yt-dlp's rungs, once the job has its turn: the sound (TierYtDlp)
+// or the muxed stream (TierMuxed).
+void StreamResolver::launchYtDlp(Job *job)
+{
+    const bool muxed = job->tier == TierMuxed;
+    // When each lookup starts: with one at a time, the log is where a wait
+    // for the turn shows.
+    qInfo("resolver: %s: yt-dlp asked for %s%s", qPrintable(job->videoId),
+          muxed ? "the muxed stream" : "the sound", job->prefetch ? ", ahead of time" : "");
+    YtDlpRequest *request = muxed ? YtDlp::resolveMuxed(job->videoId, this) : YtDlp::resolveAudio(job->videoId, this);
     job->ytdlp = request;
     const QString videoId = job->videoId;
     const int generation = job->generation;
+    const int tier = job->tier;
 
-    // Bounded like the sound's own request, for the same reason.
-    QTimer::singleShot(kYtDlpTimeoutMs, this, [this, videoId, generation]() {
+    // Nothing else bounds this. --socket-timeout is per socket operation, and
+    // yt-dlp's own retry budget lets one resolve legitimately run for minutes
+    // while the app sits on "Resolving source…" with no way out. The guard is
+    // the same shape as the lambdas below, so a job that has already settled
+    // or moved on ignores it; tierExhausted -> abortPending kills the process.
+    QTimer::singleShot(kYtDlpTimeoutMs, this, [this, videoId, generation, tier, muxed]() {
         Job *job = m_jobs.value(videoId);
-        if (job && !job->settled && job->generation == generation && job->tier == TierMuxed)
-            tierExhausted(job, QStringLiteral("yt-dlp timed out finding the muxed stream"));
+        if (job && !job->settled && job->generation == generation && job->tier == tier)
+            tierExhausted(job, muxed ? QStringLiteral("yt-dlp timed out finding the muxed stream")
+                                     : QStringLiteral("yt-dlp timed out"));
     });
 
     connect(request, &YtDlpRequest::succeededJson, this,
-            [this, videoId, generation](const QJsonDocument &document) {
+            [this, videoId, generation, muxed](const QJsonDocument &document) {
                 Job *job = m_jobs.value(videoId);
                 if (!job || job->settled || job->generation != generation)
                     return;
                 const QJsonObject root = document.object();
                 const QString url = root.value(QStringLiteral("url")).toString();
+                if (!muxed) {
+                    if (url.isEmpty())
+                        tierExhausted(job, QStringLiteral("yt-dlp returned no audio url"));
+                    else
+                        succeed(job, url);
+                    return;
+                }
                 if (url.isEmpty()) {
                     tierExhausted(job, QStringLiteral("yt-dlp returned no muxed stream"));
                     return;
@@ -531,11 +539,174 @@ void StreamResolver::startMuxed(Job *job)
             });
 
     connect(request, &YtDlpRequest::failed, this,
-            [this, videoId, generation](const QString &reason) {
+            [this, videoId, generation, muxed](const QString &reason) {
                 Job *job = m_jobs.value(videoId);
                 if (job && !job->settled && job->generation == generation)
-                    tierExhausted(job, QStringLiteral("muxed: %1").arg(reason));
+                    tierExhausted(job, (muxed ? QStringLiteral("muxed: %1") : QStringLiteral("yt-dlp: %1")).arg(reason));
             });
+}
+
+void StreamResolver::queueYtDlp(Job *job)
+{
+    if (!m_ytdlpOneAtATime) {
+        launchYtDlp(job);
+        return;
+    }
+    m_ytdlpWaiting.append(job);
+    if (m_ytdlpHolder) {
+        if (!job->prefetch && m_ytdlpHolder->prefetch) {
+            // Someone is waiting for this song; the one running was only
+            // fetched ahead of time.
+            preemptYtDlp();
+        } else {
+            job->waitingForYtDlp.start();
+            qInfo("resolver: %s waits its turn for yt-dlp: %s's lookup%s is running", qPrintable(job->videoId),
+                  qPrintable(m_ytdlpHolder->videoId), m_ytdlpHolder->prefetch ? " (ahead of time)" : "");
+        }
+    }
+    pumpYtDlp();
+}
+
+void StreamResolver::pumpYtDlp()
+{
+    if (!m_ytdlpOneAtATime || m_ytdlpHolder || m_ytdlpWaiting.isEmpty())
+        return;
+    // Songs someone is waiting for first, each in the order it asked; then
+    // the ones fetched ahead of time, the same way.
+    auto next = std::find_if(m_ytdlpWaiting.begin(), m_ytdlpWaiting.end(), [](const Job *job) {
+        return !job->prefetch;
+    });
+    if (next == m_ytdlpWaiting.end())
+        next = m_ytdlpWaiting.begin();
+    Job *job = *next;
+    m_ytdlpWaiting.erase(next);
+    m_ytdlpHolder = job;
+    if (job->waitingForYtDlp.isValid()) {
+        qInfo("resolver: %s's turn for yt-dlp (%s), after %lld ms", qPrintable(job->videoId), tierName(job->tier),
+              (long long)job->waitingForYtDlp.elapsed());
+        job->waitingForYtDlp.invalidate();
+    }
+    launchYtDlp(job);
+}
+
+void StreamResolver::preemptYtDlp()
+{
+    Job *held = std::exchange(m_ytdlpHolder, nullptr);
+    if (!held)
+        return;
+    // Its answer, its failure and its time limit are stale from here; it
+    // stays on its rung and starts that lookup again when its turn comes.
+    ++held->generation;
+    if (QPointer<YtDlpRequest> request = std::exchange(held->ytdlp, {}); request && request->isRunning())
+        request->cancel();
+    qInfo("resolver: %s's yt-dlp lookup, ahead of time, stopped for a song someone is waiting for; "
+          "it waits its turn", qPrintable(held->videoId));
+    held->waitingForYtDlp.start();
+    m_ytdlpWaiting.prepend(held);   // first of the prefetches
+}
+
+void StreamResolver::releaseYtDlp(Job *job)
+{
+    m_ytdlpWaiting.removeAll(job);
+    job->waitingForYtDlp.invalidate();
+    if (m_ytdlpHolder != job)
+        return;
+    m_ytdlpHolder = nullptr;
+    // On the next turn of the event loop, not now: a job letting go on its
+    // way to the muxed rung asks again first, and keeps its place.
+    QMetaObject::invokeMethod(this, [this]() { pumpYtDlp(); }, Qt::QueuedConnection);
+}
+
+void StreamResolver::setYtDlpOneAtATime(bool on)
+{
+    m_ytdlpOneAtATime = on;
+    if (!on) {
+        // Whatever waits for its turn starts now.
+        m_ytdlpHolder = nullptr;
+        const QList<Job *> waiting = std::exchange(m_ytdlpWaiting, {});
+        for (Job *job : waiting) {
+            job->waitingForYtDlp.invalidate();
+            launchYtDlp(job);
+        }
+    }
+    foregroundChanged();
+}
+
+void StreamResolver::foregroundChanged()
+{
+    bool foreground = false;
+    if (m_ytdlpOneAtATime) {
+        for (const Job *job : std::as_const(m_jobs)) {
+            if (!job->prefetch) {
+                foreground = true;
+                break;
+            }
+        }
+    }
+    if (foreground == m_foreground)
+        return;
+    m_foreground = foreground;
+    YtDlp::setPlaybackResolving(this, foreground);
+}
+
+// ------------------------------------------------------------ the deadline
+
+void StreamResolver::armDeadline(const QString &videoId)
+{
+    if (!m_deadlineOn)
+        return;
+    const int generation = ++m_deadlineGeneration;
+    m_deadlines.insert(videoId, generation);
+    // Precise: a coarse timer may be 5% late on macOS and Linux, a second
+    // here.
+    QTimer::singleShot(kResolveDeadlineMs, Qt::PreciseTimer, this, [this, videoId, generation]() {
+        if (m_deadlines.value(videoId) == generation)
+            deadlinePassed(videoId);
+    });
+}
+
+void StreamResolver::deadlinePassed(const QString &videoId)
+{
+    m_deadlines.remove(videoId);
+    const auto race = m_races.find(videoId);
+    // YouTube's answer is in hand, held a moment for JioSaavn's: it plays.
+    if (race != m_races.end() && race->youtubeReady) {
+        qInfo("jiosaavn: %s had not answered by the %d s limit; YouTube plays", qPrintable(videoId),
+              kResolveDeadlineMs / 1000);
+        youtubeWins(videoId);
+        return;
+    }
+    QString reason = QStringLiteral("No source answered within %1 s").arg(kResolveDeadlineMs / 1000);
+    Job *job = m_jobs.value(videoId);
+    if (job && !job->prefetch) {
+        const bool waiting = m_ytdlpWaiting.contains(job);
+        qInfo("resolver: %s not resolved within %d s, still on %s%s; giving up", qPrintable(videoId),
+              kResolveDeadlineMs / 1000, tierName(job->tier), waiting ? " (waiting its turn for yt-dlp)" : "");
+        reason += QStringLiteral(" (still on %1)").arg(QString::fromLatin1(tierName(job->tier)));
+        if (!job->errors.isEmpty())
+            reason += QStringLiteral(": ") + job->errors.join(QStringLiteral(" | "));
+        cancelJob(videoId);
+    } else if (race != m_races.end() && race->youtubeFailed) {
+        qInfo("resolver: %s: YouTube had failed and JioSaavn had not answered within %d s", qPrintable(videoId),
+              kResolveDeadlineMs / 1000);
+        reason += QStringLiteral(" (JioSaavn did not answer): ") + race->failure;
+    } else {
+        return;   // nothing left of it to give up on
+    }
+    m_races.remove(videoId);
+    emitFailed(videoId, reason);
+}
+
+void StreamResolver::emitResolved(const QString &videoId, const QString &url, int tier, bool fromCache)
+{
+    m_deadlines.remove(videoId);
+    Q_EMIT resolved(videoId, url, tier, fromCache);
+}
+
+void StreamResolver::emitFailed(const QString &videoId, const QString &reason)
+{
+    m_deadlines.remove(videoId);
+    Q_EMIT failed(videoId, reason);
 }
 
 // Piped returns a JSON list of audio streams pointing straight at the YouTube
@@ -707,17 +878,22 @@ void StreamResolver::abortPending(Job *job)
 
     if (QPointer<YtDlpRequest> request = std::exchange(job->ytdlp, {}); request && request->isRunning())
         request->cancel();
+    // Its turn at yt-dlp, held or awaited, is over.
+    releaseYtDlp(job);
 }
 
 void StreamResolver::discard(Job *job)
 {
+    releaseYtDlp(job);
     m_jobs.remove(job->videoId);
     delete job;
+    foregroundChanged();
 }
 
 void StreamResolver::cancel(const QString &videoId)
 {
     m_races.remove(videoId);
+    m_deadlines.remove(videoId);
     cancelJob(videoId);
 }
 
@@ -734,6 +910,7 @@ void StreamResolver::cancelJob(const QString &videoId)
 void StreamResolver::cancelAll()
 {
     m_races.clear();
+    m_deadlines.clear();
     const QStringList ids = m_jobs.keys();
     for (const QString &id : ids)
         cancelJob(id);
@@ -745,7 +922,7 @@ void StreamResolver::resolveTrack(const Saavn::Target &track)
 {
     const QString videoId = track.videoId;
     if (videoId.isEmpty()) {
-        Q_EMIT failed(videoId, QStringLiteral("Empty video id."));
+        emitFailed(videoId, QStringLiteral("Empty video id."));
         return;
     }
     // Asked again for the same song: the earlier race is over, unheard.
@@ -765,7 +942,7 @@ void StreamResolver::resolveTrack(const Saavn::Target &track)
         // Queued, like a remembered YouTube link, so the caller sees the
         // same order of events either way.
         QMetaObject::invokeMethod(this, [this, videoId, url]() {
-            Q_EMIT resolved(videoId, url, TierJioSaavn, /*fromCache=*/true);
+            emitResolved(videoId, url, TierJioSaavn, /*fromCache=*/true);
         }, Qt::QueuedConnection);
         // YouTube's link, fetched quietly beside it: should mpv refuse
         // JioSaavn's, the way back starts warm rather than from nothing.
@@ -805,7 +982,7 @@ void StreamResolver::report(const QString &videoId, const QString &url, int tier
 {
     const auto race = m_races.find(videoId);
     if (race == m_races.end()) {
-        Q_EMIT resolved(videoId, url, tier, fromCache);
+        emitResolved(videoId, url, tier, fromCache);
         return;
     }
     race->youtubeReady = true;
@@ -836,7 +1013,7 @@ void StreamResolver::reportFailure(const QString &videoId, const QString &reason
 {
     const auto race = m_races.find(videoId);
     if (race == m_races.end()) {
-        Q_EMIT failed(videoId, reason);
+        emitFailed(videoId, reason);
         return;
     }
     race->youtubeFailed = true;
@@ -846,7 +1023,7 @@ void StreamResolver::reportFailure(const QString &videoId, const QString &reason
 void StreamResolver::youtubeWins(const QString &videoId)
 {
     const Race race = m_races.take(videoId);
-    Q_EMIT resolved(videoId, race.url, race.tier, race.fromCache);
+    emitResolved(videoId, race.url, race.tier, race.fromCache);
 }
 
 void StreamResolver::startSaavnLookup(const Saavn::Target &track)
@@ -919,9 +1096,11 @@ void StreamResolver::saavnAnswered(const QString &videoId, const QString &signat
         m_races.erase(race);
         // YouTube's leg carries on unheard, into the cache: should mpv refuse
         // JioSaavn's link, the way back is already there.
-        if (Job *job = m_jobs.value(videoId))
+        if (Job *job = m_jobs.value(videoId)) {
             job->prefetch = true;
-        Q_EMIT resolved(videoId, handOverSaavn(videoId, result.url), TierJioSaavn, /*fromCache=*/false);
+            foregroundChanged();
+        }
+        emitResolved(videoId, handOverSaavn(videoId, result.url), TierJioSaavn, /*fromCache=*/false);
         return;
     }
     if (race->youtubeReady) {
@@ -931,7 +1110,7 @@ void StreamResolver::saavnAnswered(const QString &videoId, const QString &signat
     if (race->youtubeFailed) {
         const QString reason = race->failure;
         m_races.erase(race);
-        Q_EMIT failed(videoId, reason);
+        emitFailed(videoId, reason);
         return;
     }
     // YouTube is still on its way, and is now simply the answer.

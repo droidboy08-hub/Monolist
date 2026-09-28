@@ -72,6 +72,21 @@ constexpr int kPlayerTimeoutMs = 8000;
 // answered in 0.5 s at the 90th percentile when this was set.
 constexpr int kPlayerFallbackTimeoutMs = 3000;
 
+// A player() call as a whole, from the call to its answer. The two limits
+// above are Qt's, which counts silence, not time: a server that trickles
+// never trips them, and a stalled first request was 8 s, then 1.2 s, then 8
+// s more of its retry, 17.2 s before yt-dlp was even started. /player
+// answers in 199 ms at the median and 247-355 ms at the 90th percentile
+// (96 calls, September 2026), so 3 s is about ten times that: past it the
+// song goes to yt-dlp, which gets it in about three.
+constexpr int kPlayerDeadlineMs = 3000;
+// A first request with no answer this long, about four times the 90th
+// percentile, is sent once more beside it (the hedge), on a connection of
+// its own: over HTTP/2 a second request through the same network manager
+// would share the stalled connection. Once a call, and never more: more
+// /player traffic is how a client gets flagged as a bot.
+constexpr int kPlayerHedgeMs = 1200;
+
 // The visionOS app's versions, as /player is asked. 1.02 answered every call
 // measured (96 of 96, September 2026). 0.1 answered the same twelve test
 // tracks with plain URLs that played whole, where every other client that
@@ -202,6 +217,15 @@ struct PlayerClientsSwitch {
     InnerTube::PlayerClients clients = InnerTube::PlayerClients::Both;
 };
 PlayerClientsSwitch g_playerClients;
+
+// youtube.player_deadline, read the same way: "off" asks /player as before
+// the deadline and the hedge (InnerTube::player).
+const QString kPlayerDeadlineKey = QStringLiteral("youtube.player_deadline");
+struct PlayerDeadlineSwitch {
+    bool loaded = false;
+    bool on = true;
+};
+PlayerDeadlineSwitch g_playerDeadline;
 
 // youtube.format, read the same way: "bitrate" takes the audio format with
 // the highest bitrate, whatever its codec, as before the order in
@@ -1140,6 +1164,17 @@ struct InnerTube::PlayerAsk {
     bool fallbackLeft = false;   // PlayerFallback still to be asked
     bool renewed = false;        // asked again with a new visitor id
     QStringList refusals;        // "VISIONOS 1.02: LOGIN_REQUIRED: …", in order
+    // Bounded (youtube.player_deadline): the request out now, and its hedge
+    // on a network manager of its own, made for it and gone with the call.
+    bool bounded = false;
+    bool finished = false;       // `done` has been called
+    bool awaitingId = false;     // waiting for a visitor id, the first or a renewed one
+    bool hedged = false;         // the one hedge this call may send has gone
+    Client current = Client::Player;   // the client last asked
+    Slot main;
+    Slot hedge;
+    QPointer<QNetworkAccessManager> hedgeNetwork;
+    QString firstError;          // what the first of the two failed with
 };
 
 void InnerTube::setRegion(const QString &code)
@@ -1251,6 +1286,7 @@ void InnerTube::setVisitorStore(VisitorStore store)
     if (v.jar)
         v.jar->clear();
     g_playerClients = {};
+    g_playerDeadline = {};
     g_formatRule = {};
     // Nobody is left waiting on a fetch whose answer will now be dropped.
     const auto waiters = std::exchange(v.waiters, {});
@@ -1299,6 +1335,25 @@ InnerTube::PlayerClients InnerTube::playerClients()
     return s.clients;
 }
 
+void InnerTube::setPlayerDeadline(bool on)
+{
+    g_playerDeadline.loaded = true;
+    g_playerDeadline.on = on;
+}
+
+bool InnerTube::playerDeadline()
+{
+    PlayerDeadlineSwitch &s = g_playerDeadline;
+    if (s.loaded)
+        return s.on;
+    s.loaded = true;
+    s.on = !(g_visitor.store.read && g_visitor.store.read(kPlayerDeadlineKey) == QLatin1String("off"));
+    if (!s.on)
+        qInfo("innertube: youtube.player_deadline=off: /player as before, %d ms a request and a retry, "
+              "with no limit on the whole", kPlayerTimeoutMs);
+    return s.on;
+}
+
 InnerTube::InnerTube(QObject *parent, bool warmUp)
     : QObject(parent)
     , m_network(new QNetworkAccessManager(this))
@@ -1334,7 +1389,7 @@ void InnerTube::withVisitorData(std::function<void()> then)
 }
 
 QNetworkReply *InnerTube::post(Client client, const QString &endpoint, QJsonObject body, int timeoutMs,
-                               Auth auth, quint64 *session)
+                               Auth auth, quint64 *session, QNetworkAccessManager *network)
 {
     QString host = QStringLiteral("https://www.youtube.com");
     QByteArray agent = kUserAgent;
@@ -1409,7 +1464,7 @@ QNetworkReply *InnerTube::post(Client client, const QString &endpoint, QJsonObje
     if (session)
         *session = account;
     body.insert(QStringLiteral("context"), context);
-    return m_network->post(request, QJsonDocument(body).toJson(QJsonDocument::Compact));
+    return (network ? network : m_network)->post(request, QJsonDocument(body).toJson(QJsonDocument::Compact));
 }
 
 void InnerTube::release(Slot &slot)
@@ -1426,10 +1481,10 @@ void InnerTube::release(Slot &slot)
 void InnerTube::send(Client client, const QString &endpoint, const QJsonObject &body, int timeoutMs,
                      Slot *slot,
                      std::function<void(const QJsonObject &, const QString &)> done, int retries,
-                     Auth auth)
+                     Auth auth, QNetworkAccessManager *network)
 {
     quint64 account = 0;
-    QNetworkReply *reply = post(client, endpoint, body, timeoutMs, auth, &account);
+    QNetworkReply *reply = post(client, endpoint, body, timeoutMs, auth, &account, network);
     // The request this attempt belongs to. Its retries carry it forward, and
     // whichever of them finds the slot moved on stops there.
     const quint64 generation = slot ? slot->generation : 0;
@@ -1440,7 +1495,8 @@ void InnerTube::send(Client client, const QString &endpoint, const QJsonObject &
     };
 
     connect(reply, &QNetworkReply::finished, this,
-            [this, reply, client, endpoint, body, timeoutMs, slot, done, retries, auth, account, superseded]() {
+            [this, reply, client, endpoint, body, timeoutMs, slot, done, retries, auth, account, superseded,
+             network]() {
                 reply->deleteLater();
                 // A newer request of the same kind took this one's place, or it
                 // was cancelled: whoever did that has already moved on.
@@ -1483,7 +1539,7 @@ void InnerTube::send(Client client, const QString &endpoint, const QJsonObject &
                                                 : reply->errorString());
                             return;
                         }
-                        send(client, endpoint, body, timeoutMs, slot, done, retries, Auth::Anonymous);
+                        send(client, endpoint, body, timeoutMs, slot, done, retries, Auth::Anonymous, network);
                         return;
                     }
                 }
@@ -1501,21 +1557,21 @@ void InnerTube::send(Client client, const QString &endpoint, const QJsonObject &
                         // if it did, that one is the answer now.
                         if (superseded())
                             return;
-                        send(client, endpoint, body, timeoutMs, slot, done, retries, auth);
+                        send(client, endpoint, body, timeoutMs, slot, done, retries, auth, network);
                         return;
                     }
                     // A dropped connection or a timeout is ordinary on a home
                     // connection; the second attempt usually works.
                     if (retries > 0 && reply->error() != QNetworkReply::OperationCanceledError) {
                         QTimer::singleShot(1200, this, [this, client, endpoint, body, timeoutMs,
-                                                        slot, done, retries, auth, superseded]() {
+                                                        slot, done, retries, auth, superseded, network]() {
                             // Replaced or cancelled while waiting. Sending now
                             // would put this old request back in the slot,
                             // where the newer one's answer would be dropped
                             // as stale and nobody would ever hear back.
                             if (superseded())
                                 return;
-                            send(client, endpoint, body, timeoutMs, slot, done, retries - 1, auth);
+                            send(client, endpoint, body, timeoutMs, slot, done, retries - 1, auth, network);
                         });
                         return;
                     }
@@ -1545,12 +1601,22 @@ void InnerTube::player(const QString &videoId,
     ask->clock.start();
     const PlayerClients clients = playerClients();
     ask->fallbackLeft = clients == PlayerClients::Both;
+    ask->bounded = playerDeadline();
+    // From the call, not from the first request: a visitor id that does not
+    // come is as much a stall as a /player that does not answer.
+    if (ask->bounded)
+        QTimer::singleShot(kPlayerDeadlineMs, Qt::PreciseTimer, this, [this, ask]() { playerDeadlinePassed(ask); });
     askPlayer(clients == PlayerClients::Second ? Client::PlayerFallback : Client::Player, ask);
 }
 
 void InnerTube::askPlayer(Client client, std::shared_ptr<PlayerAsk> ask)
 {
+    ask->awaitingId = true;
     withVisitorData([this, client, ask]() {
+        ask->awaitingId = false;
+        // Out of time while the id was awaited.
+        if (ask->finished)
+            return;
         // The id post() puts on this call: afterwards it tells whether the
         // call went with the stored id, and whether a newer one has come.
         const QString visitor = g_visitor.anonymous;
@@ -1564,93 +1630,225 @@ void InnerTube::askPlayer(Client client, std::shared_ptr<PlayerAsk> ask)
         // The client asked after another has answered is a second chance:
         // a shorter limit, and no retry.
         const bool second = !ask->refusals.isEmpty();
+        if (ask->bounded) {
+            sendPlayer(client, visitor, body, ask, /*hedge=*/false);
+            // Only the first client's request is hedged, and only once a
+            // call: the second is asked because the server did answer.
+            if (!second && !ask->hedged) {
+                const quint64 generation = ask->main.generation;
+                QTimer::singleShot(kPlayerHedgeMs, Qt::PreciseTimer, this,
+                                   [this, client, visitor, body, ask, generation]() {
+                    if (ask->finished || ask->hedged || ask->main.generation != generation || !ask->main.reply)
+                        return;   // answered, or moved on, meanwhile
+                    hedgePlayer(client, visitor, body, ask,
+                                QStringLiteral("no answer in %1 ms").arg(kPlayerHedgeMs));
+                });
+            }
+            return;
+        }
         send(client, QStringLiteral("player"), body, second ? kPlayerFallbackTimeoutMs : kPlayerTimeoutMs,
              /*slot=*/nullptr,
              [this, client, visitor, ask](const QJsonObject &root, const QString &error) {
-                 const QString &videoId = ask->videoId;
-                 if (!error.isEmpty()) {
-                     // No answer at all: not asked of the other client, which
-                     // would only wait on the same server again.
-                     ask->refusals << playerClientName(client) + QStringLiteral(": ") + error;
-                     const QString why = ask->refusals.join(QStringLiteral("; "));
-                     qInfo("innertube: %s not resolved in %lld ms: %s", qPrintable(videoId),
-                           (long long)ask->clock.elapsed(), qPrintable(why));
-                     ask->done({}, 0, why);
-                     return;
-                 }
-                 const QString status = dig(root, { "playabilityStatus", "status" }).toString();
-                 if (status != QLatin1String("OK")) {
-                     // LOGIN_REQUIRED, UNPLAYABLE, AGE_VERIFICATION_REQUIRED:
-                     // all of them mean the next client, or the tier below,
-                     // should try.
-                     const QString reason = dig(root, { "playabilityStatus", "reason" }).toString();
-                     const QString refused = reason.isEmpty() ? status : status + QStringLiteral(": ") + reason;
-                     // Except once. A stored id YouTube no longer honours is
-                     // answered LOGIN_REQUIRED, exactly as having none is, and
-                     // a new id and a second /player cost a few hundred ms
-                     // where yt-dlp costs seconds. Only for the id this launch
-                     // found stored: with one fetched this launch,
-                     // LOGIN_REQUIRED is the track's own answer.
-                     if (status == QLatin1String("LOGIN_REQUIRED") && !ask->renewed && ask->refusals.isEmpty()
-                         && !visitor.isEmpty() && visitor == g_visitor.fromSettings) {
-                         ask->renewed = true;
-                         qInfo("innertube: %s refused with the stored visitor id (LOGIN_REQUIRED); "
-                               "fetching a new id and asking once more", qPrintable(videoId));
-                         renewVisitor(visitor, [self = QPointer<InnerTube>(this), client, visitor, refused, ask]() {
-                             if (!self)
-                                 return;
-                             if (g_visitor.anonymous.isEmpty() || g_visitor.anonymous == visitor) {
-                                 qInfo("innertube: %s: no new visitor id to ask with", qPrintable(ask->videoId));
-                                 self->playerRefused(client, refused, ask);
-                                 return;
-                             }
-                             self->askPlayer(client, ask);
-                         });
-                         return;
-                     }
-                     if (ask->renewed && ask->refusals.isEmpty())
-                         qInfo("innertube: %s refused again with a new visitor id: %s", qPrintable(videoId),
-                               qPrintable(status));
-                     playerRefused(client, refused, ask);
-                     return;
-                 }
-                 if (ask->renewed && ask->refusals.isEmpty())
-                     qInfo("innertube: %s answered with the new visitor id", qPrintable(videoId));
-                 // The first play has its answer: a stored id over a day old
-                 // is replaced now, in the background.
-                 if (g_visitor.refreshDue)
-                     renewVisitorSoon();
-
-                 const bool byBitrate = chooseByBitrate();
-                 const Choice choice = pickStream(root, byBitrate);
-                 if (choice.chosen.url.isEmpty()) {
-                     playerRefused(client, QStringLiteral("no plain audio stream offered"), ask);
-                     return;
-                 }
-                 // What was chosen, from what, on every resolve: the one place
-                 // that tells which rendition played and why, and that Opus
-                 // was not offered when the song plays as AAC.
-                 const QString from = choice.offered.isEmpty() ? QStringLiteral("no audio-only format offered")
-                                                               : QStringLiteral("of ") + choice.offered.join(QLatin1Char(' '));
-                 qInfo("innertube: %s chose itag %d: %s (%s%s)", qPrintable(videoId), choice.chosen.itag,
-                       qPrintable(describe(choice.chosen)), qPrintable(from),
-                       byBitrate ? ", by bitrate alone: youtube.format=bitrate" : "");
-                 // Which client answered is in the log only when it was not
-                 // the usual one, which is exactly when it matters.
-                 if (client != Client::Player) {
-                     const QString after = ask->refusals.isEmpty()
-                         ? QString() : QStringLiteral(", after ") + ask->refusals.join(QStringLiteral("; "));
-                     qInfo("innertube: %s answered as %s in %lld ms%s", qPrintable(videoId),
-                           qPrintable(playerClientName(client)), (long long)ask->clock.elapsed(), qPrintable(after));
-                 }
-                 ask->done(choice.chosen.url, choice.chosen.itag, QString());
+                 playerAnswered(client, visitor, ask, root, error);
              },
              /*retries=*/second ? 0 : 1);
     });
 }
 
+void InnerTube::sendPlayer(Client client, const QString &visitor, const QJsonObject &body,
+                           std::shared_ptr<PlayerAsk> ask, bool hedge)
+{
+    Slot &slot = hedge ? ask->hedge : ask->main;
+    // A new request in this slot: whatever it held before has answered.
+    release(slot);
+    ask->current = client;
+    QNetworkAccessManager *network = nullptr;
+    if (hedge) {
+        // Its own manager, so its own connection: through this object's,
+        // HTTP/2 would put the hedge on the very connection that stalled.
+        // Made for this call alone, so no connection an earlier hedge left
+        // half-open is reused either; it goes when the call is answered.
+        network = new QNetworkAccessManager(this);
+        shareJar(network);
+        ask->hedgeNetwork = network;
+    }
+    // No retry of its own: the hedge is the retry. Qt's limit, which counts
+    // only silence, is set to the whole call's; the call's own timer is what
+    // ends it.
+    send(client, QStringLiteral("player"), body, kPlayerDeadlineMs, &slot,
+         [this, client, visitor, body, ask, hedge](const QJsonObject &root, const QString &error) {
+             playerAttemptDone(client, visitor, body, ask, hedge, root, error);
+         },
+         /*retries=*/0, Auth::Anonymous, network);
+}
+
+void InnerTube::playerAttemptDone(Client client, const QString &visitor, const QJsonObject &body,
+                                  std::shared_ptr<PlayerAsk> ask, bool hedge, const QJsonObject &root,
+                                  const QString &error)
+{
+    if (ask->finished)
+        return;
+    Slot &other = hedge ? ask->main : ask->hedge;
+    if (!error.isEmpty()) {
+        if (ask->firstError.isEmpty())
+            ask->firstError = error;
+        // No answer on this connection. The other may still bring one.
+        if (other.reply) {
+            qInfo("innertube: %s: the %s /player request failed (%s); waiting on the %s", qPrintable(ask->videoId),
+                  hedge ? "second" : "first", qPrintable(error), hedge ? "first" : "second");
+            return;
+        }
+        // The first client's request failing before its hedge went: the
+        // hedge goes now, as the retry used to 1.2 s later.
+        if (!hedge && !ask->hedged && ask->refusals.isEmpty()) {
+            hedgePlayer(client, visitor, body, ask, QStringLiteral("the first request failed: ") + error);
+            return;
+        }
+        const QString said = ask->hedged && ask->firstError != error
+            ? error + QStringLiteral(" (and before it: ") + ask->firstError + QLatin1Char(')')
+            : error;
+        playerAnswered(client, visitor, ask, QJsonObject(), said);
+        return;
+    }
+    // An answer: the other request, if there is one, is not needed.
+    release(other);
+    if (hedge)
+        qInfo("innertube: %s answered on the second request's own connection, %lld ms in",
+              qPrintable(ask->videoId), (long long)ask->clock.elapsed());
+    playerAnswered(client, visitor, ask, root, QString());
+}
+
+void InnerTube::hedgePlayer(Client client, const QString &visitor, const QJsonObject &body,
+                            std::shared_ptr<PlayerAsk> ask, const QString &why)
+{
+    ask->hedged = true;
+    qInfo("innertube: %s: /player as %s: %s; asking once more on a connection of its own, %lld ms in",
+          qPrintable(ask->videoId), qPrintable(playerClientName(client)), qPrintable(why),
+          (long long)ask->clock.elapsed());
+    sendPlayer(client, visitor, body, ask, /*hedge=*/true);
+}
+
+void InnerTube::playerDeadlinePassed(std::shared_ptr<PlayerAsk> ask)
+{
+    if (ask->finished)
+        return;
+    // Both requests, if both are out, are dropped: their answers would come
+    // after the song has gone to yt-dlp.
+    release(ask->main);
+    release(ask->hedge);
+    QStringList all = ask->refusals;
+    all << (ask->awaitingId ? QStringLiteral("no visitor id within %1 ms").arg(kPlayerDeadlineMs)
+                            : QStringLiteral("%1: no answer within %2 ms%3")
+                                  .arg(playerClientName(ask->current))
+                                  .arg(kPlayerDeadlineMs)
+                                  .arg(ask->hedged ? QStringLiteral(", asked twice") : QString()));
+    const QString why = all.join(QStringLiteral("; "));
+    qInfo("innertube: %s not resolved in %lld ms: %s", qPrintable(ask->videoId), (long long)ask->clock.elapsed(),
+          qPrintable(why));
+    finishPlayer(ask, {}, 0, why);
+}
+
+void InnerTube::finishPlayer(std::shared_ptr<PlayerAsk> ask, const QString &url, int itag, const QString &error)
+{
+    if (ask->finished)
+        return;
+    ask->finished = true;
+    if (ask->bounded) {
+        release(ask->main);
+        release(ask->hedge);
+        if (ask->hedgeNetwork)
+            ask->hedgeNetwork->deleteLater();
+    }
+    ask->done(url, itag, error);
+}
+
+void InnerTube::playerAnswered(Client client, const QString &visitor, std::shared_ptr<PlayerAsk> ask,
+                               const QJsonObject &root, const QString &error)
+{
+    if (ask->finished)
+        return;
+    const QString &videoId = ask->videoId;
+    if (!error.isEmpty()) {
+        // No answer at all: not asked of the other client, which would only
+        // wait on the same server again.
+        ask->refusals << playerClientName(client) + QStringLiteral(": ") + error;
+        const QString why = ask->refusals.join(QStringLiteral("; "));
+        qInfo("innertube: %s not resolved in %lld ms: %s", qPrintable(videoId), (long long)ask->clock.elapsed(),
+              qPrintable(why));
+        finishPlayer(ask, {}, 0, why);
+        return;
+    }
+    const QString status = dig(root, { "playabilityStatus", "status" }).toString();
+    if (status != QLatin1String("OK")) {
+        // LOGIN_REQUIRED, UNPLAYABLE, AGE_VERIFICATION_REQUIRED: all of them
+        // mean the next client, or the tier below, should try.
+        const QString reason = dig(root, { "playabilityStatus", "reason" }).toString();
+        const QString refused = reason.isEmpty() ? status : status + QStringLiteral(": ") + reason;
+        // Except once. A stored id YouTube no longer honours is answered
+        // LOGIN_REQUIRED, exactly as having none is, and a new id and a
+        // second /player cost a few hundred ms where yt-dlp costs seconds.
+        // Only for the id this launch found stored: with one fetched this
+        // launch, LOGIN_REQUIRED is the track's own answer.
+        if (status == QLatin1String("LOGIN_REQUIRED") && !ask->renewed && ask->refusals.isEmpty()
+            && !visitor.isEmpty() && visitor == g_visitor.fromSettings) {
+            ask->renewed = true;
+            ask->awaitingId = true;
+            qInfo("innertube: %s refused with the stored visitor id (LOGIN_REQUIRED); "
+                  "fetching a new id and asking once more", qPrintable(videoId));
+            renewVisitor(visitor, [self = QPointer<InnerTube>(this), client, visitor, refused, ask]() {
+                ask->awaitingId = false;
+                if (!self || ask->finished)
+                    return;
+                if (g_visitor.anonymous.isEmpty() || g_visitor.anonymous == visitor) {
+                    qInfo("innertube: %s: no new visitor id to ask with", qPrintable(ask->videoId));
+                    self->playerRefused(client, refused, ask);
+                    return;
+                }
+                self->askPlayer(client, ask);
+            });
+            return;
+        }
+        if (ask->renewed && ask->refusals.isEmpty())
+            qInfo("innertube: %s refused again with a new visitor id: %s", qPrintable(videoId), qPrintable(status));
+        playerRefused(client, refused, ask);
+        return;
+    }
+    if (ask->renewed && ask->refusals.isEmpty())
+        qInfo("innertube: %s answered with the new visitor id", qPrintable(videoId));
+    // The first play has its answer: a stored id over a day old is replaced
+    // now, in the background.
+    if (g_visitor.refreshDue)
+        renewVisitorSoon();
+
+    const bool byBitrate = chooseByBitrate();
+    const Choice choice = pickStream(root, byBitrate);
+    if (choice.chosen.url.isEmpty()) {
+        playerRefused(client, QStringLiteral("no plain audio stream offered"), ask);
+        return;
+    }
+    // What was chosen, from what, on every resolve: the one place that tells
+    // which rendition played and why, and that Opus was not offered when the
+    // song plays as AAC.
+    const QString from = choice.offered.isEmpty() ? QStringLiteral("no audio-only format offered")
+                                                  : QStringLiteral("of ") + choice.offered.join(QLatin1Char(' '));
+    qInfo("innertube: %s chose itag %d: %s (%s%s)", qPrintable(videoId), choice.chosen.itag,
+          qPrintable(describe(choice.chosen)), qPrintable(from),
+          byBitrate ? ", by bitrate alone: youtube.format=bitrate" : "");
+    // Which client answered is in the log only when it was not the usual
+    // one, which is exactly when it matters.
+    if (client != Client::Player) {
+        const QString after = ask->refusals.isEmpty()
+            ? QString() : QStringLiteral(", after ") + ask->refusals.join(QStringLiteral("; "));
+        qInfo("innertube: %s answered as %s in %lld ms%s", qPrintable(videoId),
+              qPrintable(playerClientName(client)), (long long)ask->clock.elapsed(), qPrintable(after));
+    }
+    finishPlayer(ask, choice.chosen.url, choice.chosen.itag, QString());
+}
+
 void InnerTube::playerRefused(Client client, const QString &why, std::shared_ptr<PlayerAsk> ask)
 {
+    if (ask->finished)
+        return;
     ask->refusals << playerClientName(client) + QStringLiteral(": ") + why;
     // The one other client, once, and only after an answer: never a walk
     // through several, each with its own wait.
@@ -1667,7 +1865,7 @@ void InnerTube::playerRefused(Client client, const QString &why, std::shared_ptr
     const QString all = ask->refusals.join(QStringLiteral("; "));
     qInfo("innertube: %s not resolved in %lld ms: %s", qPrintable(ask->videoId), (long long)ask->clock.elapsed(),
           qPrintable(all));
-    ask->done({}, 0, all);
+    finishPlayer(ask, {}, 0, all);
 }
 
 void InnerTube::search(const QString &query, Filter filter)

@@ -7,6 +7,8 @@
 #include <QStringList>
 #include <QVariantMap>
 
+#include <functional>
+
 // How a download is written to disk.
 struct DownloadOptions
 {
@@ -105,6 +107,17 @@ public:
     // cancel once did. Downloads always wait. Set once at start, from the
     // setting ytdlp.cancel ("wait"); off by default.
     static void setCancelWaits(bool wait);
+
+    // Playback first. A resolver says so while a song someone is waiting to
+    // hear is being resolved (StreamResolver; `who` is the resolver, so any
+    // number can), and no new download starts its yt-dlp until none is: two
+    // extractions at once each take several times as long under emulation
+    // or on a small machine. Downloads already running carry on. `then`
+    // runs on `context`'s thread once none is resolving, queued, and at
+    // once (still queued) when none is.
+    static void setPlaybackResolving(const void *who, bool resolving);
+    static bool playbackResolving();
+    static void whenPlaybackResolved(QObject *context, std::function<void()> then);
 
     // Adds the places a package manager puts these tools to PATH, where the
     // platform does not already. Call once at startup, before anything looks.

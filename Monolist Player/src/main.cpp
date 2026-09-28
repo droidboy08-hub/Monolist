@@ -202,6 +202,14 @@ int main(int argc, char *argv[])
                 ids << arguments.at(i);
             return runPlayerCanary(ids) == 0 ? 0 : 1;
         }
+        // How long a resolve may take: /player's hedge and deadline, yt-dlp
+        // at ~3 s, the 20 s limit on a song, and one yt-dlp at a time,
+        // against a stand-in YouTube (resolveselftest.cpp); in
+        // MONOLIST_DATA_DIR only.
+        if (const int boundsFlag = arguments.indexOf(QStringLiteral("--bounds-test")); boundsFlag >= 0) {
+            const int rounds = boundsFlag + 1 < arguments.size() ? arguments.at(boundsFlag + 1).toInt() : 0;
+            return runBoundsSelfTest(&library, rounds, arguments.contains(QStringLiteral("--before"))) == 0 ? 0 : 1;
+        }
         // What a failed or cancelled download may delete, on invented files,
         // and where downloads go under a scratch data folder
         // (downloadselftest.cpp); in MONOLIST_DATA_DIR only.
@@ -311,6 +319,19 @@ int main(int argc, char *argv[])
         resolver.setPipedInstances(pipedSetting.split(QLatin1Char(','), Qt::SkipEmptyParts));
     if (!invidiousSetting.isEmpty())
         resolver.setInvidiousInstances(invidiousSetting.split(QLatin1Char(','), Qt::SkipEmptyParts));
+    // A song gives up after 20 s, and one yt-dlp resolve runs at a time, the
+    // song being waited for first, with no new download started meanwhile
+    // (streamresolver.cpp). playback.resolve_deadline=off and
+    // ytdlp.resolves=parallel are the switches back.
+    if (library.settingValue(QStringLiteral("playback.resolve_deadline")) == QLatin1String("off")) {
+        resolver.setDeadline(false);
+        qInfo("resolver: playback.resolve_deadline=off: a song has no overall time limit, as before");
+    }
+    if (library.settingValue(QStringLiteral("ytdlp.resolves")) == QLatin1String("parallel")) {
+        resolver.setYtDlpOneAtATime(false);
+        qInfo("resolver: ytdlp.resolves=parallel: yt-dlp resolves run side by side and downloads never wait, "
+              "as before");
+    }
 
     DownloadManager downloads;
 

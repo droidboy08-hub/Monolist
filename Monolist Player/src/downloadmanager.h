@@ -176,6 +176,7 @@ private:
     DownloadLibraryModel m_library;
     QString m_directory;
     QStringList m_pending;                               // waiting to start, in order
+    bool m_waitingOnPlayback = false;                    // pump() waits for a song to resolve
     QHash<QString, QPointer<YtDlpRequest>> m_requests;   // running
     QHash<QString, QString> m_stored;                    // video id -> file on disk
     QHash<QString, QSet<QString>> m_before;              // running: its files already there at the start

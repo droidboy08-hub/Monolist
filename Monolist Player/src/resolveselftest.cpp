@@ -1,23 +1,38 @@
 #include "resolveselftest.h"
 
+#include "downloadmanager.h"
 #include "innertube.h"
+#include "library.h"
+#include "mpvengine.h"
+#include "playbackcontroller.h"
 #include "streamresolver.h"
 #include "ytdlp.h"
 
 #include <QElapsedTimer>
 #include <QEventLoop>
+#include <QHash>
+#include <QHostAddress>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
+#include <QPointer>
+#include <QScopeGuard>
+#include <QTcpServer>
+#include <QTcpSocket>
 #include <QTimer>
 #include <QUrl>
 #include <QUrlQuery>
 
 #include <algorithm>
+#include <cmath>
 #include <functional>
 #include <memory>
 #include <tuple>
 #include <utility>
+#include <vector>
 
 namespace {
 
@@ -299,5 +314,608 @@ int runPlayerCanary(const QStringList &videoIdsArgument)
         }
     }
     InnerTube::setPlayerClients(InnerTube::PlayerClients::Both);
+    return t.finish();
+}
+
+// ------------------------------------------------------------ --bounds-test
+
+namespace {
+
+// A stand-in for www.youtube.com: sw.js_data at once, and /player as
+// `player` says. Every answer closes its connection, so a request's client
+// port tells which connection it came on.
+class BoundsStandIn : public QObject
+{
+public:
+    struct Request {
+        QByteArray path;
+        QString videoId;
+        qint64 at = 0;          // ms since listen()
+        quint16 peerPort = 0;   // the client's end of its connection
+    };
+    struct Answer {
+        int delayMs = 0;        // answered this long after it came
+        bool hold = false;      // never answered
+        QByteArray body = "{}";
+    };
+    std::function<Answer(const Request &)> player;
+    QList<Request> requests;
+
+    bool listen()
+    {
+        connect(&m_server, &QTcpServer::newConnection, this, &BoundsStandIn::accept);
+        m_clock.start();
+        return m_server.listen(QHostAddress::LocalHost, 0);
+    }
+    QString base() const { return QStringLiteral("http://127.0.0.1:%1").arg(m_server.serverPort()); }
+    QList<Request> playersSince(qsizetype from) const
+    {
+        QList<Request> found;
+        for (qsizetype i = from; i < requests.size(); ++i) {
+            if (requests.at(i).path.contains("/player"))
+                found << requests.at(i);
+        }
+        return found;
+    }
+
+private:
+    void accept()
+    {
+        while (QTcpSocket *socket = m_server.nextPendingConnection()) {
+            auto buffer = std::make_shared<QByteArray>();
+            connect(socket, &QTcpSocket::disconnected, socket, &QObject::deleteLater);
+            connect(socket, &QTcpSocket::readyRead, this, [this, socket, buffer]() {
+                *buffer += socket->readAll();
+                handle(socket, *buffer);
+            });
+        }
+    }
+
+    void handle(QTcpSocket *socket, QByteArray &buffer)
+    {
+        const qsizetype end = buffer.indexOf("\r\n\r\n");
+        if (end < 0)
+            return;
+        const QList<QByteArray> lines = buffer.left(end).split('\n');
+        qsizetype length = 0;
+        for (const QByteArray &line : lines) {
+            if (line.trimmed().toLower().startsWith("content-length:"))
+                length = line.trimmed().mid(15).trimmed().toLongLong();
+        }
+        if (buffer.size() < end + 4 + length)
+            return;
+        Request request;
+        request.path = lines.value(0).trimmed().split(' ').value(1);
+        request.videoId = QJsonDocument::fromJson(buffer.mid(end + 4, length)).object()
+                              .value(QStringLiteral("videoId")).toString();
+        request.at = m_clock.elapsed();
+        request.peerPort = socket->peerPort();
+        buffer.clear();
+        requests.append(request);
+
+        Answer answer;
+        if (request.path.startsWith("/sw.js_data"))
+            answer.body = visitorAnswer();
+        else if (request.path.contains("/player") && player)
+            answer = player(request);
+        if (answer.hold)
+            return;
+        const QByteArray out = "HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=UTF-8\r\n"
+                               "Content-Length: " + QByteArray::number(answer.body.size())
+                               + "\r\nConnection: close\r\n\r\n" + answer.body;
+        const QPointer<QTcpSocket> guard(socket);
+        const auto send = [guard, out]() {
+            if (guard && guard->state() == QAbstractSocket::ConnectedState) {
+                guard->write(out);
+                guard->disconnectFromHost();
+            }
+        };
+        if (answer.delayMs > 0)
+            QTimer::singleShot(answer.delayMs, socket, send);
+        else
+            send();
+    }
+
+    // sw.js_data's shape, as innertube.cpp reads it: ")]}'", then the id at
+    // [0][2][6].
+    static QByteArray visitorAnswer()
+    {
+        QJsonArray config;
+        config.append(QJsonArray());
+        config.append(QStringLiteral("TESTKEY"));
+        for (int i = 2; i < 6; ++i)
+            config.append(QJsonValue());
+        config.append(QStringLiteral("TESTVISITORbounds0001"));
+        const QJsonArray entry{ QStringLiteral("yt.sw.adr"), QJsonValue(), config };
+        return ")]}'\n" + QJsonDocument(QJsonArray{ entry }).toJson(QJsonDocument::Compact);
+    }
+
+    QTcpServer m_server;
+    QElapsedTimer m_clock;
+};
+
+// A proxy that takes every connection and never says a word: yt-dlp sent
+// through it (HTTP_PROXY and the rest) finds YouTube gone dark, and nothing
+// it asks for reaches the network.
+class BlackHole : public QObject
+{
+public:
+    bool listen()
+    {
+        connect(&m_server, &QTcpServer::newConnection, this, [this]() {
+            while (m_server.nextPendingConnection())
+                ++m_connections;   // kept open, unread, until the test ends
+        });
+        return m_server.listen(QHostAddress::LocalHost, 0);
+    }
+    QString url() const { return QStringLiteral("http://127.0.0.1:%1").arg(m_server.serverPort()); }
+    int connections() const { return m_connections; }
+
+private:
+    QTcpServer m_server;
+    int m_connections = 0;
+};
+
+// Points this process's children at a proxy until it goes; what the
+// variables were is put back.
+class ProxyEnvironment
+{
+public:
+    explicit ProxyEnvironment(const QString &proxy)
+    {
+        for (const char *name : { "HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "all_proxy" })
+            set(name, proxy.toUtf8());
+        for (const char *name : { "NO_PROXY", "no_proxy" })
+            set(name, "127.0.0.1,localhost");
+    }
+    ~ProxyEnvironment()
+    {
+        // Backwards: on Windows the upper and lower case names are one.
+        for (auto it = m_saved.crbegin(); it != m_saved.crend(); ++it) {
+            if (it->had)
+                qputenv(it->name.constData(), it->value);
+            else
+                qunsetenv(it->name.constData());
+        }
+    }
+
+private:
+    void set(const char *name, const QByteArray &value)
+    {
+        m_saved.push_back({ name, qEnvironmentVariableIsSet(name), qgetenv(name) });
+        qputenv(name, value);
+    }
+    struct Saved {
+        QByteArray name;
+        bool had;
+        QByteArray value;
+    };
+    std::vector<Saved> m_saved;
+};
+
+QStringList *g_boundsLog = nullptr;
+QtMessageHandler g_boundsPrevious = nullptr;
+
+void keepBoundsMessage(QtMsgType type, const QMessageLogContext &context, const QString &message)
+{
+    if (g_boundsLog)
+        g_boundsLog->append(message);
+    if (g_boundsPrevious)
+        g_boundsPrevious(type, context, message);
+}
+
+const QByteArray kPlayable =
+    R"({"playabilityStatus":{"status":"OK"},"streamingData":{"adaptiveFormats":[)"
+    R"({"itag":251,"url":"http://127.0.0.1:9/bounds-audio","mimeType":"audio/webm; codecs=\"opus\"","bitrate":130000}]}})";
+const QByteArray kUnplayable = R"({"playabilityStatus":{"status":"UNPLAYABLE","reason":"Not in this test"}})";
+
+struct PlayerAnswer {
+    bool done = false;
+    QString url;
+    QString error;
+};
+
+std::shared_ptr<PlayerAnswer> askPlayer(InnerTube &tube, const QString &videoId)
+{
+    auto answer = std::make_shared<PlayerAnswer>();
+    tube.player(videoId, [answer](const QString &url, int, const QString &error) {
+        answer->done = true;
+        answer->url = url;
+        answer->error = error;
+    });
+    return answer;
+}
+
+qint64 percentile90(QList<qint64> values)
+{
+    if (values.isEmpty())
+        return -1;
+    std::sort(values.begin(), values.end());
+    return values.at(qMin<qsizetype>(values.size() - 1, qsizetype(std::ceil(0.9 * values.size())) - 1));
+}
+
+} // namespace
+
+int runBoundsSelfTest(Library *library, int roundsArgument, bool before)
+{
+    Checks t("bounds");
+    if (qEnvironmentVariableIsEmpty("MONOLIST_DATA_DIR")) {
+        t.check(false, QStringLiteral("MONOLIST_DATA_DIR is set"),
+                QStringLiteral("refusing to run: the player part plays on the library there"));
+        return t.finish();
+    }
+    const int rounds = roundsArgument > 0 ? roundsArgument : 1;
+
+    QStringList log;
+    g_boundsLog = &log;
+    g_boundsPrevious = qInstallMessageHandler(keepBoundsMessage);
+    const auto restoreLog = qScopeGuard([]() {
+        qInstallMessageHandler(g_boundsPrevious);
+        g_boundsLog = nullptr;
+    });
+    const auto loggedSince = [&log](qsizetype from, const QString &text) {
+        for (qsizetype i = from; i < log.size(); ++i) {
+            if (log.at(i).contains(text))
+                return true;
+        }
+        return false;
+    };
+    const auto countSince = [&log](qsizetype from, const QString &text) {
+        int count = 0;
+        for (qsizetype i = from; i < log.size(); ++i) {
+            if (log.at(i).contains(text))
+                ++count;
+        }
+        return count;
+    };
+
+    BoundsStandIn standIn;
+    if (!t.check(standIn.listen(), QStringLiteral("a stand-in YouTube on this computer")))
+        return t.finish();
+    InnerTube::setTestServer(standIn.base());
+    // A visitor id store of its own, in memory: the library's is not touched.
+    QHash<QString, QString> settings;
+    InnerTube::setVisitorStore({ [&settings](const QString &key) { return settings.value(key); },
+                                 [&settings](const QString &key, const QString &value) { settings.insert(key, value); } });
+    const auto restoreInnerTube = qScopeGuard([]() {
+        InnerTube::setVisitorStore({});
+        InnerTube::setTestServer(QString());
+    });
+    t.note(QStringLiteral("/player goes to %1; yt-dlp to YouTube, or to a proxy that never answers").arg(standIn.base()));
+
+    const auto hold = []() {
+        BoundsStandIn::Answer answer;
+        answer.hold = true;
+        return answer;
+    };
+    const auto playable = [](int delayMs) {
+        BoundsStandIn::Answer answer;
+        answer.delayMs = delayMs;
+        answer.body = kPlayable;
+        return answer;
+    };
+
+    // — 1. the first /player stalls: the hedge, on its own connection, answers —
+    {
+        InnerTube tube;
+        int seen = 0;
+        standIn.player = [&](const BoundsStandIn::Request &) { return ++seen == 1 ? hold() : playable(0); };
+        const qsizetype from = standIn.requests.size();
+        const qsizetype logFrom = log.size();
+        QElapsedTimer took;
+        took.start();
+        const auto answer = askPlayer(tube, QStringLiteral("boundsHedge"));
+        waitUntil([answer]() { return answer->done; }, 10000);
+        const qint64 ms = took.elapsed();
+        const QList<BoundsStandIn::Request> asked = standIn.playersSince(from);
+        const qint64 gap = asked.size() >= 2 ? asked.at(1).at - asked.at(0).at : -1;
+        t.check(!answer->url.isEmpty() && asked.size() == 2 && ms >= 1100 && ms < 2500,
+                QStringLiteral("a first /player that never answers: asked once more, which answers, in %1 ms").arg(ms),
+                QStringLiteral("%1 /player requests; %2").arg(asked.size()).arg(answer->error));
+        t.check(gap >= 1100 && gap < 1700, QStringLiteral("the second went %1 ms after the first (1200 set)").arg(gap));
+        t.check(asked.size() == 2 && asked.at(0).peerPort != asked.at(1).peerPort,
+                QStringLiteral("on a connection of its own (client ports %1 and %2)")
+                    .arg(asked.value(0).peerPort).arg(asked.value(1).peerPort));
+        t.check(loggedSince(logFrom, QStringLiteral("asking once more on a connection of its own"))
+                    && loggedSince(logFrom, QStringLiteral("answered on the second request's own connection")),
+                QStringLiteral("the log says so"));
+    }
+
+    // — 2. every /player slow: given up at 3 s, after two requests, no more —
+    {
+        InnerTube tube;
+        standIn.player = [&](const BoundsStandIn::Request &) { return playable(10000); };
+        const qsizetype from = standIn.requests.size();
+        QElapsedTimer took;
+        took.start();
+        const auto answer = askPlayer(tube, QStringLiteral("boundsSlow1"));
+        waitUntil([answer]() { return answer->done; }, 15000);
+        const qint64 ms = took.elapsed();
+        const int asked = int(standIn.playersSince(from).size());
+        t.check(answer->done && answer->url.isEmpty() && ms >= 2800 && ms < 3800 && asked == 2
+                    && answer->error.contains(QLatin1String("no answer within 3000 ms")),
+                QStringLiteral("every /player delayed 10 s: given up after %1 ms and %2 requests").arg(ms).arg(asked),
+                answer->error);
+    }
+
+    // — 3. the switch back: youtube.player_deadline=off —
+    {
+        InnerTube::setPlayerDeadline(false);
+        InnerTube tube;
+        standIn.player = [&](const BoundsStandIn::Request &) { return hold(); };
+        const qsizetype from = standIn.requests.size();
+        const auto answer = askPlayer(tube, QStringLiteral("boundsOff01"));
+        settle(4000);
+        const int asked = int(standIn.playersSince(from).size());
+        t.check(!answer->done && asked == 1,
+                QStringLiteral("youtube.player_deadline=off: 4 s in, still one request and no answer, as before"),
+                QStringLiteral("%1 requests, %2").arg(asked).arg(answer->done ? QStringLiteral("answered") : QStringLiteral("waiting")));
+        InnerTube::setPlayerDeadline(true);
+    }
+
+    // — 4. through the resolver, every /player delayed 10 s: yt-dlp at ~3 s —
+    if (!t.check(YtDlp::isAvailable(), QStringLiteral("yt-dlp is installed"))) {
+        return t.finish();
+    }
+    {
+        // One round: the real song resolved while every /player takes 10 s.
+        // `asBefore` turns every bound off (the three switches back), for
+        // the numbers these replace.
+        struct Arm {
+            QList<qint64> starts;    // when yt-dlp was started
+            QList<qint64> answers;   // when yt-dlp's answer came
+            int viaYtDlp = 0;
+        };
+        const auto slowRound = [&](Arm &arm, bool asBefore, int round) {
+            InnerTube::setPlayerDeadline(!asBefore);
+            StreamResolver resolver;
+            resolver.setSaavnEnabled(false);
+            resolver.setDeadline(!asBefore);
+            resolver.setYtDlpOneAtATime(!asBefore);
+            QElapsedTimer clock;
+            qint64 ytdlpAt = -1;
+            qint64 answeredAt = -1;
+            int tier = -1;
+            QString failure;
+            QObject::connect(&resolver, &StreamResolver::tierChanged, &resolver, [&](const QString &, int now) {
+                if (now == StreamResolver::TierYtDlp && ytdlpAt < 0)
+                    ytdlpAt = clock.elapsed();
+            });
+            QObject::connect(&resolver, &StreamResolver::resolved, &resolver,
+                             [&](const QString &, const QString &, int answeredTier, bool) {
+                                 answeredAt = clock.elapsed();
+                                 tier = answeredTier;
+                             });
+            QObject::connect(&resolver, &StreamResolver::failed, &resolver, [&](const QString &, const QString &why) {
+                answeredAt = clock.elapsed();
+                failure = why;
+            });
+            clock.start();
+            resolver.resolve(kDefaultVideo);
+            waitUntil([&answeredAt]() { return answeredAt >= 0; }, 40000);
+            t.note(QStringLiteral("round %1%2: yt-dlp started at %3 ms, %4 at %5 ms%6")
+                       .arg(round).arg(asBefore ? QStringLiteral(" as before") : QString()).arg(ytdlpAt)
+                       .arg(tier == StreamResolver::TierYtDlp ? QStringLiteral("answered by yt-dlp")
+                                                              : QStringLiteral("ended"))
+                       .arg(answeredAt).arg(failure.isEmpty() ? QString() : QStringLiteral(": ") + failure.left(120)));
+            if (ytdlpAt >= 0)
+                arm.starts << ytdlpAt;
+            if (tier == StreamResolver::TierYtDlp) {
+                ++arm.viaYtDlp;
+                arm.answers << answeredAt;
+            }
+            InnerTube::setPlayerDeadline(true);
+        };
+        Arm bounded;
+        Arm unbounded;
+        standIn.player = [&](const BoundsStandIn::Request &) { return playable(10000); };
+        for (int round = 1; round <= rounds; ++round) {
+            slowRound(bounded, false, round);
+            if (before)
+                slowRound(unbounded, true, round);
+        }
+        t.check(bounded.starts.size() == rounds
+                    && std::all_of(bounded.starts.begin(), bounded.starts.end(),
+                                   [](qint64 at) { return at >= 2800 && at < 4000; }),
+                QStringLiteral("every /player delayed 10 s: yt-dlp starts at %1 ms (median of %2)")
+                    .arg(median(bounded.starts)).arg(bounded.starts.size()));
+        t.check(bounded.viaYtDlp == rounds && largest(bounded.answers) <= 10000,
+                QStringLiteral("and answers: median %1 ms, p90 %2 ms, n=%3 (the plan's target ~6,000)")
+                    .arg(median(bounded.answers)).arg(percentile90(bounded.answers)).arg(bounded.answers.size()));
+        if (before) {
+            t.note(QStringLiteral("as before (every switch back): yt-dlp starts at median %1 ms, p90 %2; answers at "
+                                  "median %3 ms, p90 %4; n=%5 of %6")
+                       .arg(median(unbounded.starts)).arg(percentile90(unbounded.starts))
+                       .arg(median(unbounded.answers)).arg(percentile90(unbounded.answers))
+                       .arg(unbounded.answers.size()).arg(rounds));
+        }
+    }
+
+    // From here yt-dlp goes through a proxy that never answers.
+    BlackHole blackHole;
+    if (!t.check(blackHole.listen(), QStringLiteral("a proxy that never answers")))
+        return t.finish();
+    ProxyEnvironment proxy(blackHole.url());
+
+    // — 5. everything dark: the skip notice within 20 s —
+    //
+    // The real player, on a queue of two invented songs: the first with
+    // YouTube and yt-dlp both dark, the second failing at once so the queue
+    // stops there. `asBefore` turns every bound off; `alongside` runs as
+    // Play is pressed.
+    struct DarkRun {
+        bool engine = false;
+        qint64 noticeAt = -1;
+        QString notice;
+        qint64 failedAt = -1;
+        QString failure;
+        QList<QPair<int, qint64>> walked;   // tier, when
+        QString rungs() const
+        {
+            QStringList names;
+            for (const auto &step : walked)
+                names << QStringLiteral("%1 at %2 ms").arg(step.first).arg(step.second);
+            return names.join(QStringLiteral(", "));
+        }
+    };
+    const auto playDark = [&](const QString &dark, const QString &after, bool asBefore, int waitMs,
+                              const std::function<void()> &alongside) {
+        DarkRun run;
+        InnerTube::setPlayerDeadline(!asBefore);
+        MpvEngine engine;
+        run.engine = engine.isValid();
+        if (!run.engine)
+            return run;
+        StreamResolver resolver;
+        DownloadManager downloads;
+        PlaybackController player(&engine, &resolver, &downloads);
+        player.setLibrary(library);
+        resolver.setSaavnEnabled(false);   // invented songs: JioSaavn is never asked about them
+        resolver.setDeadline(!asBefore);
+        resolver.setYtDlpOneAtATime(!asBefore);
+        player.setAutoplay(false);
+        player.setVolume(0.2);
+        for (const int tier : { StreamResolver::TierInnerTube, StreamResolver::TierYtDlp, StreamResolver::TierMuxed,
+                                StreamResolver::TierPiped, StreamResolver::TierInvidious })
+            resolver.setTestAnswer(after, tier, QString());
+        QElapsedTimer clock;
+        QObject::connect(&resolver, &StreamResolver::tierChanged, &resolver, [&](const QString &id, int tier) {
+            if (id == dark)
+                run.walked.append({ tier, clock.elapsed() });
+        });
+        QObject::connect(&resolver, &StreamResolver::failed, &resolver, [&](const QString &id, const QString &why) {
+            if (id == dark && run.failedAt < 0) {
+                run.failedAt = clock.elapsed();
+                run.failure = why;
+            }
+        });
+        QObject::connect(&player, &PlaybackController::notice, &player, [&](const QString &text) {
+            if (run.noticeAt < 0) {
+                run.noticeAt = clock.elapsed();
+                run.notice = text;
+            }
+        });
+        const auto song = [](const QString &id, const QString &title) {
+            return QVariantMap{ { QStringLiteral("videoId"), id },
+                                { QStringLiteral("title"), title },
+                                { QStringLiteral("artist"), QStringLiteral("Selftest") },
+                                { QStringLiteral("durationMs"), 180000 } };
+        };
+        clock.start();
+        player.playTracks({ song(dark, QStringLiteral("Gone dark")), song(after, QStringLiteral("After it")) }, 0);
+        if (alongside)
+            alongside();
+        waitUntil([&run]() { return run.noticeAt >= 0; }, waitMs);
+        resolver.cancelAll();
+        InnerTube::setPlayerDeadline(true);
+        return run;
+    };
+    standIn.player = [&](const BoundsStandIn::Request &) { return hold(); };
+    {
+        // Beside it, the same song on a resolver with the switch back.
+        const QString dark = QStringLiteral("selftestB05");
+        StreamResolver unbounded;
+        unbounded.setSaavnEnabled(false);
+        unbounded.setDeadline(false);
+        bool unboundedEnded = false;
+        QObject::connect(&unbounded, &StreamResolver::resolved, &unbounded, [&]() { unboundedEnded = true; });
+        QObject::connect(&unbounded, &StreamResolver::failed, &unbounded, [&]() { unboundedEnded = true; });
+        const DarkRun run = playDark(dark, QStringLiteral("selftestB06"), false, 30000,
+                                     [&unbounded, &dark]() { unbounded.resolve(dark); });
+        if (!t.check(run.engine, QStringLiteral("an audio engine to drive")))
+            return t.finish();
+        t.check(run.noticeAt >= 0 && run.noticeAt <= 20500 && run.notice.contains(QLatin1String("skipping"))
+                    && run.notice.contains(QLatin1String("Gone dark")),
+                QStringLiteral("YouTube and yt-dlp both dark: the skip notice %1 ms after Play (20 s is the limit)")
+                    .arg(run.noticeAt),
+                run.notice);
+        const QList<QPair<int, qint64>> &walked = run.walked;
+        const bool ladder = walked.size() >= 3 && walked.at(0).first == StreamResolver::TierInnerTube
+                            && walked.at(1).first == StreamResolver::TierYtDlp && walked.at(1).second >= 2800
+                            && walked.at(1).second < 4000 && walked.at(2).first == StreamResolver::TierMuxed;
+        t.check(ladder && run.failedAt >= 19500 && run.failure.contains(QLatin1String("within 20 s")),
+                QStringLiteral("the ladder on the way: InnerTube, yt-dlp at ~3 s, the muxed stream, then given up "
+                               "at %1 ms").arg(run.failedAt),
+                QStringLiteral("rungs (tier at time) %1; %2").arg(run.rungs(), run.failure.left(200)));
+        t.check(blackHole.connections() > 0, QStringLiteral("and yt-dlp did reach the dark proxy (%1 connections)")
+                                                 .arg(blackHole.connections()));
+        settle(1000);
+        t.check(!unboundedEnded, QStringLiteral("playback.resolve_deadline=off: the same song still resolving "
+                                                "past 21 s, as before"));
+        unbounded.cancelAll();
+    }
+    if (before) {
+        const DarkRun run = playDark(QStringLiteral("selftestB07"), QStringLiteral("selftestB08"), true, 60000, {});
+        t.note(QStringLiteral("as before (every switch back), everything dark: the skip notice %1 ms after Play; "
+                              "rungs (tier at time) %2; %3")
+                   .arg(run.noticeAt).arg(run.rungs(), run.failure.left(200)));
+    }
+
+    // — 6. one yt-dlp at a time, the song someone is waiting for first —
+    {
+        StreamResolver resolver;
+        resolver.setSaavnEnabled(false);
+        standIn.player = [](const BoundsStandIn::Request &) {
+            BoundsStandIn::Answer answer;
+            answer.body = kUnplayable;
+            return answer;
+        };
+        const auto launches = [&countSince](qsizetype from, const QString &id) {
+            return countSince(from, QStringLiteral("resolver: %1: yt-dlp asked for").arg(id));
+        };
+        const qsizetype from = log.size();
+        const QString first = QStringLiteral("selftestQ01");
+        const QString second = QStringLiteral("selftestQ02");
+        const QString wanted = QStringLiteral("selftestQ03");
+        resolver.prefetch(first);
+        const bool firstRan = waitUntil([&]() { return launches(from, first) == 1; }, 5000);
+        resolver.prefetch(second);
+        const bool secondWaits = waitUntil([&]() {
+            return loggedSince(from, second + QStringLiteral(" waits its turn for yt-dlp"));
+        }, 5000);
+        settle(300);
+        t.check(firstRan && secondWaits && launches(from, second) == 0 && !YtDlp::playbackResolving(),
+                QStringLiteral("two songs fetched ahead: the second waits for the first's lookup, and no download "
+                               "waits for either"));
+        resolver.resolve(wanted);
+        const bool wantedRan = waitUntil([&]() { return launches(from, wanted) == 1; }, 5000);
+        settle(300);
+        t.check(wantedRan && loggedSince(from, first + QStringLiteral("'s yt-dlp lookup, ahead of time, stopped"))
+                    && launches(from, first) == 1 && launches(from, second) == 0,
+                QStringLiteral("a song someone is waiting for: the first's lookup is stopped, and it goes first"));
+        t.check(YtDlp::playbackResolving(), QStringLiteral("and while it resolves, new downloads wait"));
+        bool released = false;
+        YtDlp::whenPlaybackResolved(&resolver, [&released]() { released = true; });
+        resolver.cancel(wanted);
+        const bool firstAgain = waitUntil([&]() { return launches(from, first) == 2; }, 5000);
+        settle(300);
+        t.check(firstAgain && launches(from, second) == 0,
+                QStringLiteral("once it has gone, the stopped one starts again, ahead of the one behind it"));
+        waitUntil([&released]() { return released; }, 2000);
+        t.check(released && !YtDlp::playbackResolving(), QStringLiteral("and the downloads' wait is over"));
+        resolver.cancelAll();
+    }
+
+    // — 7. the switch back: ytdlp.resolves=parallel —
+    {
+        StreamResolver resolver;
+        resolver.setSaavnEnabled(false);
+        resolver.setYtDlpOneAtATime(false);
+        const qsizetype from = log.size();
+        const QString ahead = QStringLiteral("selftestQ04");
+        const QString wanted = QStringLiteral("selftestQ05");
+        resolver.prefetch(ahead);
+        waitUntil([&]() { return countSince(from, ahead + QStringLiteral(": yt-dlp asked for")) == 1; }, 5000);
+        resolver.resolve(wanted);
+        waitUntil([&]() { return countSince(from, wanted + QStringLiteral(": yt-dlp asked for")) == 1; }, 5000);
+        settle(300);
+        t.check(countSince(from, ahead + QStringLiteral(": yt-dlp asked for")) == 1
+                    && countSince(from, wanted + QStringLiteral(": yt-dlp asked for")) == 1
+                    && !loggedSince(from, QStringLiteral("waits its turn")) && !loggedSince(from, QStringLiteral("stopped for"))
+                    && !YtDlp::playbackResolving(),
+                QStringLiteral("ytdlp.resolves=parallel: both lookups at once, and no download waits, as before"));
+        resolver.cancelAll();
+    }
+    settle(200);
     return t.finish();
 }

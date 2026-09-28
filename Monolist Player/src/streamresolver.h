@@ -173,6 +173,25 @@ public:
     // track, which then points at a file the CDN does not have.
     void spoilNextSaavn(const QString &videoId) { m_spoilSaavn = videoId; }
 
+    // A song someone is waiting for has 20 s, from resolve(), resolveVia()
+    // or resolveTrack() to its answer, JioSaavn's part included: past it the
+    // walk stops and failed() says so, and the player moves on. Walked to the
+    // end, the ladder could take ~49 s before (a visitor id, /player and its
+    // retry at 8 s each, then yt-dlp and the muxed stream at 12 s each).
+    // Prefetches have no such limit; each rung has its own.
+    // playback.resolve_deadline=off is the switch back.
+    void setDeadline(bool on) { m_deadlineOn = on; }
+    bool deadline() const { return m_deadlineOn; }
+    // One yt-dlp lookup at a time for resolves (the sound's and the muxed
+    // stream's): two at once each take several times as long under
+    // emulation or on a small machine. A song someone is waiting for goes
+    // first: a prefetch's lookup is stopped for it and waits, still on its
+    // rung, for its turn. While such a song resolves no new download starts
+    // (YtDlp::playbackResolving). ytdlp.resolves=parallel is the switch
+    // back: every lookup at once, as before, and downloads never wait.
+    void setYtDlpOneAtATime(bool on);
+    bool ytdlpOneAtATime() const { return m_ytdlpOneAtATime; }
+
     // Instance lists rot — hosts disappear every few months. They are settable
     // so a config update can fix playback without shipping a new binary.
     void setPipedInstances(const QStringList &hosts);
@@ -209,6 +228,8 @@ private:
         // After a refusal, the rung the song played from (resolveVia);
         // answers from another rung below InnerTube are rescue links.
         int homeTier = -1;
+        // Since it asked for yt-dlp and found another lookup running.
+        QElapsedTimer waitingForYtDlp;
     };
 
     // A resolved URL stays valid for hours (YouTube signs an expiry into it),
@@ -228,6 +249,26 @@ private:
     void startInnerTube(Job *job);
     void startYtDlp(Job *job);
     void startMuxed(Job *job);
+    // One yt-dlp at a time (setYtDlpOneAtATime): a job on the yt-dlp or the
+    // muxed rung asks for the turn, and its lookup starts once it has it.
+    void queueYtDlp(Job *job);
+    void launchYtDlp(Job *job);
+    void pumpYtDlp();
+    // The prefetch holding the turn stops, and waits for it again.
+    void preemptYtDlp();
+    // `job` no longer runs or waits for a lookup (it moved on, or went).
+    void releaseYtDlp(Job *job);
+    // Whether a song someone waits for is resolving, for the downloads.
+    void foregroundChanged();
+
+    // The 20 s a resolve has (setDeadline), by song. A new resolve of the
+    // same song starts its own.
+    void armDeadline(const QString &videoId);
+    void deadlinePassed(const QString &videoId);
+    // What every answer and failure goes out through, so the song's
+    // deadline ends with it.
+    void emitResolved(const QString &videoId, const QString &url, int tier, bool fromCache);
+    void emitFailed(const QString &videoId, const QString &reason);
     void startPipedRace(Job *job);
     void startInvidiousRace(Job *job);
 
@@ -296,6 +337,13 @@ private:
     // other's connection.
     InnerTube m_innerTube;
     QHash<QString, Job *> m_jobs;
+    bool m_deadlineOn = true;
+    QHash<QString, int> m_deadlines;   // song -> the generation of its timer
+    int m_deadlineGeneration = 0;
+    bool m_ytdlpOneAtATime = true;
+    Job *m_ytdlpHolder = nullptr;      // whose lookup runs
+    QList<Job *> m_ytdlpWaiting;       // in the order they asked
+    bool m_foreground = false;         // last said to YtDlp::setPlaybackResolving
     QHash<QString, CacheEntry> m_cache;
     // The rescue links of the play under way (see resolveVia), apart from
     // the songs' own links above.
