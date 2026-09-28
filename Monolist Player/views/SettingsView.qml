@@ -313,6 +313,18 @@ ScrollPage {
                     : "What most music videos are published at. The next video uses the new size."
         }
 
+        // Asked of LRCLIB and YouTube Music only, never of anyone else, and
+        // not for the next song on a metered connection (Lyrics.background).
+        ToggleRow {
+            width: parent.width
+            label: "Look up lyrics in the background"
+            hint: "Lyrics for the song playing, and the one after it, are fetched from LRCLIB and YouTube Music "
+                  + "as each song starts, so they are there when you open them. Off, a song's lyrics are looked "
+                  + "up only once you open them."
+            checked: Lyrics.background
+            onToggled: Lyrics.background = !Lyrics.background
+        }
+
         HRule { width: parent.width }
 
         // — downloads —

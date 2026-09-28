@@ -196,6 +196,21 @@ void AppDatabase::createSchema()
         " plain TEXT NOT NULL DEFAULT '',"
         " source TEXT NOT NULL DEFAULT '',"
         " fetched_at TEXT NOT NULL DEFAULT (datetime('now')))"));
+    // Each lyrics provider's own answer for a song, found or none (LyricsStore),
+    // so one that has answered is not asked again while that is fresh. Never a
+    // failure. `duration` is the length of the entry it came from, -1 unknown.
+    q.exec(QStringLiteral(
+        "CREATE TABLE IF NOT EXISTS lyrics_results ("
+        " video_id TEXT NOT NULL,"
+        " provider TEXT NOT NULL,"
+        " synced TEXT NOT NULL DEFAULT '',"
+        " plain TEXT NOT NULL DEFAULT '',"
+        " source TEXT NOT NULL DEFAULT '',"
+        " instrumental INTEGER NOT NULL DEFAULT 0,"
+        " loose INTEGER NOT NULL DEFAULT 0,"
+        " duration REAL NOT NULL DEFAULT -1,"
+        " fetched_at TEXT NOT NULL DEFAULT (datetime('now')),"
+        " PRIMARY KEY (video_id, provider))"));
 
     // Scrobbles not yet accepted by Last.fm, oldest first. A row is written
     // the moment a listen qualifies, before anything is sent, so a crash, a

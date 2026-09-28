@@ -1,83 +1,34 @@
 #include "lyrics.h"
-#include "appdatabase.h"
 #include "artistlinks.h"
 #include "playbackcontroller.h"
+#include "lyrics/lyricsstore.h"
+#include "lyrics/providers/lrclibprovider.h"
+#include "lyrics/providers/ytmlyricsprovider.h"
 
-#include <QJsonArray>
-#include <QJsonDocument>
-#include <QJsonObject>
 #include <QNetworkAccessManager>
-#include <QNetworkReply>
-#include <QNetworkRequest>
+#include <QNetworkInformation>
 #include <QRegularExpression>
-#include <QSqlError>
-#include <QSqlQuery>
-#include <QUrl>
 #include <QVariant>
 
 #include <algorithm>
+#include <utility>
 
 namespace {
 
 // A line lights this far ahead of the audio, so it shows as it is sung rather
 // than just after.
 constexpr qint64 kLeadMs = 150;
-// How far LRCLIB's length for a song may be from this recording's for its
-// timing to be trusted, and for its words to be used at all, in seconds. The
-// second was 20 s; at that distance an entry is as likely another song's as
-// another edit's. 20 s stays for lyrics.lrclib=search, the rules from before.
-constexpr double kSyncTolerance = 3.0;
-constexpr double kLooseTolerance = 10.0;
-constexpr double kOldLooseTolerance = 20.0;
-// How long "none found" stands before a song is looked up again, and found
-// lyrics before they are checked again behind the ones shown.
-const QString kAskAgainAfter = QStringLiteral("-3 days");
-const QString kCheckAgainAfter = QStringLiteral("-60 days");
 // A provisional answer that stays on show this long (one song on repeat) is
 // asked for again without waiting for the next view.
 constexpr int kRecheckMs = 60 * 60 * 1000;
-// LRCLIB as a whole, every request in it: a wall clock, where Qt's own timeout
-// only measures silence and restarts with each request.
-constexpr int kLrclibDeadlineMs = 6000;
-// /api/get, the exact lookup, usually answers in one round trip (~200 ms
-// here), but on a miss LRCLIB may ask elsewhere before it answers. Not
-// answered this long after it was sent, /api/search is asked as well. The
-// second figure covers a connection that never reports the request as sent.
-// (/api/get-cached, which would stay in LRCLIB's own database, answers an
-// empty 404 for every song, as a path that does not exist does: September
-// 2026.)
-constexpr int kExactPatienceMs = 250;
-constexpr int kExactPatienceFallbackMs = 1500;
-// The exact answer outranks the search's: a search can hold nothing but
-// another song's words under the right title (アイドル: 20 entries, all
-// wrong). So an answer the search has first is held until the exact lookup
-// has had this long since it was sent (/api/get: median 195 ms, p90 521 ms,
-// n=29), and only then taken.
-constexpr int kExactGraceMs = 1000;
+// A song the queue's lookups could not settle for good (a provider down, so
+// an error or a provisional answer) is asked about again by the queue only
+// after this long; the view asks whenever it is opened.
+constexpr qint64 kQueueRetryMs = 10 * 60 * 1000;
 
-const QByteArray kUserAgent = QByteArrayLiteral("Monolist/0.1 (desktop music player)");
-
-QString encoded(const QString &text)
+bool sameWords(const LyricsAnswer &a, const LyricsAnswer &b)
 {
-    return QString::fromLatin1(QUrl::toPercentEncoding(text));
-}
-
-QString joinedText(const QList<LyricsModel::Line> &lines)
-{
-    QStringList texts;
-    for (const LyricsModel::Line &line : lines)
-        texts << line.text;
-    return texts.join(QLatin1Char('\n'));
-}
-
-// Detached first: abort() delivers finished() at once, and its handler must
-// see itself as superseded.
-void abortRequest(QPointer<QNetworkReply> &request)
-{
-    if (QNetworkReply *reply = request) {
-        request = nullptr;
-        reply->abort();
-    }
+    return a.synced == b.synced && a.plain == b.plain && a.instrumental == b.instrumental;
 }
 
 } // namespace
@@ -123,7 +74,14 @@ Lyrics::Lyrics(PlaybackController *player, QObject *parent)
     : QObject(parent)
     , m_player(player)
     , m_network(new QNetworkAccessManager(this))
+    , m_lrclib(std::make_unique<LrclibProvider>(m_network))
+    , m_ytm(std::make_unique<YtmLyricsProvider>(&m_innerTube))
 {
+    // The user's order, until there is a way to change it (LY-10): LRCLIB's
+    // timed lines first, YouTube Music's plain text after.
+    m_order = { m_lrclib.get(), m_ytm.get() };
+    m_sessionClock.start();
+
     connect(m_player, &PlaybackController::currentTrackChanged, this, &Lyrics::trackChanged);
     connect(m_player, &PlaybackController::positionChanged, this, &Lyrics::updateCurrentLine);
 
@@ -133,35 +91,56 @@ Lyrics::Lyrics(PlaybackController *player, QObject *parent)
         if (m_active && m_hasStored && m_stored.provisional && !m_checking)
             checkAgain();
     });
-    m_hedge.setSingleShot(true);
-    connect(&m_hedge, &QTimer::timeout, this, [this]() {
-        if (m_exact == Step::Pending && m_search == Step::Idle) {
-            m_lrclibTrail << QStringLiteral("get slow, search asked too");
-            askSearch(false);
-        }
-    });
-    m_exactWait.setSingleShot(true);
-    connect(&m_exactWait, &QTimer::timeout, this, [this]() {
-        m_exactOverdue = true;
-        settleLrclib();
-    });
-    m_deadline.setSingleShot(true);
-    m_deadline.setInterval(kLrclibDeadlineMs);
-    connect(&m_deadline, &QTimer::timeout, this, [this]() {
-        m_exactOverdue = true;
-        if (m_search == Step::Found)
-            return settleLrclib();   // the search's answer, held for the exact one
-        m_lrclibError = QStringLiteral("LRCLIB did not answer within %1 s").arg(kLrclibDeadlineMs / 1000);
-        endLrclib(QStringLiteral("failed"));
-        askYouTube();
-    });
+}
+
+Lyrics::~Lyrics()
+{
+    // Before the providers, and what they ask with, go.
+    const QList<Job> jobs = m_jobs.values();
+    m_jobs.clear();
+    m_race = nullptr;
+    for (const Job &job : jobs) {
+        job.race->cancel();
+        delete job.race;
+    }
 }
 
 void Lyrics::setLrclibUrl(const QString &url)
 {
-    const QString trimmed = url.trimmed();
-    if (!trimmed.isEmpty())
-        m_lrclib = trimmed.endsWith(QLatin1Char('/')) ? trimmed.chopped(1) : trimmed;
+    m_lrclib->setUrl(url);
+}
+
+void Lyrics::setLrclibExact(bool on)
+{
+    m_lrclib->setExact(on);
+}
+
+void Lyrics::setProviders(const QList<LyricsProvider *> &providers)
+{
+    m_order = providers;
+}
+
+QList<LyricsProvider *> Lyrics::providers(bool background) const
+{
+    if (!background)
+        return m_order;
+    QList<LyricsProvider *> allowed;
+    for (LyricsProvider *provider : m_order) {
+        if (provider->background())
+            allowed << provider;
+    }
+    return allowed;
+}
+
+LyricsQuery::Query Lyrics::queryFor(const QVariantMap &track) const
+{
+    // The artist line as names: the song's own credits, else the names
+    // ArtistLinks has seen linked, else the line whole.
+    const QVariant credits = track.value(QStringLiteral("credits"));
+    const QVariantList pieces = m_artistLinks
+        ? m_artistLinks->credits(track.value(QStringLiteral("artist")).toString(), credits)
+        : credits.toList();
+    return LyricsQuery::fromTrack(track, pieces);
 }
 
 void Lyrics::setActive(bool active)
@@ -174,8 +153,23 @@ void Lyrics::setActive(bool active)
         return;
     if (m_state == QLatin1String("idle"))
         load(m_player->currentTrack(), false);
-    else if (m_hasStored && m_stored.provisional && !m_checking)
+    else if (m_hasStored && m_stored.provisional && !m_checking && !m_race)
         checkAgain();   // looked at again: a stand-in is asked for again
+}
+
+void Lyrics::setBackground(bool on)
+{
+    if (on == m_background)
+        return;
+    m_background = on;
+    Q_EMIT backgroundChanged();
+    if (!m_background) {
+        // The queue's lookups stop; one the view is waiting on goes on.
+        m_queueSongs.clear();
+        prune();
+        return;
+    }
+    prefetchQueue();
 }
 
 void Lyrics::trackChanged()
@@ -188,8 +182,9 @@ void Lyrics::trackChanged()
         load(track, false);
         return;
     }
-    // Nobody is looking: let the last song's lines go, and fetch nothing.
-    cancelRequest();
+    // Nobody is looking: the last song's lines go. Its lookup carries on
+    // only while the queue still wants it.
+    detach();
     m_track.clear();
     m_videoId.clear();
     m_source.clear();
@@ -199,6 +194,7 @@ void Lyrics::trackChanged()
     m_lines.replace({});
     setState(QStringLiteral("idle"));
     updateCurrentLine();
+    prune();
 }
 
 void Lyrics::lookup(const QVariantMap &track)
@@ -211,17 +207,6 @@ void Lyrics::retry()
     load(m_track.isEmpty() ? m_player->currentTrack() : m_track, true);
 }
 
-void Lyrics::cancelRequest()
-{
-    ++m_generation;   // YouTube Music's answer, when it comes, is for nobody
-    abortRequest(m_exactRequest);
-    abortRequest(m_searchRequest);
-    m_hedge.stop();
-    m_exactWait.stop();
-    m_deadline.stop();
-    m_recheck.stop();
-}
-
 void Lyrics::setState(const QString &state)
 {
     if (state == m_state)
@@ -230,9 +215,18 @@ void Lyrics::setState(const QString &state)
     Q_EMIT stateChanged();
 }
 
+// The view lets go of the race it was waiting on; prune() then decides
+// whether that goes on for the queue.
+void Lyrics::detach()
+{
+    m_race = nullptr;
+    m_interim = false;
+    m_recheck.stop();
+}
+
 void Lyrics::load(const QVariantMap &track, bool askAgain)
 {
-    cancelRequest();
+    detach();
     m_track = track;
     m_videoId = track.value(QStringLiteral("sourceId")).toString();
     m_source.clear();
@@ -244,496 +238,404 @@ void Lyrics::load(const QVariantMap &track, bool askAgain)
 
     if (m_videoId.isEmpty() || track.value(QStringLiteral("title")).toString().isEmpty()) {
         setState(QStringLiteral("none"));
+        prune();
         return;
     }
-    // The artist line as names: the song's own credits, else the names
-    // ArtistLinks has seen linked, else the line whole.
-    const QVariant credits = track.value(QStringLiteral("credits"));
-    const QVariantList pieces = m_artistLinks
-        ? m_artistLinks->credits(track.value(QStringLiteral("artist")).toString(), credits)
-        : credits.toList();
-    m_query = LyricsQuery::fromTrack(track, pieces);
+    // The length mpv found, for a song listed without one: most providers
+    // match on it.
+    if (m_track.value(QStringLiteral("durationMs")).toLongLong() <= 0
+        && m_videoId == m_player->currentSourceId() && m_player->duration() > 0)
+        m_track.insert(QStringLiteral("durationMs"), m_player->duration());
+    const LyricsQuery::Query query = queryFor(m_track);
+    if (askAgain)
+        dropJob(m_videoId);   // asked afresh, past whatever is out already
 
-    Answer kept;
-    const Stored stored = readStored(&kept);
-    if (!askAgain && stored == Stored::Show) {
-        show(kept);
+    // A lookup already out for this song (the queue's): the view waits on it
+    // rather than asking a second time.
+    if (m_jobs.contains(m_videoId)) {
+        const Job job = m_jobs.value(m_videoId);
+        m_race = job.race;
+        if (job.hasKept) {
+            m_checking = true;
+            show(job.kept);
+        } else {
+            setState(QStringLiteral("loading"));
+            if (job.race->hasOffer())
+                showOffer(job.race);
+        }
+        // Any provider the queue may not ask joins it now.
+        job.race->include(providers(false));
+        prune();
         return;
     }
-    if (!askAgain && stored == Stored::ShowAndCheck) {
+
+    LyricsAnswer kept;
+    const LyricsStore::Stored stored = LyricsStore::read(m_videoId, &kept);
+    if (!askAgain && stored == LyricsStore::Stored::Show) {
+        show(kept);
+        prune();
+        return;
+    }
+    if (!askAgain && stored == LyricsStore::Stored::ShowAndCheck) {
         // Shown at once, and asked for again behind it.
         m_checking = true;
         show(kept);
-        startLrclib();
+        startRace(m_videoId, query, kept, true, false, false);
+        prune();
         return;
     }
     // Asked again by hand: what is kept stays the answer if nothing better
     // is found.
-    if (stored != Stored::Nothing && (kept.instrumental || !kept.synced.isEmpty() || !kept.plain.isEmpty())) {
+    bool hasKept = false;
+    if (stored != LyricsStore::Stored::Nothing && kept.found()) {
         m_stored = kept;
         m_hasStored = true;
+        hasKept = true;
     }
     setState(QStringLiteral("loading"));
-    startLrclib();
+    startRace(m_videoId, query, kept, hasKept, askAgain, false);
+    prune();
 }
 
 // The answer on show, asked for again behind it.
 void Lyrics::checkAgain()
 {
-    ++m_generation;
-    abortRequest(m_exactRequest);
-    abortRequest(m_searchRequest);
+    if (m_race || m_videoId.isEmpty())
+        return;
     m_recheck.stop();
     m_checking = true;
-    startLrclib();
+    if (m_jobs.contains(m_videoId)) {
+        m_race = m_jobs.value(m_videoId).race;
+        m_race->include(providers(false));
+        return;
+    }
+    startRace(m_videoId, queryFor(m_track), m_stored, true, false, false);
 }
 
-// ------------------------------------------------------------- the database
+// ------------------------------------------------------------ the lookups
 
-Lyrics::Stored Lyrics::readStored(Answer *answer) const
+void Lyrics::startRace(const QString &videoId, const LyricsQuery::Query &query, const LyricsAnswer &kept,
+                       bool hasKept, bool askAgain, bool background)
 {
-    QSqlQuery q(AppDatabase::connection());
-    q.prepare(QStringLiteral(
-        "SELECT synced, plain, source, provisional,"
-        " fetched_at > datetime('now', ?), fetched_at > datetime('now', ?)"
-        " FROM lyrics WHERE video_id = ?"));
-    q.addBindValue(kAskAgainAfter);
-    q.addBindValue(kCheckAgainAfter);
-    q.addBindValue(m_videoId);
-    if (!q.exec() || !q.next())
-        return Stored::Nothing;
-    answer->synced = q.value(0).toString();
-    answer->plain = q.value(1).toString();
-    answer->source = q.value(2).toString();
-    answer->instrumental = answer->source == QLatin1String("instrumental");
-    if (answer->instrumental)
-        answer->source.clear();
-    answer->provisional = q.value(3).toBool();
-    const bool recent = q.value(4).toBool();
-    const bool fresh = q.value(5).toBool();
-    if (answer->synced.isEmpty() && answer->plain.isEmpty() && !answer->instrumental)
-        return recent ? Stored::Show : Stored::Nothing;   // none were found; long enough ago, look again
-    return answer->provisional || !fresh ? Stored::ShowAndCheck : Stored::Show;
+    auto *race = new LyricsRace({ videoId, query }, providers(background), m_options, this);
+    Job job;
+    job.race = race;
+    job.kept = kept;
+    job.hasKept = hasKept;
+    job.background = background;
+    m_jobs.insert(videoId, job);
+    // Each provider's own answer is kept as it comes, whoever wins.
+    race->onAnswered = [videoId](LyricsProvider *provider, const LyricsOutcome &outcome) {
+        LyricsStore::writeResult(videoId, provider->id(), outcome);
+    };
+    race->onOffer = [this, race]() { showOffer(race); };
+    race->onFinished = [this, race]() { finishRace(race); };
+    // The view's before it starts: it may be decided at once, from what the
+    // providers answered before.
+    if (!background)
+        m_race = race;
+    // Asked again by hand, every provider is asked afresh; and under
+    // lyrics.race=serial, as the chain was before the race, every time.
+    race->start(askAgain || m_options.serial ? QHash<QString, LyricsOutcome>() : LyricsStore::results(videoId));
 }
 
-void Lyrics::store(const Answer &answer)
+void Lyrics::finishRace(LyricsRace *race)
 {
-    QSqlQuery q(AppDatabase::connection());
-    q.prepare(QStringLiteral(
-        "INSERT INTO lyrics (video_id, synced, plain, source, provisional, fetched_at)"
-        " VALUES (?, ?, ?, ?, ?, datetime('now'))"
-        " ON CONFLICT(video_id) DO UPDATE SET synced = excluded.synced, plain = excluded.plain,"
-        " source = excluded.source, provisional = excluded.provisional, fetched_at = excluded.fetched_at"));
-    q.addBindValue(m_videoId);
-    q.addBindValue(AppDatabase::text(answer.synced));
-    q.addBindValue(AppDatabase::text(answer.plain));
-    q.addBindValue(answer.instrumental ? QStringLiteral("instrumental") : AppDatabase::text(answer.source));
-    q.addBindValue(answer.provisional ? 1 : 0);
-    if (!q.exec())
-        qWarning("Monolist: could not keep lyrics: %s", qPrintable(q.lastError().text()));
-}
+    const QString videoId = race->videoId();
+    const auto it = m_jobs.find(videoId);
+    if (it == m_jobs.end() || it->race != race) {
+        race->deleteLater();
+        return;
+    }
+    const Job job = *it;
+    m_jobs.erase(it);
+    const Settled settled = commit(videoId, *race, job);
 
-// Kept as it is, and looked at again only after the refresh age.
-void Lyrics::touchStored()
-{
-    QSqlQuery q(AppDatabase::connection());
-    q.prepare(QStringLiteral("UPDATE lyrics SET fetched_at = datetime('now'), provisional = 0 WHERE video_id = ?"));
-    q.addBindValue(m_videoId);
-    q.exec();
-}
-
-// ------------------------------------------------------------------- LRCLIB
-
-void Lyrics::startLrclib()
-{
-    m_loosePlain.clear();
-    m_lrclibError.clear();
-    m_lrclibTrail.clear();
-    m_lrclibBytes = 0;
-    m_exact = Step::Idle;
-    m_search = Step::Idle;
-    m_exactUnreachable = false;
-    m_searchLoose = false;
-    m_searchEmpty = false;
-    m_exactSent = false;
-    m_exactOverdue = false;
-    m_lrclibClock.start();
-    m_deadline.start();
-    // The exact lookup needs an artist; a song without one is searched for.
-    if (m_lrclibExact && !m_query.leadArtist().isEmpty())
-        askExact();
+    // Not settled for good: the queue leaves the song alone for a while.
+    const bool final = race->verdict() == LyricsRace::Verdict::None
+                       || (race->verdict() == LyricsRace::Verdict::Found && !race->answer().provisional);
+    if (final)
+        m_queueTried.remove(videoId);
     else
-        askSearch(false);
+        m_queueTried.insert(videoId, m_sessionClock.elapsed());
+
+    const bool onShow = race == m_race;
+    race->deleteLater();
+    if (onShow) {
+        m_race = nullptr;
+        display(settled);
+    }
+    // The song after the one playing waits for the one playing.
+    if (m_following)
+        QTimer::singleShot(0, this, &Lyrics::prefetchQueue);
 }
 
-void Lyrics::askExact()
+// Keeps what a finished lookup found, by the rules above, and says what is
+// left on show. The same for the view's lookups and the queue's.
+Lyrics::Settled Lyrics::commit(const QString &videoId, const LyricsRace &race, const Job &job)
 {
-    // The song as it is filed: title, lead artist, album and length. LRCLIB
-    // matches the length within a couple of seconds; an album it files under
-    // another name answers 404, and the search below still finds the song.
-    QString query = QStringLiteral("track_name=") + encoded(m_query.title)
-                  + QStringLiteral("&artist_name=") + encoded(m_query.leadArtist());
-    if (!m_query.album.isEmpty())
-        query += QStringLiteral("&album_name=") + encoded(m_query.album);
-    if (m_query.durationS > 0)
-        query += QStringLiteral("&duration=") + QString::number(qRound(m_query.durationS));
-
-    QNetworkRequest request(QUrl(m_lrclib + QStringLiteral("/api/get?") + query));
-    request.setHeader(QNetworkRequest::UserAgentHeader, kUserAgent);
-    QNetworkReply *reply = m_network->get(request);
-    m_exactRequest = reply;
-    m_exact = Step::Pending;
-    countBytes(reply);
-    // The patience is counted from the request reaching the server, not from
-    // the connection being opened: a first lookup's TLS handshake alone takes
-    // longer than it.
-    connect(reply, &QNetworkReply::requestSent, this, [this, reply]() {
-        if (reply == m_exactRequest && !m_exactSent) {
-            m_exactSent = true;
-            m_exactSentClock.start();
-            m_hedge.start(kExactPatienceMs);
+    Settled settled;
+    switch (race.verdict()) {
+    case LyricsRace::Verdict::Found: {
+        const LyricsAnswer answer = race.answer();
+        // What is kept for good is not given up for an answer that is only
+        // standing in.
+        if (job.hasKept && answer.provisional && !job.kept.provisional) {
+            qInfo("lyrics: %s: kept lyrics stay; a stand-in was found (%s)", qPrintable(videoId),
+                  qPrintable(race.error()));
+            settled.answer = job.kept;
+            settled.keptStays = true;
+            return settled;
         }
-    });
-    m_hedge.start(kExactPatienceFallbackMs);
-    connect(reply, &QNetworkReply::finished, this, [this, reply]() { handleExact(reply); });
-}
-
-// Every byte LRCLIB sends counts, a request given up on included, so the log
-// says what a lookup cost.
-void Lyrics::countBytes(QNetworkReply *reply)
-{
-    const quint64 generation = m_generation;
-    connect(reply, &QNetworkReply::downloadProgress, this, [this, reply, generation](qint64 received, qint64) {
-        if (generation != m_generation)
-            return;
-        m_lrclibBytes += received - reply->property("counted").toLongLong();
-        reply->setProperty("counted", received);
-    });
-}
-
-void Lyrics::askSearch(bool loose)
-{
-    // First by title and artist; if that finds nothing at all, by both as
-    // words anywhere, which forgives a title spelt differently, and without
-    // its version markers, for a song filed under its bare title.
-    const QString lead = m_query.leadArtist();
-    QString query;
-    if (loose)
-        query = QStringLiteral("q=") + encoded(m_query.bareTitle + QLatin1Char(' ') + lead);
-    else
-        query = QStringLiteral("track_name=") + encoded(m_query.title)
-              + (lead.isEmpty() ? QString() : QStringLiteral("&artist_name=") + encoded(lead));
-
-    QNetworkRequest request(QUrl(m_lrclib + QStringLiteral("/api/search?") + query));
-    request.setHeader(QNetworkRequest::UserAgentHeader, kUserAgent);
-    QNetworkReply *reply = m_network->get(request);
-    m_searchRequest = reply;
-    m_search = Step::Pending;
-    m_searchLoose = loose;
-    countBytes(reply);
-    connect(reply, &QNetworkReply::finished, this, [this, reply]() { handleSearch(reply); });
-}
-
-void Lyrics::handleExact(QNetworkReply *reply)
-{
-    reply->deleteLater();
-    if (reply != m_exactRequest)
-        return;
-    m_exactRequest = nullptr;
-    m_hedge.stop();
-
-    const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-    const QByteArray body = reply->readAll();
-    const QString after = m_exactSent ? QStringLiteral(" %1 ms after sent").arg(m_exactSentClock.elapsed()) : QString();
-    if (reply->error() == QNetworkReply::NoError && status == 200) {
-        const QJsonObject entry = QJsonDocument::fromJson(body).object();
-        m_exactAnswer = Answer();
-        m_exactAnswer.synced = entry.value(QLatin1String("syncedLyrics")).toString();
-        m_exactAnswer.plain = entry.value(QLatin1String("plainLyrics")).toString();
-        m_exactAnswer.instrumental = entry.value(QLatin1String("instrumental")).toBool();
-        m_exactAnswer.source = QStringLiteral("LRCLIB");
-        const bool words = !m_exactAnswer.synced.trimmed().isEmpty() || !m_exactAnswer.plain.trimmed().isEmpty();
-        m_exact = words || m_exactAnswer.instrumental ? Step::Found : Step::Missed;
-        m_lrclibTrail << QStringLiteral("get %1%2 (%3 bytes)")
-                             .arg(m_exact == Step::Found ? QStringLiteral("found") : QStringLiteral("empty"), after)
-                             .arg(body.size());
-    } else if (status == 404) {
-        m_exact = Step::Missed;
-        m_lrclibTrail << QStringLiteral("get 404") + after;
-    } else {
-        // An HTTP error may be this endpoint's alone, and the search is
-        // asked; no HTTP answer at all means the host is out of reach, and
-        // the search would only fail the same way, later.
-        m_exact = Step::Failed;
-        m_exactUnreachable = status == 0;
-        m_lrclibError = status > 0 ? QStringLiteral("LRCLIB answered HTTP %1").arg(status) : reply->errorString();
-        m_lrclibTrail << QStringLiteral("get failed: ") + m_lrclibError;
+        LyricsStore::write(videoId, answer);
+        if (answer.provisional)
+            qInfo("lyrics: %s kept as provisional, to be asked again (%s)", qPrintable(videoId),
+                  qPrintable(race.error()));
+        settled.answer = answer;
+        return settled;
     }
-    settleLrclib();
+    case LyricsRace::Verdict::None:
+        if (job.hasKept) {
+            // Lyrics were found before and nobody has them now: they stay,
+            // as they are, until the refresh age comes round again.
+            LyricsStore::touch(videoId);
+            settled.answer = job.kept;
+            settled.answer.provisional = false;
+            settled.keptStays = true;
+            return settled;
+        }
+        LyricsStore::write(videoId, LyricsAnswer());
+        return settled;   // an empty answer: "none"
+    case LyricsRace::Verdict::Error:
+        break;
+    }
+    if (job.hasKept) {
+        qInfo("lyrics: %s: kept lyrics stay; asking again failed (%s)", qPrintable(videoId),
+              qPrintable(race.error()));
+        settled.answer = job.kept;
+        settled.keptStays = true;
+        return settled;
+    }
+    // Nothing is stored, and the view offers to try again.
+    qInfo("lyrics: %s: nothing stored, a provider could not be asked (%s)", qPrintable(videoId),
+          qPrintable(race.error()));
+    settled.kind = Settled::Error;
+    settled.error = race.error();
+    return settled;
 }
 
-void Lyrics::handleSearch(QNetworkReply *reply)
+void Lyrics::dropJob(const QString &videoId)
 {
-    reply->deleteLater();
-    if (reply != m_searchRequest)
+    const auto it = m_jobs.find(videoId);
+    if (it == m_jobs.end())
         return;
-    m_searchRequest = nullptr;
+    LyricsRace *race = it->race;
+    m_jobs.erase(it);
+    if (race == m_race)
+        m_race = nullptr;
+    race->cancel();
+    race->deleteLater();
+}
 
-    const QByteArray body = reply->readAll();
-    const QString which = m_searchLoose ? QStringLiteral("words search") : QStringLiteral("search");
-    if (reply->error() != QNetworkReply::NoError) {
-        m_search = Step::Failed;
-        m_lrclibError = reply->errorString();
-        m_lrclibTrail << which + QStringLiteral(" failed: ") + m_lrclibError;
-        settleLrclib();
-        return;
-    }
-
-    // The closest in length wins: a song has entries for every release of it,
-    // and only one with this recording's length is timed to it. With the
-    // exact lookup on, an entry must also be this song (LyricsQuery::match):
-    // a search by words can return another song by the same artist, or one
-    // whose title only contains this one's.
-    const QJsonArray results = QJsonDocument::fromJson(body).array();
-    const double wanted = m_query.durationS;
-    const double looseTolerance = m_lrclibExact ? kLooseTolerance : kOldLooseTolerance;
-    QJsonObject synced, plain, instrumental, nearest;
-    double syncedGap = 1e9, plainGap = 1e9, nearestGap = 1e9;
-    int rejected = 0;
-    for (const QJsonValue &value : results) {
-        const QJsonObject entry = value.toObject();
-        const double duration = entry.value(QLatin1String("duration")).toDouble();
-        if (m_lrclibExact
-            && !LyricsQuery::match(m_query, entry.value(QLatin1String("trackName")).toString(),
-                                   entry.value(QLatin1String("artistName")).toString(), duration).accepted) {
-            ++rejected;
+// Calls off every lookup nobody wants any more: not the one the view waits
+// on, nor the queue's for the songs playing and next.
+void Lyrics::prune()
+{
+    QList<LyricsRace *> gone;
+    for (auto it = m_jobs.begin(); it != m_jobs.end();) {
+        if (it->race == m_race || m_queueSongs.contains(it.key())) {
+            ++it;
             continue;
         }
-        const double gap = wanted > 0 ? qAbs(duration - wanted) : 0.0;
-        const bool hasSynced = !entry.value(QLatin1String("syncedLyrics")).toString().trimmed().isEmpty();
-        const bool hasPlain = !entry.value(QLatin1String("plainLyrics")).toString().trimmed().isEmpty();
-        if (gap <= kSyncTolerance) {
-            if (hasSynced && gap < syncedGap) {
-                synced = entry;
-                syncedGap = gap;
-            }
-            if (hasPlain && gap < plainGap) {
-                plain = entry;
-                plainGap = gap;
-            }
-            if (instrumental.isEmpty() && entry.value(QLatin1String("instrumental")).toBool())
-                instrumental = entry;
-        } else if ((hasSynced || hasPlain) && gap <= looseTolerance && gap < nearestGap) {
-            nearest = entry;
-            nearestGap = gap;
-        }
+        gone << it->race;
+        it = m_jobs.erase(it);
     }
-    m_lrclibTrail << QStringLiteral("%1 %2 entries%3 (%4 bytes)")
-                         .arg(which)
-                         .arg(results.size())
-                         .arg(rejected > 0 ? QStringLiteral(", %1 not this song").arg(rejected) : QString())
-                         .arg(body.size());
+    for (LyricsRace *race : std::as_const(gone)) {
+        race->cancel();
+        race->deleteLater();
+    }
+}
 
-    if (!synced.isEmpty() || !plain.isEmpty() || !instrumental.isEmpty()) {
-        m_searchAnswer = Answer();
-        m_searchAnswer.source = QStringLiteral("LRCLIB");
-        if (!synced.isEmpty()) {
-            m_searchAnswer.synced = synced.value(QLatin1String("syncedLyrics")).toString();
-            m_searchAnswer.plain = synced.value(QLatin1String("plainLyrics")).toString();
-        } else if (!plain.isEmpty()) {
-            m_searchAnswer.plain = plain.value(QLatin1String("plainLyrics")).toString();
-        } else {
-            m_searchAnswer.instrumental = true;
-        }
-        m_search = Step::Found;
-        settleLrclib();
+// ------------------------------------------------------- the queue's lookups
+
+void Lyrics::followQueue()
+{
+    if (m_following)
         return;
-    }
-    // Another recording's lyrics: the words are right, the timing may not be.
-    if (!nearest.isEmpty() && m_loosePlain.isEmpty()) {
-        m_loosePlain = nearest.value(QLatin1String("plainLyrics")).toString();
-        if (m_loosePlain.trimmed().isEmpty())
-            m_loosePlain = joinedText(parseLrc(nearest.value(QLatin1String("syncedLyrics")).toString()));
-    }
-    m_search = Step::Missed;
-    m_searchEmpty = !m_searchLoose && results.isEmpty();
-    settleLrclib();
-}
-
-// Where the two requests have got to, and what follows: an answer, another
-// request, waiting, or YouTube Music.
-void Lyrics::settleLrclib()
-{
-    const auto answered = [this](const Answer &answer) {
-        endLrclib(answer.instrumental ? QStringLiteral("instrumental")
-                  : !answer.synced.isEmpty() ? QStringLiteral("synced") : QStringLiteral("plain"));
-        settle(answer);
-    };
-    if (m_exact == Step::Found)
-        return answered(m_exactAnswer);
-    // The search's answer while the exact lookup is still out: held until
-    // that has had its grace, then taken.
-    if (m_search == Step::Found) {
-        if (m_exact == Step::Pending) {
-            const qint64 waited = m_exactSent ? m_exactSentClock.elapsed()
-                                              : m_lrclibClock.elapsed() - kExactPatienceFallbackMs;
-            if (!m_exactOverdue && waited < kExactGraceMs) {
-                m_exactWait.start(int(kExactGraceMs - waited));
-                return;
-            }
-            m_lrclibTrail << QStringLiteral("get given up on");
-        }
-        return answered(m_searchAnswer);
-    }
-    if (m_exact == Step::Pending || m_search == Step::Pending)
-        return;   // the exact answer outranks whatever the search has
-
-    if (m_search == Step::Idle) {
-        if (m_exact == Step::Failed && m_exactUnreachable) {
-            endLrclib(QStringLiteral("failed"));
-            return askYouTube();
-        }
-        return askSearch(false);
-    }
-    if (m_search == Step::Missed && m_searchEmpty && !m_searchLoose)
-        return askSearch(true);
-    // A clean miss only when every request answered: the exact lookup that
-    // failed may have held what the search did not (an instrumental flag,
-    // the one right entry among wrong ones).
-    if (m_search == Step::Failed || m_exact == Step::Failed) {
-        endLrclib(QStringLiteral("failed"));
-        return askYouTube();
-    }
-    m_lrclibError.clear();
-    endLrclib(QStringLiteral("missed"));
-    askYouTube();
-}
-
-void Lyrics::endLrclib(const QString &outcome)
-{
-    m_deadline.stop();
-    m_hedge.stop();
-    m_exactWait.stop();
-    abortRequest(m_exactRequest);
-    abortRequest(m_searchRequest);
-    qInfo("lyrics: LRCLIB %s in %lld ms for %s: %s; %lld bytes", qPrintable(outcome),
-          (long long)m_lrclibClock.elapsed(), qPrintable(m_videoId),
-          qPrintable(m_lrclibTrail.isEmpty() ? QStringLiteral("no answer") : m_lrclibTrail.join(QStringLiteral(", "))),
-          (long long)m_lrclibBytes);
-}
-
-void Lyrics::askYouTube()
-{
-    const QString videoId = m_videoId;
-    const quint64 generation = m_generation;
-    m_innerTube.lyrics(videoId, [this, generation](const QString &text, const QString &source, const QString &error) {
-        if (generation != m_generation)
-            return;   // another lookup since, of this song or another
-        const bool lrclibFailed = !m_lrclibError.isEmpty();
-        if (!text.isEmpty()) {
-            Answer answer;
-            answer.plain = text;
-            answer.source = source.isEmpty() ? QStringLiteral("YouTube Music")
-                                             : source + QStringLiteral(" via YouTube Music");
-            // Shown in LRCLIB's place only because LRCLIB could not be asked.
-            answer.provisional = lrclibFailed;
-            settle(answer, lrclibFailed ? QStringLiteral("LRCLIB failed: ") + m_lrclibError : QString());
-            return;
-        }
-        if (!m_loosePlain.isEmpty()) {
-            Answer answer;
-            answer.plain = m_loosePlain;
-            answer.source = QStringLiteral("LRCLIB");
-            // Another recording's words: the answer when YouTube Music has
-            // none, only a stand-in when it could not be asked.
-            answer.provisional = !error.isEmpty() || lrclibFailed;
-            settle(answer, !error.isEmpty() ? QStringLiteral("YouTube Music failed: ") + error
-                           : lrclibFailed ? QStringLiteral("LRCLIB failed: ") + m_lrclibError : QString());
-            return;
-        }
-        if (error.isEmpty() && !lrclibFailed) {
-            settleNone();
-            return;
-        }
-        // One of them could not be asked, which says nothing about the song.
-        settleError(lrclibFailed ? m_lrclibError : error);
+    m_following = true;
+    // Once the song's sound has started, not when it became the current
+    // track: a song only loaded (the one a launch opens on) may never be
+    // played, and the first second of a new song is the stream's.
+    connect(m_player, &PlaybackController::listenStarted, this, [this](const QVariantMap &track) {
+        m_heard = track.value(QStringLiteral("sourceId")).toString();
+        m_heardTrack = track;
+        prefetchQueue();
     });
+    connect(m_player, &PlaybackController::currentTrackChanged, this, &Lyrics::prefetchQueue);
+    connect(m_player, &PlaybackController::durationChanged, this, &Lyrics::prefetchQueue);
+    connect(m_player, &PlaybackController::repeatModeChanged, this, &Lyrics::prefetchQueue);
+    connect(m_player->queue(), &QueueModel::upcomingChanged, this, &Lyrics::prefetchQueue);
+    prefetchQueue();
 }
 
-// ----------------------------------------------------------- how it ends
-
-void Lyrics::settle(const Answer &answer, const QString &why)
+void Lyrics::prefetchQueue()
 {
-    // What is kept for good is not given up for an answer that is only
-    // standing in.
-    if (m_hasStored && answer.provisional && !m_stored.provisional) {
-        qInfo("lyrics: %s: kept lyrics stay; a stand-in was found (%s)", qPrintable(m_videoId), qPrintable(why));
-        return keepStored();
+    if (!m_following || !m_background)
+        return;
+    const QString current = m_player->currentSourceId();
+    if (current.isEmpty() || (!m_followWithoutSound && current != m_heard))
+        return;
+
+    QVariantMap playing = m_player->currentTrack();
+    // The length the engine found, for a song listed without one.
+    if (playing.value(QStringLiteral("durationMs")).toLongLong() <= 0) {
+        qint64 known = m_player->duration();
+        if (known <= 0 && current == m_heard)
+            known = m_heardTrack.value(QStringLiteral("durationMs")).toLongLong();
+        if (known > 0)
+            playing.insert(QStringLiteral("durationMs"), known);
     }
-    store(answer);
-    if (answer.provisional)
-        qInfo("lyrics: %s kept as provisional, to be asked again (%s)", qPrintable(m_videoId), qPrintable(why));
-    const bool same = m_hasStored && m_state != QLatin1String("loading") && answer.synced == m_stored.synced
-                      && answer.plain == m_stored.plain && answer.instrumental == m_stored.instrumental;
-    if (same) {
-        // The lines on show are the answer: no reset under the reader.
-        m_stored = answer;
+    QueueModel *queue = m_player->queue();
+    // A new queue is in place before its first song is: until then the song
+    // playing is not the queue's, and neither is "next".
+    const QueueTrack *here = queue->current();
+    if (!here || here->videoId != current)
+        return;
+    const QueueTrack *next = queue->at(queue->currentIndex() + 1);
+    if (!next && m_player->repeatMode() == PlaybackController::RepeatAll)
+        next = queue->at(0);
+    const QString nextId = next ? next->videoId : QString();
+
+    QSet<QString> songs{ current };
+    if (!nextId.isEmpty())
+        songs.insert(nextId);
+    m_queueSongs = songs;
+    prune();
+
+    prefetch(playing);
+    // The song after once the one playing is settled, and not on a metered
+    // connection: it may be skipped, and its lookup would be spent.
+    if (!nextId.isEmpty() && nextId != current && !m_jobs.contains(current) && !metered())
+        prefetch(next->toMap());
+}
+
+// Starts a queue lookup for `track` when it needs one; false when not.
+bool Lyrics::prefetch(const QVariantMap &track)
+{
+    const QString videoId = track.value(QStringLiteral("sourceId")).toString();
+    if (videoId.isEmpty() || track.value(QStringLiteral("title")).toString().isEmpty())
+        return false;
+    if (m_jobs.contains(videoId))
+        return false;   // one lookup per song, whoever asked for it
+    // Most providers match on the length, and a lookup without it may keep
+    // a worse match for good (L8): the song playing gets it from the engine.
+    if (track.value(QStringLiteral("durationMs")).toLongLong() <= 0)
+        return false;
+    const auto tried = m_queueTried.constFind(videoId);
+    if (tried != m_queueTried.constEnd() && m_sessionClock.elapsed() - *tried < kQueueRetryMs)
+        return false;
+    LyricsAnswer kept;
+    const LyricsStore::Stored stored = LyricsStore::read(videoId, &kept);
+    if (stored == LyricsStore::Stored::Show)
+        return false;
+    const bool hasKept = stored == LyricsStore::Stored::ShowAndCheck && kept.found();
+    startRace(videoId, queryFor(track), kept, hasKept, false, true);
+    return true;
+}
+
+// Where Qt cannot tell (no backend, or none that knows), the connection is
+// taken as unmetered.
+bool Lyrics::metered() const
+{
+    if (m_meteredForTest >= 0)
+        return m_meteredForTest > 0;
+    QNetworkInformation *info = QNetworkInformation::instance();
+    if (!info) {
+        QNetworkInformation::loadBackendByFeatures(QNetworkInformation::Feature::Metered);
+        info = QNetworkInformation::instance();
+    }
+    return info && info->supports(QNetworkInformation::Feature::Metered) && info->isMetered();
+}
+
+// ---------------------------------------------------------- what is on show
+
+// The best answer in hand of the race the view waits on, while a better
+// provider is still out. A kept answer being checked stays instead.
+void Lyrics::showOffer(LyricsRace *race)
+{
+    if (race != m_race || m_checking)
+        return;
+    const LyricsAnswer offer = race->offer();
+    if (m_hasStored && m_state != QLatin1String("loading")) {
+        if (sameWords(offer, m_stored))
+            return;
+        // An earlier one on show already (a third provider answered): only
+        // a better kind replaces it while someone reads along.
+        if (m_interim && offer.rank() <= m_stored.rank() && m_active)
+            return;
+    }
+    m_interim = true;
+    show(offer);
+}
+
+void Lyrics::display(const Settled &settled)
+{
+    const bool wasInterim = std::exchange(m_interim, false);
+    if (settled.kind == Settled::Error) {
         m_checking = false;
-        if (answer.provisional)
-            m_recheck.start();
+        m_hasStored = false;
+        m_source.clear();
+        m_error = settled.error;
+        m_lines.replace({});
+        m_state = QStringLiteral("error");
+        updateCurrentLine();
         Q_EMIT stateChanged();
         return;
+    }
+    const LyricsAnswer &answer = settled.answer;
+    if (settled.keptStays) {
+        if (m_checking) {
+            // The check is over; nothing on show changed.
+            m_checking = false;
+            m_stored = answer;
+            if (answer.provisional)
+                m_recheck.start();
+            Q_EMIT stateChanged();
+            return;
+        }
+        show(answer);
+        return;
+    }
+    // Found lyrics on show already: the kept ones being checked, or this
+    // race's best in hand.
+    if (m_hasStored && m_state != QLatin1String("loading")) {
+        if (sameWords(answer, m_stored)) {
+            // The lines on show are the answer: no reset under the reader.
+            m_stored = answer;
+            m_checking = false;
+            if (answer.provisional)
+                m_recheck.start();
+            Q_EMIT stateChanged();
+            return;
+        }
+        // A better kind of answer replaces the interim one at once. One of
+        // the same kind, only from higher in the order, waits while someone
+        // reads along: it is kept, and shown next time, unless the view is
+        // hidden or the first timed line has not been sung yet.
+        const bool readingAlong = m_active && !(m_state == QLatin1String("synced") && m_current < 0);
+        if (wasInterim && answer.rank() <= m_stored.rank() && readingAlong) {
+            qInfo("lyrics: %s: the answer on show stays while it is read; %s's is kept for next time",
+                  qPrintable(m_videoId), qPrintable(answer.source));
+            m_checking = false;
+            Q_EMIT stateChanged();
+            return;
+        }
     }
     m_checking = false;
     show(answer);
 }
 
-void Lyrics::settleNone()
-{
-    if (m_hasStored) {
-        // Lyrics were found before and nobody has them now: they stay, as
-        // they are, until the refresh age comes round again.
-        touchStored();
-        m_stored.provisional = false;
-        return keepStored();
-    }
-    store(Answer());
-    m_checking = false;
-    show(Answer());
-}
-
-void Lyrics::settleError(const QString &error)
-{
-    if (m_hasStored) {
-        qInfo("lyrics: %s: kept lyrics stay; asking again failed (%s)", qPrintable(m_videoId), qPrintable(error));
-        return keepStored();
-    }
-    // Nothing is stored, and the view offers to try again.
-    qInfo("lyrics: %s: nothing stored, a source could not be asked (%s)", qPrintable(m_videoId), qPrintable(error));
-    m_checking = false;
-    m_source.clear();
-    m_error = error;
-    m_lines.replace({});
-    m_state = QStringLiteral("error");
-    updateCurrentLine();
-    Q_EMIT stateChanged();
-}
-
-// The kept answer stays the answer: already on show when it was being
-// checked, shown now when it was asked again by hand.
-void Lyrics::keepStored()
-{
-    if (m_checking) {
-        m_checking = false;
-        if (m_stored.provisional)
-            m_recheck.start();
-        Q_EMIT stateChanged();   // the check is over; nothing on show changed
-        return;
-    }
-    show(m_stored);
-}
-
-void Lyrics::show(const Answer &answer)
+void Lyrics::show(const LyricsAnswer &answer)
 {
     QList<LyricsModel::Line> lines;
     QString state;

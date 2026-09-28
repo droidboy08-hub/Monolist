@@ -47,8 +47,16 @@ qt_add_executable(monolist
     src/artistlinks.h              src/artistlinks.cpp
     src/artistselftest.h           src/artistselftest.cpp
     src/lyrics.h                   src/lyrics.cpp
+    # The lyrics providers, raced (every one at once, the answers taken in
+    # order), and what is kept of their answers.
+    src/lyrics/lyricsprovider.h
+    src/lyrics/lyricsrace.h        src/lyrics/lyricsrace.cpp
+    src/lyrics/lyricsstore.h       src/lyrics/lyricsstore.cpp
+    src/lyrics/providers/lrclibprovider.h     src/lyrics/providers/lrclibprovider.cpp
+    src/lyrics/providers/ytmlyricsprovider.h  src/lyrics/providers/ytmlyricsprovider.cpp
     # What lyrics are asked for and which answer is the song, and the lyrics
-    # tests (--lyrics-query-test, --lyrics-flow-test).
+    # tests (--lyrics-query-test, --lyrics-flow-test, --lyrics-race-test,
+    # --lyrics-prefetch-test).
     src/lyricsquery.h              src/lyricsquery.cpp
     src/lyricsselftest.h           src/lyricsselftest.cpp
     src/windowchrome.h             src/windowchrome.cpp

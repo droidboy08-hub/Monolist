@@ -367,8 +367,15 @@ public:
     // it names ("Source: Musixmatch"). Two requests: the watch page says
     // where the lyrics are, a browse fetches them. `done` gets empty text
     // when the song has none, and an error only when a request failed.
-    void lyrics(const QString &videoId,
-                std::function<void(const QString &text, const QString &source, const QString &error)> done);
+    //
+    // What it returns calls the lookup off: whichever request is out is
+    // aborted, and `done` is never called. Each lookup has its own, rather
+    // than a newer one replacing an older as a search does, because several
+    // songs are looked up at once (the one playing and the one after it) and
+    // a lookup that lost the lyrics race must stop without touching those.
+    std::function<void()> lyrics(const QString &videoId,
+                                 std::function<void(const QString &text, const QString &source,
+                                                    const QString &error)> done);
 
     // A newer call of the same kind cancels the one still in flight. The kinds
     // are independent: a search starting must not cancel the suggestions for

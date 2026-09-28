@@ -127,7 +127,13 @@ which the pencil there changes.
 
 ### Lyrics
 
-`Lyrics` looks up the song playing while the Now Playing view shows them:
+`Lyrics` looks up the song playing from two providers, asked at once and
+answered in this order (`lyrics/lyricsrace.*`): the first timed lines in the
+order show the moment they arrive, and the other provider is called off; a
+provider lower down never pre-empts one above it, except that after 1.2 s
+(`lyrics.patience`) the best answer in hand shows while the one above is still
+out, to be replaced if its timed lines still come. Each provider has 6 s on
+the wall clock. `lyrics.race=serial` goes back to one after the other.
 
 1. **LRCLIB** (lrclib.net), an open database of time-synced lyrics. First its
    exact lookup (`/api/get`: title, lead artist, album, length); on a 404, or
@@ -145,7 +151,15 @@ credits name them (`lyricsquery.*`): noise such as "(Official Video)" goes,
 version markers stay ("(Official Live Video)" is asked as "(Live)"), and an
 artist line is never cut at "&" or "," on a guess.
 
-What was found, or that nothing was, is stored per video id. An answer shown
+The song playing is looked up once its sound starts, and the song after it
+once that is done (not on a metered connection), so opening the lyrics reads
+them from the database; Settings' "Look up lyrics in the background" turns
+this off. One lookup per song at a time, whoever asked for it, and never for
+a song whose length is not known yet.
+
+What was found, or that nothing was, is stored per video id, and each
+provider's own answer beside it, so a provider that has answered is not
+asked again while that is fresh. An answer shown
 only because a better source failed (LRCLIB out of reach, so YouTube Music's
 plain text) is stored as provisional: shown at once the next time, and asked
 for again behind it until that source answers. "None" is stored only when
@@ -199,7 +213,9 @@ whichever contrasts better.
       artistselftest.*       --artist-links-test
       lyrics.*               LRCLIB and YouTube Music lyrics, synced to playback
       lyricsquery.*          what lyrics are asked for, and which answer is the song
-      lyricsselftest.*       --lyrics-query-test and --lyrics-flow-test
+      lyrics/                the providers (providers/*), their race and what is kept
+      lyricsselftest.*       --lyrics-query-test, --lyrics-flow-test, --lyrics-race-test,
+                             --lyrics-prefetch-test and --lyrics-pane
       ytdlp.*                QProcess wrapper around yt-dlp; finds FFmpeg and Deno
       streamresolver.*       the tiered source ladder and its link cache
       downloadmanager.*      offline library: queue, options, files, DB rows
@@ -413,6 +429,18 @@ mpv's own messages.
                                                     the 6 s deadline, provisional answers replaced once
                                                     LRCLIB answers, no "none" kept after a failure, old rows
                                                     read as final, the switch back; needs MONOLIST_DATA_DIR
+    monolist --lyrics-race-test                     the lyrics race with scripted providers and no network:
+                                                    order, the winner at once and losers called off,
+                                                    patience, upgrades, timed and plain kept apart, error
+                                                    is not "none", lazy providers, the serial switch, the
+                                                    gate; then what the view shows of it; MONOLIST_DATA_DIR
+    monolist --lyrics-prefetch-test                 the background lookups against a stand-in: two queue
+                                                    rows kept with the lyrics closed, then opened from the
+                                                    database, none for an unknown length, one lookup per
+                                                    song, the setting, metered, no retry loop
+    monolist --lyrics-pane "<query>" [--dwell <ms>] the search's first two songs played, the lyrics opened
+                                                    <dwell> ms (3000) into the first and 1 s into the second;
+                                                    one "pane-open" line each, timed from opening to lines
     monolist --library-test "<query>" [--videos]    a playlist, likes and a saved album from a real search;
                                                     --videos searches music videos, and says how many rows
                                                     read back from the database still know they are videos

@@ -282,7 +282,7 @@ int main(int argc, char *argv[])
 
     MediaExtractor extractor;
 
-    // Lyrics for the song playing, looked up while the Now Playing view shows.
+    // Lyrics for the song playing, shown while the Now Playing view shows them.
     Lyrics lyrics(&player);
     lyrics.setLrclibUrl(library.settingValue(QStringLiteral("lrclib_url")));
     lyrics.setArtistLinks(&artistLinks);
@@ -292,10 +292,43 @@ int main(int argc, char *argv[])
         lyrics.setLrclibExact(false);
         qInfo("lyrics: lyrics.lrclib=search: LRCLIB's search alone, taken by length, as before");
     }
+    // Every lyrics provider is asked at once and the answers taken in order
+    // (lyrics/lyricsrace.*). lyrics.race=serial is the switch back to one
+    // after the other; lyrics.patience is how long, in ms, a slower provider
+    // higher in the order is waited for before the best answer in hand shows.
+    {
+        LyricsRace::Options race = lyrics.raceOptions();
+        bool ok = false;
+        const int patience = library.settingValue(QStringLiteral("lyrics.patience")).toInt(&ok);
+        if (ok && patience >= 0)
+            race.patienceMs = patience;
+        if (library.settingValue(QStringLiteral("lyrics.race")) == QLatin1String("serial")) {
+            race.serial = true;
+            race.patienceMs = -1;
+            qInfo("lyrics: lyrics.race=serial: one provider after the other, as before the race");
+        }
+        lyrics.setRaceOptions(race);
+    }
     // --lyrics-flow-test: how a lookup ends, against a stand-in LRCLIB and
     // YouTube Music (lyricsselftest.cpp); in MONOLIST_DATA_DIR only.
     if (app.arguments().contains(QStringLiteral("--lyrics-flow-test")))
         return runLyricsFlowSelfTest(&player) == 0 ? 0 : 1;
+    // --lyrics-race-test: the race's rules with scripted providers, and the
+    // view's; --lyrics-prefetch-test: the queue's lookups against a stand-in
+    // LRCLIB and YouTube Music (lyricsselftest.cpp). In MONOLIST_DATA_DIR only.
+    if (app.arguments().contains(QStringLiteral("--lyrics-race-test")))
+        return runLyricsRaceSelfTest() == 0 ? 0 : 1;
+    if (app.arguments().contains(QStringLiteral("--lyrics-prefetch-test")))
+        return runLyricsPrefetchSelfTest() == 0 ? 0 : 1;
+    // Lyrics looked up as each song's sound starts, and for the song after
+    // it, so the lyrics pane opens on lines already kept: Settings' "Look up
+    // lyrics in the background", kept as lyrics.background.
+    lyrics.setBackground(library.settingValue(QStringLiteral("lyrics.background")) != QLatin1String("0"));
+    QObject::connect(&lyrics, &Lyrics::backgroundChanged, &library, [&library, &lyrics]() {
+        library.setSetting(QStringLiteral("lyrics.background"),
+                           lyrics.background() ? QStringLiteral("1") : QStringLiteral("0"));
+    });
+    lyrics.followQueue();
 
     // Home's content: YouTube Music's feed and new releases, fetched once at
     // start, and the songs played lately, refreshed whenever a play is
@@ -2046,6 +2079,15 @@ int main(int argc, char *argv[])
                          (long long)clock->elapsed());
                 return;
             }
+            // The best answer in hand, shown after the race's patience window
+            // while a better provider is still out: what the reader sees
+            // first, but not yet the answer.
+            if (lyrics.interim()) {
+                qWarning("selftest:   interim %s shown after %lld ms from %s, better sources still asked",
+                         qPrintable(lyrics.state()), (long long)clock->elapsed(),
+                         qPrintable(lyrics.source().isEmpty() ? QStringLiteral("-") : lyrics.source()));
+                return;
+            }
             const QList<LyricsModel::Line> &lines = lyrics.lines()->lines();
             qWarning("selftest:   %s in %lld ms, %lld lines, from %s%s", qPrintable(lyrics.state()),
                      (long long)clock->elapsed(), (long long)lines.size(),
@@ -2073,6 +2115,14 @@ int main(int argc, char *argv[])
             qWarning("selftest: timed out");
             QCoreApplication::exit(2);
         });
+    }
+
+    // --lyrics-pane "<query>" [--dwell <ms>]: opening the lyrics while the
+    // search's first two songs play, timed (lyricsselftest.cpp).
+    if (const int paneFlag = args.indexOf(QStringLiteral("--lyrics-pane")); paneFlag >= 0 && paneFlag + 1 < args.size()) {
+        const int dwellFlag = args.indexOf(QStringLiteral("--dwell"));
+        const int dwell = dwellFlag >= 0 && dwellFlag + 1 < args.size() ? args.at(dwellFlag + 1).toInt() : 3000;
+        startLyricsPaneTest(&extractor, &player, &lyrics, args.at(paneFlag + 1), dwell);
     }
 
     // --search "<query>" [--filter songs|videos|albums|artists|playlists]

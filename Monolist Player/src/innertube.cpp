@@ -1874,13 +1874,16 @@ QString InnerTube::parseLoggedIn(const QJsonObject &root)
     return QString();
 }
 
-void InnerTube::lyrics(const QString &videoId,
-                       std::function<void(const QString &, const QString &, const QString &)> done)
+std::function<void()> InnerTube::lyrics(const QString &videoId,
+                                        std::function<void(const QString &, const QString &, const QString &)> done)
 {
+    // The slot lives as long as anything that may still look at it: every
+    // callback of the two requests holds it, as does what calls it off.
+    auto slot = std::make_shared<Slot>();
     send(Client::Music, QStringLiteral("next"), {
         { QStringLiteral("videoId"), videoId },
         { QStringLiteral("isAudioOnly"), true }
-    }, kSearchTimeoutMs, nullptr, [this, done](const QJsonObject &root, const QString &error) {
+    }, kSearchTimeoutMs, slot.get(), [this, done, slot](const QJsonObject &root, const QString &error) {
         if (!error.isEmpty()) {
             done({}, {}, error);
             return;
@@ -1902,7 +1905,10 @@ void InnerTube::lyrics(const QString &videoId,
             done({}, {}, {});
             return;
         }
-        browse(browseId, [done](const QJsonObject &page, const QString &error) {
+        // browse() itself, in the same slot, so calling it off reaches this too.
+        send(Client::Music, QStringLiteral("browse"), { { QStringLiteral("browseId"), browseId } },
+             kBrowseTimeoutMs, slot.get(), [done, slot](const QJsonObject &page, const QString &error) {
+            Q_UNUSED(slot);   // held, not read: see above
             if (!error.isEmpty()) {
                 done({}, {}, error);
                 return;
@@ -1917,6 +1923,7 @@ void InnerTube::lyrics(const QString &videoId,
             done(text, source, {});
         });
     });
+    return [slot]() { release(*slot); };
 }
 
 QList<InnerTube::Shelf> InnerTube::parseShelves(const QJsonObject &root)

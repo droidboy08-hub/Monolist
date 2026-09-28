@@ -571,7 +571,8 @@ ApplicationWindow {
         onLeaveRequested: window.leaveVideoFullscreen()
     }
 
-    // Lyrics are looked up only while they are on screen.
+    // Lyrics are put on show only while they are on screen; the lookups
+    // themselves also run in the background (Lyrics.background).
     Binding {
         target: Lyrics
         property: "active"
