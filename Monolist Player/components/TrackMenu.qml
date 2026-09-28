@@ -143,7 +143,7 @@ MonoMenu {
             Library.addToPlaylist(parseInt(argument), song)
         else if (action === "download")
             Downloads.enqueue(song.sourceId, song.title, song.artist, song.artwork, song.durationMs,
-                              song.isVideo === true)
+                              song.isVideo === true, song.album !== undefined ? song.album : "")
         else if (action === "copy")
             Library.copyLink(Menus.songLink(song.sourceId))
         else if (action === "open")

@@ -100,6 +100,11 @@ qt_add_executable(monolist
     src/des.h                      src/des.cpp
     src/saavnselftest.h            src/saavnselftest.cpp
     src/downloadmanager.h          src/downloadmanager.cpp
+    # A download from JioSaavn's copy of a song, with High sound quality
+    # (--saavn-download-test); and how far apart in time two copies of a song
+    # are, for the move to JioSaavn mid-song (checked by --saavn-test).
+    src/saavndownload.h            src/saavndownload.cpp
+    src/audioalign.h               src/audioalign.cpp
     src/downloadmodels.h           src/downloadmodels.cpp
     src/downloadselftest.h         src/downloadselftest.cpp
     src/artworkcache.h             src/artworkcache.cpp

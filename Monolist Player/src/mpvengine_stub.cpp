@@ -54,6 +54,21 @@ void MpvEngine::setVideoWatched(bool watched)
 
 void MpvEngine::stop() {}
 
+// Nothing plays, so nothing is ever taken over.
+bool MpvEngine::startUpgrade(const QString &url, double offsetMs, int minKbps, const QVariantMap &headers)
+{
+    Q_UNUSED(url)
+    Q_UNUSED(offsetMs)
+    Q_UNUSED(minKbps)
+    Q_UNUSED(headers)
+    return false;
+}
+
+void MpvEngine::cancelUpgrade(const QString &why)
+{
+    Q_UNUSED(why)
+}
+
 void MpvEngine::addVideo(const QString &url, const QVariantMap &headers)
 {
     Q_UNUSED(url)

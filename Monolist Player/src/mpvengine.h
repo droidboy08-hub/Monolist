@@ -1,11 +1,13 @@
 #pragma once
 
+#include <QList>
 #include <QObject>
 #include <QSize>
 #include <QString>
 #include <QVariantMap>
 
 struct mpv_handle;
+class QThread;
 
 // Thin Qt wrapper around libmpv, configured for audio-only playback.
 //
@@ -63,6 +65,8 @@ public:
     qint64 duration() const { return m_duration; }
     // A load is on its way and has not yet opened, failed or been stopped.
     bool isLoadingFile() const { return m_loadingFile; }
+    // audioStarted has been sent for the latest load.
+    bool hasAudioStarted() const { return m_audioStarted; }
     void setPaused(bool paused);
     void seekAbsolute(qint64 ms);
     void setVolume(qreal volume);        // 0.0 – 1.0
@@ -135,6 +139,32 @@ public:
     };
     StreamInfo streamInfo() const { return m_streamInfo; }
 
+    // The song playing, taken over part-way through from another link to the
+    // same recording without a gap in the sound: QT7, the mid-song move to
+    // JioSaavn. A second player, silent and paused, opens `url` a few seconds
+    // ahead of where the song is and buffers it; only once it can play from
+    // there, and the song has reached that point, do the two sound together
+    // for a moment, the new one lined up with the old by its own clock and
+    // faded in as the old fades out. Then the new player is this one, and
+    // everything above is about it. Nothing is heard of an attempt that
+    // fails, and none is made, or finished, in the last 15 s of the song.
+    // Only for the sound alone (no picture) of a file that has started, and
+    // one at a time. False, with nothing begun, when it cannot be tried now;
+    // otherwise upgradeFinished says how it ended.
+    //
+    // `offsetMs` is how much later the music comes in the new file than in
+    // the one playing (AudioAlign measures it): the new player is lined up
+    // that far from the old one's clock, so the move neither skips nor
+    // repeats. `minKbps` is what the new file must average, its size over
+    // its length, once it is open: a link's name is not what it serves.
+    bool startUpgrade(const QString &url, double offsetMs, int minKbps = 0,
+                      const QVariantMap &headers = QVariantMap());
+    // Given up, silently where nothing has been heard of it yet: another
+    // file loaded, a stop, the picture turned on, a seek once the two
+    // players are sounding together, or the caller's own reason.
+    void cancelUpgrade(const QString &why);
+    bool upgrading() const { return m_upgrade != nullptr; }
+
 Q_SIGNALS:
     void positionChanged(qint64 ms);
     void durationChanged(qint64 ms);
@@ -155,15 +185,43 @@ Q_SIGNALS:
     void videoSizeChanged(const QSize &size);
     void audioDevicesChanged();
     void streamInfoChanged();
+    // How an upgrade ended: `swapped`, the song now plays from the new link
+    // (and the gap, the alignment and the timings are in `detail`, for the
+    // log), or not, and why.
+    void upgradeFinished(bool swapped, const QString &detail);
+    // The player mpv renders from is about to be replaced by the upgrade's,
+    // and has been: whatever holds a render context on handle() frees it on
+    // the first, before the old player goes, and makes it again on the second.
+    void handleAboutToChange();
+    void handleChanged();
 
 private Q_SLOTS:
     void drainEvents();
 
 private:
     static void onWakeup(void *ctx);
+    static void onUpgradeWakeup(void *ctx);
     void observeProperties();
     void applyBaseOptions();
     void setOption(const char *name, const char *value);
+
+    // The upgrade's steps (see startUpgrade), in mpvengine.cpp.
+    struct Upgrade;
+    // The next step in `ms`, unless another has been scheduled meanwhile.
+    void upgradeAfter(int ms, void (MpvEngine::*step)());
+    void drainUpgrade();
+    void judgeUpgrade();          // ready yet? then wait for the moment
+    void aimUpgrade(qint64 at);   // where the new player waits, from now
+    void awaitTakeover();         // until the song reaches that point
+    void beginTakeover();         // both sounding, the new one silent
+    void alignTick();             // the new one's clock onto the old's
+    void fadeTick();              // one step of the crossfade
+    void promoteUpgrade();        // the new player becomes this one
+    void endUpgrade(bool swapped, const QString &detail);
+    // Destroys a player on a thread of its own: shutting one down waits for
+    // its sound output and its network reads to stop, which the window must
+    // not. All of them are waited for when the engine goes.
+    void retire(mpv_handle *mpv);
     // The link's own headers, for whatever is opened next.
     void applyHeaders(const QVariantMap &headers);
     // True once the file of the latest load has started: what mpv reports
@@ -196,6 +254,10 @@ private:
     bool m_audioStarted = false;   // audioStarted sent for the latest load
     QSize m_videoSize;
     qint64 m_duration = 0;
+    qreal m_volume = 1.0;          // as last set, 0.0 – 1.0
     QVariantList m_audioDevices;
     StreamInfo m_streamInfo;
+    Upgrade *m_upgrade = nullptr;
+    int m_upgradesDone = 0;        // this session, for the log
+    QList<QThread *> m_retiring;   // players being shut down (retire)
 };

@@ -21,7 +21,9 @@ class Recommender;
 // repository of their own, droidboy08-hub/Monolist-data, and this fetches one
 // tagged version of it into the app's data folder, the way "Update components"
 // fetches the tools. manifest.json at the tag lists every file with its size
-// and SHA-256; each file is streamed to "<name>.part", hashed as it arrives,
+// and SHA-256, and is itself held to a SHA-256 built into the app, so a tag
+// moved later cannot swap the data; each file is streamed to "<name>.part",
+// hashed as it arrives,
 // and only renamed into place once both match. A file already here with the
 // right size and hash is kept, so a download stopped half-way — by Cancel, a
 // dropped connection or a closed app — carries on from the last whole file.
@@ -86,7 +88,9 @@ public:
     QString catalogueDirectory() const;
 
     // Where the files are fetched from: the pinned tag on GitHub, or
-    // MONOLIST_REC_DATA_URL (a URL or a local folder) for testing.
+    // MONOLIST_REC_DATA_URL (a URL or a local folder) for testing, whose
+    // list of files is not held to the built-in hash unless
+    // MONOLIST_REC_DATA_PIN names one.
     static QString baseUrl();
     // <data>/recommendations/v<version>, the one folder this creates.
     static QString folderPath();

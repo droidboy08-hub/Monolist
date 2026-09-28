@@ -1410,6 +1410,7 @@ void JioSaavn::tryNext(const std::shared_ptr<Lookup> &state)
         result.saavnId = row.id;
         result.title = row.title;
         result.artists = row.artists.join(QStringLiteral(", "));
+        result.album = row.album;
         result.durationSec = row.durationSec;
         finish(state, result);
         return;

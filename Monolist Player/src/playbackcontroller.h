@@ -15,6 +15,7 @@
 #include "queuemodel.h"
 
 class QAbstractItemModel;
+class AudioAlign;
 class Library;
 class MpvEngine;
 class StreamResolver;
@@ -101,6 +102,11 @@ class PlaybackController : public QObject
     // Both on until the listener turns them off in Settings.
     Q_PROPERTY(bool saavnEnabled READ saavnEnabled WRITE setSaavnEnabled NOTIFY saavnChanged)
     Q_PROPERTY(bool saavnIndiaHeaders READ saavnIndiaHeaders WRITE setSaavnIndiaHeaders NOTIFY saavnChanged)
+    // A song YouTube started because JioSaavn answered too late moves over
+    // to JioSaavn mid-song once its stream is ready (MpvEngine::startUpgrade).
+    // On unless turned off in Settings (jiosaavn.upgrade=0); only ever with
+    // JioSaavn itself on.
+    Q_PROPERTY(bool saavnUpgrade READ saavnUpgrade WRITE setSaavnUpgrade NOTIFY saavnChanged)
 public:
     enum RepeatMode { RepeatOff = 0, RepeatAll = 1, RepeatOne = 2 };
     Q_ENUM(RepeatMode)
@@ -168,6 +174,8 @@ public:
     void setSaavnEnabled(bool on);
     bool saavnIndiaHeaders() const;
     void setSaavnIndiaHeaders(bool on);
+    bool saavnUpgrade() const { return m_saavnUpgrade; }
+    void setSaavnUpgrade(bool on);
 
 public Q_SLOTS:
     void play();
@@ -282,6 +290,14 @@ private:
     bool resumeEarlyEnd();
     void handleVideoResolved(const QString &videoId, const QString &videoUrl, const QString &audioUrl,
                              const QVariantMap &headers);
+    // QT7: JioSaavn's match arrived for the song YouTube is already playing
+    // (StreamResolver::saavnLateMatch). The song moves over to it, where it
+    // is, when that is worth it and safe; once a play at most.
+    void offerSaavnUpgrade(const QString &videoId, const QString &url, int kbps, int durationSec);
+    // The two copies compared (AudioAlign): the move starts, lined up by
+    // how far apart the music is in the two files, or does not.
+    void saavnAligned(bool ok, double offsetMs, double peak, const QString &detail);
+    void upgradeFinished(bool swapped, const QString &detail);
     void playWithVideo(bool video);
     // A picture that will not play must not cost the song: back to the sound,
     // from the same second, with a word about it.
@@ -371,6 +387,31 @@ private:
     // playback.early_end=next takes an early end as the song's end.
     bool m_freshLinkFirst = true;
     bool m_earlyEndCheck = true;
+    // The mid-song move to JioSaavn (saavnUpgrade): the switch; whether this
+    // play has had its one attempt; the song and bitrate of one under way;
+    // and how many have been made this session, for the log.
+    bool m_saavnUpgrade = true;
+    bool m_upgradeTried = false;
+    QString m_upgradeVideoId;
+    int m_upgradeKbps = 0;
+    int m_upgradesDone = 0;
+    // A late match that came before the song's sound had started: offered
+    // again once it has (MpvEngine::audioStarted).
+    struct UpgradeOffer {
+        QString videoId;
+        QString url;
+        int kbps = 0;
+        int durationSec = 0;
+    };
+    UpgradeOffer m_upgradeOffer;
+    // One being compared with the stream playing, and that stream's link.
+    UpgradeOffer m_upgradeProbe;
+    QString m_upgradeProbeStream;
+    AudioAlign *m_align = nullptr;
+    // The stream mpv was given for the current song, and what it is fetched
+    // with: what JioSaavn's copy is compared against.
+    QString m_streamUrl;
+    QVariantMap m_streamHeaders;
     QString m_statusText;
     QString m_sourceLabel;
     bool m_statusError = false;

@@ -925,8 +925,10 @@ void StreamResolver::resolveTrack(const Saavn::Target &track)
         emitFailed(videoId, QStringLiteral("Empty video id."));
         return;
     }
-    // Asked again for the same song: the earlier race is over, unheard.
+    // Asked again for the same song: the earlier race is over, unheard, and
+    // a late answer to it is no longer news for what is playing.
     m_races.remove(videoId);
+    m_saavnLate.remove(videoId);
 
     const bool resting = m_saavnRestUntil.isValid() && m_saavnRestUntil > QDateTime::currentDateTimeUtc();
     if (!m_saavnEnabled || track.title.trimmed().isEmpty()) {
@@ -1023,6 +1025,10 @@ void StreamResolver::reportFailure(const QString &videoId, const QString &reason
 void StreamResolver::youtubeWins(const QString &videoId)
 {
     const Race race = m_races.take(videoId);
+    // JioSaavn still to answer: what it says is for the song already
+    // playing, which may move over to it (saavnLateMatch).
+    if (m_saavnAsking.contains(videoId))
+        m_saavnLate.insert(videoId);
     emitResolved(videoId, race.url, race.tier, race.fromCache);
 }
 
@@ -1033,9 +1039,73 @@ void StreamResolver::startSaavnLookup(const Saavn::Target &track)
     m_saavnAsking.insert(track.videoId);
     const QString videoId = track.videoId;
     const QString signature = Saavn::signature(track);
-    m_saavn.lookup(track, [this, videoId, signature](const JioSaavn::Result &result) {
-        saavnAnswered(videoId, signature, result);
+    const int delay = m_saavnTestDelayMs;
+    m_saavn.lookup(track, [this, videoId, signature, delay](const JioSaavn::Result &result) {
+        if (delay <= 0) {
+            saavnAnswered(videoId, signature, result);
+            return;
+        }
+        qInfo("jiosaavn: %s answered; held back %d ms for the self-test (--saavn-late)", qPrintable(videoId), delay);
+        QTimer::singleShot(delay, this, [this, videoId, signature, result]() {
+            saavnAnswered(videoId, signature, result);
+        });
     });
+}
+
+void StreamResolver::findSaavn(const Saavn::Target &track, QObject *context, SaavnCopyCallback done)
+{
+    const QPointer<QObject> guard(context);
+    const auto answer = [this, guard, done](const SaavnCopy &copy) {
+        // Always later, so the caller hears back the same way whatever the
+        // answer, and never while it is still asking.
+        QMetaObject::invokeMethod(this, [guard, done, copy]() {
+            if (guard)
+                done(copy);
+        }, Qt::QueuedConnection);
+    };
+    SaavnCopy none;
+    if (!m_saavnEnabled) {
+        none.reason = QStringLiteral("JioSaavn is off (Standard sound quality)");
+        answer(none);
+        return;
+    }
+    if (track.videoId.isEmpty() || track.title.trimmed().isEmpty()) {
+        none.reason = QStringLiteral("no title to look for");
+        answer(none);
+        return;
+    }
+    const SaavnVerdict verdict = saavnVerdict(track);
+    switch (verdict.kind) {
+    case SaavnVerdict::Match: {
+        SaavnCopy copy;
+        copy.url = verdict.url;
+        copy.kbps = verdict.kbps;
+        copy.saavnId = verdict.saavnId;
+        answer(copy);
+        return;
+    }
+    case SaavnVerdict::NoMatch:
+        none.reason = QStringLiteral("JioSaavn does not have this recording");
+        answer(none);
+        return;
+    case SaavnVerdict::Refused:
+        none.reason = QStringLiteral("JioSaavn's link was refused a few minutes ago");
+        answer(none);
+        return;
+    case SaavnVerdict::Unknown:
+        break;
+    }
+    if (m_saavnRestUntil.isValid() && m_saavnRestUntil > QDateTime::currentDateTimeUtc()) {
+        none.reason = QStringLiteral("JioSaavn is being left alone for a few minutes");
+        answer(none);
+        return;
+    }
+    // Asked, or already being asked: the answer comes through saavnAnswered.
+    m_saavnWaiters[track.videoId].append([guard, done](const SaavnCopy &copy) {
+        if (guard)
+            done(copy);
+    });
+    startSaavnLookup(track);
 }
 
 void StreamResolver::saavnAnswered(const QString &videoId, const QString &signature,
@@ -1087,6 +1157,32 @@ void StreamResolver::saavnAnswered(const QString &videoId, const QString &signat
                      kSaavnFailuresBeforeRest, kSaavnRestMinutes);
         }
         break;
+    }
+
+    // Downloads that were waiting on this lookup (findSaavn).
+    if (const QList<SaavnCopyCallback> waiters = m_saavnWaiters.take(videoId); !waiters.isEmpty()) {
+        SaavnCopy copy;
+        if (result.kind == JioSaavn::Result::Match) {
+            copy.url = result.url;
+            copy.kbps = result.kbps;
+            copy.saavnId = result.saavnId;
+            copy.album = result.album;
+            copy.durationSec = result.durationSec;
+        } else {
+            copy.reason = result.kind == JioSaavn::Result::NoMatch
+                              ? QStringLiteral("JioSaavn does not have this recording (%1)").arg(result.reason)
+                              : QStringLiteral("JioSaavn could not be asked: %1").arg(result.reason);
+        }
+        for (const SaavnCopyCallback &waiter : waiters)
+            waiter(copy);
+    }
+
+    // The answer to a race YouTube has already won: the song playing may
+    // move over to it (QT7), which is the player's to decide.
+    if (m_saavnLate.remove(videoId) && result.kind == JioSaavn::Result::Match) {
+        qInfo("jiosaavn: %s: the match came after YouTube had begun (%lld ms after it was asked); "
+              "the song may move over to it", qPrintable(videoId), static_cast<long long>(result.elapsedMs));
+        Q_EMIT saavnLateMatch(videoId, handOverSaavn(videoId, result.url), result.kbps, result.durationSec);
     }
 
     const auto race = m_races.find(videoId);

@@ -8,3 +8,13 @@
 // to run without MONOLIST_DATA_DIR, since it opens a DownloadManager on the
 // database there.
 int runDownloadCleanupSelfTest();
+
+// --saavn-download-test: a download taken from JioSaavn's copy of a song
+// (saavndownload.*), against a stand-in CDN on this computer serving a tone
+// FFmpeg makes for the test: the file's name, tags and cover as a yt-dlp
+// download's; a refused link handing the song to yt-dlp (on an invented id
+// YouTube does not have, so yt-dlp fails without downloading anything) with
+// what was there before kept; a missing cover; a cancel part-way; MP3; and
+// JioSaavn never asked on Standard. Downloads only into a scratch folder in
+// MONOLIST_DATA_DIR, which it insists on.
+int runSaavnDownloadSelfTest();

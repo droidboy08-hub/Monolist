@@ -9,8 +9,13 @@
 #include <QString>
 #include <QStringList>
 
+#include <functional>
+
 #include "downloadmodels.h"
 #include "ytdlp.h"
+
+class QNetworkAccessManager;
+class SaavnDownload;
 
 // Offline library, ported from Melody's download service.
 //
@@ -54,7 +59,31 @@ public:
 
     DownloadQueueModel *queue() { return &m_queue; }
     DownloadLibraryModel *library() { return &m_library; }
-    int activeCount() const { return int(m_requests.size()); }
+    int activeCount() const
+    {
+        return int(m_requests.size() + m_saavnRequests.size() + m_saavnAsking.size());
+    }
+
+    // JioSaavn's copy of a song about to be downloaded, when there is one it
+    // is certain of (StreamResolver::findSaavn, wired in main.cpp): with High
+    // sound quality on, a song it has is saved from it as 320 kbps AAC, named
+    // and tagged as yt-dlp's download would be, and yt-dlp takes over should
+    // anything about that fail. `done` must be called once, later, with an
+    // empty url for "none"; on Standard it is, without JioSaavn being asked.
+    struct SaavnCopy {
+        QString url;
+        int kbps = 0;
+        QString album;      // JioSaavn's, for the tags where the app knows none
+        int durationSec = 0;   // JioSaavn's length, where the app knows none
+        QString reason;     // why none
+    };
+    using SaavnFinder = std::function<void(const QString &videoId, const QString &title, const QString &artist,
+                                           const QString &album, qint64 durationMs,
+                                           std::function<void(const SaavnCopy &)> done)>;
+    void setSaavnFinder(SaavnFinder finder) { m_saavnFinder = std::move(finder); }
+    // For --saavn-download-test: where the cover comes from, "%1" being the
+    // video id (YouTube's own thumbnail otherwise).
+    void setCoverTemplateForTest(const QString &pattern) { m_coverTemplate = pattern; }
     int queuedCount() const { return int(m_pending.size()); }
     int storedCount() const { return int(m_stored.size()); }
     QString downloadDirectory() const { return QDir::toNativeSeparators(m_directory); }
@@ -89,9 +118,10 @@ public:
                              const QString &artist,
                              const QString &artwork = QString(),
                              qint64 durationMs = 0,
-                             bool isVideo = false);
+                             bool isVideo = false,
+                             const QString &album = QString());
     // A whole list at once (Download all): track maps as the lists hand the
-    // player (sourceId, title, artist, artwork, durationMs, isVideo). The rows
+    // player (sourceId, title, artist, album, artwork, durationMs, isVideo). The rows
     // are told once at the end rather than once a song, which for a long
     // playlist was every row asking again for every song queued.
     Q_INVOKABLE void enqueueAll(const QVariantList &tracks);
@@ -151,10 +181,19 @@ Q_SIGNALS:
 private:
     // Puts one track in the queue; false when it is stored, queued or running
     // already, or yt-dlp is missing. The caller tells the rows and pumps.
-    bool queueOne(const QString &videoId, const QString &title, const QString &artist,
+    bool queueOne(const QString &videoId, const QString &title, const QString &artist, const QString &album,
                   const QString &artwork, qint64 durationMs, bool isVideo);
     void pump();
     void begin(const QString &videoId);
+    // The two ways a download runs: yt-dlp, and JioSaavn's copy, which falls
+    // back to yt-dlp on any failure.
+    void startYtDlp(const QString &videoId);
+    void saavnAnswered(const QString &videoId, const SaavnCopy &copy);
+    void startSaavn(const QString &videoId, const SaavnCopy &copy);
+    void saavnFailed(const QString &videoId, const QString &reason);
+    // What either reports as it goes.
+    void noteProgress(const QString &videoId, qint64 received, qint64 total, double speed, int eta);
+    void noteStep(const QString &videoId, const QString &step);
     void complete(const QString &videoId, const QString &reportedPath, const QVariantMap &metadata);
     void fail(const QString &videoId, const QString &reason);
     void recordStored(const DownloadQueueModel::Item &item, const QString &path);
@@ -177,7 +216,12 @@ private:
     QString m_directory;
     QStringList m_pending;                               // waiting to start, in order
     bool m_waitingOnPlayback = false;                    // pump() waits for a song to resolve
-    QHash<QString, QPointer<YtDlpRequest>> m_requests;   // running
+    QHash<QString, QPointer<YtDlpRequest>> m_requests;   // running through yt-dlp
+    QHash<QString, QPointer<SaavnDownload>> m_saavnRequests;   // running from JioSaavn
+    QSet<QString> m_saavnAsking;                         // waiting to hear whether JioSaavn has it
+    SaavnFinder m_saavnFinder;
+    QString m_coverTemplate = QStringLiteral("https://i.ytimg.com/vi/%1/maxresdefault.jpg");
+    QNetworkAccessManager *m_network = nullptr;          // made for the first JioSaavn download
     QHash<QString, QString> m_stored;                    // video id -> file on disk
     QHash<QString, QSet<QString>> m_before;              // running: its files already there at the start
     QSet<QString> m_cancelling;

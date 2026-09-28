@@ -322,6 +322,19 @@ ScrollPage {
             onToggled: Player.saavnIndiaHeaders = !Player.saavnIndiaHeaders
         }
 
+        // The mid-song move (QT7): a song YouTube started because JioSaavn
+        // answered a moment too late goes over to JioSaavn where it is.
+        ToggleRow {
+            visible: Player.saavnEnabled
+            width: parent.width
+            label: "Switch to JioSaavn mid-song"
+            hint: "When JioSaavn answers only after YouTube has started a song, the song moves over to JioSaavn's "
+                  + "copy at the same moment, once that is ready to play, with a short crossfade and no gap. Off, "
+                  + "it stays on YouTube until it is played again."
+            checked: Player.saavnUpgrade
+            onToggled: Player.saavnUpgrade = !Player.saavnUpgrade
+        }
+
         Text {
             text: "VIDEO"
             font.family: Theme.fontFamily

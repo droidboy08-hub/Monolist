@@ -19,6 +19,7 @@ public:
         QString videoId;
         QString title;
         QString artist;
+        QString album;              // where the list knew it: JioSaavn is asked by it
         QString artwork;
         qint64 durationMs = 0;
         bool isVideo = false;       // a music video, as the list it came from said

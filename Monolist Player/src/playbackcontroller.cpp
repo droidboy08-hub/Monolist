@@ -1,5 +1,6 @@
 #include "playbackcontroller.h"
 #include "appdatabase.h"
+#include "audioalign.h"
 #include "downloadmanager.h"
 #include "library.h"
 #include "mpvengine.h"
@@ -55,6 +56,23 @@ const QString kAudioDeviceNameKey = QStringLiteral("player.audio_device_name");
 const QString kAutoDevice = QStringLiteral("auto");
 const QString kSaavnKey = QStringLiteral("jiosaavn.enabled");
 const QString kSaavnIndiaKey = QStringLiteral("jiosaavn.india_headers");
+const QString kSaavnUpgradeKey = QStringLiteral("jiosaavn.upgrade");
+// A move to JioSaavn mid-song must be worth hearing: its copy at least this
+// much above the bitrate playing (BitChord's UPGRADE_MIN_GAIN_KBPS). 320
+// against YouTube's 130-160 clears it; JioSaavn's 160 does not.
+constexpr int kUpgradeMinGainKbps = 96;
+// YouTube's Opus as mpv usually reads it, where it has not said yet.
+constexpr int kUpgradeAssumedKbps = 160;
+// JioSaavn's length against the song's as mpv read it (the engine checks the
+// file's own length again before it takes over).
+constexpr qint64 kUpgradeDriftMs = 2000;
+// Where the two copies are compared (AudioAlign): 4 s from 16 s in, looked
+// for up to 3 s either way. Near the start, since each is decoded from its
+// beginning and how far apart they are holds through the song (the same at
+// 30 s and at 120 s on the songs measured). A song must be long enough.
+constexpr qint64 kAlignAtMs = 16000;
+constexpr qint64 kAlignRangeMs = 3000;
+constexpr qint64 kAlignShortestMs = 30000;
 // The switches back for the recovery ladder's newer rungs, each restoring
 // the way it was before: "muxed", "keep" and "next" (see restoreSettings).
 const QString kRefusedKey = QStringLiteral("playback.refused");
@@ -202,6 +220,15 @@ PlaybackController::PlaybackController(MpvEngine *engine,
                       static_cast<long long>(m_rescueClock.elapsed()));
                 m_rescueClock.invalidate();
             }
+            // A late JioSaavn match that was waiting for this.
+            if (!m_upgradeOffer.videoId.isEmpty()) {
+                const UpgradeOffer offer = std::exchange(m_upgradeOffer, {});
+                // After the rest of this handler, and after mpv has said
+                // what it plays.
+                QTimer::singleShot(0, this, [this, offer]() {
+                    offerSaavnUpgrade(offer.videoId, offer.url, offer.kbps, offer.durationSec);
+                });
+            }
             if (m_consecutiveFailures == 0)
                 return;
             qInfo("playback: %s has started, so the count of songs in a row that would not play starts again"
@@ -325,6 +352,10 @@ PlaybackController::PlaybackController(MpvEngine *engine,
             logStreamInfo();
             Q_EMIT streamInfoChanged();
         });
+
+        connect(m_engine, &MpvEngine::upgradeFinished, this, &PlaybackController::upgradeFinished);
+        m_align = new AudioAlign(this);
+        connect(m_align, &AudioAlign::measured, this, &PlaybackController::saavnAligned);
     }
     applyAudioDevice();
 
@@ -358,6 +389,7 @@ PlaybackController::PlaybackController(MpvEngine *engine,
         connect(m_resolver, &StreamResolver::resolved, this, &PlaybackController::handleResolved);
         connect(m_resolver, &StreamResolver::failed, this, &PlaybackController::handleResolveFailed);
         connect(m_resolver, &StreamResolver::videoResolved, this, &PlaybackController::handleVideoResolved);
+        connect(m_resolver, &StreamResolver::saavnLateMatch, this, &PlaybackController::offerSaavnUpgrade);
         connect(m_resolver, &StreamResolver::videoFailed, this,
                 [this](const QString &videoId, const QString &reason) {
                     if (videoId != m_videoPendingId)
@@ -500,6 +532,8 @@ void PlaybackController::restoreSettings()
         m_resolver->setSaavnEnabled(m_library->settingValue(kSaavnKey) == QLatin1String("1"));
         m_resolver->setSaavnIndiaHeaders(m_library->settingValue(kSaavnIndiaKey) != QLatin1String("0"),
                                          /*forgetNoMatches=*/false);
+        // The move mid-song, on unless turned off; and only ever with High.
+        m_saavnUpgrade = m_library->settingValue(kSaavnUpgradeKey) != QLatin1String("0");
         Q_EMIT saavnChanged();
     }
 
@@ -567,6 +601,17 @@ void PlaybackController::setSaavnIndiaHeaders(bool on)
         return;
     m_resolver->setSaavnIndiaHeaders(on);
     saveSetting(kSaavnIndiaKey, on ? QStringLiteral("1") : QStringLiteral("0"));
+    Q_EMIT saavnChanged();
+}
+
+// From the next late answer on. One already under way finishes: turning the
+// switch off does not move the song back.
+void PlaybackController::setSaavnUpgrade(bool on)
+{
+    if (on == m_saavnUpgrade)
+        return;
+    m_saavnUpgrade = on;
+    saveSetting(kSaavnUpgradeKey, on ? QStringLiteral("1") : QStringLiteral("0"));
     Q_EMIT saavnChanged();
 }
 
@@ -1233,6 +1278,13 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
     m_rescueTier = -1;
     m_innerTubeAskedAgain = false;
     m_earlyEndResumed = false;
+    m_upgradeTried = false;
+    m_upgradeOffer = {};
+    m_upgradeProbe = {};
+    if (m_align)
+        m_align->cancel();
+    m_streamUrl.clear();
+    m_streamHeaders.clear();
     m_rescueClock.invalidate();
     m_localPath.clear();
     m_directUrl.clear();
@@ -1397,9 +1449,10 @@ void PlaybackController::handleResolved(const QString &videoId, const QString &u
     // with the headers to ask as; JioSaavn's CDN wants none, and must not be
     // sent a YouTube client's.
     const qint64 resumeAt = std::exchange(m_resumeAt, 0);
-    if (!m_engine
-        || !m_engine->load(url, m_autoPlayAfterResolve, QString(), resumeAt,
-                           m_resolver && !fromSaavn ? m_resolver->headersFor(videoId, url) : QVariantMap()))
+    const QVariantMap headers = m_resolver && !fromSaavn ? m_resolver->headersFor(videoId, url) : QVariantMap();
+    m_streamUrl = url;
+    m_streamHeaders = headers;
+    if (!m_engine || !m_engine->load(url, m_autoPlayAfterResolve, QString(), resumeAt, headers))
         return;   // refused outright: loadFailed has already taken it elsewhere, and nothing was heard
 
     // JioSaavn's links name their bitrate, and that is the point of them, so
@@ -1426,6 +1479,149 @@ void PlaybackController::handleResolveFailed(const QString &videoId, const QStri
     // real cause is written down.
     qWarning("resolve failed for %s: %s", qPrintable(videoId), qPrintable(reason));
     failTrack(reason);
+}
+
+// JioSaavn said yes after YouTube had already begun. The song moves over
+// where it is, if the copy is worth moving to and nothing about this play
+// says not to: the listener's switch, the picture on, a file, a move already
+// made or refused. The two copies are compared first (AudioAlign), then the
+// engine gets JioSaavn's ready unheard and takes over without a gap, or
+// leaves the song as it was.
+void PlaybackController::offerSaavnUpgrade(const QString &videoId, const QString &url, int kbps,
+                                           int durationSec)
+{
+    const auto stay = [&videoId](const QString &why) {
+        qInfo("upgrade: %s stays on YouTube: %s", qPrintable(videoId), qUtf8Printable(why));
+    };
+    if (!m_resolver || !m_resolver->saavnEnabled() || !engineAvailable())
+        return;
+    if (!m_saavnUpgrade) {
+        stay(QStringLiteral("moving mid-song is turned off (jiosaavn.upgrade=0)"));
+        return;
+    }
+    if (videoId != currentSourceId()) {
+        stay(QStringLiteral("it is no longer the song playing"));
+        return;
+    }
+    if (m_upgradeTried || m_refusedTiers.contains(StreamResolver::TierJioSaavn)) {
+        stay(QStringLiteral("it has had its one move, or JioSaavn's link was refused, this play"));
+        return;
+    }
+    // Before the song has made a sound, or while it is being fetched again
+    // after a refused link, there is nothing to judge by or to take over
+    // from: weighed once it sounds. A song rescued by its 96 kbps muxed
+    // stream is exactly the one to move.
+    if (!m_pendingVideoId.isEmpty() || !m_engine->hasAudioStarted()) {
+        m_upgradeOffer = { videoId, url, kbps, durationSec };
+        qInfo("upgrade: %s: JioSaavn's match came before YouTube's sound had started; "
+              "it is weighed once that has", qPrintable(videoId));
+        return;
+    }
+    if (videoId != m_streamVideoId || m_streamTier < 0 || m_streamTier == StreamResolver::TierJioSaavn) {
+        stay(QStringLiteral("it is not playing from a YouTube stream"));
+        return;
+    }
+    if (m_videoPlaying || m_videoWanted || m_streamIsVideo) {
+        stay(QStringLiteral("its video is on, and the picture comes with YouTube's sound"));
+        return;
+    }
+    const MpvEngine::StreamInfo sound = m_engine->streamInfo();
+    const int playing = sound.kbps > 0 ? sound.kbps : kUpgradeAssumedKbps;
+    if (kbps <= 0 || kbps - playing < kUpgradeMinGainKbps) {
+        stay(kbps <= 0 ? QStringLiteral("JioSaavn's link does not say its bitrate")
+                       : QStringLiteral("JioSaavn's %1 kbps is not enough above the %2 kbps playing")
+                             .arg(kbps).arg(playing));
+        return;
+    }
+    const qint64 length = m_engine->duration();
+    if (durationSec > 0 && length > 0 && qAbs(qint64(durationSec) * 1000 - length) > kUpgradeDriftMs) {
+        stay(QStringLiteral("JioSaavn's copy is %1 s long and the stream playing %2 s")
+                 .arg(durationSec).arg(length / 1000.0, 0, 'f', 1));
+        return;
+    }
+    if (length < kAlignShortestMs) {
+        stay(QStringLiteral("too short to compare the two copies"));
+        return;
+    }
+    // The one attempt this play, from here on whatever becomes of it.
+    m_upgradeTried = true;
+    // Where the music sits in each file first: they are not always the same
+    // file, and a move by the clock alone would skip or repeat the
+    // difference.
+    m_upgradeProbe = { videoId, url, kbps, durationSec };
+    m_upgradeProbeStream = m_streamUrl;
+    const AudioAlign::Source current{ m_streamUrl, m_streamHeaders };
+    const AudioAlign::Source saavn{ url, QVariantMap() };
+    if (!m_align || !m_align->measure(current, saavn, kAlignAtMs, kAlignRangeMs)) {
+        m_upgradeProbe = {};
+        stay(QStringLiteral("the two copies cannot be compared (FFmpeg, which does it, is not installed)"));
+        return;
+    }
+    qInfo("upgrade: %s: JioSaavn's %d kbps copy arrived at %s of %s, over %s at %d kbps; comparing the two",
+          qPrintable(videoId), kbps, qPrintable(TrackModel::formatDuration(m_position)),
+          qPrintable(TrackModel::formatDuration(length)), qUtf8Printable(tierLabel(m_streamTier)), playing);
+}
+
+void PlaybackController::saavnAligned(bool ok, double offsetMs, double peak, const QString &detail)
+{
+    const UpgradeOffer offer = std::exchange(m_upgradeProbe, {});
+    if (offer.videoId.isEmpty())
+        return;
+    const auto stay = [&offer](const QString &why) {
+        qInfo("upgrade: %s stays on YouTube: %s", qPrintable(offer.videoId), qUtf8Printable(why));
+    };
+    // Still the same song, from the same stream, with nothing else begun.
+    if (offer.videoId != currentSourceId() || m_streamUrl != m_upgradeProbeStream || !m_pendingVideoId.isEmpty()
+        || m_streamTier < 0 || m_streamTier == StreamResolver::TierJioSaavn || m_videoPlaying || m_videoWanted
+        || m_streamIsVideo || !m_saavnUpgrade) {
+        stay(QStringLiteral("the song changed while the two copies were compared"));
+        return;
+    }
+    if (!ok) {
+        stay(QStringLiteral("the two copies could not be lined up: %1").arg(detail));
+        return;
+    }
+    if (qAbs(offsetMs) > double(kUpgradeDriftMs)) {
+        stay(QStringLiteral("the music is %1 ms apart in the two files").arg(offsetMs, 0, 'f', 0));
+        return;
+    }
+    // Worth it by what the file really holds, not only by what its link says.
+    const int playing = m_engine->streamInfo().kbps > 0 ? m_engine->streamInfo().kbps : kUpgradeAssumedKbps;
+    if (!m_engine->startUpgrade(offer.url, offsetMs, playing + kUpgradeMinGainKbps)) {
+        stay(QStringLiteral("too near the end, or not playing now (at %1 of %2)")
+                 .arg(TrackModel::formatDuration(m_position), TrackModel::formatDuration(m_engine->duration())));
+        return;
+    }
+    m_upgradeVideoId = offer.videoId;
+    m_upgradeKbps = offer.kbps;
+    qInfo("upgrade: %s: the music is %+.1f ms later in JioSaavn's file (%.3f alike there); getting it ready",
+          qPrintable(offer.videoId), offsetMs, peak);
+}
+
+void PlaybackController::upgradeFinished(bool swapped, const QString &detail)
+{
+    const QString videoId = std::exchange(m_upgradeVideoId, QString());
+    if (videoId.isEmpty())
+        return;
+    if (!swapped) {
+        qInfo("upgrade: %s not moved to JioSaavn: %s", qPrintable(videoId), qUtf8Printable(detail));
+        return;
+    }
+    const QString from = tierLabel(m_streamTier);
+    m_streamTier = StreamResolver::TierJioSaavn;
+    m_streamFromCache = false;
+    m_rescueTier = -1;
+    ++m_upgradesDone;
+    // The one line to count these by: how often a song moved, and how.
+    qInfo("upgrade: %s moved from %s to JioSaavn (%d kbps) mid-song at %s, move %d this session: %s",
+          qPrintable(videoId), qUtf8Printable(from), m_upgradeKbps, qPrintable(TrackModel::formatDuration(m_position)),
+          m_upgradesDone, qUtf8Printable(detail));
+    setStatus(QStringLiteral("Streaming"), QStringLiteral("JioSaavn · %1 kbps").arg(m_upgradeKbps), false);
+    setSoundOrigin(QStringLiteral("Streaming · ") + tierLabel(StreamResolver::TierJioSaavn));
+    // What mpv has already said of the new file is written now: it may have
+    // nothing more to say.
+    logStreamInfo();
+    Q_EMIT streamInfoChanged();
 }
 
 void PlaybackController::failTrack(const QString &reason)

@@ -223,7 +223,7 @@ Seen by the agents that fixed B01–B13 and by their reviewers, and not yet fixe
   Done when: MONOLIST_DATA_DIR (or a MONOLIST_DOWNLOAD_DIR override) keeps test downloads out of the real Music folder.
 - [x] **F15** Radio tracks are never marked as radio: openPlayEvent's fromRadio test can never be true, so play_events and Last.fm's chosenByUser treat autoplay songs as chosen *(P2, S)*
   Done when: songs added by autoplay radio are recorded with source "radio" and scrobbled with chosenByUser=0.
-- [ ] **F16** Pin the published manifest's SHA-256 in the app once Monolist-data v1 is pushed, so a moved tag cannot swap the data *(P3, S)*
+- [x] **F16** Pin the published manifest's SHA-256 in the app once Monolist-data v1 is pushed, so a moved tag cannot swap the data *(P3, S)*
   Done when: RecData refuses a manifest whose hash differs from the one built into the app for that version.
 - [ ] **F17** With "Hide explicit titles" on, pressing a clean suggestion can still play an explicit version, because the YouTube search that resolves it is not filtered *(P5, S)*
   Done when: with the switch on, the resolver prefers a non-explicit result when one exists.
@@ -269,6 +269,10 @@ Seen by the agents that fixed B01–B13 and by their reviewers, and not yet fixe
   Done when: a fresh InnerTube link refused after a first refusal of the same song renews the visitor id (as LOGIN_REQUIRED does), so at most one song pays for a bad id, checked against a stand-in that refuses one id's links.
 - [ ] **F38** The picture's yt-dlp lookups are outside B9's one-yt-dlp-at-a-time queue: with the video switch on, every song start runs `StreamResolver::resolveVideo` (a yt-dlp process, ~3 s of Python under emulation) beside the sound's resolve, and prefetchUpcoming runs one more for the next song's picture. When the sound also falls to yt-dlp, two or three extractions run at once, the slowdown the queue exists to avoid, and the picture lookups have no 20 s limit either *(P6, S)*
   Done when: picture lookups take a turn in the same queue (the current song's sound first, then its picture, then anything ahead of time), measured with the video switch on and InnerTube failing (--bounds-test's stand-in).
+- [ ] **F39** A JioSaavn link named for 320 kbps can serve a far thinner file, and the race plays it as "JioSaavn · 320 kbps" over YouTube's better stream: "Baibaba Bimba" (Tenniscoats, JioSaavn auQ6LDS0) comes as a "…_320.mp4" of 4.45 MB for 6:04, 98 kbps, where YouTube's Opus is 137 kbps (1 of the 10 benchmark songs JioSaavn has, engine step JS). The mid-song move and JioSaavn downloads now check the file's own size over its length and pass such a file by; the race and a remembered match do not *(P3, S)*
+  Done when: the race weighs JioSaavn's link by what it serves (the Content-Length its CDN sends for a HEAD, or mpv's file average once open) and YouTube plays where that is not at least what YouTube offers.
+- [ ] **F40** Where JioSaavn's file and YouTube's do not have the music at the same moment, moving between them "at the same second" skips or repeats the difference: JioSaavn's "Bohemian Rhapsody" has its music 840 ms later than YouTube's (and "Baibaba Bimba" 138 ms earlier), measured by cross-correlation (bench_S_align.ps1). The mid-song move lines the two up (AudioAlign), but the other moves do not: a refused JioSaavn link back to YouTube, the picture turned on over JioSaavn's sound, and the picture turned off back to it *(P5, S)*
+  Done when: those moves use AudioAlign's lag (or the one the song already measured) to pick the moment in the other file, checked on "Bohemian Rhapsody" with --spoil-saavn.
 
 ## Connections
 

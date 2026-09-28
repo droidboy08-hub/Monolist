@@ -133,7 +133,8 @@ yt-dlp resolves side by side with downloads never waiting.
 ### JioSaavn
 
 JioSaavn has much of the same music as AAC at up to 320 kbps. While it is on
-(Settings → Playback, on by default), `StreamResolver::resolveTrack` asks it
+(Settings → Playback → Sound: High; off until chosen, and on Standard it is
+never contacted), `StreamResolver::resolveTrack` asks it
 and YouTube at the same moment: one search for "title lead-artist", whose
 rows already carry their links (DES-encrypted, decrypted by `des.*`). A row
 is taken only when it is the same recording, and the matcher leans towards
@@ -169,7 +170,37 @@ because some songs are offered only in India, and follow redirects only to
 JioSaavn's own hosts. Now Playing says which source is playing, and what
 mpv says arrived ("STREAMING · JIOSAAVN · AAC · 44.1 → 48 KHZ · 321 KBPS": the
 file's own average, container included).
-Downloads and lyrics do not use it.
+
+A JioSaavn match that comes after YouTube has started the song (it missed the
+1.2 s) moves the song over mid-song (QT7; "Switch to JioSaavn mid-song",
+`jiosaavn.upgrade`, on). Only when its bitrate is at least 96 kbps above what
+plays (by the link's name, and again by the file's own size over its length
+once it is open: one "_320" link served 98 kbps) and its length within 2 s
+of the stream's as mpv read it, never with the picture on, and once a play.
+First `AudioAlign` finds where the music sits in each file (FFmpeg decodes a
+few seconds of each from its start; a cross-correlation finds the lag to a
+quarter of a millisecond): the copies are not always the same file, and one
+had its music 138 ms earlier on JioSaavn. Then `MpvEngine::startUpgrade`
+opens JioSaavn's link in a second, silent, paused mpv 5 s ahead of the song
+and buffers 12 s past that point; when the song gets there the second player
+starts silent, its clock is brought onto the first's plus that lag (its
+speed nudged, unheard, until they are within 10 ms), the two crossfade over
+80 ms and the second becomes the player. Nothing is heard of an attempt that
+fails, and none is made or finished in the last 15 s. A song rescued by its
+muxed stream after a refused link is weighed once that sounds. Each move
+logs `upgrade: <id> moved from InnerTube to JioSaavn …`, with the timings and
+how far apart the two were. JioSaavn's CDN paces nothing (a whole song
+arrives in one request at about 35 MB/s from here, 2.2 MB/s when it is not
+yet in the CDN's cache), so it is fetched in one request.
+
+With High on, a download of a song JioSaavn has comes from it too
+(`saavndownload.*`): the 320 kbps AAC, rewrapped into
+`<Artist> - <Title> [<id>].m4a` (or re-encoded for MP3) with the same tags
+and square YouTube cover a yt-dlp download gets, through files the failure
+cleanup already treats as unfinished; anything that goes wrong, a file that
+averages under 256 kbps included, hands the song to yt-dlp. On Standard,
+`StreamResolver::findSaavn` answers "none" without asking JioSaavn. Lyrics
+do not use it.
 
 ### Downloads
 
@@ -310,8 +341,10 @@ whichever contrasts better.
                              DES (FIPS 46-3) for its encrypted links
       saavnselftest.*        --saavn-test and --saavn
       downloadmanager.*      offline library: queue, options, files, DB rows
+      saavndownload.*        one download from JioSaavn's copy, tagged as yt-dlp's
+      audioalign.*           how far apart in time two copies of a song are (QT7)
       downloadmodels.*       the queue and offline-set models for QML
-      downloadselftest.*     --download-cleanup-test
+      downloadselftest.*     --download-cleanup-test and --saavn-download-test
       artworkcache.*         async disk-cached image provider + cover colours
       windowchrome.*         the window without the system title bar
       macos/                 the Mac's own parts: the title bar (macwindow.*), Now
@@ -579,7 +612,7 @@ early end, a refused file) says what rescued it once its sound starts:
 first failure`.
 
     monolist --play <videoId> [seconds] [--again] [--at <s>] [--spoil [n]] [--video [--switch-at <s>]]
-             [--as "<title>" "<artist>" [length s]] [--spoil-saavn] [--saavn-on]
+             [--as "<title>" "<artist>" [length s]] [--spoil-saavn] [--saavn-on] [--saavn-late <ms>]
                                                     resolve and play; --again replays from the cache,
                                                     --at jumps into the song; --spoil hands InnerTube's
                                                     first n links (1 by default) over spoiled, so mpv
@@ -591,7 +624,9 @@ first failure`.
                                                     --switch-at asks for the picture after that long;
                                                     --as names the song, which JioSaavn is asked about;
                                                     --spoil-saavn hands its JioSaavn link over pointing at
-                                                    a missing file, so the way back to YouTube shows.
+                                                    a missing file, so the way back to YouTube shows;
+                                                    --saavn-late holds JioSaavn's answer back, so YouTube
+                                                    starts and the song moves to JioSaavn mid-song.
                                                     JioSaavn is asked only about a named song (--as, or
                                                     one in the library) or with --saavn-on, and never
                                                     with --spoil, so plain --play timings stay YouTube's
@@ -600,7 +635,8 @@ first failure`.
                                                     320 kbps and the 96 kbps floor, both details shapes,
                                                     entities, signatures, and the matcher on 68 invented
                                                     pairs (dubs, unknown asides, one-sided remixers) and
-                                                    its choices between rows
+                                                    its choices between rows; and AudioAlign's lag on
+                                                    invented sound shifted by known amounts
     monolist --saavn "<title>" "<artist>" [seconds] [--no-india-headers]
                                                     one real JioSaavn lookup: the row taken, its bitrate and
                                                     host (never the whole link), and every refusal's reason
@@ -629,6 +665,12 @@ first failure`.
                                                     files, never a finished file, whatever the database
                                                     says; and where MONOLIST_DATA_DIR and
                                                     MONOLIST_DOWNLOAD_DIR send downloads
+    monolist --saavn-download-test                  a download from JioSaavn's copy against a stand-in CDN on
+                                                    this computer: name, tags and square cover as yt-dlp's,
+                                                    a refused link handed to yt-dlp (an invented id, so
+                                                    nothing is downloaded) with older files kept, no cover,
+                                                    a cancel part-way, MP3, and no JioSaavn on Standard
+                                                    (needs MONOLIST_DATA_DIR)
     monolist --search "<query>" [--filter <kind>]   one timed search, with suggestions; --filter songs,
                                                     videos, albums, artists or playlists picks the chip,
                                                     and the last three print their cards by section

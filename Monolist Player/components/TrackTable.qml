@@ -445,6 +445,7 @@ Column {
                 artwork: row.artwork
                 durationMs: row.durationMs
                 isVideo: row.isVideo
+                album: row.album
             }
 
             // Blank rather than "0:00" where the list gave no length, as an

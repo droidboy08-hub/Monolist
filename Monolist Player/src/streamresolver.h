@@ -12,6 +12,8 @@
 #include "innertube.h"
 #include "jiosaavn.h"
 
+#include <functional>
+
 class QNetworkAccessManager;
 class QNetworkReply;
 class YtDlpRequest;
@@ -91,6 +93,27 @@ public:
     // forgotten and JioSaavn left out for this song for a while; the next
     // look after that asks again, in case the link had only moved.
     void refuseSaavn(const QString &videoId);
+
+    // JioSaavn's copy of a song being downloaded (DownloadManager): the
+    // match already known where it still holds, otherwise asked for now, as
+    // playback would ask. Never while JioSaavn is off (Standard sound
+    // quality): then `done` hears "none" without JioSaavn being contacted.
+    // `done` runs once, on this object's thread, after findSaavn returns,
+    // and not at all once `context` has gone.
+    struct SaavnCopy {
+        QString url;          // empty: none to use, and `reason` says why
+        int kbps = 0;         // 0 when the link does not say
+        QString saavnId;
+        QString album;        // JioSaavn's name for it, when asked just now
+        int durationSec = 0;  // likewise
+        QString reason;
+    };
+    using SaavnCopyCallback = std::function<void(const SaavnCopy &)>;
+    void findSaavn(const Saavn::Target &track, QObject *context, SaavnCopyCallback done);
+    // For --play --saavn-late <ms>: every JioSaavn answer is held back this
+    // long before it is heard, so the race is lost to YouTube on a real song
+    // and the mid-song upgrade (saavnLateMatch) can be watched.
+    void setSaavnTestDelay(int ms) { m_saavnTestDelayMs = qMax(0, ms); }
     // The bitrate of the JioSaavn link known for this song, 0 when the link
     // does not say or there is none.
     int saavnKbps(const QString &videoId) const;
@@ -210,6 +233,12 @@ Q_SIGNALS:
     void videoResolved(const QString &videoId, const QString &videoUrl, const QString &audioUrl,
                        const QVariantMap &headers);
     void videoFailed(const QString &videoId, const QString &reason);
+    // JioSaavn's answer to a race YouTube won by default — JioSaavn had not
+    // answered within the moment it is given — was a match after all: the
+    // same recording, at `kbps`, `durationSec` long, at `url`. What the
+    // player may now move to mid-song (QT7). Not for a prefetch's answer,
+    // nor one that came after the song was asked for again.
+    void saavnLateMatch(const QString &videoId, const QString &url, int kbps, int durationSec);
 
 private:
     struct Job {
@@ -365,6 +394,12 @@ private:
     int m_raceGeneration = 0;
     QHash<QString, SaavnVerdict> m_saavnVerdicts;
     QSet<QString> m_saavnAsking;     // lookups on their way
+    // Songs whose race YouTube won while JioSaavn was still being asked:
+    // a match from that lookup is a late one (saavnLateMatch).
+    QSet<QString> m_saavnLate;
+    // Downloads waiting on a lookup already on its way (findSaavn).
+    QHash<QString, QList<SaavnCopyCallback>> m_saavnWaiters;
+    int m_saavnTestDelayMs = 0;
     // A JioSaavn that cannot be reached is left alone for a while, rather
     // than asked, and waited for, at every song.
     int m_saavnFailuresInARow = 0;

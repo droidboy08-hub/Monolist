@@ -36,6 +36,15 @@ const QString kManifestFile = QStringLiteral("manifest.json");
 // What the manifest calls itself: an address that answers with some other
 // JSON is the wrong address, not damaged data.
 const QString kManifestName = QStringLiteral("monolist-recommendation-data");
+// manifest.json as published at tag v<kVersion>, by its SHA-256 (18,170
+// bytes, fetched from the tag and hashed on 2026-09-28). Every file is
+// checked against the hash the list gives it, but the list itself was only
+// ever as good as the tag it came from, and a tag can be moved or pushed
+// again: whoever did that could swap every file and every hash with it. So
+// the list must be this one, byte for byte. Raised with kVersion, from the
+// new tag's manifest (ROADMAP F16).
+const QByteArray kManifestSha256 =
+    QByteArrayLiteral("b3ba9679b923cfe963bb09c910fad1777b91103e651c6c6eb97e2bf79b4b767f");
 
 // How much is read, hashed and written per turn of the event loop. A megabyte
 // is a few milliseconds of SHA-256 even under emulation, so the interface
@@ -78,6 +87,20 @@ bool isSha256(const QByteArray &hex)
 {
     static const QRegularExpression shape(QStringLiteral("^[0-9a-f]{64}$"));
     return shape.match(QString::fromLatin1(hex)).hasMatch();
+}
+
+// What a downloaded list of files must hash to: the pin, for the published
+// data. Nothing for MONOLIST_REC_DATA_URL, which serves test data of its
+// own, unless MONOLIST_REC_DATA_PIN names a hash to hold it to, which is how
+// the check itself is tested.
+QByteArray expectedManifestHash()
+{
+    const QByteArray named = qgetenv("MONOLIST_REC_DATA_PIN").trimmed().toLower();
+    if (!named.isEmpty())
+        return named;
+    if (!qEnvironmentVariable("MONOLIST_REC_DATA_URL").trimmed().isEmpty())
+        return {};
+    return kManifestSha256;
 }
 
 QNetworkRequest makeRequest(const QUrl &url)
@@ -340,6 +363,16 @@ void RecData::manifestArrived(QNetworkReply *reply)
     }
 
     const QByteArray bytes = reply->readAll();
+    // Before anything in it is read, let alone trusted.
+    const QByteArray pin = expectedManifestHash();
+    if (!pin.isEmpty() && QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex() != pin) {
+        qWarning("Monolist: recommendation data: the list of files hashes to %s, where this build expects %s",
+                 QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex().constData(), pin.constData());
+        fail(QStringLiteral("The list of files at %1 is not the one this version of Monolist was made for, so "
+                            "none of it was used. The data there may have been changed since.")
+                 .arg(reply->url().toDisplayString()));
+        return;
+    }
     QVector<Entry> entries;
     qint64 total = 0;
     QString published;

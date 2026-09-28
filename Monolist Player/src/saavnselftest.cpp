@@ -1,7 +1,10 @@
 #include "saavnselftest.h"
 
+#include "audioalign.h"
 #include "des.h"
 #include "jiosaavn.h"
+
+#include <cmath>
 
 #include <QEventLoop>
 #include <QJsonDocument>
@@ -598,6 +601,61 @@ void testMatcher(Checks &t)
             choice.refusals.join(QStringLiteral(" | ")));
 }
 
+// How far apart two copies are (AudioAlign::bestLag), on invented sound: a
+// noise with a few tones in it, at 4 kHz, the reference 4 s of it and the
+// other copy the same sound shifted and a little quieter, with its own hiss,
+// searched 3 s either way.
+void testAlign(Checks &t)
+{
+    static constexpr int rate = 4000;
+    static constexpr int range = 3 * rate;
+    static constexpr double kPi = 3.14159265358979323846;
+    const auto sound = [](int length, quint32 seed) {
+        QVector<float> out(length);
+        quint32 state = seed;
+        for (int i = 0; i < length; ++i) {
+            state = state * 1664525u + 1013904223u;
+            const float noise = float(int(state >> 16) - 32768) / 32768.0f;
+            out[i] = 3000.0f * noise + 2000.0f * float(std::sin(2.0 * kPi * 220.0 * i / rate))
+                     + 1500.0f * float(std::sin(2.0 * kPi * 331.0 * i / rate + 0.3));
+        }
+        return out;
+    };
+    // The song as a whole, 12 s; the reference is 4 s of it from 4 s in.
+    const QVector<float> song = sound(12 * rate, 7u);
+    const QVector<float> reference = song.mid(4 * rate, 4 * rate);
+    for (const double shiftMs : { 0.0, 137.75, -16.5, 840.0, -2500.0 }) {
+        // The other copy's window starts `range` before the reference's, and
+        // its music `shiftMs` later.
+        const int shift = int(std::lround(shiftMs * rate / 1000.0));
+        QVector<float> other(4 * rate + 2 * range);
+        quint32 hiss = 99u;
+        for (int i = 0; i < other.size(); ++i) {
+            const int source = 4 * rate - range + i - shift;
+            hiss = hiss * 1664525u + 1013904223u;
+            const float noise = 60.0f * float(int(hiss >> 16) - 32768) / 32768.0f;
+            other[i] = (source >= 0 && source < song.size() ? 0.8f * song[source] : 0.0f) + noise;
+        }
+        double offset = 0.0;
+        double peak = 0.0;
+        const bool ok = AudioAlign::bestLag(reference, other, rate, range, &offset, &peak);
+        t.check(ok && qAbs(offset - shift * 1000.0 / rate) < 0.3 && peak > 0.95,
+                QStringLiteral("align: the music %1 ms later in the other copy is found to a quarter of a ms")
+                    .arg(shiftMs),
+                QStringLiteral("found %1 ms, %2 alike").arg(offset).arg(peak));
+    }
+    // Two sounds that are not the same recording.
+    const QVector<float> stranger = sound(4 * rate + 2 * range, 12345u);
+    double offset = 0.0;
+    double peak = 0.0;
+    const bool ok = AudioAlign::bestLag(reference, stranger, rate, range, &offset, &peak);
+    t.check(ok && peak < 0.8, QStringLiteral("align: a different sound is not taken for the same (below 0.8 alike)"),
+            QStringLiteral("%1 alike at %2 ms").arg(peak).arg(offset));
+    // Too little of the other to search.
+    t.check(!AudioAlign::bestLag(reference, reference, rate, range, &offset, &peak),
+            QStringLiteral("align: an other copy too short to search is refused, not guessed at"));
+}
+
 } // namespace
 
 int runSaavnSelfTest()
@@ -608,6 +666,7 @@ int runSaavnSelfTest()
     testBitrates(t);
     testParsing(t);
     testMatcher(t);
+    testAlign(t);
     return t.finish();
 }
 

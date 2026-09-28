@@ -1,10 +1,12 @@
 #include "downloadmanager.h"
 #include "appdatabase.h"
+#include "saavndownload.h"
 
 #include <QDesktopServices>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QNetworkAccessManager>
 #include <QProcess>
 #include <QRegularExpression>
 #include <QSqlError>
@@ -75,12 +77,23 @@ DownloadManager::~DownloadManager()
 {
     // Stop without the usual failure handling: nothing may start in their place.
     m_pending.clear();
+    m_saavnAsking.clear();
     const auto requests = m_requests;
     for (auto it = requests.cbegin(); it != requests.cend(); ++it) {
         if (!it.value())
             continue;
         disconnect(it.value(), nullptr, this, nullptr);
         it.value()->cancel();
+        removePartialFiles(it.key());
+    }
+    // A JioSaavn download stops (FFmpeg with it) as it is deleted, before
+    // its files go.
+    const auto saavn = m_saavnRequests;
+    for (auto it = saavn.cbegin(); it != saavn.cend(); ++it) {
+        if (!it.value())
+            continue;
+        disconnect(it.value(), nullptr, this, nullptr);
+        delete it.value().data();
         removePartialFiles(it.key());
     }
 }
@@ -193,13 +206,14 @@ void DownloadManager::enqueue(const QString &videoId,
                               const QString &artist,
                               const QString &artwork,
                               qint64 durationMs,
-                              bool isVideo)
+                              bool isVideo,
+                              const QString &album)
 {
     // What was found at launch is not the last word: tools put in place since
     // then are used rather than refused until a restart, and one taken away
     // is noticed here.
     refreshToolsIfStale();
-    if (!queueOne(videoId, title, artist, artwork, durationMs, isVideo))
+    if (!queueOne(videoId, title, artist, album, artwork, durationMs, isVideo))
         return;
     touch();
     pump();
@@ -214,6 +228,7 @@ void DownloadManager::enqueueAll(const QVariantList &tracks)
         queued |= queueOne(track.value(QStringLiteral("sourceId")).toString(),
                            track.value(QStringLiteral("title")).toString(),
                            track.value(QStringLiteral("artist")).toString(),
+                           track.value(QStringLiteral("album")).toString(),
                            track.value(QStringLiteral("artwork")).toString(),
                            track.value(QStringLiteral("durationMs")).toLongLong(),
                            track.value(QStringLiteral("isVideo")).toBool());
@@ -225,7 +240,7 @@ void DownloadManager::enqueueAll(const QVariantList &tracks)
 }
 
 bool DownloadManager::queueOne(const QString &videoId, const QString &title, const QString &artist,
-                               const QString &artwork, qint64 durationMs, bool isVideo)
+                               const QString &album, const QString &artwork, qint64 durationMs, bool isVideo)
 {
     if (videoId.isEmpty() || !m_available || m_stored.contains(videoId) || isPending(videoId))
         return false;
@@ -234,6 +249,7 @@ bool DownloadManager::queueOne(const QString &videoId, const QString &title, con
     item.videoId = videoId;
     item.title = title.trimmed();   // may be empty: yt-dlp's metadata fills it in
     item.artist = YtDlp::cleanArtist(artist);
+    item.album = album.trimmed();
     item.artwork = artwork;
     item.durationMs = durationMs;
     item.isVideo = isVideo;
@@ -250,7 +266,7 @@ void DownloadManager::pump()
     // a fifth of a second unless it has gone to yt-dlp, and never past 20 s.
     // Downloads already running are left alone; one stopped would start
     // again from nothing.
-    if (!m_pending.isEmpty() && m_requests.size() < kMaxConcurrent && YtDlp::playbackResolving()) {
+    if (!m_pending.isEmpty() && activeCount() < kMaxConcurrent && YtDlp::playbackResolving()) {
         if (!m_waitingOnPlayback) {
             m_waitingOnPlayback = true;
             qInfo("downloads: %d waiting while a song resolves", int(m_pending.size()));
@@ -263,7 +279,7 @@ void DownloadManager::pump()
         return;
     }
     bool began = false;
-    while (!m_pending.isEmpty() && m_requests.size() < kMaxConcurrent) {
+    while (!m_pending.isEmpty() && activeCount() < kMaxConcurrent) {
         begin(m_pending.takeFirst());
         began = true;
     }
@@ -291,71 +307,190 @@ void DownloadManager::begin(const QString &videoId)
     item.error.clear();
     m_queue.upsert(item);
 
-    // What is already there for this track, before yt-dlp writes a byte: should
+    // What is already there for this track, before a byte is written: should
     // this attempt fail, its cleanup may take only what the attempt wrote.
+    // Taken once, before JioSaavn's copy and before yt-dlp should that fail.
     m_before.insert(videoId, filesFor(m_directory, videoId));
 
+    // With High sound quality, JioSaavn's copy where it certainly has this
+    // recording; asked by title, so a song without one goes to yt-dlp. On
+    // Standard the finder says no without asking anyone.
+    if (m_saavnFinder && !item.title.isEmpty()) {
+        m_saavnAsking.insert(videoId);
+        m_saavnFinder(videoId, item.title, item.artist, item.album, item.durationMs,
+                      [this, videoId](const SaavnCopy &copy) { saavnAnswered(videoId, copy); });
+        return;
+    }
+    startYtDlp(videoId);
+}
+
+void DownloadManager::startYtDlp(const QString &videoId)
+{
+    const DownloadQueueModel::Item *queued = m_queue.find(videoId);
+    if (!queued) {
+        m_before.remove(videoId);
+        pump();
+        return;
+    }
     // Without a title the stem is left to yt-dlp, which names the file from
     // the metadata it fetches.
-    const QString stem = item.title.isEmpty() ? QString() : fileStem(videoId, item.title, item.artist);
+    const QString stem = queued->title.isEmpty() ? QString() : fileStem(videoId, queued->title, queued->artist);
     YtDlpRequest *request = YtDlp::download(videoId, m_directory, stem, options(), this);
     m_requests.insert(videoId, request);
 
     connect(request, &YtDlpRequest::progress, this,
             [this, videoId](qint64 received, qint64 total, double speed, int eta) {
-                const DownloadQueueModel::Item *current = m_queue.find(videoId);
-                if (!current)
-                    return;
-                DownloadQueueModel::Item item = *current;
-                const qreal fraction = total > 0 ? qBound(0.0, qreal(received) / qreal(total), 1.0)
-                                                 : item.progress;
-                // Progress lines arrive many times a second; repaint on
-                // whole-percent steps.
-                if (item.state == DownloadQueueModel::State::Downloading && fraction < 1.0
-                    && qAbs(fraction - item.progress) < 0.01)
-                    return;
-                // Back from processing (a second stream, say) is a new state
-                // for the rows; another percent is only a new percentage.
-                const bool stateChanged = item.state != DownloadQueueModel::State::Downloading;
-                item.state = DownloadQueueModel::State::Downloading;
-                item.progress = fraction;
-                item.received = received;
-                item.total = total;
-                item.speed = speed;
-                item.eta = eta;
-                m_queue.upsert(item);
-                if (stateChanged)
-                    touch();
-                else
-                    touchProgress();
-                Q_EMIT progressChanged(videoId, fraction);
+                noteProgress(videoId, received, total, speed, eta);
             });
-
     connect(request, &YtDlpRequest::postProcessing, this, [this, videoId](const QString &step) {
-        const DownloadQueueModel::Item *current = m_queue.find(videoId);
-        if (!current)
-            return;
-        // Some steps run before a single byte arrives (reading metadata,
-        // fetching SponsorBlock segments, converting the thumbnail). They are
-        // part of starting, which the row already says, not of finishing.
-        if (current->received <= 0 && current->progress <= 0.0)
-            return;
-        DownloadQueueModel::Item item = *current;
-        item.state = DownloadQueueModel::State::Processing;
-        item.progress = 1.0;
-        item.step = step;
-        m_queue.upsert(item);
-        touch();
+        noteStep(videoId, step);
     });
-
     connect(request, &YtDlpRequest::finishedFile, this,
             [this, videoId](const QString &path, const QVariantMap &metadata) {
                 complete(videoId, path, metadata);
             });
-
     connect(request, &YtDlpRequest::failed, this, [this, videoId](const QString &reason) {
         fail(videoId, reason);
     });
+}
+
+void DownloadManager::saavnAnswered(const QString &videoId, const SaavnCopy &copy)
+{
+    if (!m_saavnAsking.remove(videoId))
+        return;   // cancelled while JioSaavn was asked
+    if (copy.url.isEmpty()) {
+        qInfo("downloads: %s from YouTube: %s", qPrintable(videoId), qUtf8Printable(copy.reason));
+        startYtDlp(videoId);
+        return;
+    }
+    startSaavn(videoId, copy);
+}
+
+void DownloadManager::startSaavn(const QString &videoId, const SaavnCopy &copy)
+{
+    const DownloadQueueModel::Item *queued = m_queue.find(videoId);
+    if (!queued) {
+        m_before.remove(videoId);
+        pump();
+        return;
+    }
+    if (!m_network)
+        m_network = new QNetworkAccessManager(this);
+    SaavnDownload::Job job;
+    job.videoId = videoId;
+    job.url = copy.url;
+    job.kbps = copy.kbps;
+    job.directory = m_directory;
+    job.stem = fileStem(videoId, queued->title, queued->artist);
+    job.title = queued->title;
+    job.artist = queued->artist;
+    // YouTube Music's name for the album where the list gave one, as a
+    // download through yt-dlp is tagged; JioSaavn's where it did not.
+    job.album = queued->album.isEmpty() ? copy.album : queued->album;
+    job.coverUrl = m_coverTemplate.arg(videoId);
+    job.options = options();
+    job.durationMs = queued->durationMs > 0 ? queued->durationMs : qint64(copy.durationSec) * 1000;
+
+    auto *download = new SaavnDownload(job, m_network, this);
+    m_saavnRequests.insert(videoId, download);
+    connect(download, &SaavnDownload::progress, this,
+            [this, videoId](qint64 received, qint64 total, double speed, int eta) {
+                noteProgress(videoId, received, total, speed, eta);
+            });
+    connect(download, &SaavnDownload::postProcessing, this, [this, videoId](const QString &step) {
+        noteStep(videoId, step);
+    });
+    connect(download, &SaavnDownload::finishedFile, this,
+            [this, videoId, download](const QString &path, const QVariantMap &metadata) {
+                m_saavnRequests.remove(videoId);
+                download->deleteLater();
+                qInfo("downloads: %s saved from JioSaavn as %s", qPrintable(videoId),
+                      qUtf8Printable(QDir::toNativeSeparators(path)));
+                complete(videoId, path, metadata);
+            });
+    connect(download, &SaavnDownload::failed, this, [this, videoId, download](const QString &reason) {
+        m_saavnRequests.remove(videoId);
+        download->deleteLater();
+        saavnFailed(videoId, reason);
+    });
+    qInfo("downloads: %s from JioSaavn at %d kbps", qPrintable(videoId), copy.kbps);
+    download->start();
+}
+
+// JioSaavn's copy fell through: whatever it wrote goes, and yt-dlp downloads
+// the song as it would have. A cancel is a cancel, not a failure.
+void DownloadManager::saavnFailed(const QString &videoId, const QString &reason)
+{
+    if (m_cancelling.contains(videoId)) {
+        fail(videoId, reason);
+        return;
+    }
+    // Only what this attempt wrote: its names are all unfinished ones, and
+    // anything that was there before it began stays (ROADMAP F13).
+    const QStringList removed = removeLeftovers(m_directory, videoId, m_before.value(videoId), m_stored.value(videoId));
+    qWarning("downloads: %s: JioSaavn's copy failed (%s)%s; downloading it through yt-dlp instead",
+             qPrintable(videoId), qUtf8Printable(reason),
+             removed.isEmpty() ? "" : qPrintable(QStringLiteral(", %1 left-over file(s) removed").arg(removed.size())));
+    if (const DownloadQueueModel::Item *current = m_queue.find(videoId)) {
+        DownloadQueueModel::Item item = *current;
+        item.state = DownloadQueueModel::State::Downloading;
+        item.progress = 0.0;
+        item.received = 0;
+        item.total = -1;
+        item.speed = -1.0;
+        item.eta = -1;
+        item.step.clear();
+        m_queue.upsert(item);
+        touch();
+    }
+    startYtDlp(videoId);
+}
+
+void DownloadManager::noteProgress(const QString &videoId, qint64 received, qint64 total, double speed, int eta)
+{
+    const DownloadQueueModel::Item *current = m_queue.find(videoId);
+    if (!current)
+        return;
+    DownloadQueueModel::Item item = *current;
+    const qreal fraction = total > 0 ? qBound(0.0, qreal(received) / qreal(total), 1.0) : item.progress;
+    // Progress lines arrive many times a second; repaint on whole-percent
+    // steps.
+    if (item.state == DownloadQueueModel::State::Downloading && fraction < 1.0
+        && qAbs(fraction - item.progress) < 0.01)
+        return;
+    // Back from processing (a second stream, say) is a new state for the
+    // rows; another percent is only a new percentage.
+    const bool stateChanged = item.state != DownloadQueueModel::State::Downloading;
+    item.state = DownloadQueueModel::State::Downloading;
+    item.progress = fraction;
+    item.received = received;
+    item.total = total;
+    item.speed = speed;
+    item.eta = eta;
+    m_queue.upsert(item);
+    if (stateChanged)
+        touch();
+    else
+        touchProgress();
+    Q_EMIT progressChanged(videoId, fraction);
+}
+
+void DownloadManager::noteStep(const QString &videoId, const QString &step)
+{
+    const DownloadQueueModel::Item *current = m_queue.find(videoId);
+    if (!current)
+        return;
+    // Some steps run before a single byte arrives (reading metadata,
+    // fetching SponsorBlock segments, converting the thumbnail). They are
+    // part of starting, which the row already says, not of finishing.
+    if (current->received <= 0 && current->progress <= 0.0)
+        return;
+    DownloadQueueModel::Item item = *current;
+    item.state = DownloadQueueModel::State::Processing;
+    item.progress = 1.0;
+    item.step = step;
+    m_queue.upsert(item);
+    touch();
 }
 
 void DownloadManager::complete(const QString &videoId, const QString &reportedPath,
@@ -443,6 +578,22 @@ void DownloadManager::cancel(const QString &videoId)
         m_queue.remove(videoId);
         touch();
         Q_EMIT queueChanged();
+        return;
+    }
+
+    // Still asking JioSaavn: nothing written, nothing running.
+    if (m_saavnAsking.remove(videoId)) {
+        m_before.remove(videoId);
+        m_queue.remove(videoId);
+        touch();
+        Q_EMIT queueChanged();
+        pump();
+        return;
+    }
+
+    if (QPointer<SaavnDownload> download = m_saavnRequests.value(videoId); download) {
+        m_cancelling.insert(videoId);
+        download->cancel();   // its failed() handler clears the entry
         return;
     }
 
@@ -581,7 +732,8 @@ void DownloadManager::retryFailed(const QVariantList &tracks)
 
 bool DownloadManager::isPending(const QString &videoId) const
 {
-    return m_requests.contains(videoId) || m_pending.contains(videoId);
+    return m_requests.contains(videoId) || m_saavnRequests.contains(videoId) || m_saavnAsking.contains(videoId)
+           || m_pending.contains(videoId);
 }
 
 QString DownloadManager::localPathFor(const QString &videoId) const

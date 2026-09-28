@@ -217,6 +217,7 @@ Rectangle {
                 artwork: Player.currentTrack.artwork !== undefined ? Player.currentTrack.artwork : ""
                 durationMs: Player.duration
                 isVideo: Player.currentTrack.isVideo === true
+                album: Player.currentTrack.album !== undefined ? Player.currentTrack.album : ""
             }
 
             // Dimmed with nothing loaded, like the heart, so it is in its

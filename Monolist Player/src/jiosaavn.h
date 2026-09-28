@@ -133,6 +133,7 @@ public:
         QString saavnId;
         QString title;           // the row accepted, for the log
         QString artists;
+        QString album;           // and for a download's tags
         int durationSec = 0;
         QString reason;          // why not, for NoMatch and Failed
         QStringList refusals;    // every row turned down, and why

@@ -55,6 +55,20 @@ Column {
         color: Theme.neutral700
     }
 
+    // Where the files come from, which High sound quality changes.
+    Text {
+        width: parent.width
+        text: Player.saavnEnabled
+              ? "Downloads come from JioSaavn, as 320 kbps AAC in an .m4a file (or MP3, if chosen), when it has "
+                + "exactly the same recording, and from YouTube through yt-dlp otherwise, or if that fails."
+              : "Downloads come from YouTube, through yt-dlp. With High sound quality, songs JioSaavn has come "
+                + "from there instead."
+        wrapMode: Text.WordWrap
+        font.family: Theme.fontFamily
+        font.pixelSize: 12
+        color: Theme.neutral700
+    }
+
     ToggleRow {
         width: parent.width
         enabled: Downloads.canConvert

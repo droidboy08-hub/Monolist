@@ -25,6 +25,8 @@ Button {
     property real durationMs: 0
     // A music video: kept with the copy, so it still offers its picture.
     property bool isVideo: false
+    // Where the list knows it: with High sound quality JioSaavn is asked by it.
+    property string album: ""
     property int side: 32
     property int iconSize: 15
 
@@ -118,7 +120,7 @@ Button {
     onClicked: {
         switch (downloadState) {
         case "":
-            Downloads.enqueue(videoId, title, artist, artwork, durationMs, isVideo)
+            Downloads.enqueue(videoId, title, artist, artwork, durationMs, isVideo, album)
             break
         case "queued":
         case "downloading":

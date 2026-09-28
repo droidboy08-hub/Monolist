@@ -126,6 +126,25 @@ void VideoSurface::setEngine(MpvEngine *engine)
     // turned on from the player bar, or taken by picture in picture — would
     // otherwise have its track dropped ("No render context set").
     ensureRender(&VideoSurface::onFrame);
+    if (!engine)
+        return;
+    // A mid-song upgrade replaces the player (MpvEngine::startUpgrade). Its
+    // sound alone, never a picture, so there is nothing on screen to lose:
+    // the context is freed on the old player, which must outlive it, and
+    // made again on the new one, where the next picture will need it.
+    QObject::connect(engine, &MpvEngine::handleAboutToChange, engine, []() {
+        if (!g_render)
+            return;
+        QMutexLocker locker(&g_renderLock);
+#ifndef MONOLIST_NO_MPV
+        mpv_render_context_set_update_callback(g_render, nullptr, nullptr);
+        mpv_render_context_free(g_render);
+#endif
+        g_render = nullptr;
+    });
+    QObject::connect(engine, &MpvEngine::handleChanged, engine, []() {
+        ensureRender(&VideoSurface::onFrame);
+    });
 }
 
 void VideoSurface::itemChange(ItemChange change, const ItemChangeData &value)

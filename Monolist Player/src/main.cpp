@@ -215,6 +215,11 @@ int main(int argc, char *argv[])
         // (downloadselftest.cpp); in MONOLIST_DATA_DIR only.
         if (arguments.contains(QStringLiteral("--download-cleanup-test")))
             return runDownloadCleanupSelfTest() == 0 ? 0 : 1;
+        // A download from JioSaavn's copy, against a stand-in CDN, with
+        // yt-dlp taking over what it cannot do (downloadselftest.cpp); in
+        // MONOLIST_DATA_DIR only.
+        if (arguments.contains(QStringLiteral("--saavn-download-test")))
+            return runSaavnDownloadSelfTest() == 0 ? 0 : 1;
         // Artist links: credits read from canned answers, names split and
         // kept, and the artist page's parser (artistselftest.cpp); no
         // network, in MONOLIST_DATA_DIR only.
@@ -334,6 +339,29 @@ int main(int argc, char *argv[])
     }
 
     DownloadManager downloads;
+    // With High sound quality, a song JioSaavn certainly has is downloaded
+    // from it, at 320 kbps, and yt-dlp takes over should that fail
+    // (saavndownload.*). On Standard the resolver answers "none" without
+    // asking JioSaavn anything.
+    downloads.setSaavnFinder([&resolver, &downloads](const QString &videoId, const QString &title,
+                                                     const QString &artist, const QString &album, qint64 durationMs,
+                                                     std::function<void(const DownloadManager::SaavnCopy &)> done) {
+        Saavn::Target target;
+        target.videoId = videoId;
+        target.title = title;
+        target.artist = artist;
+        target.album = album;
+        target.durationMs = durationMs;
+        resolver.findSaavn(target, &downloads, [done](const StreamResolver::SaavnCopy &found) {
+            DownloadManager::SaavnCopy copy;
+            copy.url = found.url;
+            copy.kbps = found.kbps;
+            copy.album = found.album;
+            copy.durationSec = found.durationSec;
+            copy.reason = found.reason;
+            done(copy);
+        });
+    });
 
     PlaybackController player(&engine, &resolver, &downloads);
     player.setLibrary(&library);
@@ -597,6 +625,12 @@ int main(int argc, char *argv[])
         // way back to YouTube, from the same second, can be watched.
         if (args.contains(QStringLiteral("--spoil-saavn")))
             resolver.spoilNextSaavn(videoId);
+        // --saavn-late <ms> holds JioSaavn's answer back that long, so YouTube
+        // wins the race and the song moves over to JioSaavn mid-song (QT7)
+        // once its answer is heard; with --at the move is tried that far
+        // into the song, near its end for instance.
+        if (const int lateFlag = args.indexOf(QStringLiteral("--saavn-late")); lateFlag >= 0 && lateFlag + 1 < args.size())
+            resolver.setSaavnTestDelay(args.at(lateFlag + 1).toInt());
         auto clock = std::make_shared<QElapsedTimer>();
         // A library song plays under its own name, so the lyrics can be found.
         QVariantMap known;
