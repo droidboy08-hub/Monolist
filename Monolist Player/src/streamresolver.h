@@ -105,14 +105,34 @@ public:
     bool saavnIndiaHeaders() const { return m_saavn.indiaHeaders(); }
     // Walks exactly these tiers, in this order: how the player retries a
     // track whose stream it could not open (see afterRefusal).
-    void resolveVia(const QString &videoId, const QList<int> &tiers);
+    //
+    // `homeTier` is the rung the song was playing from before the refusal.
+    // A link found on any other rung below InnerTube is a rescue link: the
+    // muxed stream's itag 18 is about 96 kbps AAC, and kept as the song's
+    // link it was what every replay played for up to five hours. So it is
+    // kept apart, for this play alone (dropRescueLinks), and resolve() never
+    // answers with it; a resolveVia that starts on its rung does, at once,
+    // so the same play can go back to it. -1 keeps every answer as the
+    // song's link, as a plain walk down the ladder does.
+    void resolveVia(const QString &videoId, const QList<int> &tiers, int homeTier = -1);
     // Where to look next once the player has refused a link from `tier`,
     // best first; the caller leaves out what this track has already had
-    // refused.
+    // refused. The refused tier itself is not in it: asking it again (a
+    // remembered link gone stale, a fresh InnerTube link refused) is the
+    // caller's to decide, since how often depends on the track.
     static QList<int> afterRefusal(int tier);
-    // What a link must be fetched with, where its tier says so (the muxed
-    // stream's, which yt-dlp gets as a client that checks); empty otherwise.
-    QVariantMap headersFor(const QString &videoId) const;
+    // What `url`, a link this resolver answered for the track with, must be
+    // fetched with, where its tier says so (the muxed stream's, which yt-dlp
+    // gets as a client that checks); empty otherwise.
+    QVariantMap headersFor(const QString &videoId, const QString &url) const;
+    // The rescue links are for the play they rescued: every one is forgotten
+    // as a song begins, the same song again included, so its next play starts
+    // from the top of the ladder and is Opus again.
+    void dropRescueLinks() { m_rescueLinks.clear(); }
+    // playback.rescue_link=keep, the switch back: a rescue link is the
+    // song's link until it expires, as before.
+    void setKeepRescueLinks(bool keep) { m_keepRescueLinks = keep; }
+    bool keepsRescueLinks() const { return m_keepRescueLinks; }
     // Resolves into the cache without reporting, so that the track after the
     // current one starts without waiting. A resolve() for the same id while it
     // runs takes it over.
@@ -130,10 +150,25 @@ public:
     void cancel(const QString &videoId);
     void cancelAll();
 
-    // For --play --spoil: the next InnerTube link for this track is handed
-    // over spoiled, so the CDN refuses it the way it now and then refuses a
-    // real one, and the recovery can be watched on a real track.
-    void spoilNextStream(const QString &videoId) { m_spoil = videoId; }
+    // For --play --spoil [n]: the next `count` InnerTube links for this track
+    // are handed over spoiled, so the CDN refuses them the way it now and
+    // then refuses a real one, and the recovery can be watched on a real
+    // track. Two spoil the fresh link asked for after the first as well, so
+    // the rescue below it runs.
+    void spoilNextStream(const QString &videoId, int count = 1)
+    {
+        m_spoil = count > 0 ? videoId : QString();
+        m_spoilsLeft = count;
+    }
+    // For --recovery-test: `tier` answers this track with `url` at once,
+    // asking no one, or fails at once where `url` is empty. Each answer
+    // carries a g=<n> of its own, so a stand-in server can tell a fresh link
+    // from an old one, and an expire= that --spoil can spoil.
+    void setTestAnswer(const QString &videoId, int tier, const QString &url)
+    {
+        m_testAnswers[videoId].insert(tier, url);
+    }
+    void clearTestAnswers() { m_testAnswers.clear(); }
     // For --play --spoil-saavn: the same for the next JioSaavn link for this
     // track, which then points at a file the CDN does not have.
     void spoilNextSaavn(const QString &videoId) { m_spoilSaavn = videoId; }
@@ -171,6 +206,9 @@ private:
         QStringList errors;
         bool settled = false;
         bool prefetch = false;   // resolve into the cache only, report nothing
+        // After a refusal, the rung the song played from (resolveVia);
+        // answers from another rung below InnerTube are rescue links.
+        int homeTier = -1;
     };
 
     // A resolved URL stays valid for hours (YouTube signs an expiry into it),
@@ -183,7 +221,7 @@ private:
     };
     static QDateTime expiryOf(const QString &url);
 
-    void start(const QString &videoId, QList<int> tiers);
+    void start(const QString &videoId, QList<int> tiers, int homeTier = -1);
     // The ladder's own job for this song, without the race around it.
     void cancelJob(const QString &videoId);
     void startTier(Job *job, int tier);
@@ -194,6 +232,10 @@ private:
     void startInvidiousRace(Job *job);
 
     void succeed(Job *job, const QString &url, const QVariantMap &headers = QVariantMap());
+    // InnerTube's link as it is handed over: spoiled, for --spoil.
+    QString handOverInnerTube(Job *job, const QString &url);
+    // setTestAnswer's answer for the tier the job is on.
+    void answerForTest(Job *job, const QString &url);
     void tierExhausted(Job *job, const QString &reason);
     void abortPending(Job *job);
     void discard(Job *job);
@@ -255,12 +297,19 @@ private:
     InnerTube m_innerTube;
     QHash<QString, Job *> m_jobs;
     QHash<QString, CacheEntry> m_cache;
+    // The rescue links of the play under way (see resolveVia), apart from
+    // the songs' own links above.
+    QHash<QString, CacheEntry> m_rescueLinks;
+    bool m_keepRescueLinks = false;
     QHash<QString, VideoLinks> m_videoCache;
     QHash<QString, QPointer<YtDlpRequest>> m_videoJobs;
     QStringList m_piped;
     QStringList m_invidious;
     QString m_spoil;   // see spoilNextStream
+    int m_spoilsLeft = 0;
     QString m_spoilSaavn;   // see spoilNextSaavn
+    QHash<QString, QHash<int, QString>> m_testAnswers;   // see setTestAnswer
+    int m_testAnswersGiven = 0;
     QString handOverSaavn(const QString &videoId, const QString &url);
 
     bool m_saavnEnabled = false;   // off until the listener picks High sound quality

@@ -56,6 +56,11 @@ public:
     // The latest load's file is open (fileLoaded has been sent for it), so a
     // picture can be added to it.
     bool hasLoadedFile() const { return m_fileLoaded; }
+    // The length mpv read from the file most recently loaded, in ms; 0 until
+    // it has said, and for a stream with no length. Still the ended file's
+    // own while its endOfFile is being handled, so an end can be held up
+    // against it.
+    qint64 duration() const { return m_duration; }
     // A load is on its way and has not yet opened, failed or been stopped.
     bool isLoadingFile() const { return m_loadingFile; }
     void setPaused(bool paused);
@@ -137,6 +142,10 @@ Q_SIGNALS:
     void bufferingChanged(bool buffering);
     void endOfFile();                    // natural end, not a manual stop
     void loadFailed(const QString &reason);
+    // The file most recently loaded has begun to sound: mpv restarted
+    // playback for it while not paused, or its clock passed 0. Once a load.
+    // What a link that resolved, or a file that opened, cannot say.
+    void audioStarted();
     void videoAddFailed(const QString &reason);
     // The latest load's file is open: its tracks are known, and a picture
     // can join it.
@@ -184,6 +193,7 @@ private:
     bool m_watched = true;   // until a surface says otherwise
     bool m_fileLoaded = false;
     bool m_loadingFile = false;
+    bool m_audioStarted = false;   // audioStarted sent for the latest load
     QSize m_videoSize;
     qint64 m_duration = 0;
     QVariantList m_audioDevices;

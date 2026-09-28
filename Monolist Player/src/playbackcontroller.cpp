@@ -8,9 +8,11 @@
 
 #include <QAbstractItemModel>
 #include <QCoreApplication>
+#include <QDir>
 #include <QFileInfo>
 #include <QSqlError>
 #include <QSqlQuery>
+#include <QUrl>
 #include <QVariant>
 
 #include <utility>
@@ -36,6 +38,11 @@ constexpr int kMaxConsecutiveFailures = 3;
 // Previous restarts a song played for longer than this, and goes back to the
 // one before a song that has barely begun.
 constexpr qint64 kRestartAfterMs = 3000;
+// A stream that ends more than this before its own length, or 3% of it if
+// that is more, stopped short rather than finished (resumeEarlyEnd). Wide
+// enough for the last position mpv reported lagging the real end, and for
+// a length that is a little off.
+constexpr qint64 kEarlyEndMarginMs = 5000;
 
 // The player's own choices, kept in the settings table so a launch picks up
 // where the last one left off.
@@ -48,6 +55,11 @@ const QString kAudioDeviceNameKey = QStringLiteral("player.audio_device_name");
 const QString kAutoDevice = QStringLiteral("auto");
 const QString kSaavnKey = QStringLiteral("jiosaavn.enabled");
 const QString kSaavnIndiaKey = QStringLiteral("jiosaavn.india_headers");
+// The switches back for the recovery ladder's newer rungs, each restoring
+// the way it was before: "muxed", "keep" and "next" (see restoreSettings).
+const QString kRefusedKey = QStringLiteral("playback.refused");
+const QString kRescueLinkKey = QStringLiteral("playback.rescue_link");
+const QString kEarlyEndKey = QStringLiteral("playback.early_end");
 // Long enough to outlast one drag of the slider.
 constexpr int kVolumeSaveDelayMs = 400;
 
@@ -170,6 +182,33 @@ PlaybackController::PlaybackController(MpvEngine *engine,
 
         connect(m_engine, &MpvEngine::endOfFile, this, &PlaybackController::handleEndOfFile);
 
+        // A song is heard: the songs in a row that would not play are
+        // counted from nothing again. Not when its link arrived — a link mpv
+        // then refuses, and a rescue that fails, played nothing, and counting
+        // them as a success let a queue walk itself past the three-in-a-row
+        // stop.
+        connect(m_engine, &MpvEngine::audioStarted, this, [this]() {
+            // After a refusal or an early end: what the song was rescued
+            // with, and how long it went without sound. The one line that
+            // says whether a rung earns its place.
+            if (m_rescueClock.isValid()) {
+                // UTF-8: a title, and "yt-dlp · muxed", are not ASCII.
+                const QString name = currentSourceId().isEmpty()
+                                         ? m_currentTrack.value(QStringLiteral("title")).toString()
+                                         : currentSourceId();
+                qInfo("playback: %s rescued: its sound came from %s, %lld ms after the first failure",
+                      qUtf8Printable(name),
+                      qUtf8Printable(m_streamTier >= 0 ? tierLabel(m_streamTier) : QStringLiteral("its own link")),
+                      static_cast<long long>(m_rescueClock.elapsed()));
+                m_rescueClock.invalidate();
+            }
+            if (m_consecutiveFailures == 0)
+                return;
+            qInfo("playback: %s has started, so the count of songs in a row that would not play starts again"
+                  " (it was %d)", qPrintable(currentSourceId()), m_consecutiveFailures);
+            m_consecutiveFailures = 0;
+        });
+
         // A frame arrived: the picture plays, so an end of file after this is
         // the song ending, not the video failing.
         connect(m_engine, &MpvEngine::videoSizeChanged, this, [this](const QSize &size) {
@@ -227,6 +266,8 @@ PlaybackController::PlaybackController(MpvEngine *engine,
             // of the race carried on into the cache, and a remembered match
             // is played with YouTube's link fetched beside it.
             if (m_streamTier == StreamResolver::TierJioSaavn && m_resolver) {
+                if (!m_rescueClock.isValid())
+                    m_rescueClock.start();
                 m_streamTier = -1;
                 m_refusedTiers.insert(StreamResolver::TierJioSaavn);
                 m_resolver->refuseSaavn(m_streamVideoId);
@@ -238,43 +279,34 @@ PlaybackController::PlaybackController(MpvEngine *engine,
                 m_resolver->resolve(m_pendingVideoId);
                 return;
             }
-            // A URL can resolve and still be refused when mpv opens it: a link
-            // the CDN rejects now and then, or an instance serving an error
-            // page. A remembered link that no longer opens is simply stale, so
-            // a fresh one from the same tier comes first; after that, the
-            // tiers this track has not yet had refused, in the order the
-            // resolver gives for a refusal. After InnerTube's sound-only
-            // stream that is the track's muxed stream — itag 18, or the best
-            // other stream with the sound and a small picture in one file —
-            // fetched for this track alone, before anything else. Whichever
-            // it is, the song carries on from where it was: a stream refused
-            // part-way through does not start it again.
-            if (m_streamTier >= 0 && m_resolver) {
-                const int refused = std::exchange(m_streamTier, -1);
-                QList<int> tiers;
-                if (m_streamFromCache)
-                    tiers.append(refused);
-                else
-                    m_refusedTiers.insert(refused);
-                for (const int tier : StreamResolver::afterRefusal(refused)) {
-                    if (!m_refusedTiers.contains(tier) && !tiers.contains(tier))
-                        tiers.append(tier);
-                }
-                if (!tiers.isEmpty()) {
-                    m_resolver->invalidate(m_streamVideoId);
-                    m_pendingVideoId = m_streamVideoId;
+            // A downloaded file, or the row's own file, that mpv will not
+            // open (damaged, cut short, replaced by something else): the song
+            // is streamed instead, from where it was, and its file is left
+            // alone for the rest of this track. Stopping there, as it did,
+            // ended the listening over one bad file. With nothing to stream
+            // it from, it is passed over as a song that will not resolve is.
+            if (!m_localPath.isEmpty()) {
+                const QString file = std::exchange(m_localPath, QString());
+                m_localRefused = true;
+                qWarning("playback: the file %s would not play: %s", qUtf8Printable(QDir::toNativeSeparators(file)),
+                         qPrintable(reason));
+                const QString videoId = currentSourceId();
+                if (!videoId.isEmpty() && m_resolver) {
+                    if (!m_rescueClock.isValid())
+                        m_rescueClock.start();
+                    m_pendingVideoId = videoId;
                     m_resumeAt = m_position;
-                    if (tiers.first() == StreamResolver::TierMuxed) {
-                        qInfo("playback: trying %s again as its muxed stream (itag 18), for this track alone",
-                              qPrintable(m_pendingVideoId));
-                    }
-                    setStatus(m_streamFromCache ? QStringLiteral("Refreshing the source…")
-                                                : QStringLiteral("Trying another source…"),
-                              QString(), true);
-                    m_resolver->resolveVia(m_pendingVideoId, tiers);
+                    qInfo("playback: streaming %s instead of its file, from %lld ms", qPrintable(videoId),
+                          static_cast<long long>(m_resumeAt));
+                    setStatus(QStringLiteral("Resolving source…"), QString(), true);
+                    m_resolver->resolveTrack(saavnTarget(m_currentTrack));
                     return;
                 }
+                failTrack(reason);
+                return;
             }
+            if (retryRefused())
+                return;
             m_streamTier = -1;
             haltPlayback();
             setStatus(QStringLiteral("Playback failed"), QString(), false, /*error=*/true);
@@ -470,6 +502,21 @@ void PlaybackController::restoreSettings()
                                          /*forgetNoMatches=*/false);
         Q_EMIT saavnChanged();
     }
+
+    // The recovery ladder's switches back, none of them in Settings: each
+    // puts one part of it back as it was, should the new way misbehave
+    // somewhere. Said in the log when set, since they change what it shows.
+    m_freshLinkFirst = m_library->settingValue(kRefusedKey) != QLatin1String("muxed");
+    m_earlyEndCheck = m_library->settingValue(kEarlyEndKey) != QLatin1String("next");
+    const bool keepRescueLinks = m_library->settingValue(kRescueLinkKey) == QLatin1String("keep");
+    if (m_resolver)
+        m_resolver->setKeepRescueLinks(keepRescueLinks);
+    if (!m_freshLinkFirst)
+        qInfo("playback: playback.refused=muxed: a refused InnerTube link goes to its muxed stream, as before");
+    if (keepRescueLinks)
+        qInfo("playback: playback.rescue_link=keep: a rescue link is kept as the song's link, as before");
+    if (!m_earlyEndCheck)
+        qInfo("playback: playback.early_end=next: a stream that ends early is taken as the end, as before");
 
     // Used as soon as mpv has said which devices are there; until then, and
     // for as long as the device is not among them, Auto plays.
@@ -1182,7 +1229,19 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
     m_streamTier = -1;
     m_streamIsVideo = false;
     m_refusedTiers.clear();
+    m_homeTier = -1;
+    m_rescueTier = -1;
+    m_innerTubeAskedAgain = false;
+    m_earlyEndResumed = false;
+    m_rescueClock.invalidate();
+    m_localPath.clear();
+    m_directUrl.clear();
+    m_localRefused = false;
     m_resumeAt = 0;
+    // Whatever rescued the last play, this one starts from the top: a song
+    // played again is Opus again, not the last play's itag 18.
+    if (m_resolver)
+        m_resolver->dropRescueLinks();
 
     // The song being left stops now, not when the next one has resolved.
     // Until then it would play on under the new title, and the engine passes
@@ -1262,8 +1321,10 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
     // 1 — a downloaded copy, or any source that is already a local file.
     const QString localPath = localCopyOf(track);
     // mpv first here too (see handleResolved), and nothing said of a file it
-    // refused outright: loadFailed has said that.
+    // refused outright: loadFailed has said that. Which file it is, first,
+    // so that loadFailed can stream the song instead of it.
     if (!localPath.isEmpty()) {
+        m_localPath = localPath;
         if (!m_engine->load(localPath, autoPlay))
             return;
         setStatus(QStringLiteral("Offline"), QStringLiteral("Local file"), false);
@@ -1286,6 +1347,11 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
     // 3 — a plain remote URL stored on the row.
     const QString source = track.value(QStringLiteral("sourceUrl")).toString();
     if (!source.isEmpty()) {
+        // A link on the network can stop short as a resolved one can
+        // (resumeEarlyEnd), and is loaded again from where it stopped.
+        const QString scheme = QUrl(source).scheme();
+        if (scheme == QLatin1String("http") || scheme == QLatin1String("https"))
+            m_directUrl = source;
         if (!m_engine->load(source, autoPlay))
             return;
         setStatus(QStringLiteral("Streaming"), QStringLiteral("Direct URL"), false);
@@ -1308,11 +1374,20 @@ void PlaybackController::handleResolved(const QString &videoId, const QString &u
     m_pendingVideoId.clear();
 
     const bool fromSaavn = tier == StreamResolver::TierJioSaavn;
-    m_consecutiveFailures = 0;
+    // m_consecutiveFailures is left as it is: a link is not yet a song
+    // heard (see MpvEngine::audioStarted).
     m_streamVideoId = videoId;
     m_streamTier = tier;
     m_streamFromCache = fromCache;
     m_streamIsVideo = false;
+    m_localPath.clear();
+    m_directUrl.clear();
+    // The rung this play began on, and whether this link is a rescue from
+    // below it: as StreamResolver judged it, so the sound can go back to the
+    // same link later in the play (backToSound).
+    if (m_homeTier < 0 && !fromSaavn)
+        m_homeTier = tier;
+    m_rescueTier = !fromSaavn && tier != StreamResolver::TierInnerTube && tier != m_homeTier ? tier : -1;
     // mpv first: it opens the link on its own thread while everything below
     // is done on this one. The status line, the listen written down and Home
     // and History refreshed with it used to come first, and every song start
@@ -1324,7 +1399,7 @@ void PlaybackController::handleResolved(const QString &videoId, const QString &u
     const qint64 resumeAt = std::exchange(m_resumeAt, 0);
     if (!m_engine
         || !m_engine->load(url, m_autoPlayAfterResolve, QString(), resumeAt,
-                           m_resolver && !fromSaavn ? m_resolver->headersFor(videoId) : QVariantMap()))
+                           m_resolver && !fromSaavn ? m_resolver->headersFor(videoId, url) : QVariantMap()))
         return;   // refused outright: loadFailed has already taken it elsewhere, and nothing was heard
 
     // JioSaavn's links name their bitrate, and that is the point of them, so
@@ -1347,6 +1422,14 @@ void PlaybackController::handleResolveFailed(const QString &videoId, const QStri
         return;
     m_pendingVideoId.clear();
 
+    // Always in the log, whichever way this goes: it is the only place the
+    // real cause is written down.
+    qWarning("resolve failed for %s: %s", qPrintable(videoId), qPrintable(reason));
+    failTrack(reason);
+}
+
+void PlaybackController::failTrack(const QString &reason)
+{
     // One track that will not play should not end the listening: say which one
     // it was and carry on down the queue. But stop after a few in a row — a
     // machine that has lost the network fails every one of them, and would
@@ -1357,10 +1440,8 @@ void PlaybackController::handleResolveFailed(const QString &videoId, const QStri
     const bool wasGoingToPlay = m_autoPlayAfterResolve;
     const bool giveUp = ++m_consecutiveFailures >= kMaxConsecutiveFailures;
     const bool skip = wasGoingToPlay && !giveUp && m_queue.upcomingCount() > 0;
-
-    // Always in the log, whichever way this goes: it is the only place the
-    // real cause is written down.
-    qWarning("resolve failed for %s: %s", qPrintable(videoId), qPrintable(reason));
+    qInfo("playback: %d in a row that would not play%s", m_consecutiveFailures,
+          giveUp ? ", so the queue stops here" : "");
 
     if (skip) {
         // The playing flag is deliberately left alone. It follows mpv's pause
@@ -1405,10 +1486,12 @@ QString PlaybackController::localCopyOf(const QVariantMap &track) const
 // its place would leave the rest of the song at the network's mercy.
 void PlaybackController::backToSound(bool keepPlaying, const QString &resolvingText)
 {
-    const QString localPath = localCopyOf(m_currentTrack);
+    // Not a file mpv has already refused for this track.
+    const QString localPath = m_localRefused ? QString() : localCopyOf(m_currentTrack);
     if (!localPath.isEmpty()) {
         m_pendingVideoId.clear();
         m_streamIsVideo = false;
+        m_localPath = localPath;
         setStatus(QStringLiteral("Offline"), QStringLiteral("Local file"), false);
         if (m_engine && m_engine->load(localPath, keepPlaying, QString(), m_position))
             setSoundOrigin(QStringLiteral("Offline · Local file"));
@@ -1421,6 +1504,18 @@ void PlaybackController::backToSound(bool keepPlaying, const QString &resolvingT
     m_autoPlayAfterResolve = keepPlaying;
     m_pendingVideoId = videoId;
     setStatus(resolvingText, QString(), true);
+    // A play rescued from below its own rung goes back to the link that
+    // rescued it, which the resolver keeps for this play: the top of the
+    // ladder is where the refused link came from.
+    if (m_rescueTier >= 0 && !m_resolver->keepsRescueLinks()) {
+        QList<int> tiers{ m_rescueTier };
+        for (const int tier : StreamResolver::afterRefusal(m_rescueTier)) {
+            if (!m_refusedTiers.contains(tier) && !tiers.contains(tier))
+                tiers.append(tier);
+        }
+        m_resolver->resolveVia(videoId, tiers, m_homeTier);
+        return;
+    }
     // The sound as it would be for the song begun afresh: JioSaavn's copy
     // where it has one and it was not refused.
     m_resolver->resolveTrack(saavnTarget(m_currentTrack));
@@ -1467,11 +1562,139 @@ bool PlaybackController::abandonVideo(const QString &reason)
     return true;
 }
 
+// A URL can resolve and still be refused when mpv opens it: a link the CDN
+// rejects now and then, or an instance serving an error page. A remembered
+// link that no longer opens is simply stale, so a fresh one from the same tier
+// comes first. So does a fresh InnerTube link, once a track: the CDN refuses
+// one link now and then for reasons of its own, and /player's next answer
+// comes in a fifth of a second and is Opus, where the muxed stream below it
+// takes three and is 96 kbps AAC. After that, the tiers this track has not
+// yet had refused, in the order the resolver gives for a refusal: after
+// InnerTube's sound-only stream that is the track's muxed stream — itag 18,
+// or the best other stream with the sound and a small picture in one file —
+// fetched for this track alone. Whichever it is, the song carries on from
+// where it was: a stream refused part-way through does not start it again.
+bool PlaybackController::retryRefused()
+{
+    if (m_streamTier < 0 || !m_resolver)
+        return false;
+    const int refused = std::exchange(m_streamTier, -1);
+    bool again = m_streamFromCache;
+    if (refused == StreamResolver::TierInnerTube) {
+        // Once, whichever the reason, so a session YouTube doubts cannot go
+        // round in circles; not at all with the switch back, unless stale.
+        again = (m_streamFromCache || m_freshLinkFirst) && !m_innerTubeAskedAgain;
+        if (again)
+            m_innerTubeAskedAgain = true;
+    }
+    QList<int> tiers;
+    if (again)
+        tiers.append(refused);
+    if (!m_streamFromCache)
+        m_refusedTiers.insert(refused);
+    for (const int tier : StreamResolver::afterRefusal(refused)) {
+        if (!m_refusedTiers.contains(tier) && !tiers.contains(tier))
+            tiers.append(tier);
+    }
+    if (tiers.isEmpty())
+        return false;
+    if (!m_rescueClock.isValid())
+        m_rescueClock.start();
+    m_resolver->invalidate(m_streamVideoId);
+    m_pendingVideoId = m_streamVideoId;
+    m_resumeAt = m_position;
+    if (again && refused == StreamResolver::TierInnerTube && !m_streamFromCache) {
+        qInfo("playback: asking InnerTube once more for %s, for a fresh link, before its muxed stream",
+              qPrintable(m_pendingVideoId));
+    } else if (tiers.first() == StreamResolver::TierMuxed) {
+        qInfo("playback: trying %s again as its muxed stream (itag 18), for this track alone",
+              qPrintable(m_pendingVideoId));
+    }
+    setStatus(again ? QStringLiteral("Refreshing the source…") : QStringLiteral("Trying another source…"),
+              QString(), true);
+    m_resolver->resolveVia(m_pendingVideoId, tiers, m_homeTier);
+    return true;
+}
+
+// A stream that ends well short of its own length did not finish: the
+// connection gave out, or the CDN served the link's first request and
+// refused the reconnect that should have fetched the rest, which mpv reads as
+// the end of the file. The rest of the song was skipped without a word. So an
+// end more than kEarlyEndMarginMs (or 3%) before the length mpv read from the
+// stream itself — not the catalogue's, which a different upload can differ
+// from — counts as the link failing: a fresh one from the same rung, and the
+// song carries on from the second it stopped at, once a track. A second early
+// end is taken as the end, for a file whose length is simply wrong.
+//
+// Streams only. A file on disk says its own length, which for some (a VBR MP3
+// with no index) is only an estimate; and with the picture on, the sound's
+// file and the picture's are more than this puts back together.
+bool PlaybackController::resumeEarlyEnd()
+{
+    if (!m_earlyEndCheck || !m_engine || m_videoPlaying)
+        return false;
+    if ((m_streamTier < 0 || !m_resolver) && m_directUrl.isEmpty())
+        return false;
+    const qint64 length = m_engine->duration();
+    if (length <= 0)
+        return false;
+    const qint64 margin = qMax(kEarlyEndMarginMs, length * 3 / 100);
+    if (m_position >= length - margin)
+        return false;
+    const QString name = currentSourceId().isEmpty() ? m_currentTrack.value(QStringLiteral("title")).toString()
+                                                     : currentSourceId();
+    if (m_earlyEndResumed) {
+        qWarning("playback: %s ended early again, at %s of %s; taken as its end", qUtf8Printable(name),
+                 qPrintable(TrackModel::formatDuration(m_position)), qPrintable(TrackModel::formatDuration(length)));
+        return false;
+    }
+    m_earlyEndResumed = true;
+    if (!m_rescueClock.isValid())
+        m_rescueClock.start();
+    const QString from = !m_directUrl.isEmpty() ? QStringLiteral("its own link") : tierLabel(m_streamTier);
+    qWarning("playback: %s ended at %s of %s, streamed from %s: it stopped short, and carries on from there",
+             qUtf8Printable(name), qPrintable(TrackModel::formatDuration(m_position)),
+             qPrintable(TrackModel::formatDuration(length)), qUtf8Printable(from));
+    m_autoPlayAfterResolve = true;
+
+    // The row's own link has no other to go to: loaded again at the second.
+    if (!m_directUrl.isEmpty()) {
+        if (m_engine->load(m_directUrl, true, QString(), m_position))
+            setSoundOrigin(QStringLiteral("Streaming · Direct URL"));
+        return true;
+    }
+    const QString videoId = m_streamVideoId;
+    const int tier = std::exchange(m_streamTier, -1);
+    m_pendingVideoId = videoId;
+    m_resumeAt = m_position;
+    setStatus(QStringLiteral("Refreshing the source…"), QString(), true);
+    // JioSaavn's links are plain paths on its CDN that last: the match
+    // answers with the same one again.
+    if (tier == StreamResolver::TierJioSaavn) {
+        m_resolver->resolveTrack(saavnTarget(m_currentTrack));
+        return true;
+    }
+    // The same rung, and a fresh link from it; the rungs below should it not
+    // answer.
+    QList<int> tiers{ tier };
+    for (const int next : StreamResolver::afterRefusal(tier)) {
+        if (!m_refusedTiers.contains(next) && !tiers.contains(next))
+            tiers.append(next);
+    }
+    m_resolver->invalidate(videoId);
+    m_resolver->resolveVia(videoId, tiers, m_homeTier);
+    return true;
+}
+
 void PlaybackController::handleEndOfFile()
 {
     // A video that stopped before it ever showed a frame did not finish the
     // song; it failed. The queue must not move on.
     if (abandonVideo(QStringLiteral("This video would not play — back to audio")))
+        return;
+
+    // A stream that stopped short is picked up where it stopped.
+    if (resumeEarlyEnd())
         return;
 
     // The clock is left at the end for beginTrack to close the listen with, as
@@ -1766,6 +1989,9 @@ void PlaybackController::applyVideo(const QString &videoUrl, const QString &audi
     } else {
         m_videoAdded = false;
         m_streamIsVideo = true;
+        // What mpv has open now is the picture's stream, not a file.
+        m_localPath.clear();
+        m_directUrl.clear();
         setStatus(QStringLiteral("Streaming"), QStringLiteral("yt-dlp · video"), false);
         if (m_engine->load(videoUrl, m_playing || m_autoPlayAfterResolve, audioUrl, m_position, headers))
             setSoundOrigin(QStringLiteral("Streaming · yt-dlp · video"));

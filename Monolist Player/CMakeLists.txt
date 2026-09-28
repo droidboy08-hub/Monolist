@@ -108,6 +108,9 @@ qt_add_executable(monolist
     # A skip while yt-dlp resolves, timed, and each /player client on real
     # YouTube (--cancel-test, --player-canary).
     src/resolveselftest.h          src/resolveselftest.cpp
+    # How a song that has begun is kept playing, against a stand-in server on
+    # this computer (--recovery-test).
+    src/recoveryselftest.h         src/recoveryselftest.cpp
 )
 
 # The build's own identity: version, build number, commit, date. Regenerated

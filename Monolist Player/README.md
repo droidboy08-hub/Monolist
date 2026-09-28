@@ -85,9 +85,32 @@ the UI as `Player.sourceLabel`.
 
 Resolved links are cached until the expiry YouTube signs into them, and the
 next song in the queue is resolved in the background while the current one
-plays, so replaying or skipping forward rarely waits on yt-dlp. A link that
-resolves but will not open in mpv is retried: a stale cached link is fetched
-fresh, anything else moves on to the next tier.
+plays, so replaying or skipping forward rarely waits on yt-dlp.
+
+When a song will not keep playing, the player tries to keep it going from
+the same second:
+
+* **A link mpv refuses** (googlevideo's 403, now and then): a stale cached
+  link is fetched fresh. A fresh InnerTube link is asked for once more
+  (~0.2 s, and Opus again) before the song's muxed stream (itag 18, ~3 s),
+  then yt-dlp and the public instances. InnerTube is asked again at most once
+  a track. A link found below the song's own rung this way is a *rescue link*:
+  it serves the rest of that play, and the song's next play starts from
+  InnerTube again rather than replaying 96 kbps AAC for hours.
+* **A stream that ends early**, more than 5 s (or 3%) before the length mpv
+  read from it (a connection that gave out, or a reconnect googlevideo
+  refused), is taken as its link failing: a fresh link from the same rung,
+  and the song carries on from where it stopped, once a track. Streams only:
+  a file's own length can be an estimate.
+* **A downloaded or local file mpv will not open** is streamed instead, or,
+  with no source id to stream it from, passed over.
+* Three songs in a row that will not play stop the queue. The count starts
+  again only once a song's sound starts, not when its link arrives.
+
+Each newer part has a switch back in the settings table (`--set <key>
+<value>`): `playback.refused=muxed` puts the muxed stream straight after a
+refused InnerTube link, `playback.rescue_link=keep` keeps a rescue link as
+the song's link, and `playback.early_end=next` takes an early end as the end.
 
 ### JioSaavn
 
@@ -532,15 +555,21 @@ sound is resampled; and mpv's volume. For example
 `stream: CmThpha4Hoo from Streaming · InnerTube: aac 44100 Hz stereo floatp,
 130 kbps (file average) -> wasapi 48000 Hz stereo float, resampled 44100 ->
 48000 Hz, volume 65%`. Now Playing shows the short form of the same line
-(`Player.streamInfo`).
+(`Player.streamInfo`). A song that had to be rescued (a refused link, an
+early end, a refused file) says what rescued it once its sound starts:
+`playback: <id> rescued: its sound came from InnerTube, 301 ms after the
+first failure`.
 
-    monolist --play <videoId> [seconds] [--again] [--at <s>] [--spoil] [--video [--switch-at <s>]]
+    monolist --play <videoId> [seconds] [--again] [--at <s>] [--spoil [n]] [--video [--switch-at <s>]]
              [--as "<title>" "<artist>" [length s]] [--spoil-saavn] [--saavn-on]
                                                     resolve and play; --again replays from the cache,
                                                     --at jumps into the song; --spoil hands InnerTube's
-                                                    link over spoiled, so mpv refuses it and the track is
-                                                    retried as its muxed stream (itag 18), which the log
-                                                    names; --video plays it as a music video and
+                                                    first n links (1 by default) over spoiled, so mpv
+                                                    refuses them: with one, InnerTube is asked afresh;
+                                                    with two, the track is rescued by its muxed stream
+                                                    (itag 18), which the log names, and --again then
+                                                    shows the next play back on InnerTube; --video
+                                                    plays it as a music video and
                                                     --switch-at asks for the picture after that long;
                                                     --as names the song, which JioSaavn is asked about;
                                                     --spoil-saavn hands its JioSaavn link over pointing at
@@ -565,6 +594,14 @@ sound is resampled; and mpv's volume. For example
                                                     back from a failure: the broken id fails twice and
                                                     records nothing, the good one plays again and pauses,
                                                     and two quick Nexts while paused stay paused
+    monolist --recovery-test                        how a song is kept playing, on the real mpv against a
+                                                    stand-in server on this computer, with no network: a
+                                                    refused link asked for afresh, a rescue link for one
+                                                    play only, a stream cut short at 60% (its reconnect
+                                                    refused) picked up where it stopped, a row's own link
+                                                    loaded again, a junk download streamed, a junk file
+                                                    passed over, the three-in-a-row stop, and each switch
+                                                    back (needs MONOLIST_DATA_DIR; about 90 s)
     monolist --download <videoId> [seconds]         one download through yt-dlp and FFmpeg, into the scratch
                                                     database and download folder (refuses without
                                                     MONOLIST_DATA_DIR; MONOLIST_DOWNLOAD_DIR may still

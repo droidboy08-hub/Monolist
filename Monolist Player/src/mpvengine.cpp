@@ -372,9 +372,15 @@ void MpvEngine::drainEvents()
                 break;
 
             switch (event->reply_userdata) {
-            case PropTimePos:
-                Q_EMIT positionChanged(qint64(*static_cast<double *>(prop->data) * 1000.0));
+            case PropTimePos: {
+                const double seconds = *static_cast<double *>(prop->data);
+                Q_EMIT positionChanged(qint64(seconds * 1000.0));
+                if (!m_audioStarted && seconds > 0.0) {
+                    m_audioStarted = true;
+                    Q_EMIT audioStarted();
+                }
                 break;
+            }
             case PropDuration: {
                 const qint64 ms = qint64(*static_cast<double *>(prop->data) * 1000.0);
                 if (ms != m_duration) {
@@ -494,8 +500,13 @@ void MpvEngine::drainEvents()
         // output was opened anew: what it is can be read now.
         case MPV_EVENT_PLAYBACK_RESTART:
         case MPV_EVENT_AUDIO_RECONFIG:
-            if (currentFileStarted())
-                refreshStreamInfo();
+            if (!currentFileStarted())
+                break;
+            refreshStreamInfo();
+            if (event->event_id == MPV_EVENT_PLAYBACK_RESTART && !m_audioStarted && !m_paused) {
+                m_audioStarted = true;
+                Q_EMIT audioStarted();
+            }
             break;
 
         case MPV_EVENT_END_FILE: {
@@ -609,6 +620,7 @@ bool MpvEngine::load(const QString &urlOrPath, bool startPlaying, const QString 
 
     m_fileLoaded = false;
     m_loadingFile = true;
+    m_audioStarted = false;
 
     const QByteArray target = urlOrPath.toUtf8();
     // "replace" tears down the previous file. From here until mpv answers
@@ -637,6 +649,7 @@ void MpvEngine::stop()
     m_duration = 0;
     m_fileLoaded = false;
     m_loadingFile = false;
+    m_audioStarted = false;
     if (!m_videoSize.isEmpty()) {
         m_videoSize = QSize();
         Q_EMIT videoSizeChanged(m_videoSize);

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QElapsedTimer>
 #include <QHash>
 #include <QObject>
 #include <QSet>
@@ -269,6 +270,16 @@ private:
     void beginTrack(const QVariantMap &track, bool autoPlay);
     void handleResolved(const QString &videoId, const QString &url, int tier, bool fromCache);
     void handleResolveFailed(const QString &videoId, const QString &reason);
+    // The current track will not play at all: past it, down the queue, or
+    // stopped after a few in a row (kMaxConsecutiveFailures).
+    void failTrack(const QString &reason);
+    // mpv refused the link it was playing: the same song from another link,
+    // or from the next rung down, from where it was. False when nothing is
+    // left to try.
+    bool retryRefused();
+    // An end of file well before the stream's own length: the song picked up
+    // from where it stopped, once. False when it is taken as the end.
+    bool resumeEarlyEnd();
     void handleVideoResolved(const QString &videoId, const QString &videoUrl, const QString &audioUrl,
                              const QVariantMap &headers);
     void playWithVideo(bool video);
@@ -335,6 +346,31 @@ private:
     // The tiers whose fresh links mpv refused for the current track, so a
     // retry never goes back to one of them.
     QSet<int> m_refusedTiers;
+    // The rung this play's sound first came from (before any refusal), and
+    // the rung of the rescue link it is on now, -1 when it is on none: see
+    // StreamResolver::resolveVia.
+    int m_homeTier = -1;
+    int m_rescueTier = -1;
+    // InnerTube has been asked again after a refusal for this track: once is
+    // all, so a session YouTube doubts cannot go round in circles.
+    bool m_innerTubeAskedAgain = false;
+    // An early end has been picked up for this track: a second is its end.
+    bool m_earlyEndResumed = false;
+    // Running from this track's first refusal (or early end, or refused
+    // file) until its sound starts, when the log says what rescued it and
+    // how long that took; invalid otherwise.
+    QElapsedTimer m_rescueClock;
+    // What is loaded when it is not the resolver's stream: the file on disk
+    // (a download, or the row's own file), or the row's own http(s) link.
+    QString m_localPath;
+    QString m_directUrl;
+    // mpv refused this track's file: it is streamed from then on.
+    bool m_localRefused = false;
+    // The switches back (restoreSettings): playback.refused=muxed puts the
+    // muxed stream first after a refused InnerTube link, as before;
+    // playback.early_end=next takes an early end as the song's end.
+    bool m_freshLinkFirst = true;
+    bool m_earlyEndCheck = true;
     QString m_statusText;
     QString m_sourceLabel;
     bool m_statusError = false;
@@ -366,9 +402,12 @@ private:
     // queue: the fourth track of an album still came from wherever the album
     // did. Only the radio's own additions override it.
     QString m_source;
-    // Consecutive tracks that would not resolve. A queue is skipped past one
+    // Consecutive tracks that would not play. A queue is skipped past one
     // bad track, but a machine that is offline — or a YouTube-wide block —
-    // must not race the whole queue, spawning a resolve for every row.
+    // must not race the whole queue, spawning a resolve for every row. Back
+    // to 0 once a song's sound starts (MpvEngine::audioStarted), not when
+    // its link arrives, which proves nothing yet; and when the listener asks
+    // for something.
     int m_consecutiveFailures = 0;
 
     QString m_radioSeed;             // the song the radio request in flight is for

@@ -36,6 +36,7 @@
 #include "mediaextractor.h"
 #include "mpvengine.h"
 #include "playbackcontroller.h"
+#include "recoveryselftest.h"
 #include "saavnselftest.h"
 #include "scrollselftest.h"
 #include "streamresolver.h"
@@ -216,6 +217,13 @@ int main(int argc, char *argv[])
         // invented songs (libraryeditselftest.cpp); in MONOLIST_DATA_DIR only.
         if (arguments.contains(QStringLiteral("--library-edit-test")))
             return runLibraryEditSelfTest(&library) == 0 ? 0 : 1;
+        // How a song that has begun is kept playing — a refused link asked
+        // for afresh, a rescue link for one play, a stream cut short picked
+        // up where it stopped, a refused file streamed, the three-in-a-row
+        // stop — on the real mpv against a stand-in server on this computer
+        // (recoveryselftest.cpp); in MONOLIST_DATA_DIR only.
+        if (arguments.contains(QStringLiteral("--recovery-test")))
+            return runRecoverySelfTest(&library) == 0 ? 0 : 1;
     }
 
     // Which page an artist's name opens: learnt from every answer that links
@@ -553,13 +561,17 @@ int main(int argc, char *argv[])
         // --again plays the same track a second time halfway through, which
         // should start from the resolver's cache instead of from yt-dlp.
         const bool again = args.contains(QStringLiteral("--again"));
-        // --spoil hands the track's first sound-only stream over spoiled, so
-        // mpv is refused it and the recovery — the same track's muxed stream,
-        // then yt-dlp — runs on a real track, as it would for a link the CDN
-        // turned down.
-        const bool spoil = args.contains(QStringLiteral("--spoil"));
-        if (spoil)
-            resolver.spoilNextStream(videoId);
+        // --spoil [n] hands the track's first n sound-only streams (one when
+        // no number follows) over spoiled, so mpv is refused them and the
+        // recovery runs on a real track, as it would for a link the CDN
+        // turned down: a fresh InnerTube link first, then, with --spoil 2,
+        // the track's muxed stream (itag 18) and yt-dlp.
+        const int spoilFlag = args.indexOf(QStringLiteral("--spoil"));
+        const bool spoil = spoilFlag >= 0;
+        if (spoil) {
+            const int count = spoilFlag + 1 < args.size() ? args.at(spoilFlag + 1).toInt() : 0;
+            resolver.spoilNextStream(videoId, count > 0 ? count : 1);
+        }
         // --spoil-saavn does the same to the track's JioSaavn link, so the
         // way back to YouTube, from the same second, can be watched.
         if (args.contains(QStringLiteral("--spoil-saavn")))

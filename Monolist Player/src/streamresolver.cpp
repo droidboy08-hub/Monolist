@@ -44,6 +44,19 @@ constexpr int kInvidiousTimeoutMs = 6000;
 // to run on. Past this, something is wrong and waiting longer helps nobody.
 constexpr int kYtDlpTimeoutMs = 12000;
 
+// A rung as the log names it.
+const char *tierName(int tier)
+{
+    switch (tier) {
+    case StreamResolver::TierInnerTube: return "InnerTube";
+    case StreamResolver::TierYtDlp:     return "yt-dlp";
+    case StreamResolver::TierMuxed:     return "its muxed stream";
+    case StreamResolver::TierPiped:     return "Piped";
+    case StreamResolver::TierInvidious: return "Invidious";
+    default:                            return "another source";
+    }
+}
+
 QNetworkRequest makeRequest(const QUrl &url)
 {
     QNetworkRequest request(url);
@@ -149,21 +162,37 @@ void StreamResolver::resolve(const QString &videoId, int firstTier)
     start(videoId, tiers);
 }
 
-void StreamResolver::resolveVia(const QString &videoId, const QList<int> &tiers)
+void StreamResolver::resolveVia(const QString &videoId, const QList<int> &tiers, int homeTier)
 {
     if (videoId.isEmpty()) {
         Q_EMIT failed(videoId, QStringLiteral("Empty video id."));
         return;
     }
-    start(videoId, tiers);
+    // This play's rescue link, when the walk starts on its rung: the play
+    // goes back to it (the sound after its picture, say) rather than paying
+    // for the rescue twice. Queued, as a remembered link always is.
+    if (!tiers.isEmpty()) {
+        const auto rescue = m_rescueLinks.constFind(videoId);
+        if (rescue != m_rescueLinks.constEnd() && rescue->tier == tiers.first()
+            && rescue->expires > QDateTime::currentDateTimeUtc()) {
+            const CacheEntry entry = *rescue;
+            qInfo("resolver: %s goes back to the link that rescued this play", qPrintable(videoId));
+            QMetaObject::invokeMethod(this, [this, videoId, entry]() {
+                report(videoId, entry.url, entry.tier, /*fromCache=*/true);
+            }, Qt::QueuedConnection);
+            return;
+        }
+    }
+    start(videoId, tiers, homeTier);
 }
 
-void StreamResolver::start(const QString &videoId, QList<int> tiers)
+void StreamResolver::start(const QString &videoId, QList<int> tiers, int homeTier)
 {
     cancelJob(videoId);
 
     auto *job = new Job;
     job->videoId = videoId;
+    job->homeTier = homeTier;
     m_jobs.insert(videoId, job);
     const int first = tiers.isEmpty() ? int(TierExhausted) : tiers.takeFirst();
     job->next = tiers;
@@ -175,7 +204,10 @@ void StreamResolver::start(const QString &videoId, QList<int> tiers)
 // as the very client whose link was just turned down, where the muxed stream
 // is asked of others. After yt-dlp's, the muxed stream is the one kind left
 // to try; after the muxed stream's, yt-dlp's sound. The public instances come
-// last either way.
+// last either way. Before all of them, the caller may ask the refused tier
+// once more (PlaybackController's loadFailed): a refusal is often the link's
+// alone, and InnerTube's next one costs a fifth of a second where the muxed
+// stream costs three.
 QList<int> StreamResolver::afterRefusal(int tier)
 {
     switch (tier) {
@@ -187,9 +219,14 @@ QList<int> StreamResolver::afterRefusal(int tier)
     }
 }
 
-QVariantMap StreamResolver::headersFor(const QString &videoId) const
+QVariantMap StreamResolver::headersFor(const QString &videoId, const QString &url) const
 {
-    return m_cache.value(videoId).headers;
+    for (const QHash<QString, CacheEntry> *links : { &m_rescueLinks, &m_cache }) {
+        const auto entry = links->constFind(videoId);
+        if (entry != links->constEnd() && entry->url == url)
+            return entry->headers;
+    }
+    return {};
 }
 
 // The picture: yt-dlp only. The public instances answer with sound, and a
@@ -283,6 +320,7 @@ void StreamResolver::prefetch(const QString &videoId)
 void StreamResolver::invalidate(const QString &videoId)
 {
     m_cache.remove(videoId);
+    m_rescueLinks.remove(videoId);
     m_videoCache.remove(videoId);
 }
 
@@ -303,6 +341,14 @@ void StreamResolver::startTier(Job *job, int tier)
     job->tier = tier;
     ++job->generation;
     Q_EMIT tierChanged(job->videoId, tier);
+
+    if (tier < TierExhausted) {
+        const auto test = m_testAnswers.constFind(job->videoId);
+        if (test != m_testAnswers.constEnd() && test->contains(tier)) {
+            answerForTest(job, test->value(tier));
+            return;
+        }
+    }
 
     switch (tier) {
     case TierInnerTube:  startInnerTube(job);     break;
@@ -342,26 +388,57 @@ void StreamResolver::startInnerTube(Job *job)
             return;
         }
         qInfo("innertube: %s resolved as itag %d", qPrintable(videoId), itag);
-
-        QString handed = url;
-        if (!job->prefetch && videoId == m_spoil) {
-            m_spoil.clear();
-            // The expiry is signed into the link, so any change to it is a
-            // link the CDN answers with 403 — the refusal this stands in for.
-            QUrl spoiled(url);
-            QUrlQuery query(spoiled);
-            if (query.hasQueryItem(QStringLiteral("expire"))) {
-                query.removeAllQueryItems(QStringLiteral("expire"));
-                query.addQueryItem(QStringLiteral("expire"), QStringLiteral("1"));
-                spoiled.setQuery(query);
-            } else {
-                spoiled.setHost(QStringLiteral("spoiled.invalid"));
-            }
-            handed = spoiled.toString(QUrl::FullyEncoded);
-            qInfo("innertube: %s handed over spoiled, for the self-test", qPrintable(videoId));
-        }
-        succeed(job, handed);
+        succeed(job, handOverInnerTube(job, url));
     });
+}
+
+QString StreamResolver::handOverInnerTube(Job *job, const QString &url)
+{
+    if (job->prefetch || job->videoId != m_spoil || m_spoilsLeft <= 0)
+        return url;
+    if (--m_spoilsLeft == 0)
+        m_spoil.clear();
+    // The expiry is signed into the link, so any change to it is a link the
+    // CDN answers with 403 — the refusal this stands in for.
+    QUrl spoiled(url);
+    QUrlQuery query(spoiled);
+    if (query.hasQueryItem(QStringLiteral("expire"))) {
+        query.removeAllQueryItems(QStringLiteral("expire"));
+        query.addQueryItem(QStringLiteral("expire"), QStringLiteral("1"));
+        spoiled.setQuery(query);
+    } else {
+        spoiled.setHost(QStringLiteral("spoiled.invalid"));
+    }
+    qInfo("innertube: %s handed over spoiled, for the self-test", qPrintable(job->videoId));
+    return spoiled.toString(QUrl::FullyEncoded);
+}
+
+void StreamResolver::answerForTest(Job *job, const QString &url)
+{
+    QString link = url;
+    if (!link.isEmpty()) {
+        QUrl answer(url);
+        QUrlQuery query(answer);
+        query.addQueryItem(QStringLiteral("g"), QString::number(++m_testAnswersGiven));
+        query.addQueryItem(QStringLiteral("expire"),
+                           QString::number(QDateTime::currentSecsSinceEpoch() + 6 * 3600));
+        answer.setQuery(query);
+        link = answer.toString(QUrl::FullyEncoded);
+    }
+    // Queued, as a real answer always comes.
+    const QString videoId = job->videoId;
+    const int generation = job->generation;
+    QMetaObject::invokeMethod(this, [this, videoId, generation, link]() {
+        Job *job = m_jobs.value(videoId);
+        if (!job || job->settled || job->generation != generation)
+            return;
+        if (link.isEmpty()) {
+            tierExhausted(job, QStringLiteral("self-test: this tier fails"));
+            return;
+        }
+        qInfo("resolver: %s answered by the self-test as %s", qPrintable(videoId), tierName(job->tier));
+        succeed(job, job->tier == TierInnerTube ? handOverInnerTube(job, link) : link);
+    }, Qt::QueuedConnection);
 }
 
 void StreamResolver::startYtDlp(Job *job)
@@ -587,7 +664,15 @@ void StreamResolver::succeed(Job *job, const QString &url, const QVariantMap &he
     const QString videoId = job->videoId;
     const int tier = job->tier;
     const bool silent = job->prefetch;
-    m_cache.insert(videoId, { url, tier, expiryOf(url), headers });
+    // A rescue link serves the play it rescued, and no replay: see
+    // resolveVia. InnerTube's own links are never one.
+    const bool rescue = job->homeTier >= 0 && tier != job->homeTier && tier != TierInnerTube;
+    if (rescue && !m_keepRescueLinks) {
+        m_rescueLinks.insert(videoId, { url, tier, expiryOf(url), headers });
+        qInfo("resolver: %s rescued by %s, for this play only", qPrintable(videoId), tierName(tier));
+    } else {
+        m_cache.insert(videoId, { url, tier, expiryOf(url), headers });
+    }
 
     abortPending(job);
     discard(job);
