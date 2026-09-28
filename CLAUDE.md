@@ -63,9 +63,11 @@ owner's iPhone app (AryaMusix / "Mediano", Swift, not in this repo).
   `--search "<q>"`, `--lyrics "<q>"`, `--view <view>`. JioSaavn needs
   `--set jiosaavn.enabled 1` AND a real title, artist and length (without a
   length it refuses on purpose). Royalty-free test id: `LrM_Y39Gmhk`.
-- Timing benchmarks and fixed track lists from the engine study are in the
-  hand-off folder's `bench/` (not in the repo). Re-measure speed items with the
-  same scripts and lists; report median and p90.
+- Timing benchmarks, fixed track lists and all measured results from the engine
+  study are in `tools/bench/` (the instrumentation patch applies to a scratch
+  copy, never to the repo). Re-measure speed items with the same scripts and
+  lists; report median and p90. Raw research is in `docs/research/raw/`; Claude
+  Code's memory notes from the old machine are in `docs/claude-memory/`.
 
 ## Git and GitHub
 
