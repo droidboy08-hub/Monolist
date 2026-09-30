@@ -1,0 +1,5 @@
+// The app's icon, for Explorer, the taskbar and the window: Qt's Windows
+// platform takes IDI_ICON1 from the executable as every window's icon.
+// Drawn by packaging/make-icon.ps1; configured into the build folder by
+// CMakeLists.txt, with the icon's full path filled in.
+IDI_ICON1 ICON "@MONOLIST_ICON@"

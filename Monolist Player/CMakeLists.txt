@@ -405,9 +405,16 @@ if(WIN32)
     set_target_properties(monolist PROPERTIES
         WIN32_EXECUTABLE $<NOT:$<CONFIG:Debug>>
     )
-    # The icon (packaging/make-icon.ps1), built into the executable.
+    # The icon (packaging/make-icon.ps1), built into the executable. windres
+    # hands its preprocessor a command line with the paths unquoted, and this
+    # folder's name has a space in it: so the resource script is written into
+    # the build folder, naming the icon by its full path, and compiled on its
+    # own, with none of the app's include folders.
     enable_language(RC)
-    target_sources(monolist PRIVATE src/monolist.rc)
+    set(MONOLIST_ICON "${CMAKE_CURRENT_SOURCE_DIR}/packaging/monolist.ico")
+    configure_file(src/monolist.rc.in "${CMAKE_CURRENT_BINARY_DIR}/generated/monolist.rc" @ONLY)
+    add_library(monolist_resources OBJECT "${CMAKE_CURRENT_BINARY_DIR}/generated/monolist.rc")
+    target_sources(monolist PRIVATE $<TARGET_OBJECTS:monolist_resources>)
 endif()
 
 install(TARGETS monolist
