@@ -719,12 +719,47 @@ int main(int argc, char *argv[])
             const QString path = app.arguments().at(shotFlag + 1);
             const int seconds = shotFlag + 2 < app.arguments().size() ? app.arguments().at(shotFlag + 2).toInt() : 0;
             const bool quit = app.arguments().contains(QStringLiteral("--quit"));
+            // --shot-scroll <px>: the page shown scrolled that far down first
+            // (the tallest visible one), for what is below its first screen.
+            const int scrollFlag = app.arguments().indexOf(QStringLiteral("--shot-scroll"));
+            const qreal scrollTo = scrollFlag >= 0 && scrollFlag + 1 < app.arguments().size()
+                                       ? app.arguments().at(scrollFlag + 1).toDouble() : -1.0;
             auto *quick = qobject_cast<QQuickWindow *>(window);
-            QTimer::singleShot((seconds > 0 ? seconds : 5) * 1000, quick, [quick, path, quit]() {
+            const auto grab = [quick, path, quit]() {
                 const bool saved = quick && quick->grabWindow().save(path);
                 qInfo("shot: %s %s", saved ? "saved" : "could not save", qUtf8Printable(QDir::toNativeSeparators(path)));
                 if (quit)
                     QCoreApplication::quit();
+            };
+            QTimer::singleShot((seconds > 0 ? seconds : 5) * 1000, quick, [quick, scrollTo, grab]() {
+                if (scrollTo < 0 || !quick) {
+                    grab();
+                    return;
+                }
+                // A frame drawn first: a window behind others draws none, and
+                // its pages are only laid out for a frame, so until then
+                // they are as tall as they were when it was last in view.
+                quick->grabWindow();
+                // The visual tree, not the object tree: an item made by a
+                // Loader or a Repeater is not its parent's child object.
+                QQuickItem *tallest = nullptr;
+                QList<QQuickItem *> pending{ quick->contentItem() };
+                while (!pending.isEmpty()) {
+                    QQuickItem *item = pending.takeLast();
+                    if (!item->isVisible())
+                        continue;
+                    pending += item->childItems();
+                    if (item->inherits("QQuickFlickable") && !item->inherits("QQuickItemView")
+                        && (!tallest || item->property("contentHeight").toReal()
+                                            > tallest->property("contentHeight").toReal()))
+                        tallest = item;
+                }
+                if (tallest) {
+                    tallest->setProperty("contentY", scrollTo);
+                    qInfo("shot: scrolled %s (%.0f px tall) to %.0f", tallest->metaObject()->className(),
+                          tallest->property("contentHeight").toReal(), tallest->property("contentY").toReal());
+                }
+                QTimer::singleShot(1000, quick, grab);
             });
         }
     }

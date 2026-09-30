@@ -23,8 +23,58 @@ Column {
     property bool history: false
     // The page this list scrolls in: a drag held near its top or bottom edge
     // scrolls it, so a song can be carried further than the window shows.
+    // Found by itself when not given.
     property Flickable flickable: null
     signal trackActivated(int index)
+
+    // Only the rows near what the page shows are made (ROADMAP F28): a
+    // thousand-song playlist would otherwise hold a thousand rows, each with
+    // its buttons, made before the page could show. The rows the list has
+    // as a window: from `windowTop`, `windowHeight` tall, a screen beyond
+    // the page's view each way, and always the row being carried.
+    readonly property Flickable page: flickable ? flickable : enclosingPage()
+    property real windowTop: 0
+    property real windowHeight: 0
+
+    function enclosingPage() {
+        for (let p = root.parent; p; p = p.parent) {
+            if (p instanceof Flickable)
+                return p
+        }
+        return null
+    }
+
+    function updateWindow() {
+        const total = rows.count * rowHeight
+        if (!page) {
+            windowTop = 0
+            windowHeight = total
+        } else {
+            const at = rowsArea.mapToItem(page.contentItem, 0, 0).y
+            const margin = Math.max(page.height, 400)
+            let top = Math.max(0, page.contentY - at - margin)
+            let bottom = Math.min(total, page.contentY + page.height - at + margin)
+            if (dragFrom >= 0) {
+                top = Math.min(top, dragFrom * rowHeight)
+                bottom = Math.max(bottom, (dragFrom + 1) * rowHeight)
+            }
+            top = Math.floor(Math.min(top, total) / rowHeight) * rowHeight
+            windowTop = top
+            windowHeight = Math.max(0, bottom - top)
+        }
+        rows.contentY = windowTop
+    }
+
+    Connections {
+        target: root.page
+        function onContentYChanged() { root.updateWindow() }
+        function onHeightChanged() { root.updateWindow() }
+        // Something above the list grew or shrank, which moves it on the page.
+        function onContentHeightChanged() { root.updateWindow() }
+    }
+    onYChanged: updateWindow()
+    onDragFromChanged: updateWindow()
+    Component.onCompleted: updateWindow()
 
     // Column visibility follows the window: metadata drops before the title does.
     readonly property bool showAlbum: width >= 900
@@ -236,253 +286,270 @@ Column {
     }
 
     // — rows —
-    Repeater {
-        id: rows
-        model: root.model
+    // An item as tall as every row, holding a list the height of the window
+    // over it, which the page's scroll moves along (updateWindow).
+    Item {
+        id: rowsArea
+        width: root.width
+        height: rows.count * root.rowHeight
 
-        delegate: Item {
-            id: row
+        ListView {
+            id: rows
+            model: root.model
+            y: root.windowTop
+            width: parent.width
+            height: root.windowHeight
+            interactive: false
+            currentIndex: -1
+            // The row carried is drawn over the rows it passes, out of the window
+            // if it goes there.
+            clip: false
+            onCountChanged: Qt.callLater(root.updateWindow)
 
-            required property int index
-            required property string title
-            required property string artist
-            required property string album
-            required property string durationText
-            required property string sourceId
-            required property string artwork
-            required property real durationMs
-            required property int entryId
-            required property bool isVideo
-            // The artist line with each name's page, and the album's page,
-            // where the list kept them (see ArtistLine).
-            required property var credits
-            required property string albumId
+            delegate: Item {
+                id: row
 
-            width: root.width
-            height: root.rowHeight
-            readonly property bool isActive: sourceId.length > 0 ? sourceId === Player.currentSourceId
-                                                                 : index === root.activeIndex
-            readonly property bool liked: Library.revision >= 0 && Library.isLiked(sourceId)
-            readonly property bool held: root.dragFrom === index
-            // The grip shows under the pointer, and stays while the row has
-            // the keyboard, so Alt+Up and Alt+Down are seen to apply to it.
-            readonly property bool gripShown: root.reorderable && (rowHover.hovered || activeFocus || held)
+                required property int index
+                required property string title
+                required property string artist
+                required property string album
+                required property string durationText
+                required property string sourceId
+                required property string artwork
+                required property real durationMs
+                required property int entryId
+                required property bool isVideo
+                // The artist line with each name's page, and the album's page,
+                // where the list kept them (see ArtistLine).
+                required property var credits
+                required property string albumId
 
-            // Carried with the pointer, over the rows it passes, which step
-            // aside to open the gap it would drop into: where the song goes
-            // is the one empty slot in the list.
-            z: held ? 2 : 0
-            transform: Translate { y: row.held ? root.dragOffset : root.shiftFor(row.index) }
+                width: root.width
+                height: root.rowHeight
+                readonly property bool isActive: sourceId.length > 0 ? sourceId === Player.currentSourceId
+                                                                     : index === root.activeIndex
+                readonly property bool liked: Library.revision >= 0 && Library.isLiked(sourceId)
+                readonly property bool held: root.dragFrom === index
+                // The grip shows under the pointer, and stays while the row has
+                // the keyboard, so Alt+Up and Alt+Down are seen to apply to it.
+                readonly property bool gripShown: root.reorderable && (rowHover.hovered || activeFocus || held)
 
-            // Moving a song from the keyboard: Alt+Up and Alt+Down, once the
-            // grip has been pressed (or the row moved) gives the row the
-            // keyboard. The menu key opens its menu under it; Esc lets go.
-            Keys.onPressed: function(event) {
-                if (root.reorderable && (event.modifiers & Qt.AltModifier)
-                        && (event.key === Qt.Key_Up || event.key === Qt.Key_Down)) {
-                    event.accepted = true
-                    root.moveRow(row.index, row.index + (event.key === Qt.Key_Up ? -1 : 1))
-                } else if (event.key === Qt.Key_Menu
-                           || (event.key === Qt.Key_F10 && (event.modifiers & Qt.ShiftModifier))) {
-                    event.accepted = true
-                    root.openMenu(row, row)
-                } else if (event.key === Qt.Key_Escape) {
-                    event.accepted = true
-                    row.focus = false
-                }
-            }
+                // Carried with the pointer, over the rows it passes, which step
+                // aside to open the gap it would drop into: where the song goes
+                // is the one empty slot in the list.
+                z: held ? 2 : 0
+                transform: Translate { y: row.held ? root.dragOffset : root.shiftFor(row.index) }
 
-            // Hover appears at once — that is what makes a list feel quick —
-            // and leaves over a moment, so dragging down the rows does not
-            // flicker at every boundary. A row being carried is a plate of
-            // paper in an ink frame, over the rows it passes.
-            Rectangle {
-                anchors.fill: parent
-                color: row.held ? Theme.bg : rowHover.hovered ? Theme.rowHover : "transparent"
-                border.width: row.held ? Theme.ruleWidth : 0
-                border.color: Theme.text
-
-                Behavior on color {
-                    enabled: !rowHover.hovered && !row.held
-                    ColorAnimation { duration: Theme.quick }
-                }
-            }
-
-            // The row that has the keyboard: a 2px rule down its left edge,
-            // the width of every other focus mark in the app.
-            Rectangle {
-                visible: row.activeFocus && !row.held
-                width: Theme.ruleWidth
-                height: parent.height
-                color: Theme.accent
-            }
-
-            Text {
-                x: 0
-                width: root.indexWidth
-                visible: !row.gripShown
-                anchors.verticalCenter: parent.verticalCenter
-                text: row.isActive && Player.playing ? "▶" : String(row.index + 1)
-                font.family: Theme.fontFamily
-                font.pixelSize: 13
-                color: row.isActive ? Theme.accent700 : Theme.text
-            }
-
-            // The grip, in the number's place. Pressed, it holds the row;
-            // taken rather than stolen, so the page does not scroll instead.
-            Item {
-                visible: root.reorderable
-                width: root.indexWidth
-                height: parent.height
-
-                Icon {
-                    visible: row.gripShown
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 16
-                    height: 16
-                    name: "grip"
-                    color: grip.containsMouse || grip.pressed ? Theme.text : Theme.neutral700
+                // Moving a song from the keyboard: Alt+Up and Alt+Down, once the
+                // grip has been pressed (or the row moved) gives the row the
+                // keyboard. The menu key opens its menu under it; Esc lets go.
+                Keys.onPressed: function(event) {
+                    if (root.reorderable && (event.modifiers & Qt.AltModifier)
+                            && (event.key === Qt.Key_Up || event.key === Qt.Key_Down)) {
+                        event.accepted = true
+                        root.moveRow(row.index, row.index + (event.key === Qt.Key_Up ? -1 : 1))
+                    } else if (event.key === Qt.Key_Menu
+                               || (event.key === Qt.Key_F10 && (event.modifiers & Qt.ShiftModifier))) {
+                        event.accepted = true
+                        root.openMenu(row, row)
+                    } else if (event.key === Qt.Key_Escape) {
+                        event.accepted = true
+                        row.focus = false
+                    }
                 }
 
-                MouseArea {
-                    id: grip
-                    // The glyph's own column, not the whole number cell, so a
-                    // press beside it still plays the song.
-                    width: 24
+                // Hover appears at once — that is what makes a list feel quick —
+                // and leaves over a moment, so dragging down the rows does not
+                // flicker at every boundary. A row being carried is a plate of
+                // paper in an ink frame, over the rows it passes.
+                Rectangle {
+                    anchors.fill: parent
+                    color: row.held ? Theme.bg : rowHover.hovered ? Theme.rowHover : "transparent"
+                    border.width: row.held ? Theme.ruleWidth : 0
+                    border.color: Theme.text
+
+                    Behavior on color {
+                        enabled: !rowHover.hovered && !row.held
+                        ColorAnimation { duration: Theme.quick }
+                    }
+                }
+
+                // The row that has the keyboard: a 2px rule down its left edge,
+                // the width of every other focus mark in the app.
+                Rectangle {
+                    visible: row.activeFocus && !row.held
+                    width: Theme.ruleWidth
                     height: parent.height
-                    enabled: root.reorderable
-                    hoverEnabled: true
-                    preventStealing: true
-                    cursorShape: pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
-                    onPressed: function(mouse) {
-                        row.forceActiveFocus()
-                        const at = mapToItem(null, mouse.x, mouse.y)
-                        root.beginDrag(row.index, at.x, at.y)
-                    }
-                    onPositionChanged: function(mouse) {
-                        const at = mapToItem(null, mouse.x, mouse.y)
-                        root.updateDrag(at.x, at.y)
-                    }
-                    // A press alone gives the row the keyboard, for Alt+Up and
-                    // Alt+Down; a drag was the mouse's move, and leaves no red
-                    // focus mark behind on the row it moved.
-                    onReleased: {
-                        if (root.dragMoved)
-                            row.focus = false
-                        root.endDrag(true)
-                    }
-                    onCanceled: root.endDrag(false)
+                    color: Theme.accent
                 }
-            }
 
-            Text {
-                x: root.indexWidth
-                width: Math.max(0, root.titleColumnWidth - Theme.space4)
-                anchors.verticalCenter: parent.verticalCenter
-                text: row.title
-                elide: Text.ElideRight
-                font.family: Theme.fontFamily
-                font.pixelSize: 14
-                font.weight: row.isActive ? Font.Bold : Theme.weightRegular
-                color: row.isActive ? Theme.accent700 : Theme.text
-            }
+                Text {
+                    x: 0
+                    width: root.indexWidth
+                    visible: !row.gripShown
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: row.isActive && Player.playing ? "▶" : String(row.index + 1)
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 13
+                    color: row.isActive ? Theme.accent700 : Theme.text
+                }
 
-            // Each name opens its artist's page; a click anywhere else in
-            // the row still plays it.
-            ArtistLine {
-                visible: root.showArtist
-                x: root.indexWidth + root.titleColumnWidth
-                width: Math.max(0, root.artistColumnWidth - Theme.space4)
-                anchors.verticalCenter: parent.verticalCenter
-                artist: row.artist
-                credits: row.credits
-                font.family: Theme.fontFamily
-                font.pixelSize: 14
-                font.weight: row.isActive ? Font.Bold : Theme.weightRegular
-                color: row.isActive ? Theme.accent700 : Theme.text
-            }
+                // The grip, in the number's place. Pressed, it holds the row;
+                // taken rather than stolen, so the page does not scroll instead.
+                Item {
+                    visible: root.reorderable
+                    width: root.indexWidth
+                    height: parent.height
 
-            // And the album its page, where the list knows which it is.
-            ArtistLine {
-                visible: root.showAlbum
-                x: root.indexWidth + root.titleColumnWidth + root.artistColumnWidth
-                width: Math.max(0, root.albumColumnWidth - Theme.space4)
-                anchors.verticalCenter: parent.verticalCenter
-                artist: row.album
-                opens: "page"
-                pageId: row.albumId
-                font.family: Theme.fontFamily
-                font.pixelSize: 14
-                color: Theme.neutral700
-            }
+                    Icon {
+                        visible: row.gripShown
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 16
+                        height: 16
+                        name: "grip"
+                        color: grip.containsMouse || grip.pressed ? Theme.text : Theme.neutral700
+                    }
 
-            // Buttons, so their clicks are not also taken as a tap on the row.
-            // The heart stays when the song is liked, and shows on hover.
-            LikeButton {
-                visible: row.sourceId.length > 0 && (row.liked || rowHover.hovered)
-                x: root.width - root.moreWidth - root.timeWidth - root.downloadWidth - root.likeWidth
-                   + (root.likeWidth - width) / 2
-                anchors.verticalCenter: parent.verticalCenter
-                side: 30
-                liked: row.liked
-                iconSize: 15
-                onClicked: Library.setLiked(root.trackOf(row), !row.liked)
-                ToolTip.visible: hovered
-                ToolTip.delay: 600
-                ToolTip.text: row.liked ? "Remove from Liked songs" : "Add to Liked songs"
-            }
+                    MouseArea {
+                        id: grip
+                        // The glyph's own column, not the whole number cell, so a
+                        // press beside it still plays the song.
+                        width: 24
+                        height: parent.height
+                        enabled: root.reorderable
+                        hoverEnabled: true
+                        preventStealing: true
+                        cursorShape: pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
+                        onPressed: function(mouse) {
+                            row.forceActiveFocus()
+                            const at = mapToItem(null, mouse.x, mouse.y)
+                            root.beginDrag(row.index, at.x, at.y)
+                        }
+                        onPositionChanged: function(mouse) {
+                            const at = mapToItem(null, mouse.x, mouse.y)
+                            root.updateDrag(at.x, at.y)
+                        }
+                        // A press alone gives the row the keyboard, for Alt+Up and
+                        // Alt+Down; a drag was the mouse's move, and leaves no red
+                        // focus mark behind on the row it moved.
+                        onReleased: {
+                            if (root.dragMoved)
+                                row.focus = false
+                            root.endDrag(true)
+                        }
+                        onCanceled: root.endDrag(false)
+                    }
+                }
 
-            DownloadButton {
-                visible: root.downloadWidth > 0 && row.sourceId.length > 0
-                x: root.width - root.moreWidth - root.timeWidth - root.downloadWidth
-                   + (root.downloadWidth - width) / 2
-                anchors.verticalCenter: parent.verticalCenter
-                side: 30
-                iconSize: 15
-                videoId: row.sourceId
-                title: row.title
-                artist: row.artist
-                artwork: row.artwork
-                durationMs: row.durationMs
-                isVideo: row.isVideo
-                album: row.album
-            }
+                Text {
+                    x: root.indexWidth
+                    width: Math.max(0, root.titleColumnWidth - Theme.space4)
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: row.title
+                    elide: Text.ElideRight
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 14
+                    font.weight: row.isActive ? Font.Bold : Theme.weightRegular
+                    color: row.isActive ? Theme.accent700 : Theme.text
+                }
 
-            // Blank rather than "0:00" where the list gave no length, as an
-            // artist's top songs do not.
-            Text {
-                anchors.right: parent.right
-                anchors.rightMargin: root.moreWidth
-                anchors.verticalCenter: parent.verticalCenter
-                text: row.durationMs > 0 ? row.durationText : ""
-                font.family: Theme.fontFamily
-                font.pixelSize: 14
-                color: row.isActive ? Theme.accent700 : Theme.text
-            }
+                // Each name opens its artist's page; a click anywhere else in
+                // the row still plays it.
+                ArtistLine {
+                    visible: root.showArtist
+                    x: root.indexWidth + root.titleColumnWidth
+                    width: Math.max(0, root.artistColumnWidth - Theme.space4)
+                    anchors.verticalCenter: parent.verticalCenter
+                    artist: row.artist
+                    credits: row.credits
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 14
+                    font.weight: row.isActive ? Font.Bold : Theme.weightRegular
+                    color: row.isActive ? Theme.accent700 : Theme.text
+                }
 
-            IconButton {
-                visible: rowHover.hovered
-                x: root.width - root.moreWidth + (root.moreWidth - width) / 2
-                anchors.verticalCenter: parent.verticalCenter
-                side: 30
-                iconName: "dots"
-                iconSize: 16
-                iconColor: Theme.neutral700
-                onClicked: root.openMenu(row, null)
-            }
+                // And the album its page, where the list knows which it is.
+                ArtistLine {
+                    visible: root.showAlbum
+                    x: root.indexWidth + root.titleColumnWidth + root.artistColumnWidth
+                    width: Math.max(0, root.albumColumnWidth - Theme.space4)
+                    anchors.verticalCenter: parent.verticalCenter
+                    artist: row.album
+                    opens: "page"
+                    pageId: row.albumId
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 14
+                    color: Theme.neutral700
+                }
 
-            Rectangle {
-                anchors.bottom: parent.bottom
-                width: parent.width
-                height: 1
-                color: Theme.hairline
-            }
+                // Buttons, so their clicks are not also taken as a tap on the row.
+                // The heart stays when the song is liked, and shows on hover.
+                LikeButton {
+                    visible: row.sourceId.length > 0 && (row.liked || rowHover.hovered)
+                    x: root.width - root.moreWidth - root.timeWidth - root.downloadWidth - root.likeWidth
+                       + (root.likeWidth - width) / 2
+                    anchors.verticalCenter: parent.verticalCenter
+                    side: 30
+                    liked: row.liked
+                    iconSize: 15
+                    onClicked: Library.setLiked(root.trackOf(row), !row.liked)
+                    ToolTip.visible: hovered
+                    ToolTip.delay: 600
+                    ToolTip.text: row.liked ? "Remove from Liked songs" : "Add to Liked songs"
+                }
 
-            HoverHandler { id: rowHover; cursorShape: Qt.PointingHandCursor }
-            TapHandler { onTapped: root.trackActivated(row.index) }
-            TapHandler {
-                acceptedButtons: Qt.RightButton
-                onTapped: root.openMenu(row, null)
+                DownloadButton {
+                    visible: root.downloadWidth > 0 && row.sourceId.length > 0
+                    x: root.width - root.moreWidth - root.timeWidth - root.downloadWidth
+                       + (root.downloadWidth - width) / 2
+                    anchors.verticalCenter: parent.verticalCenter
+                    side: 30
+                    iconSize: 15
+                    videoId: row.sourceId
+                    title: row.title
+                    artist: row.artist
+                    artwork: row.artwork
+                    durationMs: row.durationMs
+                    isVideo: row.isVideo
+                    album: row.album
+                }
+
+                // Blank rather than "0:00" where the list gave no length, as an
+                // artist's top songs do not.
+                Text {
+                    anchors.right: parent.right
+                    anchors.rightMargin: root.moreWidth
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: row.durationMs > 0 ? row.durationText : ""
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 14
+                    color: row.isActive ? Theme.accent700 : Theme.text
+                }
+
+                IconButton {
+                    visible: rowHover.hovered
+                    x: root.width - root.moreWidth + (root.moreWidth - width) / 2
+                    anchors.verticalCenter: parent.verticalCenter
+                    side: 30
+                    iconName: "dots"
+                    iconSize: 16
+                    iconColor: Theme.neutral700
+                    onClicked: root.openMenu(row, null)
+                }
+
+                Rectangle {
+                    anchors.bottom: parent.bottom
+                    width: parent.width
+                    height: 1
+                    color: Theme.hairline
+                }
+
+                HoverHandler { id: rowHover; cursorShape: Qt.PointingHandCursor }
+                TapHandler { onTapped: root.trackActivated(row.index) }
+                TapHandler {
+                    acceptedButtons: Qt.RightButton
+                    onTapped: root.openMenu(row, null)
+                }
             }
         }
     }
