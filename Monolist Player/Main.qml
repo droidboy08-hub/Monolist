@@ -402,6 +402,7 @@ ApplicationWindow {
             onBackRequested: window.goBack()
             onForwardRequested: window.goForward()
             onSearchActivated: function(term) { window.navigate("search") }
+            onSearchCommitted: function(term) { Library.rememberSearch(term) }
         }
 
         // The queue pushes the content aside rather than covering it: what it
@@ -501,6 +502,10 @@ ApplicationWindow {
                     SearchView {
                         anchors.fill: parent
                         term: topBar.searchText
+                        onSearchRequested: function(term) {
+                            topBar.searchText = term
+                            Library.rememberSearch(term)
+                        }
                         // Its link names the catalogue folder, so Settings
                         // opens on the section that holds it.
                         onSettingsRequested: {

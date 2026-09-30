@@ -278,6 +278,34 @@ void testCopyLink(Checks &checks, Library *library)
 
 } // namespace
 
+void testSearches(Checks &checks, Library *library)
+{
+    checks.note(QStringLiteral("- recent searches"));
+    library->clearSearches();
+    library->rememberSearch(QStringLiteral("  daft   punk "));
+    library->rememberSearch(QStringLiteral("queen"));
+    checks.same(library->recentSearches().join(QLatin1Char('|')), QStringLiteral("queen|daft punk"),
+                QStringLiteral("a search used is kept, the latest first, its spaces tidied"));
+    library->rememberSearch(QStringLiteral("Daft Punk"));
+    checks.same(library->recentSearches().join(QLatin1Char('|')), QStringLiteral("Daft Punk|queen"),
+                QStringLiteral("  the same search again moves up, once, as last typed"));
+    library->rememberSearch(QStringLiteral("   "));
+    checks.check(library->recentSearches().size() == 2, QStringLiteral("  nothing typed is not kept"));
+    library->forgetSearch(QStringLiteral("queen"));
+    checks.same(library->recentSearches().join(QLatin1Char('|')), QStringLiteral("Daft Punk"),
+                QStringLiteral("one can be taken away"));
+    for (int i = 0; i < 60; ++i)
+        library->rememberSearch(QStringLiteral("search %1").arg(i));
+    checks.check(library->recentSearches().size() == 50
+                     && library->recentSearches().first() == QLatin1String("search 59")
+                     && !library->recentSearches().contains(QStringLiteral("Daft Punk")),
+                 QStringLiteral("the latest 50 are kept"),
+                 QStringLiteral("%1, first %2").arg(library->recentSearches().size())
+                     .arg(library->recentSearches().value(0)));
+    library->clearSearches();
+    checks.check(library->recentSearches().isEmpty(), QStringLiteral("and Clear all clears them"));
+}
+
 int runLibraryEditSelfTest(Library *library)
 {
     Checks checks;
@@ -290,5 +318,6 @@ int runLibraryEditSelfTest(Library *library)
     testPlaylists(checks, library);
     testHistory(checks, library);
     testCopyLink(checks, library);
+    testSearches(checks, library);
     return checks.finish();
 }

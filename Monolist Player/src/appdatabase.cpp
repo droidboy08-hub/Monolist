@@ -169,6 +169,14 @@ void AppDatabase::createSchema()
         " bytes INTEGER NOT NULL DEFAULT 0,"
         " downloaded_at TEXT NOT NULL DEFAULT (datetime('now')))"));
 
+    // What was searched for and then used (Enter, a suggestion picked, a
+    // result played or opened), the latest first on the empty Search page.
+    // One row a term, whatever its case; the latest 50 are kept.
+    q.exec(QStringLiteral(
+        "CREATE TABLE IF NOT EXISTS search_history ("
+        " term TEXT PRIMARY KEY COLLATE NOCASE,"
+        " searched_at INTEGER NOT NULL DEFAULT 0)"));
+
     // How loud YouTube measured each song (Loudness): the chosen format's
     // loudnessDb, kept so a download or a later launch levels it the same.
     q.exec(QStringLiteral(

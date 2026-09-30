@@ -1,4 +1,5 @@
 #include "library.h"
+#include <QDateTime>
 #include "appdatabase.h"
 #include "innertube.h"
 
@@ -102,8 +103,57 @@ void markUpdated(int playlistId)
 Library::Library(QObject *parent)
     : QObject(parent) {}
 
+void Library::rememberSearch(const QString &term)
+{
+    const QString kept = term.simplified();
+    if (kept.isEmpty())
+        return;
+    QSqlQuery query(AppDatabase::connection());
+    // Replaced whole, so the spelling kept is the last one typed.
+    query.prepare(QStringLiteral("DELETE FROM search_history WHERE term = ?"));
+    query.addBindValue(kept);
+    query.exec();
+    query.prepare(QStringLiteral("INSERT INTO search_history (term, searched_at) VALUES (?, ?)"));
+    query.addBindValue(kept);
+    query.addBindValue(QDateTime::currentMSecsSinceEpoch());
+    query.exec();
+    query.exec(QStringLiteral(
+        "DELETE FROM search_history WHERE term NOT IN"
+        " (SELECT term FROM search_history ORDER BY searched_at DESC, rowid DESC LIMIT 50)"));
+    reloadSearches();
+}
+
+void Library::forgetSearch(const QString &term)
+{
+    QSqlQuery query(AppDatabase::connection());
+    query.prepare(QStringLiteral("DELETE FROM search_history WHERE term = ?"));
+    query.addBindValue(term.simplified());
+    query.exec();
+    reloadSearches();
+}
+
+void Library::clearSearches()
+{
+    QSqlQuery(AppDatabase::connection()).exec(QStringLiteral("DELETE FROM search_history"));
+    reloadSearches();
+}
+
+void Library::reloadSearches()
+{
+    QStringList terms;
+    QSqlQuery query(AppDatabase::connection());
+    query.exec(QStringLiteral("SELECT term FROM search_history ORDER BY searched_at DESC, rowid DESC LIMIT 50"));
+    while (query.next())
+        terms << query.value(0).toString();
+    if (terms == m_recentSearches)
+        return;
+    m_recentSearches = terms;
+    Q_EMIT recentSearchesChanged();
+}
+
 void Library::load()
 {
+    reloadSearches();
     m_playlists.reload();
     m_tracks.reload();
     reloadLiked();

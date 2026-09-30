@@ -14,6 +14,9 @@ ScrollPage {
 
     // The empty page's way to the recommendation folders.
     signal settingsRequested()
+    // A recent search picked on the empty page: typed into the field, as if
+    // typed there.
+    signal searchRequested(string term)
 
     // Albums, artists and playlists are cards; songs and videos are rows.
     readonly property bool cardMode: Extractor.filter === "albums" || Extractor.filter === "artists"
@@ -28,8 +31,10 @@ ScrollPage {
         return count
     }
 
-    // A card opens what it is; its play plate plays it (ShelfCard).
+    // A card opens what it is; its play plate plays it (ShelfCard). Either
+    // way the search was used, and is kept among the recent ones.
     function openCard(card) {
+        Library.rememberSearch(root.term)
         if (card.type === "artist")
             Nav.openArtist(card.title, card.browseId)
         else
@@ -216,6 +221,129 @@ ScrollPage {
             }
         }
 
+        // — with nothing typed: the searches made before, each to search
+        // again or to take away, and YouTube Music's Moods & genres —
+        Column {
+            visible: root.term.length === 0 && Library.recentSearches.length > 0
+            width: parent.width
+            spacing: Theme.space3
+
+            Item {
+                width: parent.width
+                height: recentHeading.implicitHeight
+
+                Text {
+                    id: recentHeading
+                    text: "RECENT SEARCHES"
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 11
+                    font.weight: Font.Bold
+                    font.letterSpacing: Theme.tracking(11, 0.14)
+                    color: Theme.neutral700
+                }
+                Text {
+                    anchors.right: parent.right
+                    anchors.verticalCenter: recentHeading.verticalCenter
+                    text: "CLEAR ALL"
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 12
+                    font.weight: Font.Bold
+                    font.letterSpacing: Theme.tracking(12, 0.12)
+                    color: clearHover.hovered ? Theme.accent700 : Theme.neutral700
+
+                    HoverHandler { id: clearHover; cursorShape: Qt.PointingHandCursor }
+                    TapHandler { onTapped: Library.clearSearches() }
+                }
+            }
+
+            Flow {
+                width: parent.width
+                spacing: Theme.space2
+
+                Repeater {
+                    model: Library.recentSearches.slice(0, 20)
+
+                    delegate: Rectangle {
+                        id: recent
+                        required property string modelData
+
+                        width: recentText.implicitWidth + forget.width + Theme.space3 * 2 + Theme.space1
+                        height: 36
+                        color: recentHover.hovered ? Theme.surface : "transparent"
+                        border.width: Theme.ruleWidth
+                        border.color: recentHover.hovered ? Theme.text : Theme.neutral300
+
+                        HoverHandler { id: recentHover }
+
+                        Text {
+                            id: recentText
+                            x: Theme.space3
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: Math.min(implicitWidth, 320)
+                            text: recent.modelData
+                            elide: Text.ElideRight
+                            font.family: Theme.fontFamily
+                            font.pixelSize: 13
+                            color: Theme.text
+
+                            HoverHandler { cursorShape: Qt.PointingHandCursor }
+                            TapHandler { onTapped: root.searchRequested(recent.modelData) }
+                        }
+                        IconButton {
+                            id: forget
+                            anchors.right: parent.right
+                            anchors.rightMargin: Theme.space1
+                            anchors.verticalCenter: parent.verticalCenter
+                            side: 28
+                            iconName: "x"
+                            iconSize: 12
+                            iconColor: Theme.neutral700
+                            onClicked: Library.forgetSearch(recent.modelData)
+                        }
+                    }
+                }
+            }
+        }
+
+        Repeater {
+            model: root.term.length === 0 ? Catalog.moods : []
+
+            delegate: Column {
+                id: moodGroup
+                required property var modelData
+
+                width: column.width
+                spacing: Theme.space3
+
+                Text {
+                    text: (moodGroup.modelData.title || "").toUpperCase()
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 11
+                    font.weight: Font.Bold
+                    font.letterSpacing: Theme.tracking(11, 0.14)
+                    color: Theme.neutral700
+                }
+
+                Flow {
+                    width: parent.width
+                    spacing: Theme.space3
+
+                    Repeater {
+                        model: moodGroup.modelData.chips
+
+                        delegate: MoodChip {
+                            required property var modelData
+                            width: 184
+                            height: 56
+                            chip: modelData
+                            onActivated: Nav.openMore({ kind: "browse", browseId: modelData.browseId,
+                                                        params: modelData.params }, modelData.title)
+                        }
+                    }
+                }
+            }
+        }
+
         Text {
             visible: Extractor.busy
             width: parent.width
@@ -263,6 +391,7 @@ ScrollPage {
             // With "Autoplay similar songs" turned off, the player respects
             // the switch: no radio is fetched, and the song plays alone.
             onTrackActivated: function(index) {
+                Library.rememberSearch(root.term)
                 Player.playTracks([Extractor.results.get(index)], 0, "search")
             }
         }

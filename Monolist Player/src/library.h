@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QObject>
+#include <QStringList>
 #include <QSet>
 #include <QVariantList>
 #include <QVariantMap>
@@ -44,6 +45,8 @@ class Library : public QObject
     Q_PROPERTY(QString systemRegionName READ systemRegionName CONSTANT)
     // The tallest picture to ask for, in pixels: 360, 720 or 1080.
     Q_PROPERTY(int videoQuality READ videoQuality WRITE setVideoQuality NOTIFY videoQualityChanged)
+    // What was searched for and used, the latest first (rememberSearch).
+    Q_PROPERTY(QStringList recentSearches READ recentSearches NOTIFY recentSearchesChanged)
 public:
     explicit Library(QObject *parent = nullptr);
 
@@ -113,6 +116,16 @@ public:
     // An empty name goes back to the one the system knows the user by.
     Q_INVOKABLE void setUserName(const QString &name);
 
+    // — searches —
+    // A search that was used: Enter pressed, a suggestion picked, one of its
+    // results played or opened. Not every pause in the typing, which would
+    // keep "tay" and "tayl" beside "taylor swift". Kept as last typed; the
+    // latest 50.
+    Q_INVOKABLE void rememberSearch(const QString &term);
+    Q_INVOKABLE void forgetSearch(const QString &term);
+    Q_INVOKABLE void clearSearches();
+    QStringList recentSearches() const { return m_recentSearches; }
+
     QString region() const;
     void setRegion(const QString &code);
     QString regionInUse() const;
@@ -137,8 +150,10 @@ Q_SIGNALS:
     void userChanged();
     void regionChanged();
     void videoQualityChanged();
+    void recentSearchesChanged();
 
 private:
+    void reloadSearches();
     void reloadLiked();
     void reloadSaved();
     void reloadOpenPlaylist();
@@ -163,4 +178,5 @@ private:
     QSet<QString> m_savedIds;
     QSet<QString> m_playlistSongIds;   // every video id in any playlist
     int m_revision = 0;
+    QStringList m_recentSearches;
 };

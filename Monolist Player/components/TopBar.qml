@@ -13,10 +13,14 @@ Rectangle {
     readonly property bool compact: width < 720
 
     // Search suggestions: shown while typing, highlighted with the arrow keys.
+    // With nothing typed, the searches made before, while the field has the
+    // cursor (recentOpen), to pick one again.
     property bool suggesting: false
+    property bool recentOpen: false
     property int highlighted: -1
-    readonly property bool showSuggestions: suggesting && searchField.text.trim().length > 0
-                                            && Extractor.suggestions.length > 0
+    readonly property bool showingRecent: searchField.text.trim().length === 0
+    readonly property var dropdownItems: showingRecent ? Library.recentSearches.slice(0, 8) : Extractor.suggestions
+    readonly property bool showSuggestions: dropdownItems.length > 0 && (showingRecent ? recentOpen : suggesting)
 
     signal menuRequested()
     signal backRequested()
@@ -26,6 +30,9 @@ Rectangle {
     property bool canGoBack: true
     property bool canGoForward: true
     signal searchActivated(string term)
+    // A search used rather than only typed: Enter, or a suggestion or recent
+    // search picked. What the history keeps (Library.rememberSearch).
+    signal searchCommitted(string term)
 
     color: Theme.bg
     implicitHeight: Theme.titleBarHeight
@@ -33,7 +40,9 @@ Rectangle {
     function pickSuggestion(text) {
         searchField.text = text
         suggesting = false
+        recentOpen = false
         searchActivated(text)
+        searchCommitted(text)
     }
 
     // Search asked for by name — Ctrl+F, the sidebar's Search — means "I am
@@ -54,6 +63,7 @@ Rectangle {
         searchField.text = ""
         Extractor.clearSuggestions()
         searchField.forceActiveFocus()
+        recentOpen = true
     }
 
     // The typed part stays regular and the completion goes bold, the way
@@ -227,23 +237,32 @@ Rectangle {
 
             onAccepted: {
                 if (root.showSuggestions && root.highlighted >= 0
-                        && root.highlighted < Extractor.suggestions.length) {
-                    root.pickSuggestion(Extractor.suggestions[root.highlighted])
+                        && root.highlighted < root.dropdownItems.length) {
+                    root.pickSuggestion(root.dropdownItems[root.highlighted])
                 } else {
                     root.suggesting = false
                     root.searchActivated(text)
+                    if (text.trim().length > 0)
+                        root.searchCommitted(text)
                 }
             }
 
             Keys.onDownPressed: {
                 if (root.showSuggestions)
-                    root.highlighted = Math.min(root.highlighted + 1, Extractor.suggestions.length - 1)
+                    root.highlighted = Math.min(root.highlighted + 1, root.dropdownItems.length - 1)
             }
             Keys.onUpPressed: {
                 if (root.showSuggestions)
                     root.highlighted = Math.max(root.highlighted - 1, -1)
             }
-            Keys.onEscapePressed: root.suggesting = false
+            Keys.onEscapePressed: {
+                root.suggesting = false
+                root.recentOpen = false
+            }
+            onActiveFocusChanged: {
+                root.recentOpen = activeFocus
+                root.highlighted = -1
+            }
 
             // Elided rather than cut through a letter when the box is narrow.
             Text {
@@ -269,7 +288,10 @@ Rectangle {
             rightPadding: Theme.ruleWidth
             focus: false
             closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutsideParent
-            onClosed: root.suggesting = false
+            onClosed: {
+                root.suggesting = false
+                root.recentOpen = false
+            }
 
             background: Rectangle {
                 color: Theme.bg
@@ -279,7 +301,7 @@ Rectangle {
 
             contentItem: Column {
                 Repeater {
-                    model: Extractor.suggestions
+                    model: root.dropdownItems
 
                     delegate: Rectangle {
                         id: suggestionRow
@@ -293,7 +315,7 @@ Rectangle {
 
                         Icon {
                             id: rowIcon
-                            name: "search"
+                            name: root.showingRecent ? "clock" : "search"
                             width: 13
                             height: 13
                             x: Theme.space3
@@ -307,8 +329,9 @@ Rectangle {
                             anchors.right: parent.right
                             anchors.rightMargin: Theme.space3
                             anchors.verticalCenter: parent.verticalCenter
-                            text: root.suggestionMarkup(suggestionRow.modelData)
-                            textFormat: Text.StyledText
+                            text: root.showingRecent ? suggestionRow.modelData
+                                                     : root.suggestionMarkup(suggestionRow.modelData)
+                            textFormat: root.showingRecent ? Text.PlainText : Text.StyledText
                             elide: Text.ElideRight
                             font.family: Theme.fontFamily
                             font.pixelSize: 13
