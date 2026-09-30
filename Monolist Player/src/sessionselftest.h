@@ -19,3 +19,11 @@ class Library;
 // One line per check; returns how many failed. Refuses to run without
 // MONOLIST_DATA_DIR: it writes the player's settings and a tone there.
 int runSessionSelfTest(Library *library);
+
+// --loudness-test: loudness levelling (Loudness, PlaybackController's
+// levelLoudness): the gain (only ever down, at most 15 dB), what a /player
+// answer says of a song's loudness, a measurement kept; then on the real mpv
+// against the stand-in, a stream measured +6 dB played 6 dB quieter, the
+// switch taking effect mid-song, a file of a song measured before levelled
+// the same, one never measured played as it is, and the switch kept.
+int runLoudnessSelfTest(Library *library);

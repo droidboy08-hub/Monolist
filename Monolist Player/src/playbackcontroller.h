@@ -107,6 +107,10 @@ class PlaybackController : public QObject
     // On unless turned off in Settings (jiosaavn.upgrade=0); only ever with
     // JioSaavn itself on.
     Q_PROPERTY(bool saavnUpgrade READ saavnUpgrade WRITE setSaavnUpgrade NOTIFY saavnChanged)
+    // Every song turned down to the same loudness, by what YouTube measured
+    // of it (Loudness), as YouTube Music itself plays them. On unless turned
+    // off in Settings (player.level_loudness=0).
+    Q_PROPERTY(bool levelLoudness READ levelLoudness WRITE setLevelLoudness NOTIFY levelLoudnessChanged)
 public:
     enum RepeatMode { RepeatOff = 0, RepeatAll = 1, RepeatOne = 2 };
     Q_ENUM(RepeatMode)
@@ -183,6 +187,8 @@ public:
     void setSaavnIndiaHeaders(bool on);
     bool saavnUpgrade() const { return m_saavnUpgrade; }
     void setSaavnUpgrade(bool on);
+    bool levelLoudness() const { return m_levelLoudness; }
+    void setLevelLoudness(bool on);
 
 public Q_SLOTS:
     void play();
@@ -265,6 +271,7 @@ Q_SIGNALS:
     void videoChanged();
     void audioDevicesChanged();
     void saavnChanged();
+    void levelLoudnessChanged();
     void playbackError(const QString &reason);
     // Something the user should be told, in their words, for the toast.
     void notice(const QString &text);
@@ -346,6 +353,10 @@ private:
     void recordHistory(const QVariantMap &track);
     void saveSetting(const QString &key, const QString &value);
     void saveVolume();
+    // The engine told how far to turn the song playing down, from what is
+    // known of it now: at its start, and again once its /player answer has
+    // said (handleResolved).
+    void applyLoudness();
     // For restoreSession: the queue a moment after it changes (m_queueSave),
     // the place in the song every few seconds while it moves (m_placeSave),
     // and both as the app closes.
@@ -406,6 +417,8 @@ private:
     // not listed) of one under way; and how many have been made this
     // session, for the log.
     bool m_saavnUpgrade = true;
+    bool m_levelLoudness = true;
+    QString m_loudnessLogged;      // the song whose levelling the log has said
     bool m_upgradeTried = false;
     QString m_upgradeVideoId;
     int m_upgradeKbps = 0;

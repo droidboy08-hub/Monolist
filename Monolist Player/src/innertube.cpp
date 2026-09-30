@@ -1,4 +1,5 @@
 #include "innertube.h"
+#include "loudness.h"
 
 #include "cookieimport.h"
 
@@ -997,6 +998,7 @@ struct Offer {
     int bitrate = 0;        // averageBitrate where given, else the peak
     int sampleRate = 0;     // Hz, 0 when not given
     bool drc = false;       // a dynamic-range-compressed copy
+    double loudnessDb = qQNaN();   // how far above YouTube's reference, where it says
     bool ownSound = true;   // the video's own sound, not a dubbed track
     bool muxed = false;     // the sound with a picture (itag 18)
 };
@@ -1054,6 +1056,9 @@ Offer offerOf(const QJsonObject &format, bool muxed)
     const QJsonValue rate = format.value(QStringLiteral("audioSampleRate"));
     offer.sampleRate = rate.isString() ? rate.toString().toInt() : rate.toInt();
     offer.drc = !muxed && isDrc(format);
+    const QJsonValue loudness = format.value(QStringLiteral("loudnessDb"));
+    if (loudness.isDouble())
+        offer.loudnessDb = loudness.toDouble();
     // A video with dubbed sound lists each track's formats under the same
     // itags; audioIsDefault marks its own. With no audioTrack there is only
     // the one.
@@ -1999,6 +2004,9 @@ void InnerTube::playerAnswered(Client client, const QString &visitor, std::share
     qInfo("innertube: %s chose itag %d: %s (%s%s)", qPrintable(videoId), choice.chosen.itag,
           qPrintable(describe(choice.chosen)), qPrintable(from),
           byBitrate ? ", by bitrate alone: youtube.format=bitrate" : "");
+    // How loud YouTube measured it, for the player to level it by
+    // (Loudness), whichever copy of it then plays.
+    Loudness::remember(videoId, Loudness::fromAnswer(choice.chosen.loudnessDb, root));
     // Which client answered is in the log only when it was not the usual
     // one, which is exactly when it matters.
     if (client != Client::Player) {

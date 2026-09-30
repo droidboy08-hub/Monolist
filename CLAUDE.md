@@ -62,7 +62,7 @@ owner's iPhone app (AryaMusix / "Mediano", Swift, not in this repo).
 - Self-tests are flags on the app (grep `src/main.cpp` for `-test"`): e.g.
   `--saavn-test`, `--listen-test`, `--scrobble-test`, `--lyrics-race-test`,
   `--cookie-test`, `--account-guard-test`, `--ytm-session-test`, `--ytm-library-test`, `--visitor-test`, `--format-test`,
-  `--download-cleanup-test`, `--download-queue-test`, `--download-folder-test`, `--library-edit-test`, `--recovery-test`, `--session-test` … Each
+  `--download-cleanup-test`, `--download-queue-test`, `--download-folder-test`, `--loudness-test`, `--library-edit-test`, `--recovery-test`, `--session-test` … Each
   prints `N checks, 0 failed`. All must pass, except `--scrobble-send-test`,
   which needs its local stand-in (`scripts/lastfm-mock.ps1`).
 - Recommender checks (need the data): `--artist-test <EmbeddingData> <GraphData>`
@@ -182,14 +182,15 @@ Next, in the order the owner last agreed (ask which first):
 1. Engine plan items left (`docs/engine/3-plan.md`): next-song byte prefetch
    (PP-02) and gapless (QT2) first; the disk cache (PP-01) only if the owner's
    listening shows enough replays (B0 found 2.1 % replays, 1.2 % tracks over
-   7.5 min, in 1.4 days); loudness normalisation from YouTube's loudnessDb
-   (QT1); more keyless lyrics providers + a provider menu (LY-7, LY-10), then
-   word-by-word lyrics (LY-6/LY-8); long-track range reads (PP-08, gate not met).
-2. The roadmap batch that was interrupted: restore queue after restart (P04),
-   back/forward keys (N01), Windows media keys + system media controls (P02),
-   Home continuation/cache/charts/moods (F27, A06, A05, X08), library Songs /
-   Artists views and filters (L04, L05), download queue persistence and folder
-   choice (D01, D02), virtualised track tables (F28) and the small F-items.
+   7.5 min, in 1.4 days); more keyless lyrics providers + a provider menu
+   (LY-7, LY-10), then word-by-word lyrics (LY-6/LY-8); long-track range reads
+   (PP-08, gate not met). Done 2026-09-30: loudness levelling (QT1, on by
+   default).
+2. The roadmap batch that was interrupted, what is left of it: Home
+   continuation, charts and moods (F27, A05, X08), library Songs / Artists
+   views and filters (L04, L05), virtualised track tables (F28) and the small
+   F-items. Done 2026-09-30 and released in 0.1.122: P04, N01, P02, D01, D02,
+   A06.
 3. The rest of the roadmap: library export/import, local files, playlist import
    from links, preferences, in-app log, app icon, a Windows installer,
    automated tests, README/DESIGN.md refresh.

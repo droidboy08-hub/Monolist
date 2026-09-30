@@ -3,6 +3,7 @@
 #include "audioalign.h"
 #include "downloadmanager.h"
 #include "library.h"
+#include "loudness.h"
 #include "mpvengine.h"
 #include "streamresolver.h"
 #include "trackmodel.h"
@@ -53,6 +54,7 @@ const QString kVolumeKey = QStringLiteral("player.volume");
 const QString kShuffleKey = QStringLiteral("player.shuffle");
 const QString kRepeatKey = QStringLiteral("player.repeat");
 const QString kAutoplayKey = QStringLiteral("player.autoplay");
+const QString kLevelLoudnessKey = QStringLiteral("player.level_loudness");
 // The queue and the place in its song, for the next launch (restoreSession).
 const QString kQueueKey = QStringLiteral("player.queue");
 const QString kPlaceKey = QStringLiteral("player.place");
@@ -575,6 +577,10 @@ void PlaybackController::restoreSettings()
         Q_EMIT autoplayChanged();
     }
 
+    m_levelLoudness = m_library->settingValue(kLevelLoudnessKey) != QLatin1String("0");
+    Q_EMIT levelLoudnessChanged();
+    applyLoudness();
+
     // JioSaavn only once the listener picks High sound quality: a setting
     // never written reads as off. Its Indian headers, which matter only then,
     // are on unless turned off.
@@ -764,6 +770,37 @@ void PlaybackController::setSaavnIndiaHeaders(bool on)
 
 // From the next late answer on. One already under way finishes: turning the
 // switch off does not move the song back.
+void PlaybackController::setLevelLoudness(bool on)
+{
+    if (on == m_levelLoudness)
+        return;
+    m_levelLoudness = on;
+    saveSetting(kLevelLoudnessKey, on ? QStringLiteral("1") : QStringLiteral("0"));
+    Q_EMIT levelLoudnessChanged();
+    // The song playing too, at once.
+    m_loudnessLogged.clear();
+    applyLoudness();
+}
+
+void PlaybackController::applyLoudness()
+{
+    if (!m_engine)
+        return;
+    const QString videoId = currentSourceId();
+    const double db = Loudness::of(videoId);
+    const double gain = Loudness::gainFor(db);
+    m_engine->setLevelling(m_levelLoudness, gain);
+    // Once a song, when it is known: the one line that says how loud the
+    // song was measured and what was done about it.
+    if (!videoId.isEmpty() && !qIsNaN(db) && m_loudnessLogged != videoId) {
+        m_loudnessLogged = videoId;
+        qInfo("loudness: %s measured %+.1f dB, %s", qPrintable(videoId), db,
+              !m_levelLoudness ? "levelling is off"
+              : gain < 0.0     ? qPrintable(QStringLiteral("played %1 dB quieter").arg(-gain, 0, 'f', 1))
+                               : "played as it is (never turned up)");
+    }
+}
+
 void PlaybackController::setSaavnUpgrade(bool on)
 {
     if (on == m_saavnUpgrade)
@@ -1497,6 +1534,9 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
 
     m_position = openAt;
     m_autoPlayAfterResolve = autoPlay;
+    // As loud as it was measured, before a file of it loads here; a stream
+    // is told again once its answer has said (handleResolved).
+    applyLoudness();
     // A new listen for Last.fm, whether or not it will be heard: repeat-one
     // arrives here too, and is a listen of its own. A song autoplay added was
     // not chosen by anyone, which Last.fm is told. The queue row's own flag
@@ -1613,6 +1653,9 @@ void PlaybackController::handleResolved(const QString &videoId, const QString &u
     // with the headers to ask as; JioSaavn's CDN wants none, and must not be
     // sent a YouTube client's.
     const qint64 resumeAt = std::exchange(m_resumeAt, 0);
+    // The answer that brought this link measured the song, where it was
+    // YouTube's: level it by that before it loads.
+    applyLoudness();
     const QVariantMap headers = m_resolver && !fromSaavn ? m_resolver->headersFor(videoId, url) : QVariantMap();
     m_streamUrl = url;
     m_streamHeaders = headers;

@@ -77,6 +77,14 @@ public:
     void setVolume(qreal volume);        // 0.0 – 1.0
     void setSpeed(qreal speed);
     void setReplayGainEnabled(bool enabled);
+    // Loudness levelling: on, files tagged with ReplayGain are levelled by
+    // their tags (raised 4 dB to YouTube's reference), and any other by
+    // `fallbackDb`, what is known of the song playing (Loudness::gainFor);
+    // off, nothing is. Takes effect at once, and holds for the files loaded
+    // after it until it is set again.
+    void setLevelling(bool on, double fallbackDb);
+    // The gain applied to a file without tags, for --loudness-test.
+    double fallbackGain() const;
 
     // The sound devices mpv can play through, as it lists them: maps with a
     // `name`, which setAudioDevice takes, and a `description`, which is what

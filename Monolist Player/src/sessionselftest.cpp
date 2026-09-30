@@ -1,7 +1,9 @@
 #include "sessionselftest.h"
 
+#include "appdatabase.h"
 #include "downloadmanager.h"
 #include "library.h"
+#include "loudness.h"
 #include "mpvengine.h"
 #include "playbackcontroller.h"
 #include "queuemodel.h"
@@ -13,6 +15,8 @@
 #include <QHostAddress>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QSqlQuery>
+#include <QtMath>
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QTimer>
@@ -28,25 +32,28 @@ namespace {
 class Checks
 {
 public:
+    explicit Checks(const char *prefix = "session") : m_prefix(prefix) {}
+
     bool check(bool ok, const QString &what, const QString &detail = QString())
     {
         ++m_count;
         if (!ok)
             ++m_failed;
         const QString line = detail.isEmpty() ? what : what + QStringLiteral("  -- ") + detail;
-        qWarning("session: %s  %s", ok ? "ok  " : "FAIL", qUtf8Printable(line));
+        qWarning("%s: %s  %s", m_prefix, ok ? "ok  " : "FAIL", qUtf8Printable(line));
         return ok;
     }
 
-    void note(const QString &text) { qWarning("session: %s", qUtf8Printable(text)); }
+    void note(const QString &text) { qWarning("%s: %s", m_prefix, qUtf8Printable(text)); }
 
     int finish()
     {
-        qWarning("session: %d checks, %d failed", m_count, m_failed);
+        qWarning("%s: %d checks, %d failed", m_prefix, m_count, m_failed);
         return m_failed;
     }
 
 private:
+    const char *m_prefix;
     int m_count = 0;
     int m_failed = 0;
 };
@@ -514,6 +521,109 @@ int runSessionSelfTest(Library *library)
 
     engine.stop();
     library->setSetting(QStringLiteral("player.place"), QString());
+    QFile::remove(tonePath);
+    return t.finish();
+}
+
+int runLoudnessSelfTest(Library *library)
+{
+    Checks t("loudness");
+    const QString data = qEnvironmentVariable("MONOLIST_DATA_DIR");
+    if (data.isEmpty() || !library) {
+        t.check(false, QStringLiteral("MONOLIST_DATA_DIR set to a scratch folder"));
+        return t.finish();
+    }
+    const auto near = [](double a, double b) { return qAbs(a - b) < 0.01; };
+
+    t.note(QStringLiteral("- the gain"));
+    t.check(Loudness::gainFor(qQNaN()) == 0.0, QStringLiteral("a song never measured is played as it is"));
+    t.check(near(Loudness::gainFor(5.2), -5.2), QStringLiteral("one 5.2 dB loud is turned down 5.2 dB"));
+    t.check(Loudness::gainFor(-3.0) == 0.0, QStringLiteral("a quiet one is never turned up"));
+    t.check(near(Loudness::gainFor(22.0), -15.0), QStringLiteral("and none by more than 15 dB"));
+
+    t.note(QStringLiteral("- what a /player answer says"));
+    const QJsonObject perceptual{ { QStringLiteral("playerConfig"), QJsonObject{ { QStringLiteral("audioConfig"),
+        QJsonObject{ { QStringLiteral("perceptualLoudnessDb"), -9.0 } } } } } };
+    const QJsonObject both{ { QStringLiteral("playerConfig"), QJsonObject{ { QStringLiteral("audioConfig"),
+        QJsonObject{ { QStringLiteral("loudnessDb"), 3.5 }, { QStringLiteral("perceptualLoudnessDb"), -9.0 } } } } } };
+    t.check(near(Loudness::fromAnswer(2.5, perceptual), 2.5), QStringLiteral("the chosen format's own loudnessDb first"));
+    t.check(near(Loudness::fromAnswer(qQNaN(), both), 3.5), QStringLiteral("then the answer's loudnessDb"));
+    t.check(near(Loudness::fromAnswer(qQNaN(), perceptual), 5.0),
+            QStringLiteral("then its perceptual loudness, moved onto YouTube's scale (-9 -> +5)"));
+    t.check(qIsNaN(Loudness::fromAnswer(qQNaN(), QJsonObject())), QStringLiteral("and nothing when it says neither"));
+
+    Loudness::remember(QStringLiteral("loudA"), 6.0);
+    QSqlQuery stored(AppDatabase::connection());
+    stored.exec(QStringLiteral("SELECT db FROM loudness WHERE video_id = 'loudA'"));
+    t.check(near(Loudness::of(QStringLiteral("loudA")), 6.0) && stored.next() && near(stored.value(0).toDouble(), 6.0),
+            QStringLiteral("a measurement is kept, in the database too"));
+
+    t.note(QStringLiteral("- the player"));
+    const QByteArray tone = toneWav(kToneSeconds);
+    const QString tonePath = QDir(data).filePath(QStringLiteral("loudness-tone.wav"));
+    QFile toneFile(tonePath);
+    if (!toneFile.open(QIODevice::WriteOnly) || toneFile.write(tone) != tone.size()) {
+        t.check(false, QStringLiteral("a tone written to the scratch folder"), tonePath);
+        return t.finish();
+    }
+    toneFile.close();
+    StandIn server(tone);
+    if (!t.check(server.listen(), QStringLiteral("a stand-in server on this computer")))
+        return t.finish();
+    MpvEngine engine;
+    if (!engine.isValid()) {
+        t.check(false, QStringLiteral("an audio engine to drive"), engine.lastError());
+        return t.finish();
+    }
+    StreamResolver resolver;
+    resolver.setSaavnEnabled(false);
+    resolver.setTestAnswer(QStringLiteral("loudA"), StreamResolver::TierInnerTube, server.url(QStringLiteral("/loudA")));
+    resolver.setTestAnswer(QStringLiteral("loudU"), StreamResolver::TierInnerTube, server.url(QStringLiteral("/loudU")));
+    DownloadManager downloads;
+    library->setSetting(QStringLiteral("player.level_loudness"), QString());
+    PlaybackController player(&engine, &resolver, &downloads);
+    player.setLibrary(library);
+    player.restoreSettings();
+    resolver.setSaavnEnabled(false);
+    player.setAutoplay(false);
+    player.setVolume(0.0);
+    t.check(player.levelLoudness(), QStringLiteral("levelling is on until turned off"));
+
+    player.playTracks({ row(QStringLiteral("loudA"), QStringLiteral("Loud song")) }, 0, QStringLiteral("selftest"));
+    const bool started = waitUntil([&]() { return engine.hasAudioStarted() && player.playing(); }, 8000);
+    t.check(started && near(engine.fallbackGain(), -6.0), QStringLiteral("a stream measured +6 dB plays 6 dB quieter"),
+            QStringLiteral("%1 dB").arg(engine.fallbackGain()));
+    player.setLevelLoudness(false);
+    t.check(engine.fallbackGain() == 0.0, QStringLiteral("  turned off, at once, mid-song"),
+            QStringLiteral("%1 dB").arg(engine.fallbackGain()));
+    player.setLevelLoudness(true);
+    t.check(near(engine.fallbackGain(), -6.0), QStringLiteral("  and back on"));
+
+    Loudness::remember(QStringLiteral("loudF"), 3.0);
+    player.playTracks({ row(QStringLiteral("loudF"), QStringLiteral("Downloaded song"), tonePath) }, 0,
+                      QStringLiteral("selftest"));
+    waitUntil([&]() { return engine.hasLoadedFile(); }, 5000);
+    t.check(near(engine.fallbackGain(), -3.0),
+            QStringLiteral("a file of a song measured before is levelled the same, with no answer asked"),
+            QStringLiteral("%1 dB").arg(engine.fallbackGain()));
+
+    player.playTracks({ row(QStringLiteral("loudU"), QStringLiteral("Unmeasured song")) }, 0, QStringLiteral("selftest"));
+    waitUntil([&]() { return engine.hasAudioStarted() && player.playing(); }, 8000);
+    t.check(engine.fallbackGain() == 0.0, QStringLiteral("a song never measured plays as it is"),
+            QStringLiteral("%1 dB").arg(engine.fallbackGain()));
+    player.pause();
+    pause(200);
+
+    library->setSetting(QStringLiteral("player.level_loudness"), QStringLiteral("0"));
+    {
+        PlaybackController off(&engine, &resolver, &downloads);
+        off.setLibrary(library);
+        off.restoreSettings();
+        t.check(!off.levelLoudness(), QStringLiteral("turned off, it stays off at the next launch"));
+    }
+    library->setSetting(QStringLiteral("player.level_loudness"), QString());
+    QSqlQuery(AppDatabase::connection()).exec(QStringLiteral("DELETE FROM loudness WHERE video_id LIKE 'loud%'"));
+    engine.stop();
     QFile::remove(tonePath);
     return t.finish();
 }

@@ -106,6 +106,17 @@ void MpvEngine::setReplayGainEnabled(bool enabled)
     Q_UNUSED(enabled)
 }
 
+void MpvEngine::setLevelling(bool on, double fallbackDb)
+{
+    Q_UNUSED(on)
+    Q_UNUSED(fallbackDb)
+}
+
+double MpvEngine::fallbackGain() const
+{
+    return 0.0;
+}
+
 // No devices are ever listed, so the output menu offers Auto alone.
 void MpvEngine::setAudioDevice(const QString &name)
 {

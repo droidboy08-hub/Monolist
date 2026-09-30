@@ -499,6 +499,7 @@ I accepted most of the review; the corrections are written into the items above.
 1. Licence: stay MIT and write everything from the paper (recommended), or relicense to GPL-3.0 and port the reference. See below.
 2. U01: may a fresh InnerTube link go before itag 18 (PP-05)?
 3. Loudness (QT1): on by default? And raise the default volume from 0.65 at the same time?
+   *Decided 2026-09-30 (the owner left it to Claude): on by default, as YouTube Music plays; the default volume stays 0.65. Built: `Loudness`, "Even out loudness" in Settings → Playback, `--loudness-test`.*
 4. The lyrics relay policy for LY-7 (disagreement 7).
 5. Background lyrics lookups (LY-4): on by default, with LRCLIB and YouTube Music only?
 6. Cache size (PP-01): 1 GiB by default?

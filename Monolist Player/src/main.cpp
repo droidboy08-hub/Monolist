@@ -285,6 +285,9 @@ int main(int argc, char *argv[])
         // (sessionselftest.cpp); in MONOLIST_DATA_DIR only.
         if (arguments.contains(QStringLiteral("--session-test")))
             return runSessionSelfTest(&library) == 0 ? 0 : 1;
+        // Loudness levelling, on the real mpv against the same stand-in.
+        if (arguments.contains(QStringLiteral("--loudness-test")))
+            return runLoudnessSelfTest(&library) == 0 ? 0 : 1;
     }
 
     // Which page an artist's name opens: learnt from every answer that links

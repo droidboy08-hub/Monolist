@@ -52,6 +52,7 @@ qt_add_executable(monolist
     src/albummodel.h               src/albummodel.cpp
     src/trackmodel.h               src/trackmodel.cpp
     src/playbackcontroller.h       src/playbackcontroller.cpp
+    src/loudness.h                 src/loudness.cpp
     src/queuemodel.h               src/queuemodel.cpp
     src/mediaextractor.h           src/mediaextractor.cpp
     src/innertube.h                src/innertube.cpp

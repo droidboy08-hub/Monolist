@@ -306,6 +306,15 @@ ScrollPage {
             onToggled: Player.autoplay = !Player.autoplay
         }
 
+        ToggleRow {
+            width: parent.width
+            label: "Even out loudness"
+            hint: "Songs that were mastered loud are turned down to the level of the rest, by what YouTube "
+                  + "measured of each, as YouTube Music plays them. Quiet songs are never turned up."
+            checked: Player.levelLoudness
+            onToggled: Player.levelLoudness = !Player.levelLoudness
+        }
+
         // Sound quality, chosen like the video size below. High is the one
         // that brings in a second company's service, so it is never on until
         // the listener picks it: on Standard, JioSaavn is not asked anything.

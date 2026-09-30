@@ -961,6 +961,30 @@ void MpvEngine::setSpeed(qreal speed)
     }
 }
 
+void MpvEngine::setLevelling(bool on, double fallbackDb)
+{
+    if (!m_mpv)
+        return;
+    const QByteArray fallback = QByteArray::number(on ? fallbackDb : 0.0, 'f', 2);
+    const char *mode = on ? "track" : "no";
+    const char *preamp = on ? "4" : "0";
+    for (mpv_handle *mpv : { m_mpv, m_upgrade ? m_upgrade->mpv : nullptr }) {
+        if (!mpv)
+            continue;
+        mpv_set_property_string(mpv, "replaygain", mode);
+        mpv_set_property_string(mpv, "replaygain-preamp", preamp);
+        mpv_set_property_string(mpv, "replaygain-fallback", fallback.constData());
+    }
+}
+
+double MpvEngine::fallbackGain() const
+{
+    double value = 0.0;
+    if (m_mpv)
+        mpv_get_property(m_mpv, "replaygain-fallback", MPV_FORMAT_DOUBLE, &value);
+    return value;
+}
+
 void MpvEngine::setReplayGainEnabled(bool enabled)
 {
     setOption("replaygain", enabled ? "track" : "no");
@@ -1018,9 +1042,12 @@ bool MpvEngine::startUpgrade(const QString &url, double offsetMs, int minKbps, c
     const QString device = stringProperty(m_mpv, "audio-device");
     if (!device.isEmpty())
         setOptionOn(mpv, "audio-device", device.toUtf8().constData());
-    const QString gain = stringProperty(m_mpv, "replaygain");
-    if (!gain.isEmpty())
-        setOptionOn(mpv, "replaygain", gain.toUtf8().constData());
+    // And as loud: the same levelling, the song being the same.
+    for (const char *name : { "replaygain", "replaygain-preamp", "replaygain-fallback" }) {
+        const QString value = stringProperty(m_mpv, name);
+        if (!value.isEmpty())
+            setOptionOn(mpv, name, value.toUtf8().constData());
+    }
     double speed = 1.0;
     numberProperty(m_mpv, "speed", &speed);
     setOptionOn(mpv, "speed", QByteArray::number(speed, 'f', 6).constData());

@@ -169,6 +169,14 @@ void AppDatabase::createSchema()
         " bytes INTEGER NOT NULL DEFAULT 0,"
         " downloaded_at TEXT NOT NULL DEFAULT (datetime('now')))"));
 
+    // How loud YouTube measured each song (Loudness): the chosen format's
+    // loudnessDb, kept so a download or a later launch levels it the same.
+    q.exec(QStringLiteral(
+        "CREATE TABLE IF NOT EXISTS loudness ("
+        " video_id TEXT PRIMARY KEY,"
+        " db REAL NOT NULL,"
+        " measured_at INTEGER NOT NULL DEFAULT 0)"));
+
     // Home's last good answers, signed out, per country (Catalog::showSaved):
     // shown at once at the next launch, and when the network fails. The
     // body is the answer as it came, compressed.
