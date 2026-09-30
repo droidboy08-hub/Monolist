@@ -376,10 +376,17 @@ public:
     // The next part of a long list, by the token its last part ended with
     // (Collection::continuation, Listing's, Continuation::next); read the
     // answer with parseContinuation. Asked as whoever asked for the list.
+    // `visitor`, on a call made without the account: the visitorData the
+    // list's first page answered with (parseVisitorData), which some lists
+    // need to go on at all. Home's feed answers an empty page without it.
     void continueBrowse(const QString &token,
                         std::function<void(const QJsonObject &root, const QString &error)> done,
-                        Auth auth = Auth::Anonymous);
+                        Auth auth = Auth::Anonymous, const QString &visitor = QString());
     static QList<Shelf> parseShelves(const QJsonObject &root);
+    // The token for the page of shelves after a feed's first (Home's), to
+    // ask for with continueBrowse; empty when there is none. Asked anonymously,
+    // it answers only with the visitor id the first page was asked with.
+    static QString parseFeedContinuation(const QJsonObject &root);
     static Collection parseCollection(const QString &browseId, const QJsonObject &root);
     // A playlist's song as its page would show it: what its row leaves out
     // (an album's artist, its cover) filled in from the page's header.

@@ -610,6 +610,9 @@ int main(int argc, char *argv[])
     // The YouTube Music sign-in: the Settings row's import, check and sign-out.
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Account",   &ytmSession);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "AccountLibrary", &accountLibrary);
+    qmlRegisterUncreatableType<ShelfModel>(
+        "Monolist.Backend", 1, 0, "ShelfModel",
+        QStringLiteral("Obtained from Catalog.moreShelves"));
     qmlRegisterUncreatableType<SearchResultModel>(
         "Monolist.Backend", 1, 0, "SearchResultModel",
         QStringLiteral("Obtained from Extractor.results"));

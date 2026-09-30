@@ -1796,6 +1796,16 @@ int runHomeAccountSelfTest(Library *library)
     };
     int authedStatus = 200;
     bool down = false;   // YouTube Music not answering at all (7b)
+    // The signed-out feed with a next page, and the visitor it was answered
+    // to, which that page must be asked as (7c).
+    bool feedWithMore = false;
+    const QByteArray feedWithNext = QByteArray(anonymousFeed)
+        .replace(R"("responseContext":{)", R"("responseContext":{"visitorData":"TESTVISITOR01",)")
+        .replace(R"("sectionListRenderer":{"contents":[)",
+                 R"("sectionListRenderer":{"continuations":[{"nextContinuationData":{"continuation":"TESTNEXT01"}}],"contents":[)");
+    const QByteArray nextPage = R"({"continuationContents":{"sectionListContinuation":{"contents":[)"
+        + carouselJson("Further down", cardJson("Further mix", "VLTESTFURTHER", "MUSIC_PAGE_TYPE_PLAYLIST"))
+        + "]}}}";
     standIn.respond = [&](const StandIn::Request &request) {
         StandIn::Answer answer;
         const bool authed = request.authed();
@@ -1812,7 +1822,11 @@ int runHomeAccountSelfTest(Library *library)
         if (!authed)
             answer.extra << "Set-Cookie: ANONTEST=anon; Path=/";
         const QString browseId = request.json().value(QStringLiteral("browseId")).toString();
-        if (request.path.contains("account/account_menu"))
+        if (request.json().contains(QStringLiteral("continuation")))
+            answer.body = nextPage;
+        else if (feedWithMore && browseId == QLatin1String("FEmusic_home") && !authed)
+            answer.body = feedWithNext;
+        else if (request.path.contains("account/account_menu"))
             answer.body = authed ? menuAnswer(QStringLiteral("Monolist Test")) : kSignedOutMenu;
         else if (browseId == QLatin1String("FEmusic_home"))
             answer.body = authed ? accountFeed : anonymousFeed;
@@ -2150,6 +2164,46 @@ int runHomeAccountSelfTest(Library *library)
         t.check(shown() == anonymousHome && catalog->savedAt().isEmpty() && catalog->error().isEmpty(),
                 QStringLiteral("  and a fresh answer takes its place"),
                 shown() + QStringLiteral(" / saved ") + catalog->savedAt());
+    }
+
+    // — 7c. the feed below its first page —
+    {
+        feedWithMore = true;
+        catalog = std::make_unique<Catalog>();   // signed out
+        catalog->refresh();
+        settled();
+        const bool offered = catalog->homeHasMore();
+        const int from = standIn.requests.size();
+        catalog->loadMoreHome();
+        waitUntil([&catalog]() { return !catalog->homeLoadingMore(); }, 15000);
+        QList<StandIn::Request> pages;
+        for (int i = from; i < standIn.requests.size(); ++i) {
+            if (standIn.requests.at(i).json().contains(QStringLiteral("continuation")))
+                pages << standIn.requests.at(i);
+        }
+        const ShelfModel *more = catalog->moreShelves();
+        const QString title = more->rowCount() > 0
+            ? more->data(more->index(0), ShelfModel::ShelfRole).toMap().value(QStringLiteral("title")).toString()
+            : QString();
+        t.check(offered && pages.size() == 1 && title == QLatin1String("Further down") && !catalog->homeHasMore(),
+                QStringLiteral("Home asks for the feed's next page and shows its shelves after the first page's"),
+                QStringLiteral("%1 asked, first: %2").arg(pages.size()).arg(title));
+        if (!pages.isEmpty()) {
+            const StandIn::Request &page = pages.first();
+            const QString named = page.json().value(QStringLiteral("context")).toObject()
+                                      .value(QStringLiteral("client")).toObject()
+                                      .value(QStringLiteral("visitorData")).toString();
+            t.check(page.json().value(QStringLiteral("continuation")).toString() == QLatin1String("TESTNEXT01")
+                        && named == QLatin1String("TESTVISITOR01")
+                        && page.header("x-goog-visitor-id") == "TESTVISITOR01"
+                        && !page.json().contains(QStringLiteral("monolistVisitorData")),
+                    QStringLiteral("  asked as the visitor the first page was answered to, which it needs, "
+                                   "and nothing of the app's own marking left in it"),
+                    named);
+            t.check(!page.authed() && page.header("cookie").indexOf("SAPISID") < 0,
+                    QStringLiteral("  and signed out, as the first page was: nothing of an account on it"));
+        }
+        feedWithMore = false;
     }
 
     // — 8. the log —

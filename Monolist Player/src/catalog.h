@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QAbstractListModel>
 #include <QObject>
 #include <QPointer>
 #include <QSet>
@@ -10,6 +11,34 @@
 #include "mediaextractor.h"
 
 class YtmSession;
+
+// Shelves as a list model, for a page that adds them a few at a time (Home's
+// feed below its first page): each addition makes only the new ones, where a
+// list property would have every shelf above made again.
+class ShelfModel : public QAbstractListModel
+{
+    Q_OBJECT
+    Q_PROPERTY(int count READ rowCount NOTIFY countChanged)
+public:
+    enum Roles { ShelfRole = Qt::UserRole + 1 };
+    using QAbstractListModel::QAbstractListModel;
+
+    int rowCount(const QModelIndex &parent = QModelIndex()) const override
+    {
+        return parent.isValid() ? 0 : int(m_shelves.size());
+    }
+    QVariant data(const QModelIndex &index, int role) const override;
+    QHash<int, QByteArray> roleNames() const override { return { { ShelfRole, "shelf" } }; }
+
+    void append(const QVariantList &shelves);
+    void clear();
+
+Q_SIGNALS:
+    void countChanged();
+
+private:
+    QVariantList m_shelves;
+};
 
 // What there is to listen to: YouTube Music's home feed and new releases for
 // Home, the songs played lately, and album and playlist pages. Exposed to QML
@@ -45,6 +74,11 @@ class Catalog : public QObject
     // [{ title, strapline, more, items: [{ type, browseId, videoId, title, subtitle, artwork }] }]
     // `more` is where the shelf's "show all" goes (see shelfToMap), or empty.
     Q_PROPERTY(QVariantList shelves READ shelves NOTIFY homeChanged)
+    // The feed's shelves below its first page, a page more each time the
+    // reader nears the end (loadMoreHome), after `shelves`.
+    Q_PROPERTY(ShelfModel *moreShelves READ moreShelves CONSTANT)
+    Q_PROPERTY(bool homeHasMore READ homeHasMore NOTIFY homeMoreChanged)
+    Q_PROPERTY(bool homeLoadingMore READ homeLoadingMore NOTIFY homeMoreChanged)
     // The newest release, for the poster: { browseId, title, subtitle, artwork }.
     Q_PROPERTY(QVariantMap featured READ featured NOTIFY homeChanged)
     Q_PROPERTY(SearchResultModel *recent READ recent CONSTANT)
@@ -121,6 +155,13 @@ public:
     bool personalFeed() const { return m_personalFeed; }
     int quickPicksAt() const { return m_quickPicksAt; }
     QVariantList shelves() const { return m_shelves; }
+    ShelfModel *moreShelves() { return &m_moreShelves; }
+    bool homeHasMore() const { return !m_homeNext.isEmpty(); }
+    bool homeLoadingMore() const { return m_homeLoadingMore; }
+    // The feed's next page of shelves, asked as its first page was (the
+    // account's feed as the account), and at most a few pages a feed: each
+    // is a request. Nothing while one is out, or Home is loading.
+    Q_INVOKABLE void loadMoreHome();
     QVariantMap featured() const { return m_featured; }
     SearchResultModel *recent() { return &m_recent; }
     QVariantMap page() const { return m_page; }
@@ -182,6 +223,7 @@ public Q_SLOTS:
 
 Q_SIGNALS:
     void homeChanged();
+    void homeMoreChanged();
     void pageChanged();
     void pageMoreChanged();
     void listingChanged();
@@ -218,6 +260,11 @@ private:
     // Home's shelves in the order it shows them, from the feed's and new
     // releases'.
     void composeShelves();
+    // A feed's shelves, as Home shows them: a run of songs after Quick picks
+    // as cards that play, and what is the account's own noted for authFor.
+    QVariantMap feedShelfToMap(const InnerTube::Shelf &shelf, bool personal);
+    // The feed's pages after its first forgotten: a new feed, or none.
+    void resetMoreHome();
     // New releases' answer into its shelves and the poster.
     void applyReleases(const QJsonObject &root);
     // A good answer kept for the next launch, as it came.
@@ -271,6 +318,15 @@ private:
     QVariantList m_homeShelves;       // from the home feed
     QVariantList m_releaseShelves;    // from new releases
     QVariantList m_shelves;           // both, in the order Home shows them
+    // The feed after its first page: its shelves so far, the token for the
+    // next page, and how many pages have come; the generation moves on with
+    // every new feed, so a page asked for an old one is not shown under it.
+    ShelfModel m_moreShelves;
+    QString m_homeNext;
+    QString m_homeVisitor;            // the signed-out feed's visitorData, which its next pages need
+    bool m_homeLoadingMore = false;
+    int m_homePagesMore = 0;
+    quint64 m_homeGeneration = 0;
     QVariantMap m_featured;
 
     QString m_pageId;                 // the page whose answer is still wanted

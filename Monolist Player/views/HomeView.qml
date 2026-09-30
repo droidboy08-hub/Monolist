@@ -51,6 +51,25 @@ ScrollPage {
 
     function pad(n) { return n < 10 ? "0" + n : String(n) }
 
+    // The feed's next page, asked for before the reader reaches the end: on
+    // a scroll that nears it, and when a page that came leaves the end still
+    // in view. Only while Home is the page shown.
+    function askForMore() {
+        if (!visible || !Catalog.homeHasMore || Catalog.homeLoadingMore || Catalog.loading)
+            return
+        // The column places what has just come before the next frame, not
+        // now: laid out first, or the page's height is still the one it had
+        // before the shelves came, and every page would be asked for at once.
+        column.forceLayout()
+        if (contentY + height > contentHeight - 1500)
+            Catalog.loadMoreHome()
+    }
+    onContentYChanged: askForMore()
+    Connections {
+        target: Catalog
+        function onHomeMoreChanged() { Qt.callLater(root.askForMore) }
+    }
+
     // A suggestion shelf's own map, or an empty one while the page is
     // rebuilt under it.
     function recShelf(index) {
@@ -75,7 +94,11 @@ ScrollPage {
     // Built as the page opens, and when it is opened again: a like or a
     // listen since changes what to suggest. Nothing is rebuilt when nothing
     // changed (Recs.refresh).
-    onVisibleChanged: if (visible) Recs.refresh()
+    onVisibleChanged: {
+        if (visible)
+            Recs.refresh()
+        askForMore()
+    }
 
     // The number, the title and the table, with the rule under it, and the
     // section's one link at the header's end.
@@ -363,6 +386,52 @@ ScrollPage {
             }
         }
 
+        // — the feed below its first page, a page more as the reader nears
+        // the end (Catalog.loadMoreHome) —
+        Repeater {
+            model: Catalog.moreShelves
+
+            delegate: Column {
+                id: moreColumn
+                required property int index
+                required property var shelf
+
+                width: column.width
+
+                HRule {
+                    x: Theme.space8
+                    width: parent.width - Theme.space8 * 2
+                }
+
+                Item { width: 1; height: Theme.space8 }
+
+                CardShelf {
+                    x: Theme.space8
+                    width: parent.width - Theme.space8 * 2
+                    number: root.shelfNumber(Catalog.shelves.length + moreColumn.index)
+                    title: moreColumn.shelf.title
+                    strapline: moreColumn.shelf.strapline
+                    items: moreColumn.shelf.items
+                    more: moreColumn.shelf.more
+                    origin: "home"
+                    onCardActivated: function(card) { root.openCard(card) }
+                }
+
+                Item { width: 1; height: Theme.space8 }
+            }
+        }
+
+        Text {
+            visible: Catalog.homeLoadingMore
+            x: Theme.space8
+            topPadding: Theme.space4
+            bottomPadding: Theme.space4
+            text: "Loading more…"
+            font.family: Theme.fontFamily
+            font.pixelSize: 13
+            color: Theme.neutral700
+        }
+
         // — recently played, with the account's feed: after it —
         HRule {
             visible: root.hasRecent && root.personal
@@ -371,7 +440,8 @@ ScrollPage {
         }
         TrackSection {
             visible: root.hasRecent && root.personal
-            number: root.pad(root.shelfBase + Catalog.shelves.length + (root.picksInline ? 1 : 0) + 1)
+            number: root.pad(root.shelfBase + Catalog.shelves.length + Catalog.moreShelves.count
+                             + (root.picksInline ? 1 : 0) + 1)
             title: "Recently played"
             model: Catalog.recent
             history: true

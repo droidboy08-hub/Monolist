@@ -169,6 +169,7 @@ void Catalog::accountChanged()
         m_homeShelves.clear();
         m_feedAccountIds.clear();
         m_feedLoggedIn.clear();
+        resetMoreHome();
         m_personalFeed = false;
         m_feedAsAccount = false;
         composeShelves();
@@ -348,6 +349,121 @@ static bool accountsOwn(const QString &browseId)
     return false;
 }
 
+QVariant ShelfModel::data(const QModelIndex &index, int role) const
+{
+    if (role != ShelfRole || !index.isValid() || index.row() >= m_shelves.size())
+        return {};
+    return m_shelves.at(index.row());
+}
+
+void ShelfModel::append(const QVariantList &shelves)
+{
+    if (shelves.isEmpty())
+        return;
+    beginInsertRows(QModelIndex(), int(m_shelves.size()), int(m_shelves.size() + shelves.size()) - 1);
+    m_shelves += shelves;
+    endInsertRows();
+    Q_EMIT countChanged();
+}
+
+void ShelfModel::clear()
+{
+    if (m_shelves.isEmpty())
+        return;
+    beginResetModel();
+    m_shelves.clear();
+    endResetModel();
+    Q_EMIT countChanged();
+}
+
+// Pages of the feed after its first, as the reader scrolls: a few, since the
+// feed goes on a long way and each page is a request. The account's own feed
+// fewer: its pages are the account's requests, which AccountGuard paces.
+static constexpr int kMoreHomePages = 6;
+static constexpr int kMoreHomePagesAsAccount = 3;
+
+QVariantMap Catalog::feedShelfToMap(const InnerTube::Shelf &shelf, bool personal)
+{
+    if (!shelf.songs.isEmpty()) {
+        InnerTube::Shelf asCards = shelf;
+        asCards.songs.clear();
+        for (const InnerTube::Track &track : shelf.songs) {
+            InnerTube::Card card;
+            card.type = track.isVideo ? QStringLiteral("video") : QStringLiteral("song");
+            card.videoId = track.videoId;
+            card.title = track.title;
+            card.subtitle = track.artist;
+            card.artist = track.artist;
+            card.primaryArtist = track.primaryArtist;
+            card.artwork = track.artwork;
+            asCards.cards.append(card);
+        }
+        return shelfToMap(asCards);
+    }
+    if (personal) {
+        // What the account's feed links to that is the account's alone
+        // (a mix made for it, which answers nothing, or somebody else's,
+        // signed out; a shelf of its own behind SHOW ALL) opens as the
+        // account. A public album or playlist on the same feed does not:
+        // it is the same for everyone, and opened from New releases or
+        // Search it must stay the signed-out call it always was.
+        for (const InnerTube::Card &card : shelf.cards) {
+            if (accountsOwn(card.browseId))
+                m_feedAccountIds.insert(card.browseId);
+        }
+        if (accountsOwn(shelf.more.browseId))
+            m_feedAccountIds.insert(shelf.more.browseId);
+    }
+    return shelfToMap(shelf);
+}
+
+void Catalog::resetMoreHome()
+{
+    ++m_homeGeneration;
+    m_homeNext.clear();
+    m_homeLoadingMore = false;
+    m_homePagesMore = 0;
+    m_moreShelves.clear();
+    Q_EMIT homeMoreChanged();
+}
+
+void Catalog::loadMoreHome()
+{
+    if (m_homeNext.isEmpty() || m_homeLoadingMore || m_pendingHome > 0)
+        return;
+    const bool personal = m_personalFeed;
+    if (m_homePagesMore >= (personal ? kMoreHomePagesAsAccount : kMoreHomePages)) {
+        m_homeNext.clear();
+        Q_EMIT homeMoreChanged();
+        return;
+    }
+    m_homeLoadingMore = true;
+    Q_EMIT homeMoreChanged();
+    const quint64 generation = m_homeGeneration;
+    m_innerTube.continueBrowse(m_homeNext, [this, generation, personal](const QJsonObject &root, const QString &error) {
+        if (generation != m_homeGeneration)
+            return;   // Home was asked afresh meanwhile: this page was the old feed's
+        m_homeLoadingMore = false;
+        if (!error.isEmpty()) {
+            // No more this time; Home asked afresh starts again.
+            qWarning("catalog: Home's next page did not come: %s", qPrintable(error));
+            m_homeNext.clear();
+            Q_EMIT homeMoreChanged();
+            return;
+        }
+        ++m_homePagesMore;
+        const InnerTube::Continuation part = InnerTube::parseContinuation(root);
+        QVariantList maps;
+        for (const InnerTube::Shelf &shelf : part.shelves)
+            maps.append(feedShelfToMap(shelf, personal));
+        m_homeNext = part.next;
+        qInfo("catalog: Home's page %d below the first: %d shelves%s", m_homePagesMore, int(maps.size()),
+              m_homeNext.isEmpty() ? ", and no more" : "");
+        m_moreShelves.append(maps);
+        Q_EMIT homeMoreChanged();
+    }, personal ? InnerTube::Auth::IfSignedIn : InnerTube::Auth::Anonymous, personal ? QString() : m_homeVisitor);
+}
+
 void Catalog::applyFeed(const QJsonObject &root, bool asAccount)
 {
     // The one sure sign the feed is the account's: YouTube Music answers a
@@ -359,6 +475,12 @@ void Catalog::applyFeed(const QJsonObject &root, bool asAccount)
     m_homeShelves.clear();
     m_feedAccountIds.clear();
     m_feedQuickPicksAt = -1;
+    resetMoreHome();
+    m_homeNext = InnerTube::parseFeedContinuation(root);
+    // Asked signed out, the next pages answer only as the visitor this one
+    // was answered to; the account's are asked as the account.
+    m_homeVisitor = personal ? QString() : InnerTube::parseVisitorData(root);
+    Q_EMIT homeMoreChanged();
     bool songsTaken = false;
     for (const InnerTube::Shelf &shelf : InnerTube::parseShelves(root)) {
         if (!shelf.songs.isEmpty()) {
@@ -377,37 +499,10 @@ void Catalog::applyFeed(const QJsonObject &root, bool asAccount)
             // as cards that play.
             if (!personal)
                 continue;
-            InnerTube::Shelf asCards = shelf;
-            asCards.songs.clear();
-            for (const InnerTube::Track &track : shelf.songs) {
-                InnerTube::Card card;
-                card.type = track.isVideo ? QStringLiteral("video") : QStringLiteral("song");
-                card.videoId = track.videoId;
-                card.title = track.title;
-                card.subtitle = track.artist;
-                card.artist = track.artist;
-                card.primaryArtist = track.primaryArtist;
-                card.artwork = track.artwork;
-                asCards.cards.append(card);
-            }
-            m_homeShelves.append(shelfToMap(asCards));
+            m_homeShelves.append(feedShelfToMap(shelf, personal));
             continue;
         }
-        if (personal) {
-            // What the account's feed links to that is the account's alone
-            // (a mix made for it, which answers nothing, or somebody else's,
-            // signed out; a shelf of its own behind SHOW ALL) opens as the
-            // account. A public album or playlist on the same feed does not:
-            // it is the same for everyone, and opened from New releases or
-            // Search it must stay the signed-out call it always was.
-            for (const InnerTube::Card &card : shelf.cards) {
-                if (accountsOwn(card.browseId))
-                    m_feedAccountIds.insert(card.browseId);
-            }
-            if (accountsOwn(shelf.more.browseId))
-                m_feedAccountIds.insert(shelf.more.browseId);
-        }
-        m_homeShelves.append(shelfToMap(shelf));
+        m_homeShelves.append(feedShelfToMap(shelf, personal));
     }
     // A feed with no songs has no Quick picks: the last feed's, perhaps
     // another account's, do not stay under it.

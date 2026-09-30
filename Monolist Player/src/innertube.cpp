@@ -989,6 +989,10 @@ InnerTube::Watch watchOf(const QJsonValue &endpoint)
     return watch;
 }
 
+// The body key continueBrowse carries a list's visitor in, for post() to
+// take out and name the call with.
+constexpr char kListVisitorField[] = "monolistVisitorData";
+
 // One stream a /player answer offers, as the choice below sees it.
 struct Offer {
     QString url;
@@ -1429,12 +1433,21 @@ QNetworkReply *InnerTube::post(Client client, const QString &endpoint, QJsonObje
     // /player names the anonymous visitor (withVisitorData). The account
     // only ever goes on Music calls, so the two never meet.
     const QString visitor = isPlayerClient(client) ? g_visitor.anonymous : QString();
+    QString listVisitor;
     const auto nameVisitor = [](QJsonObject &context, const QString &id) {
         QJsonObject inner = context.value(QStringLiteral("client")).toObject();
         inner.insert(QStringLiteral("visitorData"), id);
         context.insert(QStringLiteral("client"), inner);
     };
     QJsonObject context = clientContext(client);
+    // Or the visitor a list's first page answered with, which the rest of it
+    // is asked as (continueBrowse). Taken out of the body either way: it is
+    // not a field YouTube knows.
+    const QString named = body.take(QLatin1String(kListVisitorField)).toString();
+    if (visitor.isEmpty() && !named.isEmpty() && auth == Auth::Anonymous) {
+        nameVisitor(context, named);
+        listVisitor = named;
+    }
     if (!visitor.isEmpty())
         nameVisitor(context, visitor);
 
@@ -1446,6 +1459,8 @@ QNetworkReply *InnerTube::post(Client client, const QString &endpoint, QJsonObje
     request.setRawHeader("Referer", (host + QLatin1Char('/')).toUtf8());
     if (!visitor.isEmpty())
         request.setRawHeader("X-Goog-Visitor-Id", visitor.toUtf8());
+    else if (!listVisitor.isEmpty())
+        request.setRawHeader("X-Goog-Visitor-Id", listVisitor.toUtf8());
     request.setTransferTimeout(timeoutMs);
 
     // The account, on the few calls that ask for it and only while there is
@@ -2358,10 +2373,14 @@ void InnerTube::browse(const QString &browseId, const QString &params,
 // for as the account is asked for as the account too: a private list's
 // token means nothing to anybody else.
 void InnerTube::continueBrowse(const QString &token,
-                               std::function<void(const QJsonObject &, const QString &)> done, Auth auth)
+                               std::function<void(const QJsonObject &, const QString &)> done, Auth auth,
+                               const QString &visitor)
 {
-    send(Client::Music, QStringLiteral("browse"), { { QStringLiteral("continuation"), token } },
-         kBrowseTimeoutMs, nullptr, std::move(done), /*retries=*/1, auth);
+    QJsonObject body{ { QStringLiteral("continuation"), token } };
+    if (!visitor.isEmpty())
+        body.insert(QLatin1String(kListVisitorField), visitor);
+    send(Client::Music, QStringLiteral("browse"), body, kBrowseTimeoutMs, nullptr, std::move(done),
+         /*retries=*/1, auth);
 }
 
 void InnerTube::accountMenu(Auth auth, std::function<void(const QJsonObject &, const QString &)> done)
@@ -2497,6 +2516,13 @@ QList<InnerTube::Shelf> InnerTube::parseShelves(const QJsonObject &root)
             shelves.append(shelf);
     }
     return shelves;
+}
+
+QString InnerTube::parseFeedContinuation(const QJsonObject &root)
+{
+    const QJsonValue list = dig(root, { "contents", "singleColumnBrowseResultsRenderer", "tabs", "#0",
+                                        "tabRenderer", "content", "sectionListRenderer" });
+    return continuationOf(list, dig(list, { "contents" }).toArray());
 }
 
 InnerTube::Collection InnerTube::parseCollection(const QString &browseId, const QJsonObject &root)
