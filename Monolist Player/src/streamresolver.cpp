@@ -765,6 +765,8 @@ void StreamResolver::followAccount(YtmSession *account)
         return;
     connect(account, &YtmSession::sessionChanged, this, &StreamResolver::accountChanged);
     connect(account, &YtmSession::playWhenNeededChanged, this, &StreamResolver::accountChanged);
+    // A rest begun: a lookup with the account under way stops.
+    connect(account, &YtmSession::accountUseChanged, this, &StreamResolver::accountChanged);
 }
 
 void StreamResolver::setAccountLimit(int perHour)

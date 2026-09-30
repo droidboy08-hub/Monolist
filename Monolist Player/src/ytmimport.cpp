@@ -96,8 +96,25 @@ YtmImport::YtmImport(Library *library, YtmSession *session, QObject *parent)
     m_enabled = !m_library || m_library->settingValue(kEnabledKey) != QLatin1String("0");
     m_autoTimer.setSingleShot(true);
     connect(&m_autoTimer, &QTimer::timeout, this, [this]() { start(false); });
+    m_cooldownTimer.setSingleShot(true);
+    connect(&m_cooldownTimer, &QTimer::timeout, this, &YtmImport::changed);
     load();
+    armCooldown();
+    if (m_library) {
+        // A playlist of the account's saved here (or no longer): the list,
+        // which shows such a one once, with the saved, follows.
+        connect(m_library, &Library::revisionChanged, this, [this]() {
+            m_playlists.reload();
+            Q_EMIT changed();
+        });
+    }
     if (m_session) {
+        // Deleted only when the user signs out: a session that merely could
+        // not be read at launch is not a sign-out.
+        connect(m_session, &YtmSession::signedOut, this, [this]() {
+            if (m_session && !m_session->isDemo())
+                forget(QStringLiteral("signed out"));
+        });
         connect(m_session, &YtmSession::sessionChanged, this, &YtmImport::sessionChanged);
         // A rest begins or ends: the status says so, and a sync under way
         // stops at its next page.
@@ -112,6 +129,7 @@ YtmImport::~YtmImport() = default;
 void YtmImport::setTiming(const Timing &timing)
 {
     m_timing = timing;
+    armCooldown();
 }
 
 void YtmImport::setEnabled(bool enabled)
@@ -146,7 +164,7 @@ bool YtmImport::shown() const
 {
     if (m_demo)
         return m_hasData;
-    if (!m_enabled || !m_hasData || !m_session)
+    if (!m_enabled || !m_hasData || !m_session || m_session->isDemo())
         return false;
     // The session ended: what was read before, marked as such.
     if (m_stale)
@@ -373,11 +391,24 @@ void YtmImport::sessionChanged()
 {
     if (!m_session)
         return;
+    // An invented account (--ytm-demo): nothing is read, forgotten or shown
+    // of the real library because of it.
+    if (m_session->isDemo() && !m_demo) {
+        if (m_run)
+            stop(QStringLiteral("stopped"), QStringLiteral("a demonstration is shown"));
+        m_autoTimer.stop();
+        m_stale = false;
+        Q_EMIT changed();
+        return;
+    }
     switch (m_session->stateValue()) {
     case YtmSession::State::SignedOut:
-        // Nothing of the account is left once it signs out.
-        if (m_hasData || m_run)
-            forget(QStringLiteral("signed out"));
+        // Hidden (shown() asks for the account's key, and there is none).
+        // Deleted when the user signed out (signedOut); a session that could
+        // not be read at launch keeps it for when it can.
+        if (m_run)
+            stop(QStringLiteral("stopped"), QStringLiteral("signed out"));
+        m_autoTimer.stop();
         m_stale = false;
         break;
     case YtmSession::State::Rejected:
@@ -397,7 +428,8 @@ void YtmImport::sessionChanged()
         m_stale = false;
         const QString key = m_session->accountKey();
         const QString stored = storedAccount();
-        if (!stored.isEmpty() && stored != key)
+        // A session with no key yet says nothing of whose it is.
+        if (!stored.isEmpty() && !key.isEmpty() && stored != key)
             forget(QStringLiteral("another account is signed in"));
         if (!m_enabled || m_run)
             break;
@@ -456,7 +488,18 @@ void YtmImport::syncNow()
     }
     if (m_library)
         m_library->setSetting(kManualKey, QString::number(nowMs()));
+    armCooldown();
     start(true);
+}
+
+void YtmImport::armCooldown()
+{
+    const qint64 last = m_library ? m_library->settingValue(kManualKey).toLongLong() : 0;
+    const qint64 left = last > 0 ? last + m_timing.manualCooldownMs - nowMs() : 0;
+    if (left > 0)
+        m_cooldownTimer.start(timerMs(left + 500));
+    else
+        m_cooldownTimer.stop();
 }
 
 // ---------------------------------------------------------------- a sync

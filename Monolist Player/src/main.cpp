@@ -496,6 +496,8 @@ int main(int argc, char *argv[])
     catalog.setAccountPages([&accountLibrary](const QString &browseId) {
         return accountLibrary.isAccountPage(browseId);
     });
+    // The import turned off: an account playlist open is closed, not paged on.
+    QObject::connect(&accountLibrary, &YtmImport::enabledChanged, &catalog, &Catalog::accountPagesChanged);
     if (demo.contains(QLatin1String("+library")))
         accountLibrary.showDemo();
     catalog.refresh();

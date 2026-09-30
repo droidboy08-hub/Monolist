@@ -40,6 +40,9 @@ AccountGuard::AccountGuard(QObject *parent)
     : QObject(parent)
 {
     m_resumeTimer.setSingleShot(true);
+    // Precise: a coarse timer of an hour may fire a second early, and a rest
+    // that ends before its time is not over.
+    m_resumeTimer.setTimerType(Qt::PreciseTimer);
     connect(&m_resumeTimer, &QTimer::timeout, this, &AccountGuard::resumed);
     m_saveTimer.setSingleShot(true);
     connect(&m_saveTimer, &QTimer::timeout, this, &AccountGuard::save);
@@ -196,12 +199,13 @@ qint64 AccountGuard::admit(Kind kind, QString *why)
     return 0;
 }
 
-void AccountGuard::started(Kind kind)
+quint64 AccountGuard::started(Kind kind)
 {
     const qint64 t = now();
     refill();
     m_tokens = std::max(0.0, m_tokens - 1.0);
     m_inFlight = true;
+    const quint64 ticket = ++m_turn;
     m_inFlightSince = t;
     m_inFlightKind = kind;
     m_lastStart = t;
@@ -210,12 +214,14 @@ void AccountGuard::started(Kind kind)
         m_lastYtDlp = t;
     m_uses.append({ t, kind, weightOf(kind) });
     saveSoon();
+    return ticket;
 }
 
-void AccountGuard::finished(Kind kind, int status, qint64 retryAfterSecs)
+void AccountGuard::finished(Kind kind, int status, qint64 retryAfterSecs, quint64 ticket)
 {
     Q_UNUSED(kind)
-    m_inFlight = false;
+    if (ticket == 0 || ticket == m_turn)
+        m_inFlight = false;
     if (status == 429) {
         trip(QStringLiteral("YouTube answered 429, too many requests"),
              retryAfterSecs > 0 ? retryAfterSecs * 1000 : 0);
@@ -279,8 +285,13 @@ void AccountGuard::armResume()
 
 void AccountGuard::resumed()
 {
-    if (m_pausedUntil == 0 || m_pausedUntil > now())
+    if (m_pausedUntil == 0)
         return;
+    // Woken early (a long wait capped, a timer's slack): not over yet.
+    if (m_pausedUntil > now()) {
+        armResume();
+        return;
+    }
     m_pausedUntil = 0;
     m_pauseWhy.clear();
     m_resumeTimer.stop();

@@ -1458,10 +1458,17 @@ int runYtmSessionSelfTest(Library *library)
         // session is checked before anything else is asked with it.
         outcomesBefore = int(outcomes.size());
         session->guard().forgive();
+        t.check(session->needsCheck() && !session->accountForPlayback(),
+                QStringLiteral("the rest over, the session is to be checked before anything else"));
+        browseNow(consumer, QStringLiteral("FEtest_anon"), InnerTube::Auth::IfSignedIn);
+        t.check(sameAsBaseline(standIn.requests.last()),
+                QStringLiteral("until then, IfSignedIn is the anonymous request"));
         waitVerdict(outcomesBefore);
-        t.check(!session->resting() && session->state() == QLatin1String("active"),
+        t.check(!session->resting() && !session->needsCheck() && session->state() == QLatin1String("active"),
                 QStringLiteral("once the rest is over the session is checked, and confirmed here, stays"),
                 session->state());
+        browseNow(consumer, QStringLiteral("FEtest_after"), InnerTube::Auth::IfSignedIn);
+        t.check(standIn.requests.last().authed(), QStringLiteral("and only then goes with the account again"));
     }
 
     // — 6. 401: the session is over —
@@ -1781,7 +1788,8 @@ int runHomeAccountSelfTest(Library *library)
         + carouselJson("Trending", cardJson("Trending mix", "VLTESTTRENDING", "MUSIC_PAGE_TYPE_PLAYLIST")));
     const QByteArray accountFeed = browseJson("1",
         carouselJson("Listen again", songJson("TESTMINE01", "Account song")) + ','
-        + carouselJson("Mixed for you", cardJson("Account supermix", "VLTESTMINE", "MUSIC_PAGE_TYPE_PLAYLIST")));
+        + carouselJson("Mixed for you", cardJson("Account supermix", "VLRDTESTMINE", "MUSIC_PAGE_TYPE_PLAYLIST") + ','
+                       + cardJson("Test Album", "MPRETEST01", "MUSIC_PAGE_TYPE_ALBUM")));
     const auto releases = [](const QByteArray &loggedIn) {
         return browseJson(loggedIn, carouselJson("New albums & singles",
                                                  cardJson("Test Album", "MPRETEST01", "MUSIC_PAGE_TYPE_ALBUM")));
@@ -1966,9 +1974,9 @@ int runHomeAccountSelfTest(Library *library)
     {
         // A mix the account's feed showed is the account's to open.
         from = int(standIn.requests.size());
-        catalog->openPage(QStringLiteral("VLTESTMINE"));
+        catalog->openPage(QStringLiteral("VLRDTESTMINE"));
         waitUntil([&catalog]() { return !catalog->pageLoading(); }, 10000);
-        const QList<StandIn::Request> opened = asked(QStringLiteral("VLTESTMINE"), from);
+        const QList<StandIn::Request> opened = asked(QStringLiteral("VLRDTESTMINE"), from);
         t.check(!opened.isEmpty() && opened.first().authed(),
                 QStringLiteral("a mix on the account's feed opens with the account"));
         from = int(standIn.requests.size());
@@ -1976,7 +1984,7 @@ int runHomeAccountSelfTest(Library *library)
         waitUntil([&catalog]() { return !catalog->pageLoading(); }, 10000);
         const QList<StandIn::Request> album = asked(QStringLiteral("MPRETEST01"), from);
         t.check(!album.isEmpty() && !album.first().authed(),
-                QStringLiteral("and a new release, the same for everyone, signed out"));
+                QStringLiteral("and an album the feed also shows, the same for everyone, signed out"));
     }
 
     // — 3. asked again signed in (as a new country does): new releases stay anonymous —
@@ -4149,10 +4157,14 @@ int runAccountGuardSelfTest()
         clock += spaced;
         t.check(guard.admit(Kind::Browse) == 0, QStringLiteral("and then goes"));
         guard.started(Kind::Browse);
+        const quint64 late = guard.started(Kind::Browse);
         clock += limits.holdMs + 1;
         t.check(!guard.busy() && guard.admit(Kind::Browse) == 0,
                 QStringLiteral("a call never heard back from gives up its turn after 45 s"));
-        guard.finished(Kind::Browse, 200);
+        guard.started(Kind::Browse);
+        guard.finished(Kind::Browse, 200, 0, late);
+        t.check(guard.busy() && guard.admit(Kind::Browse) > 0,
+                QStringLiteral("and when it does end at last, it does not free the turn of the call after it"));
     }
 
     // — 2. the bucket: a few close together, then one every 4 s —
@@ -4271,6 +4283,22 @@ int runAccountGuardSelfTest()
         guard.admit(Kind::Browse);
         guard.trip(QStringLiteral("a 403"));
         t.check(guard.pausedUntil() == clock + 24 * kHour, QStringLiteral("a third within a day: a whole day"));
+        {
+            // Throttled again as soon as the day's rest is over: another day,
+            // not back to an hour.
+            const QHash<QString, QString> snapshot = kept;
+            AccountGuard again;
+            again.setStore(store);
+            const qint64 was = clock;
+            clock += 24 * kHour + 1;
+            again.admit(Kind::Browse);
+            again.trip(QStringLiteral("a 429 right after"));
+            t.check(again.pausedUntil() == clock + 24 * kHour,
+                    QStringLiteral("throttled again right after a day's rest: a day again, not an hour"));
+            again.forgive();
+            clock = was;
+            kept = snapshot;   // as the restart below expects it
+        }
 
         // — 6. kept across a restart —
         AccountGuard later;
@@ -4482,7 +4510,12 @@ int runYtmLibrarySelfTest(Library *library)
         } else if (id == "FEmusic_history") {
             answer.body = historyPage(libraryLoggedIn, { { "Today", songRows("TESTHS", 1, 3) },
                                                          { "Yesterday", songRows("TESTHS", 4, 2) } });
-        } else if (id == "VLTESTPRIVATE1" || id == "VLTESTPUBLIC99") {
+        } else if (id == "VLTESTPRIVATE1") {
+            answer.body = playlistPage("1", id, songRows("TESTPL", 1, 5), "TESTTOKprivate2");
+        } else if (token == "TESTTOKprivate2") {
+            answer.status = 404;
+            answer.body = R"({"error":{"code":404,"status":"NOT_FOUND"}})";
+        } else if (id == "VLTESTPUBLIC99") {
             answer.body = playlistPage("1", id, songRows("TESTPL", 1, 5));
         } else {
             answer.body = trackingAnswer(authed ? "1" : "0");
@@ -4661,6 +4694,23 @@ int runYtmLibrarySelfTest(Library *library)
         }
         t.check(authed && catalog.pageTracks()->rowCount() == 5,
                 QStringLiteral("a private playlist of the account's opens with the account, and shows its songs"));
+        {
+            // Its next part fails: scrolling on does not ask again, and a 404
+            // with the account is not asked again a moment later either.
+            const int partFrom = int(standIn.requests.size());
+            for (int i = 0; i < 4; ++i) {
+                catalog.loadMorePage();
+                waitUntil([&catalog]() { return !catalog.pageLoadingMore(); }, 10000);
+                settle(100);
+            }
+            int parts = 0;
+            for (int i = partFrom; i < standIn.requests.size(); ++i)
+                parts += standIn.requests.at(i).json().value(QStringLiteral("continuation")).toString()
+                         == QLatin1String("TESTTOKprivate2");
+            t.check(parts == 1, QStringLiteral("a part that would not load is asked for once, not again at every "
+                                               "scroll (nor again at once for a 404)"),
+                    QString::number(parts));
+        }
         at = int(standIn.requests.size());
         catalog.openPage(QStringLiteral("VLTESTPUBLIC99"));
         waitUntil([&catalog]() { return !catalog.pageLoading(); }, 10000);
@@ -4735,6 +4785,18 @@ int runYtmLibrarySelfTest(Library *library)
                     && notices.last().contains(QLatin1String("go easy on your account")),
                 QStringLiteral("SYNC NOW again within a quarter of an hour: refused, saying when it works again"),
                 notices.value(notices.size() - 1));
+        pacing.manualCooldownMs = 600;
+        importer->setTiming(pacing);
+        library->setSetting(manualKey, QString::number(QDateTime::currentMSecsSinceEpoch()));
+        importer->setTiming(pacing);
+        const bool before = importer->canSyncNow();
+        int changes = 0;
+        const QMetaObject::Connection counting =
+            QObject::connect(importer.get(), &YtmImport::changed, importer.get(), [&changes]() { ++changes; });
+        waitUntil([&importer]() { return importer->canSyncNow(); }, 5000);
+        QObject::disconnect(counting);
+        t.check(!before && importer->canSyncNow() && changes > 0,
+                QStringLiteral("once the cooldown is over, SYNC NOW is offered again by itself (the view is told)"));
         pacing.manualCooldownMs = 0;
         importer->setTiming(pacing);
     }

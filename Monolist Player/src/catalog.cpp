@@ -127,6 +127,9 @@ void Catalog::followAccount(YtmSession *account)
         return;
     connect(account, &YtmSession::sessionChanged, this, &Catalog::accountChanged);
     connect(account, &YtmSession::useForHomeChanged, this, &Catalog::accountChanged);
+    // A rest begun or over, a check after one: whether Home may be the
+    // account's changed with the session the same.
+    connect(account, &YtmSession::accountUseChanged, this, &Catalog::accountChanged);
 }
 
 // Signed in, out, refused, or the setting turned: the feed is asked for again
@@ -134,31 +137,30 @@ void Catalog::followAccount(YtmSession *account)
 // once taken and once confirmed, and only the second makes it the account's.
 void Catalog::accountChanged()
 {
-    // A page of the account's own (a private playlist, Liked music), open
-    // when the session ends or changes: gone from the screen with it.
-    if (m_pageAuth != InnerTube::Auth::Anonymous
-        && !(m_account && m_account->stateValue() == YtmSession::State::Active)) {
-        ++m_pageGeneration;
-        m_pageAuth = InnerTube::Auth::Anonymous;
-        m_pageTracks.clear();
-        m_pageFeed.clear();
-        m_pageNext.clear();
-        m_pageLoading = false;
-        m_page = { { QStringLiteral("browseId"), m_pageId },
-                   { QStringLiteral("error"), QStringLiteral("This playlist is your YouTube Music account's, and you "
-                                                            "are no longer signed in.") } };
-        m_pageId.clear();
-        Q_EMIT pageChanged();
-        Q_EMIT pageMoreChanged();
+    // A page or listing of the account's own (a private playlist, Liked
+    // music, a mix made for it), open when the session ends or changes:
+    // gone from the screen with it.
+    const bool active = m_account && m_account->stateValue() == YtmSession::State::Active;
+    if (m_pageAuth != InnerTube::Auth::Anonymous && !active) {
+        dropAccountPage(QStringLiteral("This playlist is your YouTube Music account's, and you are no longer signed "
+                                       "in."));
     }
+    if (m_listingAuth != InnerTube::Auth::Anonymous && !active)
+        dropAccountListing(QStringLiteral("This shelf is your YouTube Music account's, and you are no longer signed in."));
+
     const bool asAccount = m_account && m_account->accountForHome();
-    if (asAccount == m_feedAsAccount)
-        return;
+    // What is on screen, or on its way, as the account: the feed asked as
+    // it, or one that answered as it.
+    const bool showing = m_feedAsAccount || m_personalFeed;
+    if (!asAccount && !showing)
+        return;   // signed-out Home, and it should be
+    if (asAccount && (m_personalFeed || (m_feedAsAccount && m_pendingHome > 0)))
+        return;   // the account's feed is shown, or on its way
     // The account's feed leaves Home at once, rather than staying until the
     // signed-out one has come (which may not come): after a sign-out nothing
     // of the account is left on screen. The other way round, the signed-out
     // feed stays until the account's replaces it.
-    if (m_feedAsAccount) {
+    if (!asAccount) {
         m_quickPicks.clear();
         m_quickPicksTitle.clear();
         m_quickPicksStrapline.clear();
@@ -273,6 +275,21 @@ void Catalog::load(int parts)
     });
 }
 
+// Whether a page linked from the account's feed is the account's own: a mix
+// or radio made for it (RD…), or one of its personal shelves' pages.
+static bool accountsOwn(const QString &browseId)
+{
+    if (browseId.startsWith(QLatin1String("VLRD")) || browseId.startsWith(QLatin1String("RD")))
+        return true;
+    if (!browseId.startsWith(QLatin1String("FEmusic_")))
+        return false;
+    for (const char *personal : { "for_you", "listen_again", "liked", "library", "history", "recap", "quick_picks" }) {
+        if (browseId.contains(QLatin1String(personal)))
+            return true;
+    }
+    return false;
+}
+
 void Catalog::applyFeed(const QJsonObject &root, bool asAccount)
 {
     // The one sure sign the feed is the account's: YouTube Music answers a
@@ -319,12 +336,18 @@ void Catalog::applyFeed(const QJsonObject &root, bool asAccount)
             continue;
         }
         if (personal) {
-            // What the account's feed links to is the account's to open: a
-            // mix made for it answers nothing, or somebody else's, signed out.
+            // What the account's feed links to that is the account's alone
+            // (a mix made for it, which answers nothing, or somebody else's,
+            // signed out; a shelf of its own behind SHOW ALL) opens as the
+            // account. A public album or playlist on the same feed does not:
+            // it is the same for everyone, and opened from New releases or
+            // Search it must stay the signed-out call it always was.
             for (const InnerTube::Card &card : shelf.cards) {
-                if (!card.browseId.isEmpty() && card.type != QLatin1String("artist"))
+                if (accountsOwn(card.browseId))
                     m_feedAccountIds.insert(card.browseId);
             }
+            if (accountsOwn(shelf.more.browseId))
+                m_feedAccountIds.insert(shelf.more.browseId);
         }
         m_homeShelves.append(shelfToMap(shelf));
     }
@@ -430,6 +453,7 @@ void Catalog::openPage(const QString &browseId)
     m_pageLoadingMore = false;
     m_pageFetchingTold = false;
     m_pageWantsAll = false;
+    m_pageFailedToken.clear();
     Q_EMIT pageChanged();
     Q_EMIT pageMoreChanged();
 
@@ -479,9 +503,59 @@ void Catalog::setAccountPages(std::function<bool(const QString &browseId)> isAcc
     m_accountPages = std::move(isAccountPage);
 }
 
+void Catalog::accountPagesChanged()
+{
+    if (m_pageAuth != InnerTube::Auth::Anonymous && authFor(m_pageId) == InnerTube::Auth::Anonymous)
+        dropAccountPage(QStringLiteral("This playlist is your YouTube Music account's, and your library is no longer "
+                                       "read from it."));
+    if (m_listingAuth != InnerTube::Auth::Anonymous
+        && authFor(m_listingKey.section(QLatin1Char('|'), 0, 0)) == InnerTube::Auth::Anonymous)
+        dropAccountListing(QStringLiteral("This shelf is your YouTube Music account's, and is no longer read from it."));
+}
+
+void Catalog::dropAccountPage(const QString &why)
+{
+    ++m_pageGeneration;
+    m_pageAuth = InnerTube::Auth::Anonymous;
+    m_pageTracks.clear();
+    m_pageFeed.clear();
+    m_pageNext.clear();
+    m_pageKeys.clear();
+    m_pageHeader = {};
+    m_pageFailedToken.clear();
+    m_pageLoading = false;
+    m_pageRequestOut = false;
+    m_pageWantsAll = false;
+    m_pageFeedScheduled = false;
+    m_page = { { QStringLiteral("browseId"), m_pageId }, { QStringLiteral("error"), why } };
+    m_pageId.clear();
+    updatePageLoadingMore();
+    Q_EMIT pageChanged();
+    Q_EMIT pageMoreChanged();
+}
+
+void Catalog::dropAccountListing(const QString &why)
+{
+    ++m_listingGeneration;
+    m_listingAuth = InnerTube::Auth::Anonymous;
+    m_listingLoading = false;
+    m_listingLoadingMore = false;
+    m_listingItemsNext.clear();
+    m_listingSectionsNext.clear();
+    m_listingFailedToken.clear();
+    m_listingSongs.clear();
+    m_listing = { { QStringLiteral("key"), m_listingKey }, { QStringLiteral("error"), why } };
+    m_listingKey.clear();
+    Q_EMIT listingChanged();
+    Q_EMIT listingMoreChanged();
+}
+
 void Catalog::loadMorePage()
 {
     if (m_pageNext.isEmpty() || m_pageLoading || m_pageLoadingMore)
+        return;
+    // Would not load a moment ago: scrolling does not ask again by itself.
+    if (!m_pageFailedToken.isEmpty() && m_pageNext == m_pageFailedToken)
         return;
     fetchPagePart();
 }
@@ -492,6 +566,9 @@ void Catalog::loadRestOfPage()
     // "loading more" ends when it is in.
     if (m_pageNext.isEmpty() || m_pageLoading)
         return;
+    // Asked for by the user (Play, Shuffle, Download): a part that failed
+    // is tried once more.
+    m_pageFailedToken.clear();
     m_pageWantsAll = true;
     // A part already on its way carries on to the rest when it lands.
     if (!m_pageRequestOut)
@@ -539,6 +616,12 @@ void Catalog::feedPage()
 
 void Catalog::fetchPagePart()
 {
+    // Opened with the account, which may no longer be used for it (the
+    // import turned off, the feed that showed it gone): not paged on with it.
+    if (m_pageAuth != InnerTube::Auth::Anonymous && authFor(m_pageId) == InnerTube::Auth::Anonymous) {
+        dropAccountPage(QStringLiteral("This playlist is your YouTube Music account's, and is no longer read from it."));
+        return;
+    }
     const quint64 generation = m_pageGeneration;
     const QString token = m_pageNext;
     m_pageRequestOut = true;
@@ -557,8 +640,10 @@ void Catalog::fetchPagePart()
             return;
         }
         if (!error.isEmpty()) {
-            // The token is kept, so scrolling on, or pressing Play again,
-            // asks once more.
+            // The token is kept, so pressing Play again asks once more;
+            // scrolling on does not (m_pageFailedToken), or a part that fails
+            // would be asked for over and over while the page stays open.
+            m_pageFailedToken = token;
             m_pageWantsAll = false;
             updatePageLoadingMore();
             const QString title = m_page.value(QStringLiteral("title")).toString();
@@ -621,6 +706,8 @@ void Catalog::openListing(const QString &browseId, const QString &params, const 
     Q_EMIT listingMoreChanged();
 
     m_listingOwner.clear();
+    m_listingFailedToken.clear();
+    m_listingAuth = authFor(browseId);
     m_innerTube.browse(browseId, params, [this, browseId, key, title, generation](const QJsonObject &root,
                                                                                  const QString &error) {
         if (generation != m_listingGeneration)
@@ -664,12 +751,15 @@ void Catalog::openListing(const QString &browseId, const QString &params, const 
         m_listingSectionsNext = listing.sectionsContinuation;
         Q_EMIT listingChanged();
         Q_EMIT listingMoreChanged();
-    });
+    }, m_listingAuth);
 }
 
 void Catalog::loadMoreListing()
 {
     if (m_listingLoading || m_listingLoadingMore || !listingHasMore())
+        return;
+    const QString next = !m_listingItemsNext.isEmpty() ? m_listingItemsNext : m_listingSectionsNext;
+    if (!m_listingFailedToken.isEmpty() && next == m_listingFailedToken)
         return;
     fetchListingPart();
 }
@@ -694,6 +784,7 @@ void Catalog::fetchListingPart()
             return;
         }
         if (!error.isEmpty()) {
+            m_listingFailedToken = token;
             Q_EMIT listingMoreChanged();
             Q_EMIT notice(QStringLiteral("The rest of this shelf would not load: %1").arg(error));
             return;
@@ -741,7 +832,7 @@ void Catalog::fetchListingPart()
             Q_EMIT listingChanged();
         }
         Q_EMIT listingMoreChanged();
-    });
+    }, m_listingAuth);
 }
 
 void Catalog::playCollection(const QString &browseId, const QString &title, const QString &origin)

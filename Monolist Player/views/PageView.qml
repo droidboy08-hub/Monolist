@@ -67,6 +67,12 @@ ScrollPage {
             action()
         }
         function onPageChanged() {
+            // Closed under it (signed out while the account's page was open):
+            // what was waiting has nothing left to wait for.
+            if (Catalog.page.error !== undefined) {
+                root.afterLoad = null
+                root.waiting = ""
+            }
             // Another page: what was waiting was for the last one.
             const id = Catalog.page.browseId !== undefined ? Catalog.page.browseId : ""
             if (id === root.shownId)

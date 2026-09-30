@@ -261,8 +261,10 @@ ScrollPage {
             }
         }
 
+        // Only before a section of its own: the shelves below carry their
+        // own rule.
         HRule {
-            visible: root.hasRecs && (root.picksOnTop || (!root.personal && root.hasRecent) || Catalog.shelves.length > 0)
+            visible: root.hasRecs && (root.picksOnTop || (!root.personal && root.hasRecent))
             x: Theme.space8
             width: parent.width - Theme.space8 * 2
         }

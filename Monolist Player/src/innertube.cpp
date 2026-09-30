@@ -31,6 +31,8 @@ namespace {
 // hundred KB, a page can be four hundred, and a request that times out is a
 // blank screen.
 constexpr int kSearchTimeoutMs = 12000;
+// The QNetworkReply property that carries a call's account ticket.
+constexpr const char *kTicketProperty = "monolistAccountTicket";
 constexpr int kBrowseTimeoutMs = 20000;
 constexpr int kSuggestTimeoutMs = 6000;
 
@@ -1445,6 +1447,7 @@ QNetworkReply *InnerTube::post(Client client, const QString &endpoint, QJsonObje
     // one. Everything above is what an anonymous call sends, and an
     // anonymous call sends nothing more.
     quint64 account = 0;
+    quint64 ticket = 0;
     if (auth != Auth::Anonymous && client == Client::Music && g_account.headers) {
         AccountRequest asked;
         asked.auth = auth;
@@ -1455,7 +1458,7 @@ QNetworkReply *InnerTube::post(Client client, const QString &endpoint, QJsonObje
         account = g_account.headers(asked, &carried);
         if (account != 0 && !carried.cookie.isEmpty()) {
             if (g_account.started)
-                g_account.started(account, asked);
+                ticket = g_account.started(account, asked);
             // Neither way through the network manager's own jar. How Qt
             // would mix a Cookie header set here with the jar's anonymous
             // cookies is not documented, and those must not ride along with
@@ -1504,7 +1507,12 @@ QNetworkReply *InnerTube::post(Client client, const QString &endpoint, QJsonObje
     if (auth == Auth::Required && account == 0)
         return nullptr;
     body.insert(QStringLiteral("context"), context);
-    return (network ? network : m_network)->post(request, QJsonDocument(body).toJson(QJsonDocument::Compact));
+    QNetworkReply *reply = (network ? network : m_network)->post(request, QJsonDocument(body).toJson(QJsonDocument::Compact));
+    // The account's turn this call holds (AccountGuard), handed back when it
+    // is over (accountOutcome).
+    if (ticket != 0)
+        reply->setProperty(kTicketProperty, ticket);
+    return reply;
 }
 
 void InnerTube::release(Slot &slot)
@@ -1672,13 +1680,18 @@ void InnerTube::send(Client client, const QString &endpoint, const QJsonObject &
                     // it: never a quick second request on the account's
                     // behalf.
                     const bool tooMany = account != 0 && status == 429;
+                    // With the account, only what may answer differently a
+                    // moment later is asked again: no answer at all, or the
+                    // server's own trouble. A 404 is a 404 the second time.
+                    const bool retryable = account == 0 || status == 0 || status >= 500;
                     // What would have gone signed out without a session goes
                     // signed out now, as it does while the account rests.
                     if (tooMany && auth == Auth::IfSignedIn) {
                         send(client, endpoint, body, timeoutMs, slot, done, retries, Auth::Anonymous, network);
                         return;
                     }
-                    if (retries > 0 && !tooMany && reply->error() != QNetworkReply::OperationCanceledError) {
+                    if (retries > 0 && !tooMany && retryable
+                        && reply->error() != QNetworkReply::OperationCanceledError) {
                         const int delay = account != 0 ? 4000 + int(QRandomGenerator::global()->bounded(2000)) : 1200;
                         QTimer::singleShot(delay, this, [this, client, endpoint, body, timeoutMs,
                                                          slot, done, retries, auth, superseded, network]() {
@@ -1710,6 +1723,7 @@ InnerTube::AccountOutcome InnerTube::accountOutcome(const QNetworkReply *reply, 
 {
     AccountOutcome outcome;
     outcome.status = status;
+    outcome.ticket = reply->property(kTicketProperty).toULongLong();
     // Seconds; the HTTP-date form is rare enough here to be read as none.
     bool ok = false;
     const qint64 after = reply->rawHeader("Retry-After").trimmed().toLongLong(&ok);
@@ -2118,8 +2132,7 @@ void InnerTube::reportPlayback(const QString &trackingUrl, std::function<void(in
         fail(QStringLiteral("no signed-in session to report with"));
         return;
     }
-    if (g_account.started)
-        g_account.started(account, asked);
+    const quint64 ticket = g_account.started ? g_account.started(account, asked) : 0;
 
     // In a self-test the stand-in is asked, at the same path and query.
     QUrl target = url;
@@ -2147,6 +2160,8 @@ void InnerTube::reportPlayback(const QString &trackingUrl, std::function<void(in
         request.setRawHeader("X-Goog-Visitor-Id", g_visitor.session.toUtf8());
 
     QNetworkReply *reply = m_network->get(request);
+    if (ticket != 0)
+        reply->setProperty(kTicketProperty, ticket);
     const QString host = asked.host;
     connect(reply, &QNetworkReply::finished, this, [reply, done, account, host, asked]() {
         reply->deleteLater();

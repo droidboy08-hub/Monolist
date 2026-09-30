@@ -182,6 +182,12 @@ public:
     bool reportListens() const { return m_reportListens; }
     void setReportListens(bool report);
     bool resting() const { return m_guard.paused(); }
+    // After a rest, or a doubt, nothing but the check is asked with the
+    // account until the check has confirmed the session again.
+    bool needsCheck() const { return m_needsCheck; }
+    // An invented account shown by --ytm-demo: nothing is ever sent with
+    // it, and nothing of a real account's is touched because of it.
+    bool isDemo() const { return m_demo; }
     // The account's home feed as the check that just confirmed the session
     // was answered it, for Home to show rather than ask for it again a moment
     // later (one call with the account instead of two). Given once, and only
@@ -314,6 +320,13 @@ Q_SIGNALS:
     // StreamResolver listens to both, and forgets every link it fetched with
     // the account when the account may no longer be used for playback.
     void playWhenNeededChanged();
+    // Whether the account may be used right now changed without the session
+    // changing: a rest began or ended, or a check after one confirmed it.
+    // Home and playback look again at accountForHome/accountForPlayback.
+    void accountUseChanged();
+    // The user signed out (signOut): what was kept of the account goes.
+    // Not a session that merely could not be read at launch.
+    void signedOut();
     void reportListensChanged();
     // A listen was reported to the account's history, or could not be:
     // "reported", "failed", or "skipped" (the setting off, or no session
@@ -382,6 +395,14 @@ private:
     AccountGuard m_guard;
     QJsonObject m_checkedHome;
     QElapsedTimer m_checkedHomeAge;
+    quint64 m_checkedHomeSession = 0;
+    // The ticket of each cookies file's lookup (AccountGuard::started).
+    QHash<QString, quint64> m_lentTickets;
+    bool m_needsCheck = false;
+    bool m_demo = false;
+    // Drops the check's kept feed and any pending re-check gate: a new
+    // session, a sign-out, a refusal.
+    void forgetCheckState();
     // When yt-dlp last cast doubt on the session (doubt()).
     QElapsedTimer m_lastDoubt;
     QString m_name;

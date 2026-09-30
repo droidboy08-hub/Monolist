@@ -98,6 +98,10 @@ public:
     // are opened, paged and played with the account (Auth::IfSignedIn),
     // every other page signed out as before. Unset, every page is.
     void setAccountPages(std::function<bool(const QString &browseId)> isAccountPage);
+    // Which pages are the account's changed (the import turned off): a page
+    // or listing open with the account that no longer is one is closed,
+    // rather than paged on with the account.
+    void accountPagesChanged();
 
     bool loading() const { return m_pendingHome > 0; }
     QString error() const { return m_error; }
@@ -208,6 +212,10 @@ private:
     // account's playlists, Liked music, and what its feed showed, a mix
     // made for it), signed out for any other.
     InnerTube::Auth authFor(const QString &browseId) const;
+    // Closes the page open with the account, saying why, with nothing of it
+    // left waiting (its parts, a Play that wanted all of it).
+    void dropAccountPage(const QString &why);
+    void dropAccountListing(const QString &why);
     static QVariantMap shelfToMap(const InnerTube::Shelf &shelf);
     static QVariantMap moreToMap(const InnerTube::Link &more);
     static QList<SearchResultModel::Item> toItems(const QList<InnerTube::Track> &tracks);
@@ -260,8 +268,14 @@ private:
     bool m_pageLoading = false;
     std::function<bool(const QString &)> m_accountPages;
     // How the open page was asked for, which its later parts are asked for
-    // the same way.
+    // the same way; and the listing's.
     InnerTube::Auth m_pageAuth = InnerTube::Auth::Anonymous;
+    InnerTube::Auth m_listingAuth = InnerTube::Auth::Anonymous;
+    // A part that would not load: not asked for again as the reader scrolls
+    // (which would ask for ever, the account's page with the account), only
+    // when they ask for the rest again (Play) or open the page afresh.
+    QString m_pageFailedToken;
+    QString m_listingFailedToken;
     // The rest of a long playlist: the header its later songs are completed
     // from, the token for the next part, the rows shown so far (by their
     // playlist row id), the rows still to go into the table, whether a part

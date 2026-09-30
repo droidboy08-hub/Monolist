@@ -96,7 +96,9 @@ public:
     bool canSyncNow() const;
     QString status() const;
     int likedCount() const { return int(m_likedAll.size()); }
-    int playlistCount() const { return m_playlists.rowCount(); }
+    // Every playlist read from the account, whether or not the user has
+    // also saved it here (the list shows those once, with the saved).
+    int playlistCount() const { return int(m_playlistIds.size()); }
     int historyCount() const { return m_history.rowCount(); }
     SearchResultModel *liked() { return &m_liked; }
     AlbumModel *playlists() { return &m_playlists; }
@@ -169,6 +171,9 @@ private:
     std::unique_ptr<Run> m_run;
     quint64 m_runs = 0;
     QTimer m_autoTimer;
+    // SYNC NOW's quarter of an hour: says canSyncNow again when it is over.
+    QTimer m_cooldownTimer;
+    void armCooldown();
 
     QList<SearchResultModel::Item> m_likedAll;
     QList<SearchResultModel::Item> m_likedFeed;   // waiting to be shown

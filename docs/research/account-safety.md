@@ -72,8 +72,8 @@ account's cookies), waits its turn with one guard:
 | Per hour / per day | 150 / 800 (every kind together) | A few per cent of the ~4000 an hour yt-dlp's wiki gives |
 | Listen reports | 40 an hour, 400 a day | Conservative; no flags reported, but they are writes |
 | yt-dlp with the account | 15 an hour, 60 a day, 20 s apart, counted as 4 calls | A lookup is several requests; the account is the last resort |
-| 429, bot check, "unusual traffic", a 403, a redirect to /sorry or a sign-in page | Everything rests 1 h, then 3 h, then 24 h within a day, or longer if Retry-After says so | "Up to an hour" limits; bot checks lasting about a day |
-| Retries with the account | Network errors and 5xx only, once, 4-6 s later, through the guard; never a 429 | InnerTubeX's quick 429 retry is what not to do |
+| 429, bot check, "unusual traffic", a 403, a redirect to /sorry or a sign-in page | Everything rests 1 h, then 3 h, then 24 h (each earlier rest remembered for three days, so a throttle right after a day's rest is another day), or longer if Retry-After says so; then the session is checked before anything else goes with it | "Up to an hour" limits; bot checks lasting about a day |
+| Retries with the account | Network errors and 5xx only, once, 4-6 s later, through the guard; never a 429 or another 4xx; a list's part that failed is not asked for again as the reader scrolls | InnerTubeX's quick 429 retry is what not to do |
 | Counts and rests | Kept in the settings table across restarts | A restart must not be a way round them |
 
 Around it:

@@ -30,9 +30,9 @@
 //    are kept in the settings table, so a restart does not start them afresh.
 //  - Stopped. When YouTube says to slow down (429, a bot check, "unusual
 //    traffic", a 403 on a call it had answered before), every use of the
-//    account pauses: an hour the first time, three hours the second within a
-//    day, a day the third, or longer when YouTube names a longer wait. The
-//    app carries on signed out meanwhile, and says so.
+//    account pauses: an hour the first time, three hours the second within
+//    three days, a day the third and after, or longer when YouTube names a
+//    longer wait. The app carries on signed out meanwhile, and says so.
 //
 // The limits are conservative on purpose, a few per cent of the ~4000
 // requests an hour yt-dlp's wiki gives as where YouTube throttles an
@@ -66,8 +66,10 @@ public:
         qint64 firstPauseMs = 60LL * 60 * 1000;
         qint64 secondPauseMs = 3LL * 60 * 60 * 1000;
         qint64 thirdPauseMs = 24LL * 60 * 60 * 1000;
-        // How far back earlier pauses count when choosing the next one.
-        qint64 tripMemoryMs = 24LL * 60 * 60 * 1000;
+        // How far back earlier pauses count when choosing the next one:
+        // longer than the longest rest, so an account throttled again right
+        // after a day's rest rests a day again, not an hour.
+        qint64 tripMemoryMs = 72LL * 60 * 60 * 1000;
     };
 
     // Where the counts and the pause are kept between launches: the settings
@@ -96,12 +98,14 @@ public:
     // with `why` saying why in words for the log and the interface.
     qint64 admit(Kind kind, QString *why = nullptr);
     // The call left with the account: it holds the turn until finished(),
-    // and it counts.
-    void started(Kind kind);
+    // and it counts. Returns its ticket, which finished() is given back.
+    quint64 started(Kind kind);
     // It is over: its HTTP status (0 for no answer) and, where the answer
     // named one, how long YouTube asked to be left alone. A 429 pauses
-    // everything; anything else only frees the turn.
-    void finished(Kind kind, int status, qint64 retryAfterSecs = 0);
+    // everything; anything else only frees the turn, and only when it is
+    // still this call's: one that outlived holdMs has lost it to the next,
+    // and must not free that one's (`ticket` 0: whichever holds it).
+    void finished(Kind kind, int status, qint64 retryAfterSecs = 0, quint64 ticket = 0);
     // YouTube said to slow down in some other way (a bot check, "unusual
     // traffic", a 403): everything with the account pauses.
     void trip(const QString &why, qint64 retryAfterMs = 0);
@@ -156,6 +160,7 @@ private:
     qint64 m_lastYtDlp = 0;
     int m_nextJitter = 0;
     bool m_inFlight = false;
+    quint64 m_turn = 0;          // the ticket of the call that holds the turn
     qint64 m_inFlightSince = 0;
     Kind m_inFlightKind = Kind::Browse;
     QTimer m_resumeTimer;

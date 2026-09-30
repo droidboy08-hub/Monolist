@@ -268,6 +268,7 @@ public:
         int status = 0;
         qint64 retryAfterSecs = 0;
         bool slowDown = false;
+        quint64 ticket = 0;   // what started() returned for this call
     };
     struct AccountHook {
         // Asked before a call that may carry the account is sent: 0 to send
@@ -281,8 +282,9 @@ public:
         // to; 0, with nothing filled in, when this call goes without.
         std::function<quint64(const AccountRequest &request, AccountHeaders *headers)> headers;
         // A call is leaving with the account (headers() said so); finished()
-        // is always told when it is over, however it ends.
-        std::function<void(quint64 session, const AccountRequest &request)> started;
+        // is always told when it is over, however it ends, with the ticket
+        // this returned.
+        std::function<quint64(quint64 session, const AccountRequest &request)> started;
         std::function<void(quint64 session, const AccountRequest &request, const AccountOutcome &outcome)> finished;
         // The server refused that session outright (401).
         std::function<void(quint64 session, int httpStatus)> rejected;
