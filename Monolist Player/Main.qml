@@ -19,8 +19,12 @@ ApplicationWindow {
     color: Theme.bg
 
     property string currentView: "home"
+    // Replaced, never changed in place, so what reads their length (the top
+    // bar's arrows) hears of every step.
     property var viewHistory: []
     property var viewFuture: []
+    readonly property bool canGoBack: viewHistory.length > 0
+    readonly property bool canGoForward: viewFuture.length > 0
     // Set from the command line (--query), to open with a search typed in.
     property string initialQuery: ""
     // The queue docks at the right, like a second sidebar.
@@ -251,7 +255,7 @@ ApplicationWindow {
     function navigate(view) {
         if (view === currentView)
             return;
-        viewHistory.push(currentView);
+        viewHistory = viewHistory.concat([currentView]);
         viewFuture = [];
         currentView = view;
         sidebarOverlayOpen = false;
@@ -270,15 +274,60 @@ ApplicationWindow {
     function goBack() {
         if (viewHistory.length === 0)
             return;
-        viewFuture.push(currentView);
-        currentView = viewHistory.pop();
+        const back = viewHistory[viewHistory.length - 1];
+        viewFuture = viewFuture.concat([currentView]);
+        viewHistory = viewHistory.slice(0, -1);
+        currentView = back;
     }
 
     function goForward() {
         if (viewFuture.length === 0)
             return;
-        viewHistory.push(currentView);
-        currentView = viewFuture.pop();
+        const ahead = viewFuture[viewFuture.length - 1];
+        viewHistory = viewHistory.concat([currentView]);
+        viewFuture = viewFuture.slice(0, -1);
+        currentView = ahead;
+    }
+
+    // A playlist deleted on its page: back to the page before it, and the
+    // playlist gone from the history both ways, so no arrow leads to a page
+    // that is not there. Two steps that became one page are one step.
+    function leaveDeletedPage() {
+        const gone = currentView
+        const tidy = function(views) {
+            return views.filter(function(view, i) {
+                return view !== gone && (i === 0 || view !== views[i - 1])
+            })
+        }
+        // Twice: taking the playlist out can leave two of the same side by side.
+        let history = tidy(tidy(viewHistory))
+        viewFuture = tidy(tidy(viewFuture))
+        const back = history.length > 0 ? history[history.length - 1] : "home"
+        viewHistory = history.slice(0, -1)
+        currentView = back
+    }
+
+    // Back from the keyboard or the mouse's side button: out of what covers
+    // the page first, as Esc is (the picture full screen, then Now Playing),
+    // and only then to the page before.
+    function stepBack() {
+        if (videoFullscreen)
+            leaveVideoFullscreen()
+        else if (nowPlayingOpen)
+            nowPlayingOpen = false
+        else
+            goBack()
+    }
+
+    // Forward, the same way: a page reached with it is in front, as any page
+    // opened is. Nothing moves when there is nowhere to go.
+    function stepForward() {
+        if (!canGoForward)
+            return
+        if (videoFullscreen)
+            leaveVideoFullscreen()
+        nowPlayingOpen = false
+        goForward()
     }
 
     function breadcrumbText() {
@@ -348,6 +397,8 @@ ApplicationWindow {
             breadcrumb: window.breadcrumbText()
             showMenuButton: !window.sidebarDocked
             onMenuRequested: window.sidebarOverlayOpen = true
+            canGoBack: window.canGoBack
+            canGoForward: window.canGoForward
             onBackRequested: window.goBack()
             onForwardRequested: window.goForward()
             onSearchActivated: function(term) { window.navigate("search") }
@@ -483,7 +534,7 @@ ApplicationWindow {
                         onRenameStarted: window.pendingRename = 0
                         confirmDeleteOnOpen: window.pendingDelete > 0 && key === String(window.pendingDelete)
                         onDeleteAsked: window.pendingDelete = 0
-                        onDeleted: window.goBack()
+                        onDeleted: window.leaveDeletedPage()
                     }
                 }
 
@@ -840,7 +891,35 @@ ApplicationWindow {
         }
     }
 
+    // The mouse's side buttons, anywhere in the window. Over everything, and
+    // taking those two buttons alone: every other press, the wheel and the
+    // pointer's hover go on to what is under it.
+    MouseArea {
+        anchors.fill: parent
+        z: 1000
+        acceptedButtons: Qt.BackButton | Qt.ForwardButton
+        hoverEnabled: false
+        onPressed: function(mouse) {
+            if (mouse.button === Qt.BackButton)
+                window.stepBack()
+            else
+                window.stepForward()
+        }
+    }
+
     // — keyboard —
+    // Back and forward as a browser has them: Alt+Left and Alt+Right, Cmd+[
+    // and Cmd+] on a Mac, and a keyboard's own Back and Forward keys. Not
+    // Backspace, which Windows also counts as Back: a stray one would leave
+    // the page.
+    Shortcut {
+        sequences: ["Alt+Left", "Ctrl+[", "Back"]
+        onActivated: window.stepBack()
+    }
+    Shortcut {
+        sequences: ["Alt+Right", "Ctrl+]", "Forward"]
+        onActivated: window.stepForward()
+    }
     Shortcut {
         sequence: "Space"
         enabled: !topBar.searchFocused

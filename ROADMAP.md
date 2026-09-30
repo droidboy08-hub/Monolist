@@ -81,7 +81,8 @@ Priority runs from 1 (first) to 9. Size: S under an hour, M a few hours, L a day
   Done when: Scrolling is compared on a Release build and natively on the Mac. If it is still sluggish, wheel step and flick velocity are tuned once in a shared scroll component used by every view.
 - [ ] **L06** Missing feedback and empty states: no page retry, silent download failures, a blank or bare Search page, 'Art' in an empty player bar *(P5, M)*
   Done when: Page errors get RETRY. Download failures, 'Download all' and 'Copy for a bug report' each show a toast. Search explains an empty or not-yet-personal page. The empty player bar says 'Nothing playing', with the heart, download and transport controls disabled.
-- [ ] **N01** Back and forward have no keyboard or mouse-button bindings, and never grey out *(P5, S)*
+- [x] **N01** Back and forward have no keyboard or mouse-button bindings, and never grey out *(P5, S)*
+  Done 2026-09-30: Alt+Left/Right, Cmd+[ and ] on a Mac, a keyboard's Back and Forward keys, and the mouse's side buttons anywhere in the window. Back leaves full-screen video and Now Playing first, as Esc does. The arrows dim at 0.3 when there is nowhere to go, as a shelf's do. A deleted playlist leaves the history both ways. Checked on the real window with posted side-button presses.
   Done when: Shortcuts and the mouse's side buttons go back and forward, and the arrows dim when there is nowhere to go.
 - [ ] **G04** Font weights and tooltips may look different on macOS *(P8, S)*
   Done when: Font.Bold becomes Theme.weightMedium or Theme.weightBlack (or a Bold face is bundled). The window sets the font and a palette from Theme, or a styled tooltip component is used, and the two TextFields match the other inputs.

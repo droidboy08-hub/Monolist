@@ -21,6 +21,10 @@ Rectangle {
     signal menuRequested()
     signal backRequested()
     signal forwardRequested()
+    // Whether there is a page to go back or forward to: the arrows dim when
+    // there is not, as a shelf's do at its ends.
+    property bool canGoBack: true
+    property bool canGoForward: true
     signal searchActivated(string term)
 
     color: Theme.bg
@@ -107,8 +111,18 @@ Rectangle {
             iconName: "menu"
             onClicked: root.menuRequested()
         }
-        IconButton { iconName: "arrow-left"; onClicked: root.backRequested() }
-        IconButton { iconName: "arrow-right"; onClicked: root.forwardRequested() }
+        IconButton {
+            iconName: "arrow-left"
+            enabled: root.canGoBack
+            opacity: enabled ? 1 : 0.3
+            onClicked: root.backRequested()
+        }
+        IconButton {
+            iconName: "arrow-right"
+            enabled: root.canGoForward
+            opacity: enabled ? 1 : 0.3
+            onClicked: root.forwardRequested()
+        }
     }
 
     Text {
