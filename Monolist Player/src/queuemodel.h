@@ -74,6 +74,15 @@ public:
     void shuffleUpcoming();
     void restoreOrder();
 
+    // The queue as it stands, for the next launch to put back
+    // (PlaybackController::restoreSession): at most `limit` rows, mostly the
+    // ones still to come, the row playing, and the order turning shuffle off
+    // would bring back. Empty when there is no queue.
+    QVariantMap snapshot(int limit) const;
+    // What snapshot() gave, back in place and unshuffled no further. False,
+    // and the queue as it was, when it holds nothing to play.
+    bool restoreSnapshot(const QVariantMap &snapshot);
+
     Q_INVOKABLE QVariantMap get(int row) const;
 
 Q_SIGNALS:

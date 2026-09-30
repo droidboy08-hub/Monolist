@@ -116,6 +116,7 @@ qt_add_executable(monolist
     # How a song that has begun is kept playing, against a stand-in server on
     # this computer (--recovery-test).
     src/recoveryselftest.h         src/recoveryselftest.cpp
+    src/sessionselftest.h          src/sessionselftest.cpp
 )
 
 # The build's own identity: version, build number, commit, date. Regenerated

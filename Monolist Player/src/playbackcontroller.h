@@ -124,6 +124,13 @@ public:
     // library is set, before a queue is loaded or the interface reads them;
     // each is written back whenever it changes.
     void restoreSettings();
+    // The queue, the song in it and the place in that song as the last
+    // launch left them (saveQueue, savePlace), loaded and not playing, as a
+    // launch opens. False when there was nothing to put back, and the caller
+    // loads something else.
+    bool restoreSession();
+    // Writes the queue and the place now, as the app does when it closes.
+    void saveSession();
 
     // What autoplay's radio may not add: a song the listener said "Not
     // interested" to, or one by an artist they asked not to be suggested
@@ -339,6 +346,11 @@ private:
     void recordHistory(const QVariantMap &track);
     void saveSetting(const QString &key, const QString &value);
     void saveVolume();
+    // For restoreSession: the queue a moment after it changes (m_queueSave),
+    // the place in the song every few seconds while it moves (m_placeSave),
+    // and both as the app closes.
+    void saveQueue();
+    void savePlace();
     // Rebuilds the output menu from mpv's list and plays through the choice
     // if it is there, Auto if not: at launch, on a choice, on a device
     // plugged in or taken out.
@@ -481,6 +493,11 @@ private:
     // A drag of the volume slider is dozens of changes a second: the value is
     // written once it settles, not for each.
     QTimer m_volumeSave;
+    // A burst of queue edits written once, and the place written only when
+    // it has moved since the last time (m_placeSaved).
+    QTimer m_queueSave;
+    QTimer m_placeSave;
+    QString m_placeSaved;
     bool m_shuffle = false;
     int m_repeatMode = RepeatOff;
     bool m_favourite = false;
@@ -506,6 +523,7 @@ private:
     // rather than loaded with it: dropping it leaves the sound as it is.
     bool m_videoAdded = false;
     qint64 m_resumeAt = 0;         // where the next load should begin
+    qint64 m_openAt = 0;           // where the next track begins: a launch's place put back
     int m_videoHeight = 720;
     QString m_videoPendingId;      // a picture being resolved for this track
 

@@ -37,6 +37,7 @@
 #include "mpvengine.h"
 #include "playbackcontroller.h"
 #include "recoveryselftest.h"
+#include "sessionselftest.h"
 #include "saavnselftest.h"
 #include "scrollselftest.h"
 #include "streamresolver.h"
@@ -265,6 +266,11 @@ int main(int argc, char *argv[])
         // (recoveryselftest.cpp); in MONOLIST_DATA_DIR only.
         if (arguments.contains(QStringLiteral("--recovery-test")))
             return runRecoverySelfTest(&library) == 0 ? 0 : 1;
+        // A launch opening on the queue, the song and the place the last one
+        // left, on the real mpv against a stand-in server on this computer
+        // (sessionselftest.cpp); in MONOLIST_DATA_DIR only.
+        if (arguments.contains(QStringLiteral("--session-test")))
+            return runSessionSelfTest(&library) == 0 ? 0 : 1;
     }
 
     // Which page an artist's name opens: learnt from every answer that links
@@ -425,8 +431,10 @@ int main(int argc, char *argv[])
     QObject::connect(&library, &Library::videoQualityChanged, &player, [&player, &library]() {
         player.setVideoHeight(library.videoQuality());
     });
-    // Open with the library queued and its first song ready, not playing.
-    player.loadModel(library.tracks(), 0);
+    // Open on the queue as it was left, the song and the place in it, ready
+    // and not playing; the first launch, with the library queued instead.
+    if (!player.restoreSession())
+        player.loadModel(library.tracks(), 0);
 
     MediaExtractor extractor;
 

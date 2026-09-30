@@ -46,7 +46,8 @@ Priority runs from 1 (first) to 9. Size: S under an hour, M a few hours, L a day
   Done when: MpvEngine observes audio-device-list and sets audio-device. The button opens a menu of outputs (WASAPI on Windows, CoreAudio on macOS) with the current one marked, and the choice is saved.
 - [ ] **P02** No media keys and no system Now Playing (Windows media flyout, macOS Control Center, AirPods) *(P4, L)*
   Done when: A small platform layer publishes title, artist, artwork and position, and handles play, pause, next, previous and seek. It uses the MediaPlayer framework through Objective-C++ on macOS and SMTC (or a WM_APPCOMMAND fallback) on Windows, with MPRIS later for Linux.
-- [ ] **P04** The queue, current song and position are not restored after a restart *(P5, M)*
+- [x] **P04** The queue, current song and position are not restored after a restart *(P5, M)*
+  Done 2026-09-30: PlaybackController::restoreSession, with the queue in player.queue (at most 500 rows around the song playing, the order shuffle hides, where it came from; written 2 s after a change) and the place in player.place (every 10 s while it moves, and on quit). A place within 5 s of the start or 10 s of the end starts the song from the top. `--session-test`, and a real launch and close.
   Done when: The last queue, current index and position are saved on quit and restored, paused, at launch.
 - [ ] **P05** *(Partly done: the player bar has the song menu, from its dots or a right click on the song; Now Playing and the sleep timer are still to do.)* No menu for the song that is playing, and no sleep timer *(P5, S)*
   Done when: A more button on the player bar and in Now Playing opens TrackMenu for Player.currentTrack, plus a sleep timer (15, 30, 45 or 60 minutes, or end of song) shown as a countdown that pauses playback.

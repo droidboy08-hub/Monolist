@@ -11,6 +11,8 @@
 #include <QCoreApplication>
 #include <QDir>
 #include <QFileInfo>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QSqlError>
 #include <QSqlQuery>
 #include <QUrl>
@@ -51,6 +53,18 @@ const QString kVolumeKey = QStringLiteral("player.volume");
 const QString kShuffleKey = QStringLiteral("player.shuffle");
 const QString kRepeatKey = QStringLiteral("player.repeat");
 const QString kAutoplayKey = QStringLiteral("player.autoplay");
+// The queue and the place in its song, for the next launch (restoreSession).
+const QString kQueueKey = QStringLiteral("player.queue");
+const QString kPlaceKey = QStringLiteral("player.place");
+// At most this many of the queue's songs are kept, mostly those still to
+// come: a queue autoplay has run on for a day is otherwise written whole.
+constexpr int kQueueKeptRows = 500;
+constexpr int kQueueSaveDelayMs = 2000;
+constexpr int kPlaceSaveIntervalMs = 10000;
+// A place this near either end of a song is not worth going back to: the
+// song starts from the top.
+constexpr qint64 kPlaceMinMs = 5000;
+constexpr qint64 kPlaceTailMs = 10000;
 const QString kAudioDeviceKey = QStringLiteral("player.audio_device");
 const QString kAudioDeviceNameKey = QStringLiteral("player.audio_device_name");
 const QString kAutoDevice = QStringLiteral("auto");
@@ -386,6 +400,17 @@ PlaybackController::PlaybackController(MpvEngine *engine,
     m_volumeSave.setInterval(kVolumeSaveDelayMs);
     connect(&m_volumeSave, &QTimer::timeout, this, &PlaybackController::saveVolume);
 
+    m_queueSave.setSingleShot(true);
+    m_queueSave.setInterval(kQueueSaveDelayMs);
+    connect(&m_queueSave, &QTimer::timeout, this, &PlaybackController::saveQueue);
+    // Every change there is: a list played, a song added, moved or taken
+    // out, shuffle, and the queue moving on to its next song.
+    connect(&m_queue, &QueueModel::countChanged, &m_queueSave, qOverload<>(&QTimer::start));
+    connect(&m_queue, &QueueModel::upcomingChanged, &m_queueSave, qOverload<>(&QTimer::start));
+    m_placeSave.setInterval(kPlaceSaveIntervalMs);
+    connect(&m_placeSave, &QTimer::timeout, this, &PlaybackController::savePlace);
+    m_placeSave.start();
+
     // The last song of a session is the one nothing else closes, and it is the
     // most recent thing the listener chose — exactly the event a recommender
     // would miss most.
@@ -401,6 +426,12 @@ PlaybackController::PlaybackController(MpvEngine *engine,
                 m_volumeSave.stop();
                 saveVolume();
             }
+            // And where the listener was, for the next launch to open on.
+            if (m_queueSave.isActive()) {
+                m_queueSave.stop();
+                saveQueue();
+            }
+            savePlace();
         });
     }
 
@@ -592,6 +623,100 @@ void PlaybackController::saveSetting(const QString &key, const QString &value)
 void PlaybackController::saveVolume()
 {
     saveSetting(kVolumeKey, QString::number(m_volume, 'f', 3));
+}
+
+namespace {
+
+// Which song a saved place belongs to: its id, or its file for a row with
+// none, or its title for a row with neither.
+QString placeKey(const QVariantMap &track)
+{
+    for (const char *key : { "sourceId", "sourceUrl", "title" }) {
+        const QString value = track.value(QLatin1String(key)).toString();
+        if (!value.isEmpty())
+            return value;
+    }
+    return {};
+}
+
+QVariantMap settingObject(Library *library, const QString &key)
+{
+    return QJsonDocument::fromJson(library->settingValue(key).toUtf8()).object().toVariantMap();
+}
+
+QString compactJson(const QVariantMap &map)
+{
+    return QString::fromUtf8(QJsonDocument(QJsonObject::fromVariantMap(map)).toJson(QJsonDocument::Compact));
+}
+
+} // namespace
+
+void PlaybackController::saveQueue()
+{
+    if (!m_library)
+        return;
+    QVariantMap snapshot = m_queue.snapshot(kQueueKeptRows);
+    // An empty queue is written as nothing: the next launch opens as a
+    // first one does.
+    if (!snapshot.isEmpty())
+        snapshot.insert(QStringLiteral("origin"), m_source);
+    saveSetting(kQueueKey, snapshot.isEmpty() ? QString() : compactJson(snapshot));
+}
+
+// Kept apart from the queue, which can be long: this is the part that moves
+// while a song plays, and is small.
+void PlaybackController::savePlace()
+{
+    if (!m_library || m_currentTrack.isEmpty())
+        return;
+    const QString place = compactJson({ { QStringLiteral("key"), placeKey(m_currentTrack) },
+                                        { QStringLiteral("ms"), qMax<qint64>(0, m_position) } });
+    if (place == m_placeSaved)
+        return;
+    m_placeSaved = place;
+    saveSetting(kPlaceKey, place);
+}
+
+void PlaybackController::saveSession()
+{
+    m_queueSave.stop();
+    saveQueue();
+    savePlace();
+}
+
+bool PlaybackController::restoreSession()
+{
+    if (!m_library)
+        return false;
+    const QVariantMap saved = settingObject(m_library, kQueueKey);
+    if (saved.isEmpty() || !m_queue.restoreSnapshot(saved))
+        return false;
+    // A queue of its own, as startQueue makes one, but as it was: in the
+    // order it was left, shuffled or not, and not shuffled again.
+    ++m_queueGeneration;
+    m_consecutiveFailures = 0;
+    m_source = saved.value(QStringLiteral("origin")).toString();
+
+    // The place, if it is this song's and not at either end of it. A place
+    // written for the song after, by a launch that ended before the queue
+    // was written, is some other song's and is left alone.
+    const QueueTrack *track = m_queue.current();
+    const QVariantMap place = settingObject(m_library, kPlaceKey);
+    qint64 at = 0;
+    if (track && place.value(QStringLiteral("key")).toString() == placeKey(track->toMap()))
+        at = place.value(QStringLiteral("ms")).toLongLong();
+    if (at < kPlaceMinMs || (track && track->durationMs > 0 && at > track->durationMs - kPlaceTailMs))
+        at = 0;
+
+    qInfo("session: the queue back as it was left, %d songs, at song %d, from %lld ms",
+          int(m_queue.rowCount()), m_queue.currentIndex() + 1, static_cast<long long>(at));
+    m_openAt = at;
+    beginCurrent(/*autoPlay=*/false);
+    m_openAt = 0;
+    // Written as read, until either moves.
+    m_placeSaved = compactJson(place);
+    m_queueSave.stop();
+    return true;
 }
 
 bool PlaybackController::saavnEnabled() const
@@ -1300,6 +1425,8 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
     // of it was heard is the single most useful thing the recommender gets,
     // and it exists only in this instant.
     closePlayEvent();
+    // Anything but the song a launch opens on starts from the top.
+    const qint64 openAt = std::exchange(m_openAt, 0);
 
     if (m_resolver && !m_pendingVideoId.isEmpty())
         m_resolver->cancel(m_pendingVideoId);
@@ -1322,7 +1449,7 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
     m_localPath.clear();
     m_directUrl.clear();
     m_localRefused = false;
-    m_resumeAt = 0;
+    m_resumeAt = openAt;
     // Whatever rescued the last play, this one starts from the top: a song
     // played again is Opus again, not the last play's itag 18. Unless
     // googlevideo refused its InnerTube links lately, which the resolver
@@ -1368,7 +1495,7 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
             m_currentTrack.insert(QStringLiteral("artwork"), derived);
     }
 
-    m_position = 0;
+    m_position = openAt;
     m_autoPlayAfterResolve = autoPlay;
     // A new listen for Last.fm, whether or not it will be heard: repeat-one
     // arrives here too, and is a listen of its own. A song autoplay added was
@@ -1412,7 +1539,8 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
     // so that loadFailed can stream the song instead of it.
     if (!localPath.isEmpty()) {
         m_localPath = localPath;
-        if (!m_engine->load(localPath, autoPlay))
+        m_resumeAt = 0;
+        if (!m_engine->load(localPath, autoPlay, QString(), openAt))
             return;
         setStatus(QStringLiteral("Offline"), QStringLiteral("Local file"), false);
         setSoundOrigin(QStringLiteral("Offline · Local file"));
@@ -1439,7 +1567,8 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
         const QString scheme = QUrl(source).scheme();
         if (scheme == QLatin1String("http") || scheme == QLatin1String("https"))
             m_directUrl = source;
-        if (!m_engine->load(source, autoPlay))
+        m_resumeAt = 0;
+        if (!m_engine->load(source, autoPlay, QString(), openAt))
             return;
         setStatus(QStringLiteral("Streaming"), QStringLiteral("Direct URL"), false);
         setSoundOrigin(QStringLiteral("Streaming · Direct URL"));
@@ -2007,9 +2136,12 @@ void PlaybackController::play()
         return;
     }
     // A track that would not load has nothing to unpause: try it again, now
-    // as one the listener is waiting for, which says so if it fails.
+    // as one the listener is waiting for, which says so if it fails. From
+    // where it was: the place a launch put back, with the network down then,
+    // is still the place to go back to.
     if (m_statusError) {
         m_consecutiveFailures = 0;
+        m_openAt = m_position;
         beginCurrent(/*autoPlay=*/true);
         return;
     }

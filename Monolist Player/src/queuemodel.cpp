@@ -323,3 +323,61 @@ void QueueModel::restoreOrder()
     endResetModel();
     Q_EMIT upcomingChanged();
 }
+
+QVariantMap QueueModel::snapshot(int limit) const
+{
+    const int count = int(m_items.size());
+    if (count == 0 || m_current < 0)
+        return {};
+    // A fifth of the rows for Previous to go back through, the rest what is
+    // still to come; all of them when the queue is no longer than that.
+    limit = qMax(1, limit);
+    int first = qMax(0, m_current - limit / 5);
+    const int end = qMin(count, first + limit);
+    first = qMax(0, end - limit);
+
+    QVariantList rows;
+    QHash<quint64, int> rowOf;
+    for (int row = first; row < end; ++row) {
+        const QueueTrack &track = m_items.at(row);
+        QVariantMap map = track.toMap();
+        map.remove(QStringLiteral("durationText"));   // made again from durationMs
+        rows.append(map);
+        rowOf.insert(track.uid, row - first);
+    }
+    // The uids are this queue's alone: the order is kept as rows instead.
+    QVariantList order;
+    for (const quint64 uid : m_originalOrder) {
+        const auto row = rowOf.constFind(uid);
+        if (row != rowOf.constEnd())
+            order.append(*row);
+    }
+    return {
+        { QStringLiteral("tracks"), rows },
+        { QStringLiteral("current"), m_current - first },
+        { QStringLiteral("order"), order }
+    };
+}
+
+bool QueueModel::restoreSnapshot(const QVariantMap &snapshot)
+{
+    QList<QueueTrack> tracks;
+    const QVariantList rows = snapshot.value(QStringLiteral("tracks")).toList();
+    tracks.reserve(rows.size());
+    for (const QVariant &row : rows)
+        tracks.append(QueueTrack::fromMap(row.toMap()));
+    bool ok = false;
+    const int current = snapshot.value(QStringLiteral("current")).toInt(&ok);
+    if (tracks.isEmpty() || !ok || current < 0 || current >= tracks.size())
+        return false;
+
+    replace(tracks, current);
+    // replace() gave the rows new uids, and forgot any shuffle: the order
+    // from before it is the saved rows' new uids, upcoming ones alone.
+    for (const QVariant &row : snapshot.value(QStringLiteral("order")).toList()) {
+        const int at = row.toInt(&ok);
+        if (ok && at > m_current && at < m_items.size() && !m_originalOrder.contains(m_items.at(at).uid))
+            m_originalOrder.append(m_items.at(at).uid);
+    }
+    return true;
+}
