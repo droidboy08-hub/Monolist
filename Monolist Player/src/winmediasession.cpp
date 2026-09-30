@@ -21,7 +21,12 @@
 
 using Microsoft::WRL::ComPtr;
 
-namespace {
+// A namespace with a name, not an anonymous one: nothing in this file
+// implements these interfaces (Windows does), and GCC, seeing a type no other
+// file could name, would take a call through one for a call that cannot
+// happen, and optimise it into a jump to nowhere. The Release build crashed
+// so; the Debug build, not optimised, did not.
+namespace MonolistWinRT {
 
 // The parts of Windows.Media, Windows.Foundation and Windows.Storage.Streams
 // used here, as mingw-w64's newer headers declare them (this toolchain's do
@@ -200,6 +205,12 @@ const IID kStreamReferencesIid = { 0x857309dc, 0x3fbf, 0x4e7d, { 0x98, 0x6f, 0xe
 const IID kInteropIid = { 0xddb0472d, 0xc911, 0x4a1f, { 0x86, 0xd9, 0xdc, 0x3d, 0x71, 0xa9, 0x5f, 0x5a } };
 const IID kUnknownIid = { 0x00000000, 0x0000, 0x0000, { 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x46 } };
 const IID kAgileObjectIid = { 0x94ea2b94, 0xe9cc, 0x49e0, { 0xc0, 0xff, 0xee, 0x64, 0xca, 0x8f, 0x5b, 0x90 } };
+
+} // namespace MonolistWinRT
+
+using namespace MonolistWinRT;
+
+namespace {
 
 // The position Windows shows may drift this far from the player's before it
 // is told again; anything further is a seek. And while playing, it is told

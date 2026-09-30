@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Builds Monolist in Release and packs it, with everything it needs, into a
     folder and a zip that run on a Windows PC with nothing else installed.
@@ -262,6 +262,19 @@ if ($missing.Count -gt 0) {
     throw "$($missing.Count) DLL(s) needed by the package are neither in it nor part of Windows."
 }
 Write-Host "  $scanned programs and libraries checked: every DLL they load is in the package or in Windows." -ForegroundColor Green
+
+# A call the optimiser decided could never happen comes out as a call to the
+# image's lowest address, which crashes the moment it is reached. GCC does
+# that to a call through an interface it thinks nothing implements (a COM
+# interface declared in an anonymous namespace, say), and only in an
+# optimised build, so the Debug build the tests run on never shows it.
+$bogus = & $objdump -d --no-show-raw-insn (Join-Path $stage 'monolist.exe') |
+    Select-String -Pattern '(call|jmp)\s+0x100000000$'
+if ($bogus) {
+    $bogus | Select-Object -First 5 | ForEach-Object { Write-Host "  $($_.Line.Trim())" -ForegroundColor Red }
+    throw "monolist.exe calls nowhere in $(@($bogus).Count) place(s): code the optimiser took for unreachable."
+}
+Write-Host '  monolist.exe has no calls the optimiser turned into jumps to nowhere.' -ForegroundColor Green
 
 # ---------------------------------------------------------------- zip
 
