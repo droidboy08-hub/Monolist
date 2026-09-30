@@ -182,6 +182,11 @@ public:
     bool reportListens() const { return m_reportListens; }
     void setReportListens(bool report);
     bool resting() const { return m_guard.paused(); }
+    // The account's home feed as the check that just confirmed the session
+    // was answered it, for Home to show rather than ask for it again a moment
+    // later (one call with the account instead of two). Given once, and only
+    // within `maxAgeMs` of the check; empty otherwise.
+    QJsonObject takeCheckedHome(qint64 maxAgeMs = 60 * 1000);
     QString restLine() const;
     // The guard every call with the account goes through (and the self-test
     // reads).
@@ -375,6 +380,8 @@ private:
     // compared with what it was lent, not with a jar that rotated meanwhile.
     QHash<QString, QList<CookieImport::Cookie>> m_lent;
     AccountGuard m_guard;
+    QJsonObject m_checkedHome;
+    QElapsedTimer m_checkedHomeAge;
     // When yt-dlp last cast doubt on the session (doubt()).
     QElapsedTimer m_lastDoubt;
     QString m_name;

@@ -291,7 +291,11 @@ void RecommenderWorker::build(quint64 generation, const QVector<Rec::PlayEvent> 
 
     QVariantList out;
     bool personal = false;
-    for (const Rec::Shelf &shelf : std::as_const(shelves)) {
+    // Which of them Home shows at its top, signed out (Rec::homePicks):
+    // "home" is its place there, from 1, and 0 for the rest.
+    const QVector<int> home = Rec::homePicks(shelves);
+    for (int i = 0; i < shelves.size(); ++i) {
+        const Rec::Shelf &shelf = shelves.at(i);
         if (shelf.kind != QLatin1String("popular") && shelf.kind != QLatin1String("region"))
             personal = true;
         QVariantList rows;
@@ -303,7 +307,8 @@ void RecommenderWorker::build(quint64 generation, const QVector<Rec::PlayEvent> 
             { QStringLiteral("kind"), shelf.kind },
             { QStringLiteral("rows"), rows },
             // Whether See all has anywhere to go from here.
-            { QStringLiteral("more"), shelf.anchor.kind != Rec::Anchor::None }
+            { QStringLiteral("more"), shelf.anchor.kind != Rec::Anchor::None },
+            { QStringLiteral("home"), int(home.indexOf(i)) + 1 }
         });
     }
     // Kept, anchors and all, for See all to continue from: the page exactly
@@ -673,6 +678,18 @@ QVariantList Recommender::rowsOf(int shelf) const
     if (shelf < 0 || shelf >= m_shelves.size())
         return {};
     return m_shelves.at(shelf).toMap().value(QStringLiteral("rows")).toList();
+}
+
+QVariantList Recommender::homeShelves() const
+{
+    QVariantList picks;
+    for (int place = 1; place <= 2; ++place) {
+        for (int i = 0; i < m_shelves.size(); ++i) {
+            if (m_shelves.at(i).toMap().value(QStringLiteral("home")).toInt() == place)
+                picks.append(i);
+        }
+    }
+    return picks;
 }
 
 // ------------------------------------------------------------- looking up

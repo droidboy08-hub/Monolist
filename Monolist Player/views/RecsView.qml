@@ -144,7 +144,7 @@ ScrollPage {
         Text {
             visible: root.info.gone === true
             width: parent.width
-            text: "This shelf is no longer on Search: the suggestions there have been drawn afresh since."
+            text: "This shelf is no longer suggested: the suggestions have been drawn afresh since."
             wrapMode: Text.WordWrap
             font.family: Theme.fontFamily
             font.pixelSize: 13

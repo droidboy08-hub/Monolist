@@ -79,6 +79,10 @@ class Recommender : public QObject
     // False while the page is only the cold-start shelf, so the interface can
     // say so rather than implying these are someone's own recommendations.
     Q_PROPERTY(bool personal READ personal NOTIFY shelvesChanged)
+    // The one or two of `shelves` Home shows at its top while its feed is
+    // not the YouTube Music account's, as indices into `shelves`, in Home's
+    // order (Rec::homePicks); empty when nothing personal was built.
+    Q_PROPERTY(QVariantList homeShelves READ homeShelves NOTIFY shelvesChanged)
     Q_PROPERTY(QString dataDirectory READ dataDirectory WRITE setDataDirectory NOTIFY stateChanged)
     // The regional graph shards. Empty means "look beside the catalogue",
     // which is where the iOS project keeps them.
@@ -111,6 +115,7 @@ public:
     bool busy() const { return m_busy; }
     QString message() const { return m_message; }
     QVariantList shelves() const { return m_shelves; }
+    QVariantList homeShelves() const;
     bool personal() const { return m_personal; }
     QString dataDirectory() const;
     void setDataDirectory(const QString &path);

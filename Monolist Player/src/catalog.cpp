@@ -161,11 +161,28 @@ void Catalog::accountChanged()
     if (m_feedAsAccount) {
         m_quickPicks.clear();
         m_quickPicksTitle.clear();
+        m_quickPicksStrapline.clear();
         m_homeShelves.clear();
+        m_feedAccountIds.clear();
         m_feedLoggedIn.clear();
-        m_shelves = m_releaseShelves;
+        m_personalFeed = false;
         m_feedAsAccount = false;
+        composeShelves();
         Q_EMIT homeChanged();
+    }
+    // Just confirmed: the check has this moment been answered the account's
+    // feed, which is shown as it is rather than asked for a second time.
+    if (asAccount && m_pendingHome == 0) {
+        const QJsonObject checked = m_account->takeCheckedHome();
+        if (!checked.isEmpty()) {
+            qInfo("catalog: Home's feed is the account's, from the check's own answer (nothing asked again)");
+            m_feedAsAccount = true;
+            m_error.clear();
+            applyFeed(checked, true);
+            composeShelves();
+            Q_EMIT homeChanged();
+            return;
+        }
     }
     qInfo("catalog: Home's feed is asked for again, %s", asAccount ? "as the account" : "signed out");
     ask(Feed);
@@ -215,41 +232,10 @@ void Catalog::load(int parts)
                 finishHome();
                 return;
             }
-            if (error.isEmpty()) {
-                m_homeShelves.clear();
-                bool songsTaken = false;
-                for (const InnerTube::Shelf &shelf : InnerTube::parseShelves(root)) {
-                    // The first run of songs is Home's own list; later ones are rare
-                    // and would repeat its look, so they are left out.
-                    if (!shelf.songs.isEmpty()) {
-                        if (!songsTaken) {
-                            m_quickPicks.replace(toItems(shelf.songs));
-                            m_quickPicksTitle = shelf.title;
-                            songsTaken = true;
-                        }
-                        continue;
-                    }
-                    m_homeShelves.append(shelfToMap(shelf));
-                }
-                // A feed with no songs has no Quick picks: the last feed's,
-                // perhaps another account's, do not stay under it.
-                if (!songsTaken) {
-                    m_quickPicks.clear();
-                    m_quickPicksTitle.clear();
-                }
-                // The one sure sign the feed is the account's: YouTube Music
-                // answers a session it does not accept with the signed-out
-                // feed, 200 OK. YtmSession's own checks decide on the
-                // session; this only says what Home got.
-                m_feedLoggedIn = InnerTube::parseLoggedIn(root);
-                if (asAccount) {
-                    qInfo("catalog: Home's feed, asked as the account, answered logged_in=%s (%d songs, %d shelves)",
-                          m_feedLoggedIn.isEmpty() ? "(not said)" : qPrintable(m_feedLoggedIn),
-                          m_quickPicks.rowCount(), int(m_homeShelves.size()));
-                }
-            } else {
+            if (error.isEmpty())
+                applyFeed(root, asAccount);
+            else
                 m_error = error;
-            }
             finishHome();
         }, useAccount ? InnerTube::Auth::IfSignedIn : InnerTube::Auth::Anonymous);
     }
@@ -287,6 +273,99 @@ void Catalog::load(int parts)
     });
 }
 
+void Catalog::applyFeed(const QJsonObject &root, bool asAccount)
+{
+    // The one sure sign the feed is the account's: YouTube Music answers a
+    // session it does not accept with the signed-out feed, 200 OK.
+    // YtmSession's own checks decide on the session; this only says what
+    // Home got.
+    m_feedLoggedIn = InnerTube::parseLoggedIn(root);
+    const bool personal = asAccount && m_feedLoggedIn == QLatin1String("1");
+    m_homeShelves.clear();
+    m_feedAccountIds.clear();
+    m_feedQuickPicksAt = -1;
+    bool songsTaken = false;
+    for (const InnerTube::Shelf &shelf : InnerTube::parseShelves(root)) {
+        if (!shelf.songs.isEmpty()) {
+            // The first run of songs is Home's own list (Quick picks).
+            if (!songsTaken) {
+                m_quickPicks.replace(toItems(shelf.songs));
+                m_quickPicksTitle = shelf.title;
+                m_quickPicksStrapline = personal ? shelf.strapline : QString();
+                m_feedQuickPicksAt = int(m_homeShelves.size());
+                songsTaken = true;
+                continue;
+            }
+            // Later ones are rare on the signed-out feed, and left out as
+            // they always were. The account's feed has more of them (Listen
+            // again, a mix of songs), and they are its own: kept, in place,
+            // as cards that play.
+            if (!personal)
+                continue;
+            InnerTube::Shelf asCards = shelf;
+            asCards.songs.clear();
+            for (const InnerTube::Track &track : shelf.songs) {
+                InnerTube::Card card;
+                card.type = track.isVideo ? QStringLiteral("video") : QStringLiteral("song");
+                card.videoId = track.videoId;
+                card.title = track.title;
+                card.subtitle = track.artist;
+                card.artist = track.artist;
+                card.primaryArtist = track.primaryArtist;
+                card.artwork = track.artwork;
+                asCards.cards.append(card);
+            }
+            m_homeShelves.append(shelfToMap(asCards));
+            continue;
+        }
+        if (personal) {
+            // What the account's feed links to is the account's to open: a
+            // mix made for it answers nothing, or somebody else's, signed out.
+            for (const InnerTube::Card &card : shelf.cards) {
+                if (!card.browseId.isEmpty() && card.type != QLatin1String("artist"))
+                    m_feedAccountIds.insert(card.browseId);
+            }
+        }
+        m_homeShelves.append(shelfToMap(shelf));
+    }
+    // A feed with no songs has no Quick picks: the last feed's, perhaps
+    // another account's, do not stay under it.
+    if (!songsTaken) {
+        m_quickPicks.clear();
+        m_quickPicksTitle.clear();
+        m_quickPicksStrapline.clear();
+    }
+    m_personalFeed = personal;
+    if (asAccount) {
+        // Counts only: the straplines name the account.
+        qInfo("catalog: Home's feed, asked as the account, answered logged_in=%s (%d songs, %d shelves)",
+              m_feedLoggedIn.isEmpty() ? "(not said)" : qPrintable(m_feedLoggedIn), m_quickPicks.rowCount(),
+              int(m_homeShelves.size()));
+    }
+}
+
+void Catalog::composeShelves()
+{
+    if (m_personalFeed) {
+        // The account's feed first, in its own order; this week's releases,
+        // the same for everyone, after it.
+        m_shelves = m_homeShelves + m_releaseShelves;
+        m_quickPicksAt = m_quickPicks.rowCount() > 0 && m_feedQuickPicksAt < m_shelves.size() ? m_feedQuickPicksAt : -1;
+    } else {
+        m_shelves = m_releaseShelves + m_homeShelves;
+        m_quickPicksAt = -1;
+    }
+}
+
+InnerTube::Auth Catalog::authFor(const QString &browseId) const
+{
+    if (m_accountPages && m_accountPages(browseId))
+        return InnerTube::Auth::IfSignedIn;
+    if (m_personalFeed && m_feedAccountIds.contains(browseId))
+        return InnerTube::Auth::IfSignedIn;
+    return InnerTube::Auth::Anonymous;
+}
+
 void Catalog::finishHome()
 {
     if (--m_pendingHome > 0)
@@ -299,7 +378,7 @@ void Catalog::finishHome()
         ask(queued);
         return;
     }
-    m_shelves = m_releaseShelves + m_homeShelves;
+    composeShelves();
     // One failed request out of two still leaves a page worth showing.
     if (!m_shelves.isEmpty() || m_quickPicks.rowCount() > 0) {
         m_error.clear();
@@ -354,7 +433,7 @@ void Catalog::openPage(const QString &browseId)
     Q_EMIT pageChanged();
     Q_EMIT pageMoreChanged();
 
-    m_pageAuth = m_accountPages && m_accountPages(browseId) ? InnerTube::Auth::IfSignedIn : InnerTube::Auth::Anonymous;
+    m_pageAuth = authFor(browseId);
     m_innerTube.browse(browseId, [this, browseId, generation](const QJsonObject &root, const QString &error) {
         if (generation != m_pageGeneration)
             return;   // another page was opened meanwhile, or this one again
@@ -699,7 +778,7 @@ void Catalog::playCollection(const QString &browseId, const QString &title, cons
             return;
         }
         Q_EMIT collectionReady(origin, toMaps(collection.tracks));
-    }, m_accountPages && m_accountPages(browseId) ? InnerTube::Auth::IfSignedIn : InnerTube::Auth::Anonymous);
+    }, authFor(browseId));
 }
 
 QVariantList Catalog::pageTrackList() const

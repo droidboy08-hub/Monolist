@@ -21,6 +21,7 @@
 #include <limits>
 #include <memory>
 #include <string>
+#include <utility>
 
 #ifdef Q_OS_WIN
 #ifndef NOMINMAX
@@ -122,6 +123,7 @@ struct YtmSession::CheckAnswers {
     // learn() checks them), the home feed's first and the menu's after.
     QString visitorData;
     QString dataSyncId;
+    QJsonObject home;   // the feed's answer, kept for Home once confirmed
 };
 
 YtmSession::YtmSession(Library *library, QObject *parent)
@@ -159,6 +161,15 @@ YtmSession::YtmSession(Library *library, QObject *parent)
         }
     });
     updateStatus();
+}
+
+QJsonObject YtmSession::takeCheckedHome(qint64 maxAgeMs)
+{
+    QJsonObject home = std::exchange(m_checkedHome, QJsonObject());
+    if (home.isEmpty() || !m_checkedHomeAge.isValid() || m_checkedHomeAge.elapsed() > maxAgeMs
+        || m_state != State::Active)
+        return {};
+    return home;
 }
 
 QString YtmSession::accountKey() const
@@ -818,6 +829,7 @@ void YtmSession::check()
     });
     tube->browse(QStringLiteral("FEmusic_home"), [answers, finish](const QJsonObject &root, const QString &error) {
         answers->homeError = error;
+        answers->home = root;
         answers->loggedIn = InnerTube::parseLoggedIn(root);
         const QString visitor = InnerTube::parseVisitorData(root);
         const QString dataSync = InnerTube::parseDataSyncId(root);
@@ -896,6 +908,12 @@ void YtmSession::checkFinished(const CheckAnswers &answers)
               answers.loggedIn == QLatin1String("1") ? "logged_in=1" : "the account menu names it",
               m_name.isEmpty() ? "" : qPrintable(QStringLiteral(" as ") + m_name));
         learn(answers);
+        // The feed this check was answered, for Home to take (Catalog)
+        // rather than ask the account for it again.
+        if (answers.loggedIn == QLatin1String("1") && !answers.home.isEmpty()) {
+            m_checkedHome = answers.home;
+            m_checkedHomeAge.start();
+        }
         setState(State::Active);
         if (news)
             Q_EMIT sessionChanged();

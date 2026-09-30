@@ -1350,4 +1350,34 @@ QVector<Suggestion> moreFrom(const Catalog *catalog,
     return out;
 }
 
+QVector<int> homePicks(const QVector<Shelf> &page)
+{
+    const auto find = [&page](const std::function<bool(const Shelf &)> &test) {
+        for (int i = 0; i < page.size(); ++i) {
+            if (!page.at(i).rows.isEmpty() && test(page.at(i)))
+                return i;
+        }
+        return -1;
+    };
+    const auto kindIs = [](const char *kind) {
+        return [kind](const Shelf &shelf) { return shelf.kind == QLatin1String(kind); };
+    };
+    int first = find(kindIs("taste"));
+    if (first < 0)
+        first = find(kindIs("song"));
+    int second = find([](const Shelf &shelf) {
+        return shelf.kind == QLatin1String("artist") && shelf.anchor.kind == Anchor::Neighbours;
+    });
+    if (second < 0)
+        second = find(kindIs("artist"));
+    if (second < 0)
+        second = find(kindIs("recent"));
+    QVector<int> picks;
+    for (int index : { first, second }) {
+        if (index >= 0 && !picks.contains(index))
+            picks.append(index);
+    }
+    return picks;
+}
+
 } // namespace Rec

@@ -137,7 +137,7 @@ owner's iPhone app (AryaMusix / "Mediano", Swift, not in this repo).
   ship every style (~20 MB) — avoid.
 - Qt binds a null QString as SQL NULL: wrap text bindings in `AppDatabase::text()`.
 
-## Where things stand (2026-09-28)
+## Where things stand (2026-09-29)
 
 Done and on GitHub: the 13 core bugs; search radio; explicit filter; in-app
 recommendation-data download; Last.fm (connect, listening time, offline queue,
@@ -151,23 +151,24 @@ account plumbing, personal Home (signed-in feed via FEmusic_home), signed-in
 playback when needed, listen reports; and the step-by-step cookie-import guide
 with clear sign-in states in Settings → Connections (check `git log`).
 
+2026-09-29, on the native Windows PC (item 0, built and tested against the
+stand-in; the live test with the owner's spare account is still to do,
+`docs/testing-your-youtube-account.md`):
+- `AccountGuard`: every call with the account paced, counted and rested (the
+  owner's account-safety rule, see Rules); 403 now rests the account rather
+  than ending the session; the yt-dlp account rung comes after yt-dlp signed
+  out; F41 fixed (continuations carry the account).
+- Read-only library import (C04, `YtmImport`, QML `AccountLibrary`): Liked on
+  YouTube Music, the account's playlists (opened with the account, private
+  ones too), its history; own tables, deleted on sign-out.
+- Personalised Home both ways: the account's feed in its own order with
+  "For <name>", mixes opened with the account, the check's feed reused (one
+  call, not two); signed out, "Suggested for you" (Recs.homeShelves) on top.
+
 Next, in the order the owner last agreed (ask which first):
-0. Finish the YouTube account work that was cut short:
-   - read-only YouTube Music library import (ROADMAP C04): liked songs (browse
-     `VLLM`) into a separate "Liked on YouTube Music" playlist, the account's
-     playlists (`FEmusic_liked_playlists`, private ones opened with the
-     account, continuations), and its history (`FEmusic_history`); "Sync now"
-     plus refresh when a session becomes Active; never write back to YouTube;
-     hide on sign-out;
-   - personalised Home both ways: signed in, render YouTube Music's personal
-     shelves properly (Quick picks = musicResponsiveListItemRenderer rows in a
-     musicCarouselShelfRenderer, Listen again, Mixed for you) with play
-     actions and "For <name>"; signed out (or the switch off), put one or two
-     of Monolist's own recommender shelves ("Made for you", "Because you like
-     …") at the top of Home when the data is installed and there is history;
-   - `docs/testing-your-youtube-account.md`: a numbered live-test checklist for
-     the owner's spare account (import, Settings state, Home, library import,
-     an age-restricted song, a listen in YouTube history, sign out).
+0. The owner's live test of the account work with a spare account
+   (`docs/testing-your-youtube-account.md`); tune AccountGuard's limits from
+   what it shows (docs/research/account-safety.md lists what is unknown).
 1. Engine plan items left (`docs/engine/3-plan.md`): next-song byte prefetch
    (PP-02) and gapless (QT2) first; the disk cache (PP-01) only if the owner's
    listening shows enough replays (B0 found 2.1 % replays, 1.2 % tracks over

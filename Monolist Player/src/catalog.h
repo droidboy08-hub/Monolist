@@ -27,9 +27,17 @@ class Catalog : public QObject
     Q_OBJECT
     Q_PROPERTY(bool loading READ loading NOTIFY homeChanged)
     Q_PROPERTY(QString error READ error NOTIFY homeChanged)
-    // The first song shelf on the home feed ("Quick picks") and its title.
+    // The first song shelf on the home feed ("Quick picks"), its title and
+    // the small line above it ("For Demo Listener" on the account's feed).
     Q_PROPERTY(SearchResultModel *quickPicks READ quickPicks CONSTANT)
     Q_PROPERTY(QString quickPicksTitle READ quickPicksTitle NOTIFY homeChanged)
+    Q_PROPERTY(QString quickPicksStrapline READ quickPicksStrapline NOTIFY homeChanged)
+    // Home shows the YouTube Music account's own feed: asked as the account,
+    // and answered as it (logged_in=1). Its shelves are then in the feed's
+    // own order, Quick picks among them before shelf `quickPicksAt` (-1: at
+    // the top, as the signed-out Home has it), and new releases after them.
+    Q_PROPERTY(bool personalFeed READ personalFeed NOTIFY homeChanged)
+    Q_PROPERTY(int quickPicksAt READ quickPicksAt NOTIFY homeChanged)
     // [{ title, strapline, more, items: [{ type, browseId, videoId, title, subtitle, artwork }] }]
     // `more` is where the shelf's "show all" goes (see shelfToMap), or empty.
     Q_PROPERTY(QVariantList shelves READ shelves NOTIFY homeChanged)
@@ -95,6 +103,9 @@ public:
     QString error() const { return m_error; }
     SearchResultModel *quickPicks() { return &m_quickPicks; }
     QString quickPicksTitle() const { return m_quickPicksTitle; }
+    QString quickPicksStrapline() const { return m_quickPicksStrapline; }
+    bool personalFeed() const { return m_personalFeed; }
+    int quickPicksAt() const { return m_quickPicksAt; }
     QVariantList shelves() const { return m_shelves; }
     QVariantMap featured() const { return m_featured; }
     SearchResultModel *recent() { return &m_recent; }
@@ -187,6 +198,16 @@ private:
     void load(int parts);
     void finishHome();
     void accountChanged();
+    // Reads a home feed's answer into Home's parts; `asAccount` when it was
+    // asked (or checked) as the account.
+    void applyFeed(const QJsonObject &root, bool asAccount);
+    // Home's shelves in the order it shows them, from the feed's and new
+    // releases'.
+    void composeShelves();
+    // How a page is asked for: as the account for its own pages (the
+    // account's playlists, Liked music, and what its feed showed, a mix
+    // made for it), signed out for any other.
+    InnerTube::Auth authFor(const QString &browseId) const;
     static QVariantMap shelfToMap(const InnerTube::Shelf &shelf);
     static QVariantMap moreToMap(const InnerTube::Link &more);
     static QList<SearchResultModel::Item> toItems(const QList<InnerTube::Track> &tracks);
@@ -217,6 +238,13 @@ private:
     QString m_feedLoggedIn;
     QString m_error;
     QString m_quickPicksTitle;
+    QString m_quickPicksStrapline;
+    bool m_personalFeed = false;
+    int m_quickPicksAt = -1;
+    int m_feedQuickPicksAt = -1;      // where Quick picks sat among the feed's shelves
+    // The pages the account's feed showed (a mix made for it, one of its
+    // playlists), which are opened as the account while its feed is shown.
+    QSet<QString> m_feedAccountIds;
     QVariantList m_homeShelves;       // from the home feed
     QVariantList m_releaseShelves;    // from new releases
     QVariantList m_shelves;           // both, in the order Home shows them

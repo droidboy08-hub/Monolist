@@ -15,6 +15,9 @@ Item {
     property int shelfIndex: -1
     // Whether the shelf has somewhere to carry on from (Recs: `more`).
     property bool hasMore: true
+    // The first rows only, where a page shows it as a taste of the rest
+    // (Home): SHOW ALL then always offers the whole. 0 shows every row.
+    property int maxRows: 0
 
     implicitHeight: body.implicitHeight
     // Every row turned down: nothing left to head.
@@ -92,7 +95,7 @@ Item {
                     onTriggered: Recs.playAll(root.shelfIndex)
                 }
                 HeaderLink {
-                    visible: root.hasMore
+                    visible: root.hasMore || (root.maxRows > 0 && root.rows.length > root.maxRows)
                     text: "SHOW ALL"
                     onTriggered: Nav.openSuggestions(root.shelfIndex)
                 }
@@ -114,7 +117,7 @@ Item {
             width: parent.width
 
             Repeater {
-                model: root.rows
+                model: root.maxRows > 0 ? root.rows.slice(0, root.maxRows) : root.rows
 
                 RecRow {
                     required property var modelData

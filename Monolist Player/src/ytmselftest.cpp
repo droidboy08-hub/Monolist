@@ -8,6 +8,7 @@
 #include "secretstore.h"
 #include "streamresolver.h"
 #include "ytdlp.h"
+#include "rec/shelves.h"
 #include "ytmimport.h"
 #include "ytmsession.h"
 
@@ -1870,7 +1871,8 @@ int runHomeAccountSelfTest(Library *library)
                + QStringLiteral(" / ") + shelves.join(QStringLiteral(" | "));
     };
     const QString anonymousHome = QStringLiteral("Quick picks: Anonymous song / New releases | Trending");
-    const QString accountHome = QStringLiteral("Listen again: Account song / New releases | Mixed for you");
+    // The account's feed in its own order, new releases after it.
+    const QString accountHome = QStringLiteral("Listen again: Account song / Mixed for you | New releases");
     const auto noAccountShown = [&catalog]() {
         const SearchResultModel *picks = catalog->quickPicks();
         for (int row = 0; row < picks->rowCount(); ++row) {
@@ -1883,6 +1885,26 @@ int runHomeAccountSelfTest(Library *library)
         }
         return catalog->quickPicksTitle() != QLatin1String("Listen again");
     };
+
+    // — 0. which of the listener's own shelves Home shows signed out —
+    {
+        const auto shelf = [](const char *kind, Rec::Anchor::Kind anchor = Rec::Anchor::None) {
+            Rec::Shelf made;
+            made.kind = QLatin1String(kind);
+            made.title = QLatin1String(kind);
+            made.anchor.kind = anchor;
+            made.rows.append(Rec::Suggestion{});
+            return made;
+        };
+        const QVector<Rec::Shelf> page{ shelf("song"), shelf("taste"), shelf("recent"), shelf("artist"),
+                                        shelf("artist", Rec::Anchor::Neighbours), shelf("popular"), shelf("region") };
+        const QVector<Rec::Shelf> plain{ shelf("song"), shelf("recent"), shelf("artist"), shelf("region") };
+        const QVector<Rec::Shelf> none{ shelf("popular"), shelf("region") };
+        t.check(Rec::homePicks(page) == QVector<int>{ 1, 4 } && Rec::homePicks(plain) == QVector<int>{ 0, 2 }
+                    && Rec::homePicks(none).isEmpty(),
+                QStringLiteral("Home's own shelves: Made for you (else More like), then Because you like (else Sounds "
+                               "like, else On repeat); never popular or country ones, and none without anything personal"));
+    }
 
     // — 1. signed out: Home as it always was —
     newSession();
@@ -1928,16 +1950,34 @@ int runHomeAccountSelfTest(Library *library)
         bool allAuthed = !feeds.isEmpty();
         for (const StandIn::Request &request : feeds)
             allAuthed = allAuthed && request.authed() && request.header("cookie") == expectedCookie;
-        t.check(session->state() == QLatin1String("active") && feeds.size() == 2 && allAuthed
+        t.check(session->state() == QLatin1String("active") && feeds.size() == 1 && allAuthed
                     && asked(releasesId, from).isEmpty(),
-                QStringLiteral("once confirmed, the feed alone is asked again, as the account (the check's feed, "
-                               "then Home's), and new releases are not asked again"),
+                QStringLiteral("once confirmed, Home shows the account's feed from the check's own answer: one call "
+                               "with the account, not two, and new releases are not asked again"),
                 QStringLiteral("%1, %2 feeds, %3 new releases").arg(session->state()).arg(feeds.size())
                     .arg(asked(releasesId, from).size()));
     }
     t.check(shown() == accountHome && catalog->feedAsAccount() && catalog->feedLoggedIn() == QLatin1String("1")
+                && catalog->personalFeed() && catalog->quickPicksAt() == 0
                 && catalog->featured().value(QStringLiteral("title")).toString() == QLatin1String("Test Album"),
-            QStringLiteral("signed in, Home is the account's feed (logged_in=1), under the same new releases"), shown());
+            QStringLiteral("signed in, Home is the account's feed (logged_in=1) in its own order, its songs first "
+                           "where the feed has them, then new releases"),
+            shown());
+    {
+        // A mix the account's feed showed is the account's to open.
+        from = int(standIn.requests.size());
+        catalog->openPage(QStringLiteral("VLTESTMINE"));
+        waitUntil([&catalog]() { return !catalog->pageLoading(); }, 10000);
+        const QList<StandIn::Request> opened = asked(QStringLiteral("VLTESTMINE"), from);
+        t.check(!opened.isEmpty() && opened.first().authed(),
+                QStringLiteral("a mix on the account's feed opens with the account"));
+        from = int(standIn.requests.size());
+        catalog->openPage(QStringLiteral("MPRETEST01"));
+        waitUntil([&catalog]() { return !catalog->pageLoading(); }, 10000);
+        const QList<StandIn::Request> album = asked(QStringLiteral("MPRETEST01"), from);
+        t.check(!album.isEmpty() && !album.first().authed(),
+                QStringLiteral("and a new release, the same for everyone, signed out"));
+    }
 
     // — 3. asked again signed in (as a new country does): new releases stay anonymous —
     from = int(standIn.requests.size());
@@ -2039,10 +2079,10 @@ int runHomeAccountSelfTest(Library *library)
         int authed = 0;
         for (const StandIn::Request &request : feeds)
             authed += request.authed() ? 1 : 0;
-        t.check(checking && firstAnonymous && feeds.size() == 3 && authed == 2 && asked(releasesId, from).size() == 1
+        t.check(checking && firstAnonymous && feeds.size() == 2 && authed == 1 && asked(releasesId, from).size() == 1
                     && shown() == accountHome && catalog->feedLoggedIn() == QLatin1String("1"),
-                QStringLiteral("at launch Home asks signed out while the stored session is checked, then asks the feed "
-                               "alone again as the account"),
+                QStringLiteral("at launch Home asks signed out while the stored session is checked, then shows the "
+                               "account's feed from the check's answer, asking nothing again"),
                 QStringLiteral("%1 feeds (%2 with the account), %3 new releases; %4").arg(feeds.size()).arg(authed)
                     .arg(asked(releasesId, from).size()).arg(shown()));
         session->signOut();

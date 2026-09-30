@@ -193,6 +193,13 @@ QVector<Suggestion> moreFrom(const Catalog *catalog,
                              int count,
                              bool hideExplicit = false);
 
+// Home's one or two, signed out: indices into `page`, in the order Home shows
+// them. First "Made for you" (else the first "More like"), then "Because you
+// like" (else "Sounds like", else "On repeat lately"). Never the popular or
+// country shelves, which say nothing of the listener; empty when the page has
+// nothing personal, so Home then shows none.
+QVector<int> homePicks(const QVector<Shelf> &page);
+
 } // namespace Rec
 
 // Carried to the worker thread with every build and every See all page.

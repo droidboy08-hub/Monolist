@@ -915,7 +915,9 @@ void readListItem(const QJsonValue &entry, QList<InnerTube::Track> &songs, QList
 InnerTube::Shelf parseCarousel(const QJsonValue &carousel)
 {
     InnerTube::Shelf shelf;
-    const QJsonValue header = dig(carousel, { "header", "musicCarouselShelfBasicHeaderRenderer" });
+    QJsonValue header = dig(carousel, { "header", "musicCarouselShelfBasicHeaderRenderer" });
+    if (header.isUndefined())
+        header = dig(carousel, { "header", "musicImmersiveCarouselShelfBasicHeaderRenderer" });
     shelf.title = joinRuns(dig(header, { "title", "runs" }).toArray()).trimmed();
     shelf.strapline = joinRuns(dig(header, { "strapline", "runs" }).toArray()).trimmed();
     // The button at the header's end, or else the title itself when that is
@@ -2459,7 +2461,11 @@ QList<InnerTube::Shelf> InnerTube::parseShelves(const QJsonObject &root)
                                             "contents" }).toArray();
     for (const QJsonValue &section : sections) {
         // Carousels only: the taste builder and genre chips are not content.
-        const QJsonValue carousel = dig(section, { "musicCarouselShelfRenderer" });
+        // The big one a signed-in feed may open with (an immersive carousel)
+        // is read as any other.
+        QJsonValue carousel = dig(section, { "musicCarouselShelfRenderer" });
+        if (carousel.isUndefined())
+            carousel = dig(section, { "musicImmersiveCarouselShelfRenderer" });
         if (carousel.isUndefined())
             continue;
 

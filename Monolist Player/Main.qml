@@ -240,7 +240,7 @@ ApplicationWindow {
         openCurrentPage()
         // A like or a new listen since Search was last open changes what it
         // should suggest. This rebuilds only when something did change.
-        if (currentView === "search")
+        if (currentView === "search" || currentView === "home")
             Recs.refresh()
     }
 
@@ -289,7 +289,7 @@ ApplicationWindow {
                   : currentView.indexOf("page:") === 0 ? (Catalog.page.type === "playlist" ? "PLAYLIST" : "ALBUM")
                   : currentView.indexOf("artist") === 0 ? "ARTIST"
                   : currentView.indexOf("shelf:") === 0 ? "SHOW ALL"
-                  : currentView.indexOf("recs:") === 0 ? "SEARCH / SHOW ALL"
+                  : currentView.indexOf("recs:") === 0 ? "SUGGESTIONS / SHOW ALL"
                   : currentView === "playlist:liked" ? "YOUR LIBRARY / LIKED SONGS"
                   : currentView === "playlist:ytliked" ? "YOUR LIBRARY / LIKED ON YOUTUBE MUSIC"
                   : currentView.indexOf("playlist:") === 0 ? "YOUR LIBRARY / PLAYLIST"
