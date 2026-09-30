@@ -19,6 +19,8 @@ namespace {
 
 const QString kFormatKey = QStringLiteral("download_format");
 const QString kSkipNonMusicKey = QStringLiteral("download_skip_non_music");
+// The folder the listener chose; empty or missing for the default.
+const QString kDirectoryKey = QStringLiteral("download_dir");
 // How stale a look for the tools may be before it is taken again. Not on every
 // call: "Download all" enqueues a whole album in one go, and a tool that is not
 // bundled is looked for along the whole of PATH.
@@ -66,6 +68,12 @@ DownloadManager::DownloadManager(QObject *parent)
     , m_canConvert(!YtDlp::ffmpegPath().isEmpty())
 {
     m_toolsChecked.start();
+    // A folder chosen in Settings, unless one is named outright for a test.
+    const QString chosen = settingValue(kDirectoryKey, QString());
+    if (!chosen.isEmpty() && qEnvironmentVariable("MONOLIST_DOWNLOAD_DIR").isEmpty()) {
+        m_directory = QDir::cleanPath(chosen);
+        m_customDirectory = true;
+    }
     QDir().mkpath(m_directory);
 
     const QString format = settingValue(kFormatKey, m_format);
@@ -162,7 +170,8 @@ void DownloadManager::setSettingValue(const QString &key, const QString &value)
     QSqlQuery query(AppDatabase::connection());
     query.prepare(QStringLiteral("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)"));
     query.addBindValue(key);
-    query.addBindValue(value);
+    // Never NULL, which the table refuses: an empty value clears a setting.
+    query.addBindValue(AppDatabase::text(value));
     query.exec();
 }
 
@@ -197,6 +206,91 @@ void DownloadManager::touch()
     // after each, a moment later.
     if (m_queueRestored)
         m_queueSave.start();
+}
+
+bool DownloadManager::setDownloadDirectory(const QString &folder)
+{
+    const auto refuse = [this](const QString &why) {
+        m_directoryNote = why;
+        Q_EMIT directoryChanged();
+        return false;
+    };
+    // Running downloads write where they began, and clear up there.
+    if (activeCount() > 0)
+        return refuse(QStringLiteral("Wait for the downloads under way to finish, then choose the folder again."));
+
+    QString path = folder.trimmed();
+    if (path.startsWith(QLatin1String("file:"), Qt::CaseInsensitive))
+        path = QUrl(path).toLocalFile();
+    const bool reset = path.isEmpty();
+    path = QDir::cleanPath(QDir(reset ? chooseDirectory() : path).absolutePath());
+
+    // Written to once, to be sure it can be.
+    if (!QDir().mkpath(path))
+        return refuse(QStringLiteral("That folder could not be made."));
+    {
+        QFile probe(QDir(path).filePath(QStringLiteral(".monolist-write-test")));
+        if (!probe.open(QIODevice::WriteOnly))
+            return refuse(QStringLiteral("Monolist cannot save files in that folder."));
+        probe.close();
+        probe.remove();
+    }
+
+    // The partial files kept for the queue in the old folder: the queue now
+    // downloads into the new one, from the start.
+    const QString old = m_directory;
+    if (QDir(old) != QDir(path)) {
+        for (const QString &videoId : std::as_const(m_pending))
+            removeLeftovers(old, videoId, filesFor(old, videoId), QString());
+    }
+
+    m_directory = path;
+    m_customDirectory = !reset;
+    setSettingValue(kDirectoryKey, reset ? QString() : path);
+    const int found = relinkStored();
+    loadStored();
+    m_library.reload();
+    m_directoryNote = found == 0 ? QString()
+                    : found == 1 ? QStringLiteral("1 download that had gone missing was found in this folder.")
+                                 : QStringLiteral("%1 downloads that had gone missing were found in this folder.").arg(found);
+    qInfo("downloads: now saved in %s%s", qUtf8Printable(QDir::toNativeSeparators(path)),
+          found > 0 ? qPrintable(QStringLiteral(", %1 found there again").arg(found)) : "");
+    touch();
+    Q_EMIT directoryChanged();
+    Q_EMIT libraryChanged();
+    return true;
+}
+
+int DownloadManager::relinkStored()
+{
+    QList<QPair<QString, QString>> missing;   // video id, the path it had
+    QSqlQuery query(AppDatabase::connection());
+    if (!query.exec(QStringLiteral("SELECT video_id, file_path FROM downloads")))
+        return 0;
+    while (query.next()) {
+        if (!QFileInfo::exists(query.value(1).toString()))
+            missing.append({ query.value(0).toString(), query.value(1).toString() });
+    }
+    int found = 0;
+    for (const auto &[videoId, oldPath] : std::as_const(missing)) {
+        const QString path = findWrittenFile(videoId);
+        if (path.isEmpty())
+            continue;
+        QSqlQuery row(AppDatabase::connection());
+        row.prepare(QStringLiteral("UPDATE downloads SET file_path = ? WHERE video_id = ?"));
+        row.addBindValue(path);
+        row.addBindValue(videoId);
+        row.exec();
+        // The library's row plays the file, as recordStored set it.
+        QSqlQuery track(AppDatabase::connection());
+        track.prepare(QStringLiteral("UPDATE tracks SET source_url = ? WHERE source_id = ? AND source_url = ?"));
+        track.addBindValue(path);
+        track.addBindValue(videoId);
+        track.addBindValue(oldPath);
+        track.exec();
+        ++found;
+    }
+    return found;
 }
 
 void DownloadManager::setHeldForTest(bool held)

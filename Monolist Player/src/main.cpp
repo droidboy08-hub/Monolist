@@ -251,6 +251,9 @@ int main(int argc, char *argv[])
         // on invented songs that are never started (downloadselftest.cpp).
         if (arguments.contains(QStringLiteral("--download-queue-test")))
             return runDownloadQueueSelfTest() == 0 ? 0 : 1;
+        // The download folder chosen in Settings (downloadselftest.cpp).
+        if (arguments.contains(QStringLiteral("--download-folder-test")))
+            return runDownloadFolderSelfTest() == 0 ? 0 : 1;
         // A real song stopped part-way and finished by the next launch; needs
         // the network (downloadselftest.cpp).
         if (const int resumeFlag = arguments.indexOf(QStringLiteral("--download-resume-test")); resumeFlag >= 0)

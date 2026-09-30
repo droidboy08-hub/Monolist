@@ -43,7 +43,12 @@ class DownloadManager : public QObject
     Q_PROPERTY(int activeCount READ activeCount NOTIFY queueChanged)
     Q_PROPERTY(int queuedCount READ queuedCount NOTIFY queueChanged)
     Q_PROPERTY(int storedCount READ storedCount NOTIFY libraryChanged)
-    Q_PROPERTY(QString downloadDirectory READ downloadDirectory CONSTANT)
+    Q_PROPERTY(QString downloadDirectory READ downloadDirectory NOTIFY directoryChanged)
+    // Whether the folder is one the listener chose, rather than the default.
+    Q_PROPERTY(bool customDirectory READ customDirectory NOTIFY directoryChanged)
+    // What the last change of folder had to say: the downloads it found
+    // there, or why the folder could not be used. Empty otherwise.
+    Q_PROPERTY(QString directoryNote READ directoryNote NOTIFY directoryChanged)
     Q_PROPERTY(QString format READ format WRITE setFormat NOTIFY optionsChanged)
     Q_PROPERTY(bool skipNonMusic READ skipNonMusic WRITE setSkipNonMusic NOTIFY optionsChanged)
     // Not fixed at launch: the tools can be installed or updated from Settings
@@ -88,6 +93,15 @@ public:
     int queuedCount() const { return int(m_pending.size()); }
     int storedCount() const { return int(m_stored.size()); }
     QString downloadDirectory() const { return QDir::toNativeSeparators(m_directory); }
+    bool customDirectory() const { return m_customDirectory; }
+    QString directoryNote() const { return m_directoryNote; }
+    // Where new downloads go: a folder's path, or its file:// address as a
+    // folder picker gives it; empty for the default again. The songs already
+    // downloaded stay where they are. Any the database has lost track of are
+    // looked for in the new folder, so a folder moved by hand is found again
+    // once it is chosen. False, with directoryNote saying why, while a
+    // download is running or when the folder cannot be written to.
+    Q_INVOKABLE bool setDownloadDirectory(const QString &folder);
 
     // "original" (the best stream, never re-encoded), "m4a" or "mp3".
     QString format() const { return m_format; }
@@ -185,6 +199,7 @@ Q_SIGNALS:
     void revisionChanged();
     void progressRevisionChanged();
     void toolsChanged();
+    void directoryChanged();
 
 private:
     // Puts one track in the queue; false when it is stored, queued or running
@@ -208,6 +223,9 @@ private:
     QString findWrittenFile(const QString &videoId) const;
     void removePartialFiles(const QString &videoId);
     void loadStored();
+    // Downloads whose file is missing, found again in the download folder by
+    // the video id in their names. Returns how many were.
+    int relinkStored();
     // The downloads not finished, kept in download_queue so a quit does not
     // lose them: written a moment after any change, and as the app closes.
     // Put back once, at launch, or once yt-dlp is found if it was missing
@@ -229,6 +247,8 @@ private:
     DownloadQueueModel m_queue;
     DownloadLibraryModel m_library;
     QString m_directory;
+    bool m_customDirectory = false;
+    QString m_directoryNote;
     QStringList m_pending;                               // waiting to start, in order
     bool m_waitingOnPlayback = false;                    // pump() waits for a song to resolve
     QHash<QString, QPointer<YtDlpRequest>> m_requests;   // running through yt-dlp

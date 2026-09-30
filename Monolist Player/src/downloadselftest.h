@@ -34,3 +34,10 @@ int runDownloadQueueSelfTest();
 // the partial file kept; nothing left over. Needs the network; in
 // MONOLIST_DATA_DIR and MONOLIST_DOWNLOAD_DIR only, which it insists on.
 int runDownloadResumeSelfTest(const QString &videoId);
+
+// --download-folder-test: the download folder chosen in Settings
+// (DownloadManager::setDownloadDirectory): taken from a folder picker's
+// address, kept for the next launch, a song moved there by hand found again
+// and played from there, a folder that cannot be made refused, and DEFAULT
+// going back. Only in folders inside MONOLIST_DATA_DIR, which it insists on.
+int runDownloadFolderSelfTest();

@@ -867,3 +867,101 @@ int runDownloadResumeSelfTest(const QString &videoId)
     }
     return t.finish();
 }
+
+int runDownloadFolderSelfTest()
+{
+    Checks t("download-folder");
+    const QString data = qEnvironmentVariable("MONOLIST_DATA_DIR");
+    if (data.isEmpty()) {
+        t.check(false, QStringLiteral("MONOLIST_DATA_DIR is set"),
+                QStringLiteral("refusing to run: this test writes the downloads table and files there"));
+        return t.finish();
+    }
+    // The folder a launch picks by itself: the scratch one beside the
+    // database, since MONOLIST_DATA_DIR is set. A folder named outright
+    // would override the choice being tested.
+    SavedVariable keepNamed("MONOLIST_DOWNLOAD_DIR");
+    qunsetenv("MONOLIST_DOWNLOAD_DIR");
+    DownloadManager::setHeldForTest(true);
+    const auto setting = []() {
+        QSqlQuery query(AppDatabase::connection());
+        query.exec(QStringLiteral("SELECT value FROM settings WHERE key = 'download_dir'"));
+        return query.next() ? query.value(0).toString() : QString();
+    };
+    QSqlQuery(AppDatabase::connection()).exec(QStringLiteral("DELETE FROM settings WHERE key = 'download_dir'"));
+    const QString standard = QDir::toNativeSeparators(DownloadManager::chooseDirectory());
+    const QString moved = QDir(data).filePath(QStringLiteral("moved-downloads"));
+    QDir().mkpath(moved);
+
+    // A song downloaded into the default folder, then moved by hand.
+    const QString oldPath = QDir(DownloadManager::chooseDirectory()).filePath(QStringLiteral("Artist - Song [fX].opus"));
+    const QString newPath = QDir(moved).filePath(QStringLiteral("Artist - Song [fX].opus"));
+    {
+        QFile file(newPath);
+        if (file.open(QIODevice::WriteOnly))
+            file.write("not really a song");
+    }
+    QSqlQuery row(AppDatabase::connection());
+    row.prepare(QStringLiteral("INSERT OR REPLACE INTO downloads (video_id, title, artist, file_path) VALUES ('fX', 'Song', 'Artist', ?)"));
+    row.addBindValue(oldPath);
+    row.exec();
+    QSqlQuery track(AppDatabase::connection());
+    track.prepare(QStringLiteral("INSERT INTO tracks (position, title, artist, album, duration_ms, source_url, source_id, artwork, favourite)"
+                                 " VALUES (9999, 'Song', 'Artist', '', 0, ?, 'fX', '', 0)"));
+    track.addBindValue(oldPath);
+    track.exec();
+    const auto trackSource = []() {
+        QSqlQuery query(AppDatabase::connection());
+        query.exec(QStringLiteral("SELECT source_url FROM tracks WHERE source_id = 'fX'"));
+        return query.next() ? query.value(0).toString() : QString();
+    };
+
+    t.note(QStringLiteral("- choosing a folder"));
+    {
+        DownloadManager first;
+        t.check(first.downloadDirectory() == standard && !first.customDirectory(),
+                QStringLiteral("a launch saves downloads in the default folder"), first.downloadDirectory());
+        t.check(!first.isDownloaded(QStringLiteral("fX")), QStringLiteral("  and the moved song is missing"));
+        const bool changed = first.setDownloadDirectory(QUrl::fromLocalFile(moved).toString());
+        t.check(changed && first.downloadDirectory() == QDir::toNativeSeparators(moved) && first.customDirectory(),
+                QStringLiteral("a folder chosen as the picker gives it is taken"), first.downloadDirectory());
+        t.check(setting() == QDir::cleanPath(moved), QStringLiteral("  and kept"), setting());
+        t.check(first.isDownloaded(QStringLiteral("fX")) && first.localPathFor(QStringLiteral("fX")) == newPath,
+                QStringLiteral("the moved song is found there again"), first.localPathFor(QStringLiteral("fX")));
+        t.check(trackSource() == newPath, QStringLiteral("  and the library plays it from there"), trackSource());
+        t.check(first.directoryNote().contains(QLatin1String("1 download")),
+                QStringLiteral("  which Settings says"), first.directoryNote());
+
+        const QString underFile = QDir(newPath).filePath(QStringLiteral("inside"));
+        const bool refused = !first.setDownloadDirectory(underFile);
+        t.check(refused && first.downloadDirectory() == QDir::toNativeSeparators(moved)
+                    && !first.directoryNote().isEmpty(),
+                QStringLiteral("a folder that cannot be made is refused, saying so"), first.directoryNote());
+    }
+
+    t.note(QStringLiteral("- the next launch"));
+    {
+        DownloadManager second;
+        t.check(second.downloadDirectory() == QDir::toNativeSeparators(moved) && second.customDirectory(),
+                QStringLiteral("the next launch saves downloads in the chosen folder"), second.downloadDirectory());
+        t.check(second.isDownloaded(QStringLiteral("fX")), QStringLiteral("  and knows the song there"));
+        const bool reset = second.setDownloadDirectory(QString());
+        t.check(reset && second.downloadDirectory() == standard && !second.customDirectory() && setting().isEmpty(),
+                QStringLiteral("DEFAULT goes back to the default folder, and forgets the choice"),
+                second.downloadDirectory() + QStringLiteral(", setting: ") + setting());
+        t.check(second.isDownloaded(QStringLiteral("fX")),
+                QStringLiteral("  the songs already downloaded staying where they are"));
+    }
+    {
+        DownloadManager third;
+        t.check(third.downloadDirectory() == standard && !third.customDirectory(),
+                QStringLiteral("and the launch after that uses the default"), third.downloadDirectory());
+    }
+
+    QSqlQuery(AppDatabase::connection()).exec(QStringLiteral("DELETE FROM downloads WHERE video_id = 'fX'"));
+    QSqlQuery(AppDatabase::connection()).exec(QStringLiteral("DELETE FROM tracks WHERE source_id = 'fX'"));
+    QSqlQuery(AppDatabase::connection()).exec(QStringLiteral("DELETE FROM settings WHERE key = 'download_dir'"));
+    QDir(moved).removeRecursively();
+    DownloadManager::setHeldForTest(false);
+    return t.finish();
+}

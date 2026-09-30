@@ -30,7 +30,8 @@ Priority runs from 1 (first) to 9. Size: S under an hour, M a few hours, L a day
 - [x] **D01** The download queue is lost on quit, and partly downloaded files are deleted *(P5, M)*
   Done 2026-09-30: the download_queue table, written a second after any change and as the app closes, in the order the downloads will run (those running first). At launch, or once yt-dlp is found, queued ones are queued again, and failed ones come back as failed with why. yt-dlp's partial file is kept on quit and carried on from; a finished download clears any stale one. `--download-queue-test` (offline) and `--download-resume-test <id>` (network): a real song stopped at 31% was finished by the next launch from the kept part.
   Done when: Queued and failed downloads are stored in a table and queued again at launch.
-- [ ] **D02** The download folder can't be changed *(P5, M)*
+- [x] **D02** The download folder can't be changed *(P5, M)*
+  Done 2026-09-30: CHANGE… in Settings → Downloads opens the system's folder picker, and DEFAULT goes back to Music\Monolist. The choice is kept (download_dir) and checked by writing to the folder first; it is refused while a download is running. Songs already downloaded stay where they are, and any whose file has gone missing are looked for in the chosen folder, so a folder moved by hand is found again and the library plays from there. `--download-folder-test`.
   Done when: A 'Change…' action in Settings opens a native folder picker, saves the choice and rescans the stored files.
 
 ## Player

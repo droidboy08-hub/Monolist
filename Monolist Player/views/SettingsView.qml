@@ -45,6 +45,7 @@ ScrollPage {
             return
         column.forceLayout()
         var target = section === "recommendations" ? recommendationsHeader
+                   : section === "downloads" ? downloadsHeader
                    : section === "connections" ? connectionsHeader
                    : section === "ytmusic" ? homeToggle : null
         if (target)
@@ -62,6 +63,15 @@ ScrollPage {
             if (Account.importFile(selectedFile))
                 ytmRow.importing = false
         }
+    }
+
+    // Where downloads are saved: the system's own folder picker, opened on
+    // the folder in use.
+    FolderDialog {
+        id: downloadFolderDialog
+        title: "Choose where downloads are saved"
+        currentFolder: "file:///" + Downloads.downloadDirectory.replace(/\\/g, "/")
+        onAccepted: Downloads.setDownloadDirectory(selectedFolder.toString())
     }
 
     function matches() {
@@ -410,6 +420,7 @@ ScrollPage {
 
         // — downloads —
         SectionHeader {
+            id: downloadsHeader
             width: parent.width
             number: "03"
             title: "Downloads"
@@ -421,8 +432,51 @@ ScrollPage {
             width: parent.width
         }
 
+        Item {
+            width: parent.width
+            height: Math.max(folderPath.implicitHeight, folderButtons.implicitHeight)
+
+            Text {
+                id: folderPath
+                anchors.left: parent.left
+                anchors.right: folderButtons.left
+                anchors.rightMargin: Theme.space4
+                anchors.verticalCenter: parent.verticalCenter
+                text: Downloads.downloadDirectory
+                elide: Text.ElideMiddle
+                font.family: Theme.fontFamily
+                font.pixelSize: 13
+                color: Theme.text
+            }
+
+            Row {
+                id: folderButtons
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: Theme.space2
+
+                // Back to Music\Monolist, once another folder was chosen.
+                ActionButton {
+                    visible: Downloads.customDirectory
+                    text: "DEFAULT"
+                    enabled: Downloads.activeCount === 0
+                    onClicked: Downloads.setDownloadDirectory("")
+                }
+                ActionButton {
+                    text: "CHANGE…"
+                    enabled: Downloads.activeCount === 0
+                    onClicked: downloadFolderDialog.open()
+                }
+            }
+        }
+
         Note {
-            text: Downloads.downloadDirectory
+            text: Downloads.directoryNote.length > 0
+                  ? Downloads.directoryNote
+                  : Downloads.activeCount > 0
+                    ? "The folder can be changed once the downloads under way have finished."
+                    : "New downloads are saved here. Songs already downloaded stay where they are; a folder "
+                      + "you moved yourself is found again once you choose its new place."
         }
 
         HRule { width: parent.width }
