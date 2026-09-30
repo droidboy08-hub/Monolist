@@ -217,6 +217,9 @@ public Q_SLOTS:
 
     void playNext(const QVariantMap &track);
     void addToQueue(const QVariantMap &track);
+    // A whole list after what the listener queued before, as one block: one
+    // call and one insertion however long it is (Add all to queue).
+    void addAllToQueue(const QVariantList &tracks);
     void removeFromQueue(int index);
     // An upcoming song to another upcoming place, `to` being where it then
     // stands: dragged in the queue, or moved from its menu.

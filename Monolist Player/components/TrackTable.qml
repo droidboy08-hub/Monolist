@@ -88,7 +88,13 @@ Column {
 
     function updateWindow() {
         const total = rows.count * rowHeight
-        if (!page) {
+        // Not shown, no rows: a table on a page not in view, or on a tab not
+        // picked, costs nothing when its list changes (the History a play
+        // rebuilds, ROADMAP F35).
+        if (!visible) {
+            windowTop = 0
+            windowHeight = 0
+        } else if (!page) {
             windowTop = 0
             windowHeight = total
         } else {
@@ -115,6 +121,7 @@ Column {
         function onContentHeightChanged() { root.updateWindow() }
     }
     onYChanged: updateWindow()
+    onVisibleChanged: updateWindow()
     onDragFromChanged: updateWindow()
     Component.onCompleted: updateWindow()
 
@@ -149,6 +156,13 @@ Column {
     readonly property int dropIndex: dragGap > dragFrom ? dragGap - 1 : dragGap
     readonly property bool dropMoves: dragFrom >= 0 && dropIndex !== dragFrom
 
+    function primaryArtistOf(index) {
+        if (!model || typeof model.get !== "function")
+            return ""
+        const map = model.get(index)
+        return map && map.primaryArtist ? map.primaryArtist : ""
+    }
+
     function trackOf(row) {
         return {
             sourceId: row.sourceId,
@@ -163,7 +177,10 @@ Column {
             // And into the queue and the menu, so the names still open
             // their pages from the player bar and "Go to artist".
             credits: row.credits,
-            albumId: row.albumId
+            albumId: row.albumId,
+            // The first credit alone, which Last.fm is sent: read from the
+            // row's map, since not every list has the role to require.
+            primaryArtist: root.primaryArtistOf(row.index)
         }
     }
 

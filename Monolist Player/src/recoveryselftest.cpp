@@ -695,6 +695,33 @@ int runRecoverySelfTest(Library *library)
                 notices.mid(fromNotices).join(QStringLiteral(" / ")));
     }
 
+    // — 5b: every link of a song refused: passed over as a song that will
+    // not resolve is, and the next plays, rather than the listening ending
+    // with "Playback failed" (F36) —
+    {
+        const QString id = QStringLiteral("selftestR5b");
+        const QString next = QStringLiteral("selftestR5c");
+        const QString after = QStringLiteral("After the refused one");
+        // Every rung answers with a link mpv cannot load: InnerTube's
+        // spoiled (refused with 403), the rest on a port nothing listens on.
+        answer(id, StreamResolver::TierInnerTube, QStringLiteral("/r5b.wav"), standIn);
+        resolver.spoilNextStream(id, 8);
+        for (const int tier : { StreamResolver::TierYtDlp, StreamResolver::TierMuxed, StreamResolver::TierPiped,
+                                StreamResolver::TierInvidious })
+            resolver.setTestAnswer(id, tier, QStringLiteral("http://127.0.0.1:1/r5b-dead.wav"));
+        answer(next, StreamResolver::TierInnerTube, QStringLiteral("/r5c.wav"), standIn);
+        const int fromNotices = notices.size();
+        const int starts = audioStarts;
+        player.playTracks({ row(id, QStringLiteral("Refused everywhere")), row(next, after) }, 0);
+        const bool played = waitUntil([&]() { return playing(after, starts); }, 30000);
+        t.check(played && notices.mid(fromNotices).join(QLatin1Char('|')).contains(QLatin1String("skipping")),
+                QStringLiteral("every link of a song refused: passed over, saying so, and the next plays"),
+                QStringLiteral("on \"%1\", status \"%2\"; notices: %3")
+                    .arg(title(), player.statusText(), notices.mid(fromNotices).join(QStringLiteral(" / "))));
+        player.pause();
+        settle(300);
+    }
+
     // — 6: three in a row that will not play, and the count starting again
     // only once a song's sound has —
     {

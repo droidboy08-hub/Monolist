@@ -167,7 +167,13 @@ ScrollPage {
             titleLine1: Catalog.featured.title !== undefined ? Catalog.featured.title : ""
             meta: Catalog.featured.subtitle !== undefined ? Catalog.featured.subtitle : ""
             artwork: Catalog.featured.artwork !== undefined ? Catalog.featured.artwork : ""
-            buttonText: "Open album"
+            // It opens the release's page, so an arrow, and the button says
+            // what kind of release it is ("Single • Horror Skunx").
+            buttonText: {
+                const kind = (Catalog.featured.subtitle || "").split(" • ")[0]
+                return "Open " + (kind === "Single" ? "single" : kind === "EP" ? "EP" : "album")
+            }
+            buttonIcon: "arrow-right"
             onPlayRequested: root.pageRequested(Catalog.featured.browseId)
         }
 

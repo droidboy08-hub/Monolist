@@ -32,6 +32,8 @@ AlbumCard {
     format: label.kind
     artwork: card.artwork || ""
     playable: collection && (card.browseId || "").length > 0
+    // A song or a video plays; anything else opens its page.
+    opensPage: (card.videoId || "").length === 0
     playLoading: playable && Catalog.collectionLoading === card.browseId
     // A song's or a video's is the song menu; anything else's, the card's.
     hasMenu: (card.videoId || "").length > 0 || (card.browseId || "").length > 0

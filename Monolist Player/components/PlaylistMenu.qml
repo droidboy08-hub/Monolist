@@ -60,11 +60,7 @@ MonoMenu {
     MonoMenuItem {
         text: "Add all to queue"
         enabled: menu.songCount > 0
-        onTriggered: {
-            const tracks = menu.songs()
-            for (let i = 0; i < tracks.length; ++i)
-                Player.addToQueue(tracks[i])
-        }
+        onTriggered: Player.addAllToQueue(menu.songs())
     }
     PlaylistSubmenu {
         title: "Add all to playlist"

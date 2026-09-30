@@ -370,12 +370,10 @@ PlaybackController::PlaybackController(MpvEngine *engine,
             if (retryRefused())
                 return;
             m_streamTier = -1;
-            haltPlayback();
-            setStatus(QStringLiteral("Playback failed"), QString(), false, /*error=*/true);
-            // As for a failed resolve: a toast only for someone waiting to
-            // hear it.
-            if (m_autoPlayAfterResolve)
-                Q_EMIT playbackError(reason);
+            // Every link refused: passed over as a song that will not resolve
+            // is, and counted toward the three in a row that stop the queue,
+            // rather than ending the listening here.
+            failTrack(reason);
         });
 
         m_engine->setVolume(m_volume);
@@ -1194,16 +1192,35 @@ void PlaybackController::playNext(const QVariantMap &map)
     }
     m_queue.insert(m_queue.currentIndex() + 1, { track });
     prefetchUpcoming();
+    // Said, since with the queue closed nothing else shows it worked.
+    Q_EMIT notice(track.title.isEmpty() ? QStringLiteral("Playing next")
+                                        : QStringLiteral("Playing next: %1").arg(track.title));
 }
 
 void PlaybackController::addToQueue(const QVariantMap &map)
 {
-    QueueTrack track = QueueTrack::fromMap(map);
-    track.fromRadio = false;
-    if (track.videoId.isEmpty() && track.sourceUrl.isEmpty())
+    addAllToQueue({ map });
+}
+
+void PlaybackController::addAllToQueue(const QVariantList &maps)
+{
+    QList<QueueTrack> tracks;
+    tracks.reserve(maps.size());
+    for (const QVariant &map : maps) {
+        QueueTrack track = QueueTrack::fromMap(map.toMap());
+        track.fromRadio = false;
+        if (!track.videoId.isEmpty() || !track.sourceUrl.isEmpty())
+            tracks.append(track);
+    }
+    if (tracks.isEmpty())
         return;
+    const QString said = tracks.size() == 1
+        ? (tracks.first().title.isEmpty() ? QStringLiteral("Added to the queue")
+                                          : QStringLiteral("Added to the queue: %1").arg(tracks.first().title))
+        : QStringLiteral("Added %1 songs to the queue").arg(tracks.size());
     if (m_queue.rowCount() == 0) {
-        startQueue({ track }, 0, /*autoPlay=*/false);
+        startQueue(tracks, 0, /*autoPlay=*/false);
+        Q_EMIT notice(said);
         return;
     }
     // What you queue goes ahead of what autoplay found.
@@ -1214,8 +1231,9 @@ void PlaybackController::addToQueue(const QVariantMap &map)
             break;
         }
     }
-    m_queue.insert(row, { track });
+    m_queue.insert(row, tracks);
     prefetchUpcoming();
+    Q_EMIT notice(said);
 }
 
 void PlaybackController::removeFromQueue(int index)

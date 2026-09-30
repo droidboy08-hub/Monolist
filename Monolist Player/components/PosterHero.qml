@@ -13,6 +13,9 @@ Rectangle {
     property string meta: ""
     property string artwork: ""
     property string buttonText: "Play album"
+    // What the button does, said by its glyph: an arrow to open a page, the
+    // triangle to play.
+    property string buttonIcon: "play"
     signal playRequested()
 
     color: Theme.accent
@@ -68,6 +71,7 @@ Rectangle {
 
             PosterButton {
                 text: root.buttonText
+                iconName: root.buttonIcon
                 onClicked: root.playRequested()
             }
 

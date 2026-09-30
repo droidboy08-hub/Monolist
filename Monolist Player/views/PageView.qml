@@ -104,9 +104,7 @@ ScrollPage {
             text: "Add all to queue"
             enabled: Catalog.pageTracks.count > 0 && root.waiting.length === 0
             onTriggered: root.withWholePage("queue", function() {
-                var tracks = Catalog.pageTrackList()
-                for (var i = 0; i < tracks.length; ++i)
-                    Player.addToQueue(tracks[i])
+                Player.addAllToQueue(Catalog.pageTrackList())
             })
         }
         PlaylistSubmenu {

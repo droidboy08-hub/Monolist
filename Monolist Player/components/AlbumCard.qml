@@ -21,6 +21,9 @@ Rectangle {
     property var artworks: []
     // "liked" or "new": see CollectionCover.
     property string plate: ""
+    // Whether a press opens a page (an album, a playlist, an artist) rather
+    // than playing: the footer's mark says which, an arrow or the triangle.
+    property bool opensPage: true
     // The play plate, and three dots on it while the songs are fetched.
     property bool playable: false
     property bool playLoading: false
@@ -153,7 +156,7 @@ Rectangle {
             anchors.right: parent.right
             anchors.bottom: parent.bottom
             anchors.bottomMargin: 1
-            name: root.plate === "new" ? "plus" : "play"
+            name: root.plate === "new" ? "plus" : root.opensPage ? "arrow-right" : "play"
             width: 14
             height: 14
             color: Theme.accent
