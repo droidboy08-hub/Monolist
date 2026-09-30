@@ -1795,9 +1795,15 @@ int runHomeAccountSelfTest(Library *library)
                                                  cardJson("Test Album", "MPRETEST01", "MUSIC_PAGE_TYPE_ALBUM")));
     };
     int authedStatus = 200;
+    bool down = false;   // YouTube Music not answering at all (7b)
     standIn.respond = [&](const StandIn::Request &request) {
         StandIn::Answer answer;
         const bool authed = request.authed();
+        if (down) {
+            answer.status = 503;
+            answer.body = R"({"error":{"code":503,"status":"UNAVAILABLE"}})";
+            return answer;
+        }
         if (authed && authedStatus != 200) {
             answer.status = authedStatus;
             answer.body = R"({"error":{"code":)" + QByteArray::number(authedStatus) + R"(,"status":"REFUSED"}})";
@@ -2098,6 +2104,52 @@ int runHomeAccountSelfTest(Library *library)
     } else {
         t.note(QStringLiteral("no secret store here (") + SecretStore::unavailableReason()
                + QStringLiteral("): the launch with a stored session is skipped"));
+    }
+
+    // — 7b. Home kept for the next launch —
+    {
+        // What the parts above left kept: the signed-out feed's answer, and
+        // new releases', and nothing of the account's.
+        QSqlQuery kept(AppDatabase::connection());
+        kept.exec(QStringLiteral("SELECT part, body FROM home_cache"));
+        QStringList parts;
+        bool accountKept = false;
+        bool anonymousKept = false;
+        while (kept.next()) {
+            parts << kept.value(0).toString();
+            const QByteArray body = qUncompress(kept.value(1).toByteArray());
+            accountKept = accountKept || body.contains("Account song") || body.contains("VLRDTESTMINE");
+            anonymousKept = anonymousKept || body.contains("Anonymous song");
+        }
+        t.check(parts.contains(QStringLiteral("feed")) && parts.contains(QStringLiteral("releases")) && anonymousKept
+                    && !accountKept,
+                QStringLiteral("Home's last good answers are kept: the signed-out feed's and new releases', never the "
+                               "account's"),
+                parts.join(QStringLiteral(", ")) + (accountKept ? QStringLiteral(" (the account's among them)") : QString()));
+
+        catalog = std::make_unique<Catalog>();   // the next launch, signed out
+        int from = standIn.requests.size();
+        const bool showsKept = catalog->showSaved();
+        t.check(showsKept && shown() == anonymousHome && !catalog->savedAt().isEmpty()
+                    && standIn.requests.size() == from,
+                QStringLiteral("the next launch shows it at once, saying when it is from, and asks nothing for it"),
+                shown() + QStringLiteral(" / saved ") + catalog->savedAt());
+
+        down = true;
+        from = standIn.requests.size();
+        catalog->refresh();
+        settled();
+        t.check(standIn.requests.size() > from && shown() == anonymousHome && !catalog->savedAt().isEmpty()
+                    && !catalog->error().isEmpty(),
+                QStringLiteral("with YouTube Music not answering, it stays on screen, saying so"),
+                shown() + QStringLiteral(" / error: ") + catalog->error());
+
+        down = false;
+        catalog->refresh();
+        settled();
+        t.check(shown() == anonymousHome && catalog->savedAt().isEmpty() && catalog->error().isEmpty(),
+                QStringLiteral("  and a fresh answer takes its place"),
+                shown() + QStringLiteral(" / saved ") + catalog->savedAt());
     }
 
     // — 8. the log —

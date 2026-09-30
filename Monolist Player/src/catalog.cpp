@@ -3,6 +3,8 @@
 #include "artistlinks.h"
 #include "ytmsession.h"
 
+#include <QDateTime>
+#include <QJsonDocument>
 #include <QSqlQuery>
 #include <QTimer>
 #include <QVariant>
@@ -190,6 +192,50 @@ void Catalog::accountChanged()
     ask(Feed);
 }
 
+bool Catalog::showSaved()
+{
+    QSqlQuery query(AppDatabase::connection());
+    query.prepare(QStringLiteral("SELECT part, saved_at, body FROM home_cache WHERE region = ?"));
+    query.addBindValue(InnerTube::region());
+    if (!query.exec())
+        return false;
+    qint64 oldest = 0;
+    bool shown = false;
+    while (query.next()) {
+        const QJsonObject root = QJsonDocument::fromJson(qUncompress(query.value(2).toByteArray())).object();
+        if (root.isEmpty())
+            continue;
+        const QString part = query.value(0).toString();
+        if (part == QLatin1String("feed"))
+            applyFeed(root, false);
+        else if (part == QLatin1String("releases"))
+            applyReleases(root);
+        else
+            continue;
+        const qint64 at = query.value(1).toLongLong();
+        oldest = oldest == 0 ? at : qMin(oldest, at);
+        shown = true;
+    }
+    if (!shown)
+        return false;
+    composeShelves();
+    m_savedAt = QLocale().toString(QDateTime::fromSecsSinceEpoch(oldest), QStringLiteral("d MMM, HH:mm"));
+    qInfo("catalog: Home as it was saved on %s, until it answers afresh", qPrintable(m_savedAt));
+    Q_EMIT homeChanged();
+    return true;
+}
+
+void Catalog::saveAnswer(const QString &part, const QJsonObject &root)
+{
+    QSqlQuery query(AppDatabase::connection());
+    query.prepare(QStringLiteral("INSERT OR REPLACE INTO home_cache (part, region, saved_at, body) VALUES (?, ?, ?, ?)"));
+    query.addBindValue(part);
+    query.addBindValue(InnerTube::region());
+    query.addBindValue(QDateTime::currentSecsSinceEpoch());
+    query.addBindValue(qCompress(QJsonDocument(root).toJson(QJsonDocument::Compact)));
+    query.exec();
+}
+
 // Home is two requests, the home feed and new releases, run side by side;
 // the view updates once both have answered.
 void Catalog::refresh()
@@ -234,10 +280,15 @@ void Catalog::load(int parts)
                 finishHome();
                 return;
             }
-            if (error.isEmpty())
+            if (error.isEmpty()) {
                 applyFeed(root, asAccount);
-            else
+                // Kept for the next launch: the signed-out feed alone. The
+                // account's is its own, and is asked for afresh each time.
+                if (!asAccount && m_feedLoggedIn != QLatin1String("1") && !m_homeShelves.isEmpty())
+                    saveAnswer(QStringLiteral("feed"), root);
+            } else {
                 m_error = error;
+            }
             finishHome();
         }, useAccount ? InnerTube::Auth::IfSignedIn : InnerTube::Auth::Anonymous);
     }
@@ -252,27 +303,34 @@ void Catalog::load(int parts)
             return;
         }
         if (error.isEmpty()) {
-            m_releaseShelves.clear();
-            m_featured.clear();
-            for (const InnerTube::Shelf &shelf : InnerTube::parseShelves(root)) {
-                // Albums and singles only: new music videos are a video
-                // player's front page, not a music player's.
-                if (shelf.cards.isEmpty() || shelf.cards.first().type != QLatin1String("album"))
-                    continue;
-                QVariantMap map = shelfToMap(shelf);
-                if (m_featured.isEmpty())
-                    m_featured = InnerTube::cardToVariant(shelf.cards.first());
-                // The country is part of what this shelf is: another one
-                // lists different records. Settings picks it.
-                map.insert(QStringLiteral("title"), QStringLiteral("New releases"));
-                map.insert(QStringLiteral("strapline"), QStringLiteral("ALBUMS & SINGLES · %1").arg(InnerTube::region()));
-                m_releaseShelves.append(map);
-            }
+            applyReleases(root);
+            if (!m_releaseShelves.isEmpty())
+                saveAnswer(QStringLiteral("releases"), root);
         } else if (m_error.isEmpty()) {
             m_error = error;
         }
         finishHome();
     });
+}
+
+void Catalog::applyReleases(const QJsonObject &root)
+{
+    m_releaseShelves.clear();
+    m_featured.clear();
+    for (const InnerTube::Shelf &shelf : InnerTube::parseShelves(root)) {
+        // Albums and singles only: new music videos are a video
+        // player's front page, not a music player's.
+        if (shelf.cards.isEmpty() || shelf.cards.first().type != QLatin1String("album"))
+            continue;
+        QVariantMap map = shelfToMap(shelf);
+        if (m_featured.isEmpty())
+            m_featured = InnerTube::cardToVariant(shelf.cards.first());
+        // The country is part of what this shelf is: another one
+        // lists different records. Settings picks it.
+        map.insert(QStringLiteral("title"), QStringLiteral("New releases"));
+        map.insert(QStringLiteral("strapline"), QStringLiteral("ALBUMS & SINGLES · %1").arg(InnerTube::region()));
+        m_releaseShelves.append(map);
+    }
 }
 
 // Whether a page linked from the account's feed is the account's own: a mix
@@ -402,8 +460,14 @@ void Catalog::finishHome()
         return;
     }
     composeShelves();
-    // One failed request out of two still leaves a page worth showing.
-    if (!m_shelves.isEmpty() || m_quickPicks.rowCount() > 0) {
+    // Answered in full: what Home shows is fresh now, not the last launch's.
+    const bool answered = m_error.isEmpty();
+    if (answered)
+        m_savedAt.clear();
+    // One failed request out of two still leaves a page worth showing. The
+    // last launch's page, shown while nothing fresh has come, is shown on,
+    // and asked for again by itself as an empty one is.
+    if ((!m_shelves.isEmpty() || m_quickPicks.rowCount() > 0) && (answered || m_savedAt.isEmpty())) {
         m_error.clear();
         m_retries = 0;
     } else if (m_retries < 2) {

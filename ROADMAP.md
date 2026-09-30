@@ -117,7 +117,8 @@ Priority runs from 1 (first) to 9. Size: S under an hour, M a few hours, L a day
   Done when: A shelf header opens a full view that loads more pages. Song shelves get Play all, album and playlist cards get a hover play button, and Recently played links to library:history.
 - [ ] **A05** Search with nothing typed has no recent searches or moods & genres *(P5, M)*
   Done when: Recent searches (capped at about 50, each removable, with Clear all) appear under the empty field and on an idle Search page, along with YouTube Music's moods & genres as cards. The recommender shelves sit above them when a catalogue is set.
-- [ ] **A06** Home is blank at every launch and when offline, because the feed isn't cached *(P5, S)*
+- [x] **A06** Home is blank at every launch and when offline, because the feed isn't cached *(P5, S)*
+  Done 2026-09-30: the last good answers of the signed-out feed and of new releases, per country, in home_cache (compressed, as they came), read back through the same parsing at launch before anything is asked; Home then refreshes behind them. They stay on screen when the network fails, retried twice by themselves, with "Home as it was on <date>" beside RETRY. The account's feed is never kept: it is its own and always asked afresh. `--home-account-test` part 7b; a real second launch showed a full Home 0.4 s after its window.
   Done when: The last good Home result is saved, shown immediately at launch and refreshed in the background, and it stays on screen when the network fails.
 - [ ] **X07** Video and fallback search results aren't re-ranked or cleaned of junk *(P7, S)*
   Done when: A shared ranking step, reusing pickResult's term list, reorders video and fallback results. YouTube Music's own song results keep their order.

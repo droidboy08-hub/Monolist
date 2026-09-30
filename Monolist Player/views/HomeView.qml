@@ -185,7 +185,9 @@ ScrollPage {
 
             Text {
                 width: Math.min(implicitWidth, root.width - Theme.space8 * 2 - 80)
-                text: "YouTube Music did not answer: " + Catalog.error
+                // Over the last launch's Home, still shown: when that one is from.
+                text: (Catalog.savedAt.length > 0 ? "Home as it was on " + Catalog.savedAt + ". " : "")
+                      + "YouTube Music did not answer: " + Catalog.error
                 wrapMode: Text.WordWrap
                 font.family: Theme.fontFamily
                 font.pixelSize: 13

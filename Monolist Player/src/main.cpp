@@ -522,6 +522,8 @@ int main(int argc, char *argv[])
     QObject::connect(&accountLibrary, &YtmImport::enabledChanged, &catalog, &Catalog::accountPagesChanged);
     if (demo.contains(QLatin1String("+library")))
         accountLibrary.showDemo();
+    // Home as the last launch left it, at once, and afresh behind it.
+    catalog.showSaved();
     catalog.refresh();
     catalog.reloadRecent();
     QObject::connect(&player, &PlaybackController::playRecorded, &catalog, &Catalog::reloadRecent);

@@ -27,6 +27,10 @@ class Catalog : public QObject
     Q_OBJECT
     Q_PROPERTY(bool loading READ loading NOTIFY homeChanged)
     Q_PROPERTY(QString error READ error NOTIFY homeChanged)
+    // When what Home shows was saved ("30 Sep, 14:02"), while it is the last
+    // launch's rather than a fresh answer: from launch until a load has
+    // answered in full. Empty once Home is fresh.
+    Q_PROPERTY(QString savedAt READ savedAt NOTIFY homeChanged)
     // The first song shelf on the home feed ("Quick picks"), its title and
     // the small line above it ("For Demo Listener" on the account's feed).
     Q_PROPERTY(SearchResultModel *quickPicks READ quickPicks CONSTANT)
@@ -105,6 +109,12 @@ public:
 
     bool loading() const { return m_pendingHome > 0; }
     QString error() const { return m_error; }
+    QString savedAt() const { return m_savedAt; }
+    // Home as the last good answers left it, for this country, shown before
+    // anything is asked: called once at launch, before refresh(). False when
+    // there is nothing saved. Only the signed-out feed is ever saved; the
+    // account's is always asked for afresh.
+    bool showSaved();
     SearchResultModel *quickPicks() { return &m_quickPicks; }
     QString quickPicksTitle() const { return m_quickPicksTitle; }
     QString quickPicksStrapline() const { return m_quickPicksStrapline; }
@@ -208,6 +218,10 @@ private:
     // Home's shelves in the order it shows them, from the feed's and new
     // releases'.
     void composeShelves();
+    // New releases' answer into its shelves and the poster.
+    void applyReleases(const QJsonObject &root);
+    // A good answer kept for the next launch, as it came.
+    void saveAnswer(const QString &part, const QJsonObject &root);
     // How a page is asked for: as the account for its own pages (the
     // account's playlists, Liked music, and what its feed showed, a mix
     // made for it), signed out for any other.
@@ -245,6 +259,7 @@ private:
     bool m_feedAsAccount = false;
     QString m_feedLoggedIn;
     QString m_error;
+    QString m_savedAt;
     QString m_quickPicksTitle;
     QString m_quickPicksStrapline;
     bool m_personalFeed = false;

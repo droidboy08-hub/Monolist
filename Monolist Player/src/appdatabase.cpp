@@ -169,6 +169,16 @@ void AppDatabase::createSchema()
         " bytes INTEGER NOT NULL DEFAULT 0,"
         " downloaded_at TEXT NOT NULL DEFAULT (datetime('now')))"));
 
+    // Home's last good answers, signed out, per country (Catalog::showSaved):
+    // shown at once at the next launch, and when the network fails. The
+    // body is the answer as it came, compressed.
+    q.exec(QStringLiteral(
+        "CREATE TABLE IF NOT EXISTS home_cache ("
+        " part TEXT PRIMARY KEY,"
+        " region TEXT NOT NULL DEFAULT '',"
+        " saved_at INTEGER NOT NULL DEFAULT 0,"
+        " body BLOB NOT NULL)"));
+
     // The downloads not finished yet, in the order they will run, so a quit
     // does not lose them (DownloadManager::saveQueue): queued ones, those
     // running when the app closed, and failed ones with why.
