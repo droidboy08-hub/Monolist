@@ -67,6 +67,9 @@
 #include "macos/mediasession.h"
 #include "macos/toolstore.h"
 #endif
+#ifdef Q_OS_WIN
+#include "winmediasession.h"
+#endif
 
 #include <clocale>
 #include <functional>
@@ -535,6 +538,10 @@ int main(int argc, char *argv[])
     // The media keys, Control Center and the lock screen.
     MacMediaSession mediaSession(&player, artworkFetcher.network());
 #endif
+#ifdef Q_OS_WIN
+    // The media keys and Windows' media flyout, once there is a window.
+    WinMediaSession mediaSession(&player);
+#endif
 
     // The system's own picture in picture, where there is one.
     SystemPip systemPip(&player, &engine, artworkFetcher.network());
@@ -658,6 +665,9 @@ int main(int argc, char *argv[])
     if (auto *window = qobject_cast<QWindow *>(qmlEngine.rootObjects().value(0))) {
         chrome.attach(window);
         window->show();
+#ifdef Q_OS_WIN
+        mediaSession.attach(window);
+#endif
 #ifdef Q_OS_MACOS
         // A Mac app outlives its window: closing it (the red button, ⌘W)
         // leaves the music playing, and clicking the Dock icon brings it back.

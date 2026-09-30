@@ -328,9 +328,13 @@ if(NOT APPLE)
 endif()
 
 if(WIN32)
+    # The media keys and Windows' media flyout (System Media Transport
+    # Controls), through the Windows Runtime.
+    target_sources(monolist PRIVATE src/winmediasession.h src/winmediasession.cpp)
     # WindowChrome: the drop shadow and square corners of the caption-less frame.
     # netapi32: the account's full name, for the sidebar (Library).
-    target_link_libraries(monolist PRIVATE dwmapi netapi32)
+    # runtimeobject: the Windows Runtime's activation and strings.
+    target_link_libraries(monolist PRIVATE dwmapi netapi32 runtimeobject)
 endif()
 
 if(APPLE)
