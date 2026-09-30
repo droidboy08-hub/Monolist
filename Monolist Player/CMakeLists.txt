@@ -196,7 +196,9 @@ endif()
 # (cookies.txt, a Cookie header or a copied cURL command), kept in SecretStore,
 # checked with YouTube Music, and carried only by the calls that ask for it.
 # Plain Qt on every platform; its tests are --cookie-test and --ytm-session-test.
+# Every call with the account passes AccountGuard first (--account-guard-test).
 target_sources(monolist PRIVATE
+    src/accountguard.h             src/accountguard.cpp
     src/cookieimport.h             src/cookieimport.cpp
     src/ytmsession.h               src/ytmsession.cpp
     src/ytmselftest.h              src/ytmselftest.cpp)

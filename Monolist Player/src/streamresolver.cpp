@@ -832,9 +832,20 @@ void StreamResolver::considerAccount(Job *job, const QString &reason)
     job->accountDecided = true;
     QString why = QStringLiteral("no account is followed");
     if (m_account && m_account->accountForPlayback(&why)) {
-        qInfo("resolver: %s: refused signed out (%s); asking with the account next", qPrintable(job->videoId),
-              qPrintable(reason.left(160)));
-        job->next.prepend(TierSignedIn);
+        // The account is the last resort, not the next thing tried: yt-dlp
+        // signed out first when it is still to come, since a refusal of one
+        // client is often not another's, and every song asked for with the
+        // account is traffic on the account (AccountGuard).
+        const int ytdlp = int(job->next.indexOf(TierYtDlp));
+        if (ytdlp >= 0) {
+            job->next.insert(ytdlp + 1, TierSignedIn);
+            qInfo("resolver: %s: refused signed out (%s); asking yt-dlp signed out, then with the account",
+                  qPrintable(job->videoId), qPrintable(reason.left(160)));
+        } else {
+            job->next.prepend(TierSignedIn);
+            qInfo("resolver: %s: refused signed out (%s); asking with the account next", qPrintable(job->videoId),
+                  qPrintable(reason.left(160)));
+        }
         return;
     }
     qInfo("resolver: %s: refused signed out (%s), and %s; it goes on signed out", qPrintable(job->videoId),
@@ -976,8 +987,13 @@ void StreamResolver::checkAccountWarning(const YtDlpRequest *request)
     // yt-dlp's warning when YouTube answered its signed-in requests as
     // signed out: "The provided YouTube account cookies are no longer
     // valid." The session's own check decides whether that is so.
-    if (m_account && request->errorOutput().contains(QLatin1String("cookies are no longer valid"), Qt::CaseInsensitive))
+    if (!m_account)
+        return;
+    if (request->errorOutput().contains(QLatin1String("cookies are no longer valid"), Qt::CaseInsensitive))
         m_account->doubt(QStringLiteral("yt-dlp says the account's cookies are no longer valid"));
+    // A bot check, a 429 or a rate limit given to the account itself rests
+    // every use of it, this rung's included.
+    m_account->ytDlpSaid(request->errorOutput());
 }
 
 // ------------------------------------------------------------ the deadline

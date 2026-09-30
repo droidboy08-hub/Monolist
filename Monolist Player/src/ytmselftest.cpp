@@ -75,6 +75,27 @@ using Cookie = CookieImport::Cookie;
 using Result = CookieImport::Result;
 using Format = CookieImport::Format;
 
+// The account's guard with its spacing and its counts taken off, for the
+// tests against the stand-in, whose dozens of calls with the account would
+// otherwise take minutes. Its rests still work: a 429, a bot check or a 403
+// rests the account here as anywhere. The spacing and the counts themselves
+// are --account-guard-test's.
+AccountGuard::Limits unpaced()
+{
+    AccountGuard::Limits limits;
+    limits.burst = 1000000;
+    limits.refillMs = 1;
+    limits.gapMs = 0;
+    limits.jitterMs = 0;
+    limits.perHour = limits.perDay = 1000000;
+    limits.listensPerHour = limits.listensPerDay = 1000000;
+    limits.ytdlpGapMs = 0;
+    limits.ytdlpPerHour = limits.ytdlpPerDay = 1000000;
+    return limits;
+}
+// What the guard keeps between launches, in the settings table.
+const QString kGuardKey = QStringLiteral("ytmusic.guard");
+
 // — the fixtures: invented, every value marked TEST so a leak is easy to find —
 
 // A cookies.txt file as a browser extension writes it for a private window
@@ -1075,6 +1096,7 @@ int runYtmSessionSelfTest(Library *library)
     SecretStore::remove(secretName);
     library->setSetting(nameKey, QString());
     library->setSetting(handleKey, QString());
+    library->setSetting(kGuardKey, QString());
     const QByteArray fixture = QByteArray(netscapeFixture()).replace("\n", "\r\n");
     const Result expected = CookieImport::parse(fixture);
     t.check(expected.ok(), QStringLiteral("the fixture is a session"), expected.error);
@@ -1141,6 +1163,7 @@ int runYtmSessionSelfTest(Library *library)
     timing.recheckMs = 300;
     timing.retryMinMs = 10 * 60 * 1000;   // never within the test
     timing.saveDelayMs = 300;
+    timing.guard = unpaced();
     session->setTiming(timing);
     QStringList outcomes;
     const auto follow = [&outcomes](YtmSession *s) {
@@ -1393,18 +1416,64 @@ int runYtmSessionSelfTest(Library *library)
             QStringLiteral("%1 drops of %2; %3").arg(regionDrops).arg(dropped, refusedRegion.error));
     InnerTube::setRegion(QString());
 
-    // — 6. 403: the session is over —
+    // — 5b. 403: the account rests, and the session is kept to be checked
+    // afterwards. YouTube answers 403 to an address it has stopped trusting
+    // as well as to a dead session, so it is never taken as the end of the
+    // sign-in: that would send the user back to sign in again, which is
+    // more traffic on the account, not less —
+    {
+        const quint64 kept = session->session();
+        authedStatus = 403;
+        requestsBefore = int(standIn.requests.size());
+        const Answered refused = browseNow(consumer, QStringLiteral("FEtest_403"), InnerTube::Auth::IfSignedIn);
+        authedStatus = 200;
+        const bool two = standIn.requests.size() == requestsBefore + 2;
+        t.check(refused.error.isEmpty() && two && standIn.requests.at(requestsBefore).authed()
+                    && !standIn.requests.last().authed(),
+                QStringLiteral("a 403 with the account: asked again without it, and answered"), refused.error);
+        t.check(session->resting() && session->state() == QLatin1String("active") && session->session() == kept
+                    && !session->jar().isEmpty(),
+                QStringLiteral("and the account rests: the session is kept, not ended"), session->state());
+        t.check(session->statusLine().contains(QLatin1String("asked Monolist to slow down"))
+                    && session->statusLine().contains(QLatin1String("plays signed out")),
+                QStringLiteral("the row says YouTube asked Monolist to slow down, until when, and that it plays "
+                               "signed out meanwhile"),
+                session->statusLine());
+        browseNow(consumer, QStringLiteral("FEtest_anon"), InnerTube::Auth::IfSignedIn);
+        t.check(sameAsBaseline(standIn.requests.last()),
+                QStringLiteral("IfSignedIn while the account rests: byte for byte the anonymous request"));
+        const Answered required = browseNow(consumer, QStringLiteral("FEtest_required"), InnerTube::Auth::Required);
+        t.check(!required.error.isEmpty() && !standIn.requests.last().authed(),
+                QStringLiteral("Required while the account rests: not asked at all"), required.error);
+        requestsBefore = int(standIn.requests.size());
+        session->checkNow();
+        settle(400);
+        t.check(standIn.requests.size() == requestsBefore,
+                QStringLiteral("not even the session's check is asked while it rests"));
+        t.check(!session->accountForHome() && !session->accountForPlayback(),
+                QStringLiteral("neither Home nor playback may use the account while it rests"));
+        // The rest over (here at once; an hour for a first rest): the
+        // session is checked before anything else is asked with it.
+        outcomesBefore = int(outcomes.size());
+        session->guard().forgive();
+        waitVerdict(outcomesBefore);
+        t.check(!session->resting() && session->state() == QLatin1String("active"),
+                QStringLiteral("once the rest is over the session is checked, and confirmed here, stays"),
+                session->state());
+    }
+
+    // — 6. 401: the session is over —
     const quint64 oldSession = session->session();
-    authedStatus = 403;
-    const Answered refused403 = browseNow(consumer, QStringLiteral("FEtest_403"), InnerTube::Auth::IfSignedIn);
+    authedStatus = 401;
+    const Answered refused401 = browseNow(consumer, QStringLiteral("FEtest_401"), InnerTube::Auth::IfSignedIn);
     authedStatus = 200;
-    t.check(refused403.error.isEmpty() && !standIn.requests.last().authed(),
-            QStringLiteral("a 403 with the account: asked again without it, and answered"), refused403.error);
+    t.check(refused401.error.isEmpty() && !standIn.requests.last().authed(),
+            QStringLiteral("a 401 with the account: asked again without it, and answered"), refused401.error);
     t.check(session->state() == QLatin1String("rejected") && session->jar().isEmpty()
-                && session->statusLine().contains(QLatin1String("ended")),
-            QStringLiteral("and the session is refused: rejected, the cookies dropped"), session->state());
+                && session->statusLine().contains(QLatin1String("ended")) && !session->resting(),
+            QStringLiteral("and the session is refused: rejected, the cookies dropped (and no rest)"), session->state());
     t.check(session->headline() == QLatin1String("Session expired")
-                && session->statusLine().contains(QLatin1String("no longer accepts the sign-in for Monolist Test (HTTP 403)"))
+                && session->statusLine().contains(QLatin1String("no longer accepts the sign-in for Monolist Test (HTTP 401)"))
                 && session->statusLine().contains(QLatin1String("Import a new one")),
             QStringLiteral("the row says Session expired, whose, why, and to import a new one"),
             session->headline() + QStringLiteral(" / ") + session->statusLine());
@@ -1743,6 +1812,7 @@ int runHomeAccountSelfTest(Library *library)
     SecretStore::remove(secretName);
     library->setSetting(nameKey, QString());
     library->setSetting(homeKey, QString());
+    library->setSetting(kGuardKey, QString());
     InnerTube bare;   // asks as Home did before there were accounts
     browseNow(bare, QStringLiteral("FEtest_anon"), InnerTube::Auth::Anonymous);
     const QByteArray fixture = QByteArray(netscapeFixture()).replace("\n", "\r\n");
@@ -1772,6 +1842,7 @@ int runHomeAccountSelfTest(Library *library)
     timing.recheckMs = 300;
     timing.retryMinMs = 10 * 60 * 1000;   // never within the test
     timing.saveDelayMs = 300;
+    timing.guard = unpaced();
     QStringList outcomes;
     const auto newSession = [&]() {
         session = std::make_unique<YtmSession>(library);
@@ -1933,14 +2004,14 @@ int runHomeAccountSelfTest(Library *library)
     waitVerdict(before);
     settled();
     t.check(shown() == accountHome, QStringLiteral("imported again: the account's Home"), shown());
-    authedStatus = 403;
+    authedStatus = 401;
     from = int(standIn.requests.size());
     catalog->refresh();
     settled();
     authedStatus = 200;
     t.check(session->state() == QLatin1String("rejected") && shown() == anonymousHome && !catalog->feedAsAccount()
                 && !asked(feedId, from).isEmpty() && !asked(feedId, from).last().authed(),
-            QStringLiteral("a 403 on Home's feed: the session is refused, and Home is the signed-out feed"),
+            QStringLiteral("a 401 on Home's feed: the session is refused, and Home is the signed-out feed"),
             session->state() + QStringLiteral("; ") + shown());
 
     // — 7. a launch with a stored session: signed out first, the account's once confirmed —
@@ -3430,7 +3501,7 @@ int runAccountPlaySelfTest(Library *library)
 
     // — the pieces —
     SecretStore::remove(secretName);
-    for (const QString &key : { nameKey, playKey, reportKey })
+    for (const QString &key : { nameKey, playKey, reportKey, kGuardKey })
         library->setSetting(key, QString());
     std::unique_ptr<YtmSession> session;
     YtmSession::Timing timing;
@@ -3438,6 +3509,7 @@ int runAccountPlaySelfTest(Library *library)
     timing.recheckMs = 300;
     timing.retryMinMs = 10 * 60 * 1000;   // never within the test
     timing.saveDelayMs = 60 * 60 * 1000;  // kept pending, so a rotation can be seen waiting
+    timing.guard = unpaced();
     QStringList verdicts;
     QHash<QString, QString> listens;      // song -> how its report went
     StreamResolver resolver;
@@ -3595,11 +3667,15 @@ int runAccountPlaySelfTest(Library *library)
         const Outcome aged = resolveNow(kAgeGated);
         const QList<FakeCall> made = fakeCalls(fake).mid(from);
         t.check(aged.ok && aged.tier == StreamResolver::TierSignedIn && aged.url == signedUrlOf(kAgeGated)
-                    && modesSince(fake, from) == QLatin1String("signed"),
-                QStringLiteral("signed in, a song /player refuses for its age is asked with the account next, before "
-                               "yt-dlp signed out, and plays from that link"),
+                    && modesSince(fake, from) == QLatin1String("anon signed"),
+                QStringLiteral("signed in, a song /player refuses for its age is asked of yt-dlp signed out first, "
+                               "then with the account (the last resort), and plays from that link"),
                 modesSince(fake, from) + QStringLiteral("; ") + describe(aged));
-        const FakeCall call = made.value(0);
+        FakeCall call;
+        for (const FakeCall &each : made) {
+            if (each.mode == QLatin1String("signed"))
+                call = each;
+        }
         t.check(call.argAfter(QStringLiteral("--extractor-args")) == QLatin1String("youtube:player_client=tv_downgraded,web_embedded")
                     && call.argAfter(QStringLiteral("-f")) == QLatin1String("bestaudio/best")
                     && call.args.contains(QStringLiteral("--dump-single-json")),
@@ -3637,7 +3713,7 @@ int runAccountPlaySelfTest(Library *library)
                 QStringLiteral("what yt-dlp rotated is taken into the session and kept (a changed SIDCC, a new "
                                "cookie), and google.com's is not"),
                 QStringLiteral("%1 cookies, was %2").arg(session->jar().size()).arg(jarBefore));
-        t.check(loggedSince(captured, logFrom, QStringLiteral("asking with the account next"))
+        t.check(loggedSince(captured, logFrom, QStringLiteral("asking yt-dlp signed out, then with the account"))
                     && loggedSince(captured, logFrom, QStringLiteral("resolved with the account as itag 251 (TVHTML5)"))
                     && loggedSince(captured, logFrom, QStringLiteral("yt-dlp gave back")),
                 QStringLiteral("the log says why the account was asked, what it gave and what came back, in names and "
@@ -3690,8 +3766,10 @@ int runAccountPlaySelfTest(Library *library)
                 modesSince(fake, from));
         const int playFrom = calls();
         const Outcome played = resolveNow(kBotWall);
-        t.check(played.ok && played.tier == StreamResolver::TierSignedIn && modesSince(fake, playFrom) == QLatin1String("signed"),
-                QStringLiteral("played, the same song goes to the account after /player's bot check"),
+        t.check(played.ok && played.tier == StreamResolver::TierSignedIn
+                    && modesSince(fake, playFrom) == QLatin1String("anon signed"),
+                QStringLiteral("played, the same song goes to the account after /player's bot check and yt-dlp's "
+                               "signed out"),
                 modesSince(fake, playFrom) + QStringLiteral("; ") + describe(played));
     }
 
@@ -3788,9 +3866,10 @@ int runAccountPlaySelfTest(Library *library)
         };
         outcomes.remove(kSlow);
         resolver.resolve(kSlow);
-        waitUntil([&]() { return runsOf(kSlow) == QStringList{ QStringLiteral("signed") }; }, 20000);
+        const QStringList signedAfterAnon{ QStringLiteral("anon"), QStringLiteral("signed") };
+        waitUntil([&]() { return runsOf(kSlow) == signedAfterAnon; }, 20000);
         settle(300);
-        const bool started = runsOf(kSlow) == QStringList{ QStringLiteral("signed") };
+        const bool started = runsOf(kSlow) == signedAfterAnon;
         // What JioSaavn winning the song's race does to it.
         resolver.carryOnUnheard(kSlow);
         // A song somebody waits for, which needs yt-dlp: the lookup above is
@@ -3824,9 +3903,9 @@ int runAccountPlaySelfTest(Library *library)
         const int slowLog = int(captured.size());
         outcomes.remove(kSlow);
         resolver.resolve(kSlow);
-        waitUntil([&]() { return modesSince(fake, slowFrom) == QLatin1String("signed"); }, 20000);
+        waitUntil([&]() { return modesSince(fake, slowFrom) == QLatin1String("anon signed"); }, 20000);
         settle(300);
-        const bool started = modesSince(fake, slowFrom) == QLatin1String("signed");
+        const bool started = modesSince(fake, slowFrom) == QLatin1String("anon signed");
         session->signOut();
         const Outcome slow = wait(kSlow);
         waitUntil([]() { return cookieFilesLeft() == 0; }, 8000);
@@ -3939,12 +4018,20 @@ int runAccountPlaySelfTest(Library *library)
         remixStatus = 403;
         const QString refused = listen(kPlain);
         remixStatus = 200;
-        waitUntil([&]() { return verdicts.size() > verdictsBefore; }, 15000);
+        settle(300);
         t.check(refused == QLatin1String("failed") && remixPlayers(from).size() == 1 && requestsTo("/api/stats/", from).isEmpty()
-                    && !requestsTo("account/account_menu", from).isEmpty() && session->state() == QLatin1String("active"),
-                QStringLiteral("the account's /player refused (403): nothing is asked again without the account, and "
-                               "the session is checked rather than ended (confirmed here, it stays)"),
+                    && requestsTo("account/account_menu", from).isEmpty() && session->resting()
+                    && session->state() == QLatin1String("active") && !session->jar().isEmpty(),
+                QStringLiteral("the account's /player refused (403): nothing is asked again without the account, the "
+                               "account rests, and the session is kept (not even checked yet)"),
                 refused + QStringLiteral("; ") + session->state());
+        const QString resting = listen(kPlain);
+        t.check(resting == QLatin1String("skipped") && remixPlayers(from).size() == 1,
+                QStringLiteral("while it rests, a listen is not reported"), resting);
+        session->guard().forgive();
+        waitUntil([&]() { return verdicts.size() > verdictsBefore; }, 15000);
+        t.check(!requestsTo("account/account_menu", from).isEmpty() && session->state() == QLatin1String("active"),
+                QStringLiteral("the rest over, the session is checked (confirmed here, it stays)"), session->state());
 
         session->signOut();
         from = int(standIn.requests.size());
@@ -3974,11 +4061,200 @@ int runAccountPlaySelfTest(Library *library)
     resolver.followAccount(nullptr);
     session.reset();
     SecretStore::remove(secretName);
-    for (const QString &key : { nameKey, playKey, reportKey })
+    for (const QString &key : { nameKey, playKey, reportKey, kGuardKey })
         library->setSetting(key, QString());
     YtDlp::setExecutableOverride(QString());
     InnerTube::setTestServer(QString());
     settle(200);
     QDir(fake).removeRecursively();
+    return t.finish();
+}
+
+// ---------------------------------------------------------------- the account's guard
+
+int runAccountGuardSelfTest()
+{
+    Checks t("guard");
+    qint64 clock = 1800000000000LL;   // an afternoon in 2027, in ms
+    AccountGuard::setClock([&clock]() { return clock; });
+    constexpr qint64 kMinute = 60 * 1000;
+    constexpr qint64 kHour = 60 * kMinute;
+    QHash<QString, QString> kept;
+    const AccountGuard::Store store{ [&kept](const QString &key) { return kept.value(key); },
+                                     [&kept](const QString &key, const QString &value) { kept.insert(key, value); } };
+    using Kind = AccountGuard::Kind;
+
+    // — 1. one at a time, then spaced —
+    {
+        AccountGuard guard;
+        const AccountGuard::Limits limits;
+        t.check(limits.gapMs == 1500 && limits.jitterMs == 1000 && limits.burst == 6 && limits.refillMs == 4000
+                    && limits.perHour == 150 && limits.perDay == 800 && limits.listensPerHour == 40
+                    && limits.ytdlpGapMs == 20000 && limits.ytdlpPerHour == 15 && limits.firstPauseMs == kHour
+                    && limits.secondPauseMs == 3 * kHour && limits.thirdPauseMs == 24 * kHour,
+                QStringLiteral("the limits the app runs with: 1.5-2.5 s apart, 6 at most close together then one "
+                               "every 4 s, 150 an hour, 800 a day, 40 listen reports and 15 lookups an hour, rests of "
+                               "1 h, 3 h and a day"));
+        QString why;
+        t.check(guard.admit(Kind::Browse, &why) == 0, QStringLiteral("a first call goes at once"), why);
+        guard.started(Kind::Browse);
+        const qint64 busy = guard.admit(Kind::Browse, &why);
+        t.check(busy > 0 && busy < 1000 && why.contains(QLatin1String("another call")),
+                QStringLiteral("while it is out, the next waits its turn"), QString::number(busy) + QStringLiteral(" ") + why);
+        guard.finished(Kind::Browse, 200);
+        const qint64 spaced = guard.admit(Kind::Browse, &why);
+        t.check(spaced >= 1500 && spaced <= 2500, QStringLiteral("once it is back, the next waits 1.5 to 2.5 s from its start"),
+                QString::number(spaced));
+        clock += spaced;
+        t.check(guard.admit(Kind::Browse) == 0, QStringLiteral("and then goes"));
+        guard.started(Kind::Browse);
+        clock += limits.holdMs + 1;
+        t.check(!guard.busy() && guard.admit(Kind::Browse) == 0,
+                QStringLiteral("a call never heard back from gives up its turn after 45 s"));
+        guard.finished(Kind::Browse, 200);
+    }
+
+    // — 2. the bucket: a few close together, then one every 4 s —
+    {
+        AccountGuard guard;
+        AccountGuard::Limits limits;
+        limits.gapMs = 0;
+        limits.jitterMs = 0;
+        guard.setLimits(limits);
+        int went = 0;
+        for (int i = 0; i < 10 && guard.admit(Kind::Browse) == 0; ++i) {
+            guard.started(Kind::Browse);
+            guard.finished(Kind::Browse, 200);
+            ++went;
+        }
+        const qint64 wait = guard.admit(Kind::Browse);
+        t.check(went == 6 && wait > 3000 && wait <= 4000,
+                QStringLiteral("six go close together; the seventh waits for the bucket (about 4 s)"),
+                QStringLiteral("%1 went, then %2 ms").arg(went).arg(wait));
+    }
+
+    // — 3. the hour and the day —
+    {
+        AccountGuard guard;
+        AccountGuard::Limits limits;
+        limits.gapMs = limits.jitterMs = 0;
+        limits.burst = 1000;
+        limits.perHour = 5;
+        limits.perDay = 8;
+        guard.setLimits(limits);
+        const auto use = [&](Kind kind) {
+            const qint64 verdict = guard.admit(kind);
+            if (verdict == 0) {
+                guard.started(kind);
+                guard.finished(kind, 200);
+            }
+            clock += 1000;
+            return verdict;
+        };
+        for (int i = 0; i < 5; ++i)
+            use(Kind::Browse);
+        QString why;
+        t.check(guard.admit(Kind::Browse, &why) == -1 && why.contains(QLatin1String("for this hour")),
+                QStringLiteral("the hour's calls spent: refused, not kept waiting"), why);
+        clock += kHour;
+        t.check(guard.admit(Kind::Browse) == 0 && guard.usedLastHour() == 0 && guard.usedLastDay() == 5,
+                QStringLiteral("an hour later it may go again; the day still counts them"));
+        for (int i = 0; i < 3; ++i)
+            use(Kind::Browse);
+        t.check(guard.admit(Kind::Browse, &why) == -1 && why.contains(QLatin1String("for today")),
+                QStringLiteral("the day's calls spent: refused until they fall out of the last 24 hours"), why);
+        clock += 24 * kHour;
+        t.check(guard.admit(Kind::Browse) == 0, QStringLiteral("a day later, free again"));
+    }
+
+    // — 4. listen reports and yt-dlp's lookups have shares of their own —
+    {
+        AccountGuard guard;
+        AccountGuard::Limits limits;
+        limits.gapMs = limits.jitterMs = 0;
+        limits.burst = 1000;
+        limits.listensPerHour = 3;
+        limits.ytdlpPerHour = 2;
+        guard.setLimits(limits);
+        for (int i = 0; i < 3; ++i) {
+            guard.admit(Kind::Listen);
+            guard.started(Kind::Listen);
+            guard.finished(Kind::Listen, 200);
+            clock += 1000;
+        }
+        QString why;
+        t.check(guard.admit(Kind::Listen, &why) == -1 && why.contains(QLatin1String("listens")) && guard.admit(Kind::Browse) == 0,
+                QStringLiteral("the hour's listen reports spent: another is refused, while a browse still goes"), why);
+        t.check(guard.admit(Kind::YtDlp) == 0, QStringLiteral("a lookup with the account may go"));
+        guard.started(Kind::YtDlp);
+        guard.finished(Kind::YtDlp, 0);
+        t.check(guard.usedLastHour() == 3 + 4, QStringLiteral("a lookup counts as four calls in the hour"),
+                QString::number(guard.usedLastHour()));
+        clock += 5000;
+        t.check(guard.admit(Kind::YtDlp, &why) == -1 && why.contains(QLatin1String("s ago")),
+                QStringLiteral("another within 20 s is refused (the song goes on signed out), not kept waiting"), why);
+        clock += 20000;
+        guard.admit(Kind::YtDlp);
+        guard.started(Kind::YtDlp);
+        guard.finished(Kind::YtDlp, 0);
+        clock += 30000;
+        t.check(guard.admit(Kind::YtDlp, &why) == -1 && why.contains(QLatin1String("in the last hour")),
+                QStringLiteral("the hour's lookups spent: refused"), why);
+    }
+
+    // — 5. rests: a 429 pauses everything; an hour, three, a day —
+    {
+        kept.clear();
+        AccountGuard guard;
+        guard.setStore(store);
+        int changes = 0;
+        QObject::connect(&guard, &AccountGuard::pausedChanged, &guard, [&changes]() { ++changes; });
+        guard.admit(Kind::Browse);
+        guard.started(Kind::Browse);
+        guard.finished(Kind::Browse, 429);
+        QString why;
+        t.check(guard.paused() && guard.pausedUntil() == clock + kHour && changes == 1
+                    && guard.admit(Kind::Check, &why) == -1 && why.contains(QLatin1String("resting until"))
+                    && guard.admit(Kind::YtDlp) == -1 && guard.admit(Kind::Listen) == -1,
+                QStringLiteral("a 429: everything rests an hour, the check and the lookups too"), why);
+        clock += 30 * 1000;
+        guard.trip(QStringLiteral("a second refusal of the same moment"));
+        t.check(guard.pausedUntil() == clock - 30 * 1000 + kHour,
+                QStringLiteral("refusals close together are one rest, not three"));
+        clock += kHour;
+        t.check(guard.admit(Kind::Browse) == 0 && !guard.paused() && changes == 2,
+                QStringLiteral("the hour over, calls go again (and it says so)"));
+        guard.trip(QStringLiteral("a bot check"));
+        t.check(guard.pausedUntil() == clock + 3 * kHour, QStringLiteral("a second rest within a day: three hours"));
+        clock += 3 * kHour + 1;
+        guard.admit(Kind::Browse);
+        guard.trip(QStringLiteral("a 403"));
+        t.check(guard.pausedUntil() == clock + 24 * kHour, QStringLiteral("a third within a day: a whole day"));
+
+        // — 6. kept across a restart —
+        AccountGuard later;
+        later.setStore(store);
+        t.check(later.paused() && later.pausedUntil() == guard.pausedUntil()
+                    && later.pauseReason() == QLatin1String("a 403") && later.usedLastDay() == guard.usedLastDay(),
+                QStringLiteral("a restart keeps the rest, its reason and the day's count: never a way round them"));
+        clock += 24 * kHour + 1;
+        t.check(later.admit(Kind::Browse) == 0 && !later.paused(), QStringLiteral("and ends it on time"));
+    }
+
+    // — 7. a longer Retry-After is honoured —
+    {
+        AccountGuard guard;
+        clock += 48 * kHour;
+        guard.admit(Kind::Browse);
+        guard.started(Kind::Browse);
+        guard.finished(Kind::Browse, 429, 2 * 60 * 60);
+        t.check(guard.pausedUntil() == clock + 2 * kHour,
+                QStringLiteral("a 429 that asks for two hours rests two hours, not one"));
+        guard.forgive();
+        t.check(!guard.paused() && guard.usedLastDay() == 0 && guard.admit(Kind::Browse) == 0,
+                QStringLiteral("forgive (the self-tests' own) clears it all"));
+    }
+
+    AccountGuard::setClock({});
     return t.finish();
 }

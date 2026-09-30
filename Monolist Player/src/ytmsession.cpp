@@ -73,6 +73,14 @@ int timerMs(qint64 ms)
     return int(std::clamp<qint64>(ms, 0, std::numeric_limits<int>::max()));
 }
 
+// `ms` give or take `spread` of it (0.25: from 75 to 125 per cent), so the
+// account's checks never come on a clock a server could set its watch by.
+qint64 jittered(qint64 ms, double spread)
+{
+    const double factor = 1.0 + spread * (2.0 * QRandomGenerator::global()->generateDouble() - 1.0);
+    return qint64(double(ms) * factor);
+}
+
 QString joinedNames(const QList<Cookie> &jar)
 {
     return CookieImport::names(jar).join(QStringLiteral(", "));
@@ -132,7 +140,47 @@ YtmSession::YtmSession(Library *library, QObject *parent)
     m_useForHome = !m_library || m_library->settingValue(kHomeKey) != QLatin1String("0");
     m_playWhenNeeded = !m_library || m_library->settingValue(kPlayKey) != QLatin1String("0");
     m_reportListens = !m_library || m_library->settingValue(kReportKey) != QLatin1String("0");
+    // The counts and any rest an earlier run was told to take outlive it:
+    // a restart must never be a way round them.
+    m_guard.setLimits(m_timing.guard);
+    if (m_library) {
+        Library *library = m_library;
+        m_guard.setStore({ [library](const QString &key) { return library->settingValue(key); },
+                           [library](const QString &key, const QString &value) { library->setSetting(key, value); } });
+    }
+    connect(&m_guard, &AccountGuard::pausedChanged, this, [this]() {
+        updateStatus();
+        // Rested: whatever the session's standing, a check says it again
+        // before anything else is asked with it.
+        if (!m_guard.paused() && !m_jar.isEmpty()) {
+            m_failures = 0;
+            scheduleCheck(m_timing.launchCheckMs
+                          + qint64(QRandomGenerator::global()->bounded(std::max(1, 2 * m_timing.launchCheckMs))));
+        }
+    });
     updateStatus();
+}
+
+QString YtmSession::restLine() const
+{
+    if (!m_guard.paused())
+        return QString();
+    const QDateTime until = QDateTime::fromMSecsSinceEpoch(m_guard.pausedUntil());
+    const bool today = until.date() == QDate::currentDate();
+    const QString when = today ? QLocale::system().toString(until.time(), QLocale::ShortFormat)
+                               : QLocale::system().toString(until, QLocale::ShortFormat);
+    return QStringLiteral("YouTube asked Monolist to slow down, so nothing is asked with your account until %1. "
+                          "Everything plays signed out meanwhile; your sign-in is kept.").arg(when);
+}
+
+void YtmSession::ytDlpSaid(const QString &errorOutput)
+{
+    static const QRegularExpression slowDown(
+        QStringLiteral("not a bot|HTTP Error 429|Too Many Requests|rate[- ]limited|unusual traffic"),
+        QRegularExpression::CaseInsensitiveOption);
+    const QRegularExpressionMatch match = slowDown.match(errorOutput);
+    if (match.hasMatch())
+        m_guard.trip(QStringLiteral("yt-dlp's lookup with the account was answered \"%1\"").arg(match.captured(0)));
 }
 
 void YtmSession::setUseForHome(bool use)
@@ -175,9 +223,9 @@ void YtmSession::setReportListens(bool report)
 
 bool YtmSession::accountForHome() const
 {
-    // What the hook asks of an IfSignedIn call (authHeaders), so what Home
-    // believes it asked as is what it did.
-    return m_useForHome && m_state == State::Active && !m_jar.isEmpty();
+    // What the hook asks of an IfSignedIn call (authHeaders, admit), so what
+    // Home believes it asked as is what it did.
+    return m_useForHome && m_state == State::Active && !m_jar.isEmpty() && !m_guard.paused();
 }
 
 YtmSession::~YtmSession()
@@ -203,8 +251,19 @@ void YtmSession::installHook()
 {
     const QPointer<YtmSession> self(this);
     InnerTube::AccountHook hook;
+    hook.admit = [self](const InnerTube::AccountRequest &request, QString *why) -> qint64 {
+        return self ? self->admit(request, why) : 0;
+    };
     hook.headers = [self](const InnerTube::AccountRequest &request, InnerTube::AccountHeaders *headers) -> quint64 {
         return self ? self->authHeaders(request, headers) : 0;
+    };
+    hook.started = [self](quint64, const InnerTube::AccountRequest &request) {
+        if (self)
+            self->m_guard.started(kindOf(request));
+    };
+    hook.finished = [self](quint64, const InnerTube::AccountRequest &request, const InnerTube::AccountOutcome &outcome) {
+        if (self)
+            self->callFinished(request, outcome);
     };
     hook.rejected = [self](quint64 session, int status) {
         if (self)
@@ -212,8 +271,7 @@ void YtmSession::installHook()
     };
     hook.doubted = [self](quint64 session, int status) {
         if (self && session != 0 && session == self->m_generation)
-            self->doubt(QStringLiteral("YouTube Music refused a listen report's call with the account (HTTP %1)")
-                            .arg(status));
+            self->doubt(QStringLiteral("YouTube Music refused a call with the account (HTTP %1)").arg(status));
     };
     hook.cookies = [self](quint64 session, const QString &host, const QList<QNetworkCookie> &cookies) {
         if (self)
@@ -235,6 +293,7 @@ void YtmSession::publishVisitor()
 void YtmSession::setTiming(const Timing &timing)
 {
     m_timing = timing;
+    m_guard.setLimits(timing.guard);
 }
 
 InnerTube *YtmSession::innerTube()
@@ -274,9 +333,15 @@ void YtmSession::start()
         m_info = info;
         publishVisitor();
         setState(State::Checking);
-        qInfo("ytmusic: restored a session of %d cookies (%s)%s; checking it in %d s", int(m_jar.size()),
-              qPrintable(joinedNames(m_jar)), qPrintable(describe(m_info)), m_timing.launchCheckMs / 1000);
-        scheduleCheck(m_timing.launchCheckMs);
+        {
+            // A few seconds in, once Home has asked for its signed-out feed,
+            // and never at quite the same moment of a launch.
+            const qint64 in = m_timing.launchCheckMs
+                              + qint64(QRandomGenerator::global()->bounded(std::max(1, m_timing.launchCheckMs)));
+            qInfo("ytmusic: restored a session of %d cookies (%s)%s; checking it in %.1f s", int(m_jar.size()),
+                  qPrintable(joinedNames(m_jar)), qPrintable(describe(m_info)), double(in) / 1000);
+            scheduleCheck(in);
+        }
         break;
     }
     case SecretStore::Status::NotFound:
@@ -476,6 +541,13 @@ void YtmSession::updateStatus()
         }
         break;
     }
+    }
+    // A rest is what matters most while it lasts: whatever the session's
+    // standing, nothing is asked with it until the rest is over.
+    if (m_guard.paused() && (m_state == State::Active || m_state == State::Checking || m_state == State::Unreachable)) {
+        if (m_state != State::Active)
+            headline = QStringLiteral("Resting");
+        line = restLine().toHtmlEscaped();
     }
     m_headline = headline;
     m_statusLine = line;
@@ -697,6 +769,14 @@ void YtmSession::check()
     if (m_jar.isEmpty() || m_checking)
         return;
     m_checkTimer.stop();
+    // Resting: not even the check is asked. The rest's end starts one
+    // (pausedChanged, in the constructor).
+    if (m_guard.paused()) {
+        qInfo("ytmusic: the account is resting (%s); the session is checked once the rest is over",
+              qPrintable(m_guard.pauseReason()));
+        updateStatus();
+        return;
+    }
     m_checking = true;
     // Only the first check says Checking; a later one runs behind an active
     // session, which stays in use until there is a verdict against it.
@@ -807,7 +887,7 @@ void YtmSession::checkFinished(const CheckAnswers &answers)
         setState(State::Active);
         if (news)
             Q_EMIT sessionChanged();
-        scheduleCheck(m_timing.periodicMs);
+        scheduleCheck(jittered(m_timing.periodicMs, 1.0 / 12));
         Q_EMIT checked(QStringLiteral("active"));
         return;
     }
@@ -832,7 +912,8 @@ void YtmSession::checkFinished(const CheckAnswers &answers)
     // the session is kept and asked about again later.
     ++m_failures;
     const int doublings = qBound(0, m_failures - 1, 16);
-    const qint64 wait = std::min<qint64>(qint64(m_timing.retryMinMs) << doublings, m_timing.retryMaxMs);
+    const qint64 wait =
+        jittered(std::min<qint64>(qint64(m_timing.retryMinMs) << doublings, m_timing.retryMaxMs), 0.25);
     const QString why = !answers.homeError.isEmpty() ? answers.homeError
                       : !answers.menuError.isEmpty() ? answers.menuError
                                                      : QStringLiteral("the answers did not say");
@@ -921,6 +1002,48 @@ QByteArray YtmSession::authorization(const QList<Cookie> &cookies, qint64 timest
     if (!thirdParty.isEmpty())
         parts << sidHash("SAPISID3PHASH", timestamp, thirdParty, origin);
     return parts.join(' ');
+}
+
+AccountGuard::Kind YtmSession::kindOf(const InnerTube::AccountRequest &request)
+{
+    if (request.auth == InnerTube::Auth::Checking)
+        return AccountGuard::Kind::Check;
+    // A listen report is two calls, /player for the address and the report
+    // itself; the first is what the listen share counts.
+    if (request.path.endsWith(QLatin1String("/player")))
+        return AccountGuard::Kind::Listen;
+    return AccountGuard::Kind::Browse;
+}
+
+qint64 YtmSession::admit(const InnerTube::AccountRequest &request, QString *why)
+{
+    // A call that would not carry the account (authHeaders) goes as it
+    // would have: nothing to wait for, nothing to count.
+    if (m_jar.isEmpty() || request.auth == InnerTube::Auth::Anonymous)
+        return 0;
+    if (request.auth != InnerTube::Auth::Checking && m_state != State::Active)
+        return 0;
+    const qint64 wait = m_guard.admit(kindOf(request), why);
+    if (wait < 0 && why)
+        qInfo("ytmusic: a %s not asked with the account: %s", AccountGuard::name(kindOf(request)), qPrintable(*why));
+    return wait;
+}
+
+void YtmSession::callFinished(const InnerTube::AccountRequest &request, const InnerTube::AccountOutcome &outcome)
+{
+    const AccountGuard::Kind kind = kindOf(request);
+    m_guard.finished(kind, outcome.status, outcome.retryAfterSecs);
+    if (outcome.slowDown) {
+        m_guard.trip(QStringLiteral("YouTube answered a %1 with the account by asking to confirm it is not a bot")
+                         .arg(QLatin1String(AccountGuard::name(kind))),
+                     outcome.retryAfterSecs * 1000);
+    } else if (outcome.status == 403) {
+        // Refused, but not for the credentials (that is 401): the account is
+        // rested, and then checked.
+        m_guard.trip(QStringLiteral("YouTube refused a %1 with the account (HTTP 403)")
+                         .arg(QLatin1String(AccountGuard::name(kind))),
+                     outcome.retryAfterSecs * 1000);
+    }
 }
 
 quint64 YtmSession::authHeaders(const InnerTube::AccountRequest &request, InnerTube::AccountHeaders *headers)
@@ -1072,6 +1195,8 @@ bool YtmSession::accountForPlayback(QString *why) const
         return because("the YouTube Music session is not confirmed yet");
     if (!m_playWhenNeeded)
         return because("\"Play with my account when needed\" is off");
+    if (m_guard.paused())
+        return because("YouTube asked Monolist to slow down, and the account is resting");
     return true;
 }
 
@@ -1154,6 +1279,17 @@ quint64 YtmSession::openCookieFile(QString *path, QString *error)
         *error = why;
         return 0;
     }
+    // The account's turn, as for every call with it; a lookup is several
+    // requests, and the guard counts it so. A song is never held up for it:
+    // refused or not yet, it goes on down the signed-out ladder.
+    {
+        QString why;
+        const qint64 wait = m_guard.admit(AccountGuard::Kind::YtDlp, &why);
+        if (wait != 0) {
+            *error = wait < 0 ? why : QStringLiteral("another call with the account is under way");
+            return 0;
+        }
+    }
     int written = 0;
     const QByteArray text = CookieImport::toNetscape(m_jar, 0, &written);
     if (written == 0) {
@@ -1193,6 +1329,8 @@ quint64 YtmSession::openCookieFile(QString *path, QString *error)
     }
     out.close();
     m_cookieFiles.insert(file);
+    m_lent.insert(file, m_jar);
+    m_guard.started(AccountGuard::Kind::YtDlp);
     *path = file;
     qInfo("ytmusic: lent yt-dlp the session's %d youtube.com cookies for one lookup (%s)", written, qPrintable(name));
     return m_generation;
@@ -1202,6 +1340,9 @@ void YtmSession::closeCookieFile(quint64 session, const QString &path, bool read
 {
     if (path.isEmpty())
         return;
+    // The lookup is over, and with it the account's turn.
+    const QList<Cookie> lent = m_lent.take(path);
+    m_guard.finished(AccountGuard::Kind::YtDlp, 0);
     const QString name = QFileInfo(path).fileName();
     QByteArray text;
     if (readBack) {
@@ -1237,12 +1378,16 @@ void YtmSession::closeCookieFile(quint64 session, const QString &path, bool read
     // not taken as deleted: the server deleting it is the only reason worth
     // following, and a jar that lost a line some other way must not cost
     // the session a cookie.
+    // Compared with what it was lent rather than with the jar now: a cookie
+    // another call rotated while yt-dlp ran is newer than the one yt-dlp
+    // hands back unchanged, and must not be put back to the old value.
+    const QList<Cookie> &before = lent.isEmpty() ? m_jar : lent;
     QList<QNetworkCookie> changed;
     for (const Cookie &cookie : back.cookies) {
         if (cookie.hostOnly && cookie.domain != CookieImport::kWwwHost)
             continue;
         bool same = false;
-        for (const Cookie &held : std::as_const(m_jar)) {
+        for (const Cookie &held : before) {
             if (held.name == cookie.name && held.domain == cookie.domain && held.hostOnly == cookie.hostOnly
                 && held.path == cookie.path) {
                 same = held.value == cookie.value && held.expires == cookie.expires;
@@ -1310,10 +1455,12 @@ void YtmSession::listenQualified(const QVariantMap &track, qint64 startedAt, boo
     const QString videoId = track.value(QStringLiteral("sourceId")).toString();
     if (!videoIdShape.match(videoId).hasMatch())
         return;
-    if (!m_reportListens || m_state != State::Active || m_jar.isEmpty()) {
+    if (!m_reportListens || m_state != State::Active || m_jar.isEmpty() || m_guard.paused()) {
         // Said only where there is a session the listen would have gone to.
-        if (m_reportListens && !m_jar.isEmpty())
-            qInfo("ytmusic: %s not reported to YouTube history: the session is not confirmed", qPrintable(videoId));
+        if (m_reportListens && !m_jar.isEmpty()) {
+            qInfo("ytmusic: %s not reported to YouTube history: %s", qPrintable(videoId),
+                  m_guard.paused() ? "the account is resting" : "the session is not confirmed");
+        }
         Q_EMIT listenReported(videoId, QStringLiteral("skipped"));
         return;
     }

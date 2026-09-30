@@ -259,15 +259,39 @@ public:
         QByteArray authUser = "0";  // X-Goog-AuthUser: the session's index, 0 when not known
         QString onBehalfOfUser;     // a brand channel's id, for context.user; empty for the account's own
     };
+    // How a call that carried the account ended, for the account's guard
+    // (AccountGuard): its HTTP status (0 for no answer), the Retry-After it
+    // named in seconds (0 for none), and whether the answer was YouTube
+    // asking to slow down rather than an answer (a bot check, "unusual
+    // traffic", a redirect to a sign-in or /sorry page).
+    struct AccountOutcome {
+        int status = 0;
+        qint64 retryAfterSecs = 0;
+        bool slowDown = false;
+    };
     struct AccountHook {
+        // Asked before a call that may carry the account is sent: 0 to send
+        // it now; a positive number of milliseconds to wait and ask again;
+        // -1 when it may not carry the account now, with `why` saying why.
+        // Then an IfSignedIn call goes without it, and any other is not sent.
+        // A call that would not carry the account anyway (nobody signed in)
+        // is 0. Unset, every call may go at once.
+        std::function<qint64(const AccountRequest &request, QString *why)> admit;
         // Fills in what one call carries, and returns the session it belongs
         // to; 0, with nothing filled in, when this call goes without.
         std::function<quint64(const AccountRequest &request, AccountHeaders *headers)> headers;
-        // The server refused that session outright (401, 403).
+        // A call is leaving with the account (headers() said so); finished()
+        // is always told when it is over, however it ends.
+        std::function<void(quint64 session, const AccountRequest &request)> started;
+        std::function<void(quint64 session, const AccountRequest &request, const AccountOutcome &outcome)> finished;
+        // The server refused that session outright (401).
         std::function<void(quint64 session, int httpStatus)> rejected;
-        // A call with Auth::Required was refused (401, 403). A listen report
-        // is a background nicety and must never be what ends a session, so
-        // this is only a reason to check it; the check decides.
+        // A call was refused in a way that may or may not be about the
+        // session: a 401 or 403 on a call with Auth::Required (a listen
+        // report is a background nicety and must never be what ends a
+        // session), or a 403 on any call (which YouTube also answers to an
+        // address it has stopped trusting). Only a reason to check the
+        // session; the check decides.
         std::function<void(quint64 session, int httpStatus)> doubted;
         // Set-Cookie on an answer from `host` to that session: its cookies,
         // rotated. One without a Domain is `host`'s alone.
@@ -345,12 +369,14 @@ public:
     // The same with the parameters a link carries (Link::params), which
     // pick part of a page: an artist's albums, say, rather than the artist.
     void browse(const QString &browseId, const QString &params,
-                std::function<void(const QJsonObject &root, const QString &error)> done);
+                std::function<void(const QJsonObject &root, const QString &error)> done,
+                Auth auth = Auth::Anonymous);
     // The next part of a long list, by the token its last part ended with
     // (Collection::continuation, Listing's, Continuation::next); read the
-    // answer with parseContinuation.
+    // answer with parseContinuation. Asked as whoever asked for the list.
     void continueBrowse(const QString &token,
-                        std::function<void(const QJsonObject &root, const QString &error)> done);
+                        std::function<void(const QJsonObject &root, const QString &error)> done,
+                        Auth auth = Auth::Anonymous);
     static QList<Shelf> parseShelves(const QJsonObject &root);
     static Collection parseCollection(const QString &browseId, const QJsonObject &root);
     // A playlist's song as its page would show it: what its row leaves out
@@ -541,6 +567,11 @@ private:
               Slot *slot,
               std::function<void(const QJsonObject &root, const QString &error)> done,
               int retries = 1, Auth auth = Auth::Anonymous, QNetworkAccessManager *network = nullptr);
+    // What the account's guard is told of a call that carried the account:
+    // the status, the Retry-After, and whether YouTube was asking to slow
+    // down rather than answering.
+    static AccountOutcome accountOutcome(const QNetworkReply *reply, int status, const QByteArray &answer,
+                                         const QString &endpoint);
 
     static QList<Track> parseSearch(const QJsonObject &root);
     static QList<Track> parseYouTubeSearch(const QJsonObject &root);

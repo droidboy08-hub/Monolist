@@ -150,6 +150,10 @@ int main(int argc, char *argv[])
     // known answers, on invented cookies (ytmselftest.cpp).
     if (app.arguments().contains(QStringLiteral("--cookie-test")))
         return runCookieImportSelfTest() == 0 ? 0 : 1;
+    // --account-guard-test: how much the account may be asked, and its rests,
+    // on a clock of the test's own (ytmselftest.cpp).
+    if (app.arguments().contains(QStringLiteral("--account-guard-test")))
+        return runAccountGuardSelfTest() == 0 ? 0 : 1;
     // --saavn-test: JioSaavn's DES, links, bitrates, answers and the matcher,
     // on fixtures, with no network (saavnselftest.cpp).
     if (app.arguments().contains(QStringLiteral("--saavn-test")))

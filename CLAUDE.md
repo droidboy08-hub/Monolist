@@ -51,7 +51,7 @@ owner's iPhone app (AryaMusix / "Mediano", Swift, not in this repo).
   for tests. Never touch the owner's real library, database or Music folder.
 - Self-tests are flags on the app (grep `src/main.cpp` for `-test"`): e.g.
   `--saavn-test`, `--listen-test`, `--scrobble-test`, `--lyrics-race-test`,
-  `--cookie-test`, `--ytm-session-test`, `--visitor-test`, `--format-test`,
+  `--cookie-test`, `--account-guard-test`, `--ytm-session-test`, `--visitor-test`, `--format-test`,
   `--download-cleanup-test`, `--library-edit-test`, `--recovery-test` … Each
   prints `N checks, 0 failed`. All must pass, except `--scrobble-send-test`,
   which needs its local stand-in (`scripts/lastfm-mock.ps1`).
@@ -107,6 +107,13 @@ owner's iPhone app (AryaMusix / "Mediano", Swift, not in this repo).
 
 - Never log, print, commit or store in the settings table any cookie value,
   SAPISID, session key, API key or token; secrets go through `SecretStore`.
+- The owner's rule (2026-09-29): signing in must never put the user's Google
+  account at risk. Every call that carries the account goes through
+  `AccountGuard` (one at a time, spaced, counted per hour and day, and a rest
+  of 1 h / 3 h / 24 h on a 429, a bot check or a 403); never add a call with
+  the account that bypasses it, never retry one quickly, never write back to
+  the account. 401 ends a session; 403 only rests it and has it checked. The
+  evidence and the numbers: `docs/research/account-safety.md`.
 - Keep everything portable: Windows-only code behind `Q_OS_WIN` with a compiling
   fallback; macOS-only code in `src/macos/`.
 - Ask before downloading or installing anything (say what, where from, size).

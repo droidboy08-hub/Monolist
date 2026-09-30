@@ -1,7 +1,10 @@
 #pragma once
 
+#include "accountguard.h"
 #include "cookieimport.h"
 #include "innertube.h"
+
+#include <QHash>
 
 #include <QByteArray>
 #include <QDateTime>
@@ -80,6 +83,12 @@ class QNetworkCookie;
 // InnerTube objects and all of them must agree; Set-Cookie on their answers
 // rotates the jar, which is saved again 30 seconds after the last change.
 //
+// Every one of those calls, yt-dlp's lookups included, first waits its turn
+// with the session's AccountGuard: one at a time, spaced, counted by the hour
+// and the day, and none at all while YouTube has asked for a rest (a 429, a
+// bot check, a 403). A rest pauses the check too; the row says until when,
+// and the app plays signed out meanwhile.
+//
 // Exposed to QML as the "Account" singleton.
 class YtmSession : public QObject
 {
@@ -116,6 +125,11 @@ class YtmSession : public QObject
     // "Send my listens to YouTube history" (ytmusic.report_listens, "0" for
     // off; on by default).
     Q_PROPERTY(bool reportListens READ reportListens WRITE setReportListens NOTIFY reportListensChanged)
+    // YouTube asked Monolist to slow down, and nothing is asked with the
+    // account until the rest is over (AccountGuard). `restLine` says so in a
+    // sentence, with the time it ends; empty while not resting.
+    Q_PROPERTY(bool resting READ resting NOTIFY changed)
+    Q_PROPERTY(QString restLine READ restLine NOTIFY changed)
 
 public:
     enum class State { SignedOut, Checking, Active, Unreachable, Rejected };
@@ -129,6 +143,8 @@ public:
         int retryMaxMs = 60 * 60 * 1000;     // ...to an hour
         int periodicMs = 6 * 60 * 60 * 1000; // while Active
         int saveDelayMs = 30 * 1000;         // after the cookies rotate
+        // How much the account may be asked, and how it rests (AccountGuard).
+        AccountGuard::Limits guard;
     };
 
     static const QByteArray kOrigin;         // "https://music.youtube.com"
@@ -160,6 +176,14 @@ public:
     void setPlayWhenNeeded(bool play);
     bool reportListens() const { return m_reportListens; }
     void setReportListens(bool report);
+    bool resting() const { return m_guard.paused(); }
+    QString restLine() const;
+    // The guard every call with the account goes through (and the self-test
+    // reads).
+    AccountGuard &guard() { return m_guard; }
+    // yt-dlp's words after a lookup with the account: "confirm you're not a
+    // bot", HTTP 429, "rate-limited" rest the account like any other call's.
+    void ytDlpSaid(const QString &errorOutput);
 
     // — playback with the account (StreamResolver's TierSignedIn) —
     //
@@ -240,7 +264,11 @@ public:
                               const QByteArray &origin);
 
     // — the InnerTube hook (see InnerTube::AccountHook) —
+    qint64 admit(const InnerTube::AccountRequest &request, QString *why);
     quint64 authHeaders(const InnerTube::AccountRequest &request, InnerTube::AccountHeaders *headers);
+    void callFinished(const InnerTube::AccountRequest &request, const InnerTube::AccountOutcome &outcome);
+    // What kind of call a request is, for the guard's counts.
+    static AccountGuard::Kind kindOf(const InnerTube::AccountRequest &request);
     void reportRejected(quint64 session, int httpStatus);
     // Set-Cookie from `host` on an answer to `session`, merged as a browser
     // would: a cookie replaces the one with its name, domain and path, and
@@ -338,6 +366,10 @@ private:
     bool m_reportListens = true;
     // The cookies files this run has lent yt-dlp and not yet seen deleted.
     QSet<QString> m_cookieFiles;
+    // What each of them was written with, so that what yt-dlp brings back is
+    // compared with what it was lent, not with a jar that rotated meanwhile.
+    QHash<QString, QList<CookieImport::Cookie>> m_lent;
+    AccountGuard m_guard;
     // When yt-dlp last cast doubt on the session (doubt()).
     QElapsedTimer m_lastDoubt;
     QString m_name;

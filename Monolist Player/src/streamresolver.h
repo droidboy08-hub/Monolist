@@ -58,10 +58,13 @@ class YtmSession;
 // walked in order: a song goes to it only after an anonymous rung was
 // refused for a reason an account can answer (LOGIN_REQUIRED, which is how
 // "Sign in to confirm you're not a bot" arrives; an age check; a content
-// check), and then next, before the rest of the ladder, which stays below
-// it as it was. Never ahead of time (prefetch), never without a session
-// YouTube Music has confirmed and "Play with my account when needed" on
-// (followAccount), and at most setAccountLimit songs an hour.
+// check), and then after yt-dlp signed out where that is still to come
+// (next otherwise), before the rest of the ladder, which stays below it as
+// it was. Never ahead of time (prefetch), never without a session YouTube
+// Music has confirmed and "Play with my account when needed" on
+// (followAccount), at most setAccountLimit songs an hour, and only when the
+// account's guard allows (YtmSession::openCookieFile, AccountGuard): spaced,
+// counted by the hour and the day, and never while the account rests.
 class StreamResolver : public QObject
 {
     Q_OBJECT

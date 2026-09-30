@@ -23,6 +23,16 @@ class Library;
 // No network and no data folder.
 int runCookieImportSelfTest();
 
+// --account-guard-test: AccountGuard on its own, on a clock of the test's:
+// one call with the account at a time (and a call that never ends giving up
+// its turn), the spacing and the bucket, the hour's and the day's counts and
+// the shares for listen reports and yt-dlp's lookups (a lookup counting as
+// several, refused rather than kept waiting), a 429 or any other trip resting
+// everything for an hour, then three hours, then a day within the same day,
+// a longer Retry-After honoured, trips close together counted once, and the
+// counts and a rest kept across a restart. No network and no data folder.
+int runAccountGuardSelfTest();
+
 // --ytm-session-test: YtmSession and InnerTube's account path against a
 // stand-in server on this computer: signed-out requests byte for byte as
 // before (their headers and context as the build before the three-host jar
@@ -33,7 +43,9 @@ int runCookieImportSelfTest();
 // signed-in answer and sent as X-Goog-Visitor-Id and context.user.
 // onBehalfOfUser, X-Goog-AuthUser from a copied request (0 when not known),
 // Set-Cookie rotation kept out of the anonymous jar and refused for another
-// host, a 400 that never touches the country, 401/403, a restart, sign-out,
+// host, a 400 that never touches the country, a 403 resting the account (the
+// session kept, nothing asked with it, not even the check, until the rest is
+// over), a 401 ending the session, a restart, sign-out,
 // the offer to delete an imported file, and no cookie value or session id in
 // the log. Refuses to run without MONOLIST_DATA_DIR, since it replaces the
 // stored session and the account setting.
@@ -44,7 +56,7 @@ int runYtmSessionSelfTest(Library *library);
 // byte the anonymous calls Home made before; once a session is confirmed the
 // feed alone asked again with the account (logged_in=1) and new releases
 // never; "Use my account for Home" off and on again, kept in settings; a
-// sign-out, and a 403, with the account's feed on its way, leaving nothing of
+// sign-out, and a 401, with the account's feed on its way, leaving nothing of
 // it on screen; a launch with a stored session (signed out first, then the
 // account's); no cookie value in the log. Refuses to run without
 // MONOLIST_DATA_DIR, as --ytm-session-test does.
@@ -54,9 +66,10 @@ int runHomeAccountSelfTest(Library *library);
 // reported to its history, against the same stand-in, with this program
 // standing in for yt-dlp (runFakeYtDlp). Signed out, a song YouTube refuses
 // signed out goes down the anonymous ladder as before and the account's rung
-// is never tried; signed in, it is asked with the account next (never before
-// an anonymous refusal that names a reason an account answers, never ahead
-// of time, never with the switch off or the hour's limit reached), through
+// is never tried; signed in, it is asked of yt-dlp signed out first and then
+// with the account (never before an anonymous refusal that names a reason an
+// account answers, never ahead of time, never with the switch off or the
+// hour's limit reached), through
 // a cookies.txt file that holds youtube.com's cookies alone, is read back for
 // what yt-dlp rotated and deleted, with tv_downgraded,web_embedded, and its
 // link goes to mpv without a Cookie header; leftovers are swept at start;
@@ -67,7 +80,8 @@ int runHomeAccountSelfTest(Library *library);
 // then a GET of its videostatsPlaybackUrl with ver=2, c=WEB_REMIX and a cpn,
 // with s.youtube.com's own cookies and the SID hashes), and never to another
 // host or path, after a redirect, from a signed-out answer, with the switch
-// off, or without a confirmed session. No cookie value, info JSON or link in
+// off, while the account rests (a 403 on its /player rests it), or without a
+// confirmed session. No cookie value, info JSON or link in
 // the log. Refuses to run without MONOLIST_DATA_DIR.
 int runAccountPlaySelfTest(Library *library);
 // --fake-yt-dlp <folder> <yt-dlp's arguments>: this program in yt-dlp's

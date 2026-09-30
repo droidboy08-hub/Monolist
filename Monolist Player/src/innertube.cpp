@@ -1452,6 +1452,8 @@ QNetworkReply *InnerTube::post(Client client, const QString &endpoint, QJsonObje
         AccountHeaders carried;
         account = g_account.headers(asked, &carried);
         if (account != 0 && !carried.cookie.isEmpty()) {
+            if (g_account.started)
+                g_account.started(account, asked);
             // Neither way through the network manager's own jar. How Qt
             // would mix a Cookie header set here with the jar's anonymous
             // cookies is not documented, and those must not ride along with
@@ -1519,6 +1521,40 @@ void InnerTube::send(Client client, const QString &endpoint, const QJsonObject &
                      std::function<void(const QJsonObject &, const QString &)> done, int retries,
                      Auth auth, QNetworkAccessManager *network)
 {
+    // The account's turn (AccountGuard): one call with it at a time, spaced,
+    // counted, and none at all while YouTube has asked for a rest. Asked
+    // here rather than in post(), because waiting takes the event loop.
+    if (auth != Auth::Anonymous && client == Client::Music && g_account.admit) {
+        AccountRequest asked;
+        asked.auth = auth;
+        asked.host = accountHost(client);
+        asked.path = QStringLiteral("/youtubei/v1/") + endpoint;
+        QString why;
+        const qint64 wait = g_account.admit(asked, &why);
+        if (wait > 0) {
+            const quint64 waiting = slot ? slot->generation : 0;
+            QTimer::singleShot(int(std::min<qint64>(wait, 60 * 60 * 1000)), this,
+                               [this, client, endpoint, body, timeoutMs, slot, waiting, done, retries, auth, network]() {
+                                   // Replaced or cancelled while it waited its turn.
+                                   if (slot && slot->generation != waiting)
+                                       return;
+                                   send(client, endpoint, body, timeoutMs, slot, done, retries, auth, network);
+                               });
+            return;
+        }
+        if (wait < 0) {
+            // Not with the account now. What would have gone signed out
+            // without a session goes signed out; what means nothing without
+            // it is not asked at all.
+            if (auth == Auth::IfSignedIn) {
+                auth = Auth::Anonymous;
+            } else {
+                QTimer::singleShot(0, this, [done, why]() { done({}, why); });
+                return;
+            }
+        }
+    }
+
     quint64 account = 0;
     QNetworkReply *reply = post(client, endpoint, body, timeoutMs, auth, &account, network);
     if (!reply) {
@@ -1542,6 +1578,17 @@ void InnerTube::send(Client client, const QString &endpoint, const QJsonObject &
             [this, reply, client, endpoint, body, timeoutMs, slot, done, retries, auth, account, superseded,
              network]() {
                 reply->deleteLater();
+                const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+                const QByteArray answer = reply->readAll();
+                // The account's turn is over, however the call ended, even
+                // one nobody is waiting for any more.
+                if (account != 0 && g_account.finished) {
+                    AccountRequest asked;
+                    asked.auth = auth;
+                    asked.host = accountHost(client);
+                    asked.path = QStringLiteral("/youtubei/v1/") + endpoint;
+                    g_account.finished(account, asked, accountOutcome(reply, status, answer, endpoint));
+                }
                 // A newer request of the same kind took this one's place, or it
                 // was cancelled: whoever did that has already moved on.
                 if (superseded())
@@ -1549,7 +1596,6 @@ void InnerTube::send(Client client, const QString &endpoint, const QJsonObject &
                 if (slot)
                     slot->reply = nullptr;
 
-                const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
                 if (account != 0) {
                     // The session's cookies, rotated by the server; kept by
                     // YtmSession, since this request left the jar alone.
@@ -1571,13 +1617,18 @@ void InnerTube::send(Client client, const QString &endpoint, const QJsonObject &
                     // is asked again without the account.
                     const bool redirected = status >= 300 && status < 400;
                     if (status == 400 || status == 401 || status == 403 || redirected) {
-                        if (status == 401 || status == 403) {
-                            if (auth == Auth::Required) {
-                                if (g_account.doubted)
-                                    g_account.doubted(account, status);
-                            } else if (g_account.rejected) {
+                        // 401 is the session's credentials refused. 403 is
+                        // also what YouTube answers an address it has
+                        // stopped trusting, so it only has the session
+                        // checked (once the rest it earned is over), rather
+                        // than throwing away a session that may be fine and
+                        // sending the user back to sign in again.
+                        if (status == 401 && auth != Auth::Required) {
+                            if (g_account.rejected)
                                 g_account.rejected(account, status);
-                            }
+                        } else if (status == 401 || status == 403) {
+                            if (g_account.doubted)
+                                g_account.doubted(account, status);
                         }
                         if (superseded())
                             return;
@@ -1613,10 +1664,22 @@ void InnerTube::send(Client client, const QString &endpoint, const QJsonObject &
                         return;
                     }
                     // A dropped connection or a timeout is ordinary on a home
-                    // connection; the second attempt usually works.
-                    if (retries > 0 && reply->error() != QNetworkReply::OperationCanceledError) {
-                        QTimer::singleShot(1200, this, [this, client, endpoint, body, timeoutMs,
-                                                        slot, done, retries, auth, superseded, network]() {
+                    // connection; the second attempt usually works. Not
+                    // after a 429 with the account, which is a pause for
+                    // every use of it (AccountGuard), and later for one with
+                    // it: never a quick second request on the account's
+                    // behalf.
+                    const bool tooMany = account != 0 && status == 429;
+                    // What would have gone signed out without a session goes
+                    // signed out now, as it does while the account rests.
+                    if (tooMany && auth == Auth::IfSignedIn) {
+                        send(client, endpoint, body, timeoutMs, slot, done, retries, Auth::Anonymous, network);
+                        return;
+                    }
+                    if (retries > 0 && !tooMany && reply->error() != QNetworkReply::OperationCanceledError) {
+                        const int delay = account != 0 ? 4000 + int(QRandomGenerator::global()->bounded(2000)) : 1200;
+                        QTimer::singleShot(delay, this, [this, client, endpoint, body, timeoutMs,
+                                                         slot, done, retries, auth, superseded, network]() {
                             // Replaced or cancelled while waiting. Sending now
                             // would put this old request back in the slot,
                             // where the newer one's answer would be dropped
@@ -1631,13 +1694,47 @@ void InnerTube::send(Client client, const QString &endpoint, const QJsonObject &
                     return;
                 }
 
-                const QJsonDocument document = QJsonDocument::fromJson(reply->readAll());
+                const QJsonDocument document = QJsonDocument::fromJson(answer);
                 if (!document.isObject()) {
                     done({}, QStringLiteral("YouTube sent a response that is not JSON."));
                     return;
                 }
                 done(document.object(), QString());
             });
+}
+
+InnerTube::AccountOutcome InnerTube::accountOutcome(const QNetworkReply *reply, int status, const QByteArray &answer,
+                                                    const QString &endpoint)
+{
+    AccountOutcome outcome;
+    outcome.status = status;
+    // Seconds; the HTTP-date form is rare enough here to be read as none.
+    bool ok = false;
+    const qint64 after = reply->rawHeader("Retry-After").trimmed().toLongLong(&ok);
+    if (ok && after > 0)
+        outcome.retryAfterSecs = after;
+    // Sent somewhere to prove there is a person here, or to sign in again:
+    // Google's /sorry page, or accounts.google.com.
+    if (status >= 300 && status < 400) {
+        const QByteArray location = reply->rawHeader("Location");
+        outcome.slowDown = location.contains("/sorry") || location.contains("accounts.google.com")
+                           || location.contains("ServiceLogin");
+    }
+    // A page where an answer should be, saying so; never a JSON answer's own
+    // text, which quotes titles anyone could have written.
+    const QByteArray start = answer.left(64).trimmed();
+    if (!start.startsWith('{')) {
+        outcome.slowDown = outcome.slowDown || answer.contains("unusual traffic") || answer.contains("not a robot");
+    } else if (endpoint == QLatin1String("player")) {
+        // /player says it in its status: "Sign in to confirm you're not a
+        // bot", given to the account itself.
+        const QJsonObject playability =
+            QJsonDocument::fromJson(answer).object().value(QStringLiteral("playabilityStatus")).toObject();
+        outcome.slowDown = outcome.slowDown
+                           || playability.value(QStringLiteral("reason")).toString().contains(
+                                  QLatin1String("not a bot"), Qt::CaseInsensitive);
+    }
+    return outcome;
 }
 
 void InnerTube::player(const QString &videoId,
@@ -1999,12 +2096,28 @@ void InnerTube::reportPlayback(const QString &trackingUrl, std::function<void(in
     asked.host = url.host().toLower();
     asked.path = url.path();
     asked.origin = origin.toUtf8();
+    // Its turn, as every call with the account waits for one (send()).
+    if (g_account.admit) {
+        QString why;
+        const qint64 wait = g_account.admit(asked, &why);
+        if (wait < 0) {
+            fail(why);
+            return;
+        }
+        if (wait > 0) {
+            QTimer::singleShot(int(std::min<qint64>(wait, 60 * 60 * 1000)), this,
+                               [this, trackingUrl, done]() { reportPlayback(trackingUrl, done); });
+            return;
+        }
+    }
     AccountHeaders carried;
     const quint64 account = g_account.headers ? g_account.headers(asked, &carried) : 0;
     if (account == 0 || carried.cookie.isEmpty()) {
         fail(QStringLiteral("no signed-in session to report with"));
         return;
     }
+    if (g_account.started)
+        g_account.started(account, asked);
 
     // In a self-test the stand-in is asked, at the same path and query.
     QUrl target = url;
@@ -2033,9 +2146,11 @@ void InnerTube::reportPlayback(const QString &trackingUrl, std::function<void(in
 
     QNetworkReply *reply = m_network->get(request);
     const QString host = asked.host;
-    connect(reply, &QNetworkReply::finished, this, [reply, done, account, host]() {
+    connect(reply, &QNetworkReply::finished, this, [reply, done, account, host, asked]() {
         reply->deleteLater();
         const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        if (g_account.finished)
+            g_account.finished(account, asked, accountOutcome(reply, status, reply->readAll(), QString()));
         const QList<QNetworkCookie> rotated =
             reply->header(QNetworkRequest::SetCookieHeader).value<QList<QNetworkCookie>>();
         if (!rotated.isEmpty() && g_account.cookies)
@@ -2203,22 +2318,25 @@ void InnerTube::browse(const QString &browseId,
 }
 
 void InnerTube::browse(const QString &browseId, const QString &params,
-                       std::function<void(const QJsonObject &, const QString &)> done)
+                       std::function<void(const QJsonObject &, const QString &)> done, Auth auth)
 {
     QJsonObject body{ { QStringLiteral("browseId"), browseId } };
     if (!params.isEmpty())
         body.insert(QStringLiteral("params"), params);
-    send(Client::Music, QStringLiteral("browse"), body, kBrowseTimeoutMs, nullptr, std::move(done));
+    send(Client::Music, QStringLiteral("browse"), body, kBrowseTimeoutMs, nullptr, std::move(done),
+         /*retries=*/1, auth);
 }
 
 // The token goes in the body, as music.youtube.com's own client sends it
 // now. The older tokens (a list's "nextContinuationData") are answered the
-// same way, so one call serves both.
+// same way, so one call serves both. The next part of a list that was asked
+// for as the account is asked for as the account too: a private list's
+// token means nothing to anybody else.
 void InnerTube::continueBrowse(const QString &token,
-                               std::function<void(const QJsonObject &, const QString &)> done)
+                               std::function<void(const QJsonObject &, const QString &)> done, Auth auth)
 {
     send(Client::Music, QStringLiteral("browse"), { { QStringLiteral("continuation"), token } },
-         kBrowseTimeoutMs, nullptr, std::move(done));
+         kBrowseTimeoutMs, nullptr, std::move(done), /*retries=*/1, auth);
 }
 
 void InnerTube::accountMenu(Auth auth, std::function<void(const QJsonObject &, const QString &)> done)
