@@ -23,6 +23,10 @@ const QString kSkipNonMusicKey = QStringLiteral("download_skip_non_music");
 // call: "Download all" enqueues a whole album in one go, and a tool that is not
 // bundled is looked for along the whole of PATH.
 constexpr qint64 kToolsRecheckMs = 3000;
+// A burst of changes to the queue (a whole playlist queued, three downloads
+// moving on) is written once.
+constexpr int kQueueSaveDelayMs = 1000;
+bool g_heldForTest = false;
 
 bool isKnownFormat(const QString &format)
 {
@@ -71,10 +75,19 @@ DownloadManager::DownloadManager(QObject *parent)
 
     loadStored();
     m_library.reload();
+
+    m_queueSave.setSingleShot(true);
+    m_queueSave.setInterval(kQueueSaveDelayMs);
+    connect(&m_queueSave, &QTimer::timeout, this, &DownloadManager::saveQueue);
+    restoreQueue();
 }
 
 DownloadManager::~DownloadManager()
 {
+    // Written first, while the ones running still count as running: they
+    // are queued again at the next launch, ahead of the rest.
+    m_queueSave.stop();
+    saveQueue();
     // Stop without the usual failure handling: nothing may start in their place.
     m_pending.clear();
     m_saavnAsking.clear();
@@ -84,7 +97,12 @@ DownloadManager::~DownloadManager()
             continue;
         disconnect(it.value(), nullptr, this, nullptr);
         it.value()->cancel();
-        removePartialFiles(it.key());
+        // yt-dlp's partial file stays, for the next launch to carry on from
+        // (it continues a .part where it stopped) rather than start again.
+        // Should that launch not finish it, a failure or a cancel clears it
+        // as it clears any, and a finished download its stale ones.
+        if (!m_queueRestored)
+            removePartialFiles(it.key());
     }
     // A JioSaavn download stops (FFmpeg with it) as it is deleted, before
     // its files go.
@@ -175,6 +193,121 @@ void DownloadManager::touch()
 {
     ++m_revision;
     Q_EMIT revisionChanged();
+    // Every change of state comes through here, so the queue is written
+    // after each, a moment later.
+    if (m_queueRestored)
+        m_queueSave.start();
+}
+
+void DownloadManager::setHeldForTest(bool held)
+{
+    g_heldForTest = held;
+}
+
+void DownloadManager::saveQueueNow()
+{
+    m_queueSave.stop();
+    saveQueue();
+}
+
+void DownloadManager::saveQueue()
+{
+    if (!m_queueRestored)
+        return;
+    // In the order they will run next time: those running now, then the
+    // queue as it stands, then the failed ones, which wait for a retry.
+    QList<const DownloadQueueModel::Item *> order;
+    const QList<DownloadQueueModel::Item> &items = m_queue.items();
+    for (const DownloadQueueModel::Item &item : items) {
+        if (item.state != DownloadQueueModel::State::Failed && !m_pending.contains(item.videoId))
+            order.append(&item);
+    }
+    for (const QString &videoId : std::as_const(m_pending)) {
+        if (const DownloadQueueModel::Item *item = m_queue.find(videoId))
+            order.append(item);
+    }
+    for (const DownloadQueueModel::Item &item : items) {
+        if (item.state == DownloadQueueModel::State::Failed)
+            order.append(&item);
+    }
+
+    QSqlDatabase db = AppDatabase::connection();
+    db.transaction();
+    QSqlQuery clear(db);
+    clear.exec(QStringLiteral("DELETE FROM download_queue"));
+    QSqlQuery insert(db);
+    insert.prepare(QStringLiteral(
+        "INSERT OR REPLACE INTO download_queue"
+        " (video_id, position, title, artist, album, artwork, duration_ms, is_video, failed, error)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"));
+    int position = 0;
+    for (const DownloadQueueModel::Item *item : std::as_const(order)) {
+        insert.addBindValue(item->videoId);
+        insert.addBindValue(position++);
+        insert.addBindValue(AppDatabase::text(item->title));
+        insert.addBindValue(AppDatabase::text(item->artist));
+        insert.addBindValue(AppDatabase::text(item->album));
+        insert.addBindValue(AppDatabase::text(item->artwork));
+        insert.addBindValue(item->durationMs);
+        insert.addBindValue(item->isVideo ? 1 : 0);
+        insert.addBindValue(item->state == DownloadQueueModel::State::Failed ? 1 : 0);
+        insert.addBindValue(AppDatabase::text(item->error));
+        if (!insert.exec())
+            qWarning("downloads: the queue could not be kept: %s", qPrintable(insert.lastError().text()));
+    }
+    db.commit();
+}
+
+void DownloadManager::restoreQueue()
+{
+    if (m_queueRestored || !m_available)
+        return;
+    m_queueRestored = true;
+
+    QSqlQuery query(AppDatabase::connection());
+    if (!query.exec(QStringLiteral(
+            "SELECT video_id, title, artist, album, artwork, duration_ms, is_video, failed, error"
+            " FROM download_queue ORDER BY position"))) {
+        return;
+    }
+    int queued = 0;
+    int failed = 0;
+    while (query.next()) {
+        const QString videoId = query.value(0).toString();
+        const QString title = query.value(1).toString();
+        const QString artist = query.value(2).toString();
+        const QString album = query.value(3).toString();
+        const QString artwork = query.value(4).toString();
+        const qint64 durationMs = query.value(5).toLongLong();
+        const bool isVideo = query.value(6).toInt() != 0;
+        // Finished since it was written (the app closed a moment after):
+        // nothing to do.
+        if (videoId.isEmpty() || m_stored.contains(videoId) || isPending(videoId))
+            continue;
+        if (query.value(7).toInt() != 0) {
+            // Failed: back as it was, waiting for a retry, not tried again
+            // unasked.
+            DownloadQueueModel::Item item;
+            item.videoId = videoId;
+            item.title = title;
+            item.artist = artist;
+            item.album = album;
+            item.artwork = artwork;
+            item.durationMs = durationMs;
+            item.isVideo = isVideo;
+            item.state = DownloadQueueModel::State::Failed;
+            item.error = query.value(8).toString();
+            m_queue.upsert(item);
+            ++failed;
+        } else if (queueOne(videoId, title, artist, album, artwork, durationMs, isVideo)) {
+            ++queued;
+        }
+    }
+    if (queued + failed == 0)
+        return;
+    qInfo("downloads: %d queued again from the last launch, %d failed ones kept for a retry", queued, failed);
+    touch();
+    pump();
 }
 
 void DownloadManager::touchProgress()
@@ -193,6 +326,8 @@ void DownloadManager::refreshTools()
     m_available = available;
     m_canConvert = canConvert;
     Q_EMIT toolsChanged();
+    // yt-dlp found at last: the queue the last launch left can run now.
+    restoreQueue();
 }
 
 void DownloadManager::refreshToolsIfStale()
@@ -260,6 +395,10 @@ bool DownloadManager::queueOne(const QString &videoId, const QString &title, con
 
 void DownloadManager::pump()
 {
+    if (g_heldForTest) {
+        Q_EMIT queueChanged();
+        return;
+    }
     // Playback first: while a song someone is waiting for resolves, a new
     // download waits for it, since its yt-dlp and the song's would each run
     // several times slower side by side. Rarely for long: a song resolves in
@@ -535,6 +674,9 @@ void DownloadManager::complete(const QString &videoId, const QString &reportedPa
         return;
     }
     m_before.remove(videoId);
+    // A partial file an earlier launch left that this one did not carry on
+    // from (another format, say) has nothing left to finish.
+    removeLeftovers(m_directory, videoId, filesFor(m_directory, videoId), path);
 
     recordStored(item, path);
     m_stored.insert(videoId, path);

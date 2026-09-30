@@ -169,6 +169,22 @@ void AppDatabase::createSchema()
         " bytes INTEGER NOT NULL DEFAULT 0,"
         " downloaded_at TEXT NOT NULL DEFAULT (datetime('now')))"));
 
+    // The downloads not finished yet, in the order they will run, so a quit
+    // does not lose them (DownloadManager::saveQueue): queued ones, those
+    // running when the app closed, and failed ones with why.
+    q.exec(QStringLiteral(
+        "CREATE TABLE IF NOT EXISTS download_queue ("
+        " video_id TEXT PRIMARY KEY,"
+        " position INTEGER NOT NULL DEFAULT 0,"
+        " title TEXT NOT NULL DEFAULT '',"
+        " artist TEXT NOT NULL DEFAULT '',"
+        " album TEXT NOT NULL DEFAULT '',"
+        " artwork TEXT NOT NULL DEFAULT '',"
+        " duration_ms INTEGER NOT NULL DEFAULT 0,"
+        " is_video INTEGER NOT NULL DEFAULT 0,"
+        " failed INTEGER NOT NULL DEFAULT 0,"
+        " error TEXT NOT NULL DEFAULT '')"));
+
     // A playlist's songs, each a copy of what is needed to show and play it,
     // so a playlist can hold songs that are in no other list.
     q.exec(QStringLiteral(

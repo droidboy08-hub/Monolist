@@ -2,6 +2,7 @@
 
 #include <QDir>
 #include <QElapsedTimer>
+#include <QTimer>
 #include <QHash>
 #include <QObject>
 #include <QPointer>
@@ -167,6 +168,13 @@ public:
     static QStringList removeLeftovers(const QString &directory, const QString &videoId,
                                        const QSet<QString> &before, const QString &kept);
 
+    // For --download-queue-test: nothing starts while held, so what is
+    // queued stays queued. Set before a manager is made, since one puts the
+    // last launch's queue back as it is made.
+    static void setHeldForTest(bool held);
+    // The queue as it stands, written now rather than a moment later.
+    void saveQueueNow();
+
 Q_SIGNALS:
     void progressChanged(const QString &videoId, qreal progress);
     void completed(const QString &videoId, const QString &path);
@@ -200,6 +208,13 @@ private:
     QString findWrittenFile(const QString &videoId) const;
     void removePartialFiles(const QString &videoId);
     void loadStored();
+    // The downloads not finished, kept in download_queue so a quit does not
+    // lose them: written a moment after any change, and as the app closes.
+    // Put back once, at launch, or once yt-dlp is found if it was missing
+    // then; nothing is written before that, so a launch without yt-dlp
+    // leaves the last queue as it was.
+    void saveQueue();
+    void restoreQueue();
     void touch();
     void touchProgress();
     DownloadOptions options() const;
@@ -230,6 +245,8 @@ private:
     bool m_available = false;
     bool m_canConvert = false;
     QElapsedTimer m_toolsChecked;   // since the tools were last looked for
+    QTimer m_queueSave;
+    bool m_queueRestored = false;
     int m_revision = 0;
     int m_progressRevision = 0;
 };

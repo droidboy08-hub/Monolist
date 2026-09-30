@@ -1,5 +1,7 @@
 #pragma once
 
+class QString;
+
 // --download-cleanup-test: what a failed or cancelled download may delete,
 // on invented files in a scratch folder inside MONOLIST_DATA_DIR, and where
 // downloads go when MONOLIST_DOWNLOAD_DIR or MONOLIST_DATA_DIR is set. No
@@ -18,3 +20,17 @@ int runDownloadCleanupSelfTest();
 // JioSaavn never asked on Standard. Downloads only into a scratch folder in
 // MONOLIST_DATA_DIR, which it insists on.
 int runSaavnDownloadSelfTest();
+
+// --download-queue-test: the downloads not finished are kept across a quit
+// (DownloadManager::saveQueue): queued ones queued again at the next launch
+// in their order, a cancel written a moment later, failed ones back as
+// failed with why and not tried again unasked, and one finished meanwhile
+// not queued again. On invented songs that are never started; in
+// MONOLIST_DATA_DIR and MONOLIST_DOWNLOAD_DIR only, which it insists on.
+int runDownloadQueueSelfTest();
+
+// --download-resume-test <videoId>: a real song, from YouTube through yt-dlp,
+// stopped part-way as a quit stops it, then finished by the next launch from
+// the partial file kept; nothing left over. Needs the network; in
+// MONOLIST_DATA_DIR and MONOLIST_DOWNLOAD_DIR only, which it insists on.
+int runDownloadResumeSelfTest(const QString &videoId);

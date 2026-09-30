@@ -44,6 +44,7 @@ public:
 
     // Used by DownloadManager, which owns the lifecycle.
     const Item *find(const QString &videoId) const;
+    const QList<Item> &items() const { return m_items; }
     void upsert(const Item &item);
     void remove(const QString &videoId);
 

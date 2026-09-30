@@ -1,5 +1,6 @@
 #include "downloadselftest.h"
 
+#include "appdatabase.h"
 #include "downloadmanager.h"
 #include "saavndownload.h"
 #include "streamresolver.h"
@@ -16,6 +17,7 @@
 #include <QPointer>
 #include <QProcess>
 #include <QSet>
+#include <QSqlQuery>
 #include <QStandardPaths>
 #include <QTcpServer>
 #include <QTcpSocket>
@@ -645,5 +647,223 @@ int runSaavnDownloadSelfTest()
     }
 
     SaavnDownload::setAllowLocalForTest(false);
+    return t.finish();
+}
+
+namespace {
+
+// The rows download_queue holds, in order: "id" or "id!" for a failed one.
+QString queueRows()
+{
+    QStringList rows;
+    QSqlQuery query(AppDatabase::connection());
+    query.exec(QStringLiteral("SELECT video_id, failed FROM download_queue ORDER BY position"));
+    while (query.next())
+        rows << query.value(0).toString() + (query.value(1).toInt() ? QStringLiteral("!") : QString());
+    return rows.join(QLatin1Char(' '));
+}
+
+QString queueDetail(DownloadManager &downloads, const QString &videoId)
+{
+    DownloadQueueModel *queue = downloads.queue();
+    for (int row = 0; row < queue->rowCount(); ++row) {
+        const QModelIndex index = queue->index(row, 0);
+        if (queue->data(index, DownloadQueueModel::VideoIdRole).toString() == videoId)
+            return queue->data(index, DownloadQueueModel::DetailRole).toString();
+    }
+    return {};
+}
+
+} // namespace
+
+int runDownloadQueueSelfTest()
+{
+    Checks t("download-queue");
+    const QString data = qEnvironmentVariable("MONOLIST_DATA_DIR");
+    if (data.isEmpty() || qEnvironmentVariable("MONOLIST_DOWNLOAD_DIR").isEmpty()) {
+        t.check(false, QStringLiteral("MONOLIST_DATA_DIR and MONOLIST_DOWNLOAD_DIR are set"),
+                QStringLiteral("refusing to run: this test writes the downloads table and a file"));
+        return t.finish();
+    }
+    if (!t.check(YtDlp::isAvailable(), QStringLiteral("yt-dlp is found, as the queue needs it")))
+        return t.finish();
+
+    // Nothing starts: the songs are invented, and only the queue is tested.
+    DownloadManager::setHeldForTest(true);
+    QSqlQuery(AppDatabase::connection()).exec(QStringLiteral("DELETE FROM download_queue"));
+
+    t.note(QStringLiteral("- the queue is kept"));
+    {
+        DownloadManager first;
+        first.enqueue(QStringLiteral("qA"), QStringLiteral("Song A"), QStringLiteral("Artist A"),
+                      QStringLiteral("https://example.invalid/a.jpg"), 200000, false, QStringLiteral("Album A"));
+        first.enqueue(QStringLiteral("qB"), QStringLiteral("Song B"), QStringLiteral("Artist B"), QString(), 0, true);
+        first.enqueue(QStringLiteral("qC"), QStringLiteral("Song C"), QStringLiteral("Artist C"));
+        t.check(first.queuedCount() == 3, QStringLiteral("three songs queued, none started while held"),
+                QString::number(first.queuedCount()));
+        first.saveQueueNow();
+        t.check(queueRows() == QLatin1String("qA qB qC"), QStringLiteral("  and written in their order"), queueRows());
+        QSqlQuery row(AppDatabase::connection());
+        row.exec(QStringLiteral("SELECT title, artist, album, artwork, duration_ms FROM download_queue WHERE video_id = 'qA'"));
+        t.check(row.next() && row.value(0).toString() == QLatin1String("Song A")
+                    && row.value(1).toString() == QLatin1String("Artist A")
+                    && row.value(2).toString() == QLatin1String("Album A")
+                    && row.value(3).toString() == QLatin1String("https://example.invalid/a.jpg")
+                    && row.value(4).toLongLong() == 200000,
+                QStringLiteral("  with what each needs to download again"));
+        QSqlQuery video(AppDatabase::connection());
+        video.exec(QStringLiteral("SELECT is_video FROM download_queue WHERE video_id = 'qB'"));
+        t.check(video.next() && video.value(0).toInt() == 1, QStringLiteral("  a music video still one"));
+
+        first.cancel(QStringLiteral("qB"));
+        const bool rewritten = waitUntil([]() { return queueRows() == QLatin1String("qA qC"); }, 3000);
+        t.check(rewritten, QStringLiteral("a cancel is written a moment later"), queueRows());
+    }
+    t.check(queueRows() == QLatin1String("qA qC"), QStringLiteral("closing writes the queue as it stands"), queueRows());
+
+    // A failed one, as a launch that saw it fail would have kept it.
+    QSqlQuery failed(AppDatabase::connection());
+    failed.exec(QStringLiteral(
+        "INSERT INTO download_queue (video_id, position, title, artist, failed, error)"
+        " VALUES ('qF', 9, 'Song F', 'Artist F', 1, 'Video unavailable')"));
+
+    t.note(QStringLiteral("- the next launch puts it back"));
+    {
+        DownloadManager second;
+        t.check(second.queuedCount() == 2 && second.stateFor(QStringLiteral("qA")) == QLatin1String("queued")
+                    && second.stateFor(QStringLiteral("qC")) == QLatin1String("queued"),
+                QStringLiteral("the queued songs are queued again"),
+                QStringLiteral("%1 queued").arg(second.queuedCount()));
+        t.check(second.stateFor(QStringLiteral("qF")) == QLatin1String("failed")
+                    && !second.isPending(QStringLiteral("qF")),
+                QStringLiteral("a failed one is back as failed, not tried again unasked"),
+                second.stateFor(QStringLiteral("qF")));
+        t.check(queueDetail(second, QStringLiteral("qF")).contains(QLatin1String("Video unavailable")),
+                QStringLiteral("  saying why it failed"), queueDetail(second, QStringLiteral("qF")));
+        second.retry(QStringLiteral("qF"));
+        t.check(second.stateFor(QStringLiteral("qF")) == QLatin1String("queued") && second.queuedCount() == 3,
+                QStringLiteral("a retry queues it"));
+        second.saveQueueNow();
+        t.check(queueRows() == QLatin1String("qA qC qF"), QStringLiteral("  and it is kept as queued"), queueRows());
+    }
+
+    t.note(QStringLiteral("- one finished in the meantime"));
+    const QString downloads = DownloadManager::chooseDirectory();
+    QDir().mkpath(downloads);
+    const QString finished = QDir(downloads).filePath(QStringLiteral("Artist A - Song A [qA].opus"));
+    {
+        QFile file(finished);
+        if (file.open(QIODevice::WriteOnly))
+            file.write("not really a song");
+    }
+    QSqlQuery stored(AppDatabase::connection());
+    stored.prepare(QStringLiteral(
+        "INSERT OR REPLACE INTO downloads (video_id, title, artist, file_path) VALUES ('qA', 'Song A', 'Artist A', ?)"));
+    stored.addBindValue(finished);
+    stored.exec();
+    {
+        DownloadManager third;
+        t.check(third.stateFor(QStringLiteral("qA")) == QLatin1String("done") && third.queuedCount() == 2,
+                QStringLiteral("a song already downloaded is not queued again"),
+                QStringLiteral("qA %1, %2 queued").arg(third.stateFor(QStringLiteral("qA"))).arg(third.queuedCount()));
+        third.saveQueueNow();
+        t.check(queueRows() == QLatin1String("qC qF"), QStringLiteral("  and leaves the queue"), queueRows());
+    }
+
+    QSqlQuery(AppDatabase::connection()).exec(QStringLiteral("DELETE FROM download_queue"));
+    QSqlQuery(AppDatabase::connection()).exec(QStringLiteral("DELETE FROM downloads WHERE video_id = 'qA'"));
+    QFile::remove(finished);
+    DownloadManager::setHeldForTest(false);
+    return t.finish();
+}
+
+int runDownloadResumeSelfTest(const QString &videoId)
+{
+    Checks t("download-resume");
+    const QString data = qEnvironmentVariable("MONOLIST_DATA_DIR");
+    if (data.isEmpty() || qEnvironmentVariable("MONOLIST_DOWNLOAD_DIR").isEmpty() || videoId.isEmpty()) {
+        t.check(false, QStringLiteral("MONOLIST_DATA_DIR, MONOLIST_DOWNLOAD_DIR and a video id"),
+                QStringLiteral("refusing to run: this test downloads a real song into the scratch folder"));
+        return t.finish();
+    }
+    if (!t.check(YtDlp::isAvailable(), QStringLiteral("yt-dlp is found")))
+        return t.finish();
+    QSqlQuery(AppDatabase::connection()).exec(QStringLiteral("DELETE FROM download_queue"));
+    const QString directory = DownloadManager::chooseDirectory();
+    // Its partial files: how many, and their size. Windows lists a file
+    // another process is writing as empty until it is closed, so the size
+    // means something only once yt-dlp has stopped.
+    const auto partials = [&directory, &videoId](qint64 *bytes = nullptr) {
+        int count = 0;
+        qint64 total = 0;
+        const QString marker = QLatin1Char('[') + videoId + QLatin1Char(']');
+        for (const QFileInfo &file : QDir(directory).entryInfoList(QDir::Files)) {
+            if (file.fileName().contains(marker) && file.fileName().endsWith(QLatin1String(".part"))) {
+                ++count;
+                total += file.size();
+            }
+        }
+        if (bytes)
+            *bytes = total;
+        return count;
+    };
+    const auto partial = [&partials]() {
+        qint64 bytes = 0;
+        partials(&bytes);
+        return bytes;
+    };
+
+    qint64 kept = 0;
+    {
+        DownloadManager first;
+        first.enqueue(videoId, QString(), QString());
+        // Stopped a quarter of the way in or more, as a quit would stop it: a
+        // song arrives in a second or two, so on the report that says so.
+        bool reported = false;
+        QStringList seen;
+        QObject::connect(&first, &DownloadManager::progressRevisionChanged, &first, [&]() {
+            const qreal progress = first.progressFor(videoId);
+            seen << QStringLiteral("%1%").arg(qRound(progress * 100));
+            if (progress >= 0.25 && progress < 0.9 && partials() > 0)
+                reported = true;
+        });
+        const bool begun = waitUntil([&]() { return reported || first.isDownloaded(videoId); }, 60000) && reported;
+        t.note(QStringLiteral("progress seen before the stop: %1").arg(seen.join(QStringLiteral(" "))));
+        t.check(begun, QStringLiteral("the download begins"),
+                first.stateFor(videoId) + QStringLiteral(": ") + queueDetail(first, videoId));
+        if (!begun)
+            return t.finish();
+    }
+    kept = partial();
+    t.check(kept > 0, QStringLiteral("quitting part-way keeps yt-dlp's partial file"),
+            QStringLiteral("%1 bytes").arg(kept));
+    t.check(queueRows() == videoId, QStringLiteral("  and the song in the queue"), queueRows());
+
+    {
+        DownloadManager second;
+        t.check(second.isPending(videoId), QStringLiteral("the next launch queues it again"), second.stateFor(videoId));
+        qreal firstProgress = -1.0;
+        QObject::connect(&second, &DownloadManager::progressRevisionChanged, &second, [&]() {
+            if (firstProgress < 0.0 && second.progressFor(videoId) > 0.0)
+                firstProgress = second.progressFor(videoId);
+        });
+        const bool done = waitUntil([&]() { return second.isDownloaded(videoId); }, 120000);
+        t.check(done, QStringLiteral("  and finishes it"), second.stateFor(videoId));
+        const QString path = second.localPathFor(videoId);
+        t.check(!path.isEmpty() && QFileInfo(path).size() > kept,
+                QStringLiteral("  into a whole file, larger than the part kept"),
+                QStringLiteral("%1 bytes").arg(QFileInfo(path).size()));
+        // yt-dlp counts what it carried on from as downloaded: a download
+        // begun again from nothing would start near 0.
+        const qreal keptShare = QFileInfo(path).size() > 0 ? qreal(kept) / qreal(QFileInfo(path).size()) : 0.0;
+        t.check(firstProgress >= 0.2 && firstProgress + 0.05 >= keptShare,
+                QStringLiteral("  carrying on from the part kept, not from the start"),
+                QStringLiteral("kept %1 bytes, about %2% of the file; first progress %3%")
+                    .arg(kept).arg(qRound(keptShare * 100)).arg(qRound(firstProgress * 100)));
+        t.check(partials() == 0, QStringLiteral("  with no partial file left"));
+        const bool emptied = waitUntil([]() { return queueRows().isEmpty(); }, 3000);
+        t.check(emptied, QStringLiteral("  and nothing left in the queue"), queueRows());
+        second.remove(videoId);
+    }
     return t.finish();
 }

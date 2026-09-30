@@ -27,7 +27,8 @@ Priority runs from 1 (first) to 9. Size: S under an hour, M a few hours, L a day
   Done when: A failed track shows 'Retry download' (Downloads.retry). A finished one shows 'Show in folder' and 'Remove download' with the two-step confirmation (Downloads.remove).
 - [x] **B13** Downloads stay disabled after the tools are installed or updated, until restart *(P2, S)*
   Done when: DownloadManager re-checks its tools after a tool update, and lazily on enqueue, through NOTIFY properties, so new tools work without a restart.
-- [ ] **D01** The download queue is lost on quit, and partly downloaded files are deleted *(P5, M)*
+- [x] **D01** The download queue is lost on quit, and partly downloaded files are deleted *(P5, M)*
+  Done 2026-09-30: the download_queue table, written a second after any change and as the app closes, in the order the downloads will run (those running first). At launch, or once yt-dlp is found, queued ones are queued again, and failed ones come back as failed with why. yt-dlp's partial file is kept on quit and carried on from; a finished download clears any stale one. `--download-queue-test` (offline) and `--download-resume-test <id>` (network): a real song stopped at 31% was finished by the next launch from the kept part.
   Done when: Queued and failed downloads are stored in a table and queued again at launch.
 - [ ] **D02** The download folder can't be changed *(P5, M)*
   Done when: A 'Change…' action in Settings opens a native folder picker, saves the choice and rescans the stored files.
