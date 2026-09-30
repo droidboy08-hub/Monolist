@@ -171,6 +171,21 @@ ScrollPage {
             onPlayRequested: root.pageRequested(Catalog.featured.browseId)
         }
 
+        // — Moods & genres: a way in rather than a section, so not numbered —
+        Item {
+            visible: Catalog.moods.length > 0
+            width: parent.width
+            height: visible ? moodStrip.implicitHeight + Theme.space8 : 0
+
+            MoodStrip {
+                id: moodStrip
+                x: Theme.space8
+                y: Theme.space8
+                width: parent.width - Theme.space8 * 2
+                groups: Catalog.moods
+            }
+        }
+
         // — whose feed this is —
         // Only for the account's own: the page is then theirs, not everyone's.
         Text {

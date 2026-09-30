@@ -2367,6 +2367,77 @@ void InnerTube::browse(const QString &browseId, const QString &params,
          /*retries=*/1, auth);
 }
 
+void InnerTube::charts(const QString &country, std::function<void(const QJsonObject &, const QString &)> done)
+{
+    QJsonObject body{ { QStringLiteral("browseId"), QStringLiteral("FEmusic_charts") } };
+    if (!country.isEmpty()) {
+        body.insert(QStringLiteral("formData"),
+                    QJsonObject{ { QStringLiteral("selectedValues"), QJsonArray{ country } } });
+    }
+    send(Client::Music, QStringLiteral("browse"), body, kBrowseTimeoutMs, nullptr, std::move(done),
+         /*retries=*/1, Auth::Anonymous);
+}
+
+InnerTube::Charts InnerTube::parseCharts(const QJsonObject &root)
+{
+    Charts charts;
+    const QJsonArray sections = dig(root, { "contents", "singleColumnBrowseResultsRenderer", "tabs", "#0",
+                                            "tabRenderer", "content", "sectionListRenderer",
+                                            "contents" }).toArray();
+    for (const QJsonValue &section : sections) {
+        // The country menu, above the charts: which country they are.
+        const QJsonValue menu = dig(section, { "musicShelfRenderer", "subheaders", "#0",
+                                               "musicSideAlignedItemRenderer", "startItems", "#0",
+                                               "musicSortFilterButtonRenderer", "title", "runs" });
+        if (!menu.isUndefined() && charts.country.isEmpty()) {
+            charts.country = joinRuns(menu.toArray()).trimmed();
+            continue;
+        }
+        const QJsonValue carousel = dig(section, { "musicCarouselShelfRenderer" });
+        if (carousel.isUndefined())
+            continue;
+        // What a view can open: a shelf of podcasts, which it cannot, goes.
+        Shelf shelf = parseCarousel(carousel);
+        dropUnopenable(shelf);
+        if (!shelf.songs.isEmpty() || !shelf.cards.isEmpty())
+            charts.shelves.append(shelf);
+    }
+    return charts;
+}
+
+QList<InnerTube::MoodGroup> InnerTube::parseMoods(const QJsonObject &root)
+{
+    QList<MoodGroup> groups;
+    const QJsonArray sections = dig(root, { "contents", "singleColumnBrowseResultsRenderer", "tabs", "#0",
+                                            "tabRenderer", "content", "sectionListRenderer",
+                                            "contents" }).toArray();
+    for (const QJsonValue &section : sections) {
+        const QJsonValue grid = dig(section, { "gridRenderer" });
+        if (grid.isUndefined())
+            continue;
+        MoodGroup group;
+        group.title = joinRuns(dig(grid, { "header", "gridHeaderRenderer", "title", "runs" }).toArray()).trimmed();
+        for (const QJsonValue &item : dig(grid, { "items" }).toArray()) {
+            const QJsonValue button = dig(item, { "musicNavigationButtonRenderer" });
+            if (button.isUndefined())
+                continue;
+            MoodChip chip;
+            chip.title = joinRuns(dig(button, { "buttonText", "runs" }).toArray()).trimmed();
+            chip.browseId = dig(button, { "clickCommand", "browseEndpoint", "browseId" }).toString();
+            chip.params = dig(button, { "clickCommand", "browseEndpoint", "params" }).toString();
+            // ARGB as a number; the alpha is always full.
+            const double stripe = dig(button, { "solid", "leftStripeColor" }).toDouble(-1);
+            if (stripe >= 0)
+                chip.color = QStringLiteral("#%1").arg(quint32(stripe) & 0xFFFFFF, 6, 16, QLatin1Char('0'));
+            if (!chip.title.isEmpty() && !chip.browseId.isEmpty())
+                group.chips.append(chip);
+        }
+        if (!group.chips.isEmpty())
+            groups.append(group);
+    }
+    return groups;
+}
+
 // The token goes in the body, as music.youtube.com's own client sends it
 // now. The older tokens (a list's "nextContinuationData") are answered the
 // same way, so one call serves both. The next part of a list that was asked

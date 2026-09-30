@@ -111,6 +111,29 @@ public:
         Link more;
     };
 
+    // YouTube Music's charts for a country (FEmusic_charts): its video
+    // charts, genre charts, top albums and top artists as shelves; the
+    // country as the page names it ("United States").
+    struct Charts {
+        QString country;
+        QList<Shelf> shelves;
+    };
+
+    // One of the chips on YouTube Music's Moods & genres page: what it is
+    // called, the page it opens (a category's shelves of playlists), and the
+    // colour of the stripe it wears ("#rrggbb", empty for none).
+    struct MoodChip {
+        QString title;
+        QString browseId;
+        QString params;
+        QString color;
+    };
+    // "Moods & moments", "Genres": each heading with its chips.
+    struct MoodGroup {
+        QString title;
+        QList<MoodChip> chips;
+    };
+
     // An album or playlist page.
     struct Collection {
         QString browseId;
@@ -383,6 +406,13 @@ public:
                         std::function<void(const QJsonObject &root, const QString &error)> done,
                         Auth auth = Auth::Anonymous, const QString &visitor = QString());
     static QList<Shelf> parseShelves(const QJsonObject &root);
+    // The charts page for `country` (a two-letter code); the context's own
+    // country does not choose it, the page's country menu does, which this
+    // sends as that menu does. Always asked signed out. Read with parseCharts.
+    void charts(const QString &country, std::function<void(const QJsonObject &root, const QString &error)> done);
+    static Charts parseCharts(const QJsonObject &root);
+    // FEmusic_moods_and_genres's two grids of chips.
+    static QList<MoodGroup> parseMoods(const QJsonObject &root);
     // The token for the page of shelves after a feed's first (Home's), to
     // ask for with continueBrowse; empty when there is none. Asked anonymously,
     // it answers only with the visitor id the first page was asked with.

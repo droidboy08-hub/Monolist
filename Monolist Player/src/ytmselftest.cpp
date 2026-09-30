@@ -1806,6 +1806,21 @@ int runHomeAccountSelfTest(Library *library)
     const QByteArray nextPage = R"({"continuationContents":{"sectionListContinuation":{"contents":[)"
         + carouselJson("Further down", cardJson("Further mix", "VLTESTFURTHER", "MUSIC_PAGE_TYPE_PLAYLIST"))
         + "]}}}";
+    // The charts, with the country menu above them and a shelf of podcasts
+    // the app cannot open; and Moods & genres (7d).
+    bool exploreServed = false;
+    const QByteArray chartsAnswer =
+        R"({"contents":{"singleColumnBrowseResultsRenderer":{"tabs":[{"tabRenderer":{"content":{"sectionListRenderer":{"contents":[)"
+        R"({"musicShelfRenderer":{"subheaders":[{"musicSideAlignedItemRenderer":{"startItems":[{"musicSortFilterButtonRenderer":{"title":{"runs":[{"text":"Testland"}]}}}]}}]}},)"
+        + carouselJson("Video charts", cardJson("Top 100 Testland", "VLTESTCHART", "MUSIC_PAGE_TYPE_PLAYLIST")) + ','
+        + carouselJson("Weekly top podcast shows", cardJson("A podcast", "MPSPTESTPOD", "MUSIC_PAGE_TYPE_PODCAST_SHOW_DETAIL_PAGE"))
+        + "]}}}}]}}}";
+    const QByteArray moodsAnswer =
+        R"({"contents":{"singleColumnBrowseResultsRenderer":{"tabs":[{"tabRenderer":{"content":{"sectionListRenderer":{"contents":[)"
+        R"({"gridRenderer":{"header":{"gridHeaderRenderer":{"title":{"runs":[{"text":"Moods & moments"}]}}},"items":[)"
+        R"({"musicNavigationButtonRenderer":{"buttonText":{"runs":[{"text":"Chill"}]},"solid":{"leftStripeColor":4288988671},)"
+        R"("clickCommand":{"browseEndpoint":{"browseId":"FEmusic_moods_and_genres_category","params":"TESTCHILL"}}}}]}})"
+        "]}}}}]}}}";
     standIn.respond = [&](const StandIn::Request &request) {
         StandIn::Answer answer;
         const bool authed = request.authed();
@@ -1824,6 +1839,10 @@ int runHomeAccountSelfTest(Library *library)
         const QString browseId = request.json().value(QStringLiteral("browseId")).toString();
         if (request.json().contains(QStringLiteral("continuation")))
             answer.body = nextPage;
+        else if (exploreServed && browseId == QLatin1String("FEmusic_charts"))
+            answer.body = chartsAnswer;
+        else if (exploreServed && browseId == QLatin1String("FEmusic_moods_and_genres"))
+            answer.body = moodsAnswer;
         else if (feedWithMore && browseId == QLatin1String("FEmusic_home") && !authed)
             answer.body = feedWithNext;
         else if (request.path.contains("account/account_menu"))
@@ -2204,6 +2223,51 @@ int runHomeAccountSelfTest(Library *library)
                     QStringLiteral("  and signed out, as the first page was: nothing of an account on it"));
         }
         feedWithMore = false;
+    }
+
+    // — 7d. charts and Moods & genres —
+    {
+        exploreServed = true;
+        const int from = standIn.requests.size();
+        catalog = std::make_unique<Catalog>();   // signed out
+        catalog->refresh();
+        settled();
+        waitUntil([&catalog, &shown]() { return !catalog->moods().isEmpty() && shown().contains(QLatin1String("Video charts")); },
+                  8000);
+        const QList<StandIn::Request> charts = asked(QStringLiteral("FEmusic_charts"), from);
+        const QList<StandIn::Request> moods = asked(QStringLiteral("FEmusic_moods_and_genres"), from);
+        const QJsonArray country = charts.isEmpty() ? QJsonArray()
+            : charts.first().json().value(QStringLiteral("formData")).toObject()
+                  .value(QStringLiteral("selectedValues")).toArray();
+        t.check(charts.size() == 1 && moods.size() == 1 && !charts.first().authed() && !moods.first().authed()
+                    && country.size() == 1 && country.at(0).toString() == InnerTube::region(),
+                QStringLiteral("once Home has come, the charts are asked for the country chosen, as the page's own "
+                               "country menu asks, and Moods & genres; both signed out"),
+                QStringLiteral("%1 charts, %2 moods, country %3").arg(charts.size()).arg(moods.size())
+                    .arg(country.isEmpty() ? QStringLiteral("(none)") : country.at(0).toString()));
+        QString strapline;
+        for (const QVariant &shelf : catalog->shelves()) {
+            if (shelf.toMap().value(QStringLiteral("title")).toString() == QLatin1String("Video charts"))
+                strapline = shelf.toMap().value(QStringLiteral("strapline")).toString();
+        }
+        t.check(shown().endsWith(QLatin1String("| Video charts")) && strapline == QStringLiteral("CHARTS · TESTLAND")
+                    && !shown().contains(QLatin1String("podcast")),
+                QStringLiteral("  the charts follow the feed's shelves, under their country, the podcasts left out"),
+                shown() + QStringLiteral(" / ") + strapline);
+        const QVariantMap group = catalog->moods().value(0).toMap();
+        const QVariantMap chip = group.value(QStringLiteral("chips")).toList().value(0).toMap();
+        t.check(group.value(QStringLiteral("title")).toString() == QLatin1String("Moods & moments")
+                    && chip.value(QStringLiteral("title")).toString() == QLatin1String("Chill")
+                    && chip.value(QStringLiteral("params")).toString() == QLatin1String("TESTCHILL")
+                    && chip.value(QStringLiteral("color")).toString() == QLatin1String("#a4c5ff"),
+                QStringLiteral("  and the moods are read with their colours and where each opens"),
+                chip.value(QStringLiteral("title")).toString() + QLatin1Char(' ') + chip.value(QStringLiteral("color")).toString());
+        const int again = standIn.requests.size();
+        catalog->refresh();
+        settled();
+        t.check(asked(QStringLiteral("FEmusic_charts"), again).isEmpty(),
+                QStringLiteral("  asked once a country, not with every refresh of Home"));
+        exploreServed = false;
     }
 
     // — 8. the log —

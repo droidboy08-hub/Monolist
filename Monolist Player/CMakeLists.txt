@@ -254,6 +254,8 @@ qt_add_qml_module(monolist
         components/TrackMenu.qml
         components/QueuePanel.qml
         components/CardShelf.qml
+        components/MoodChip.qml
+        components/MoodStrip.qml
         components/ShelfCard.qml
         components/CardGrid.qml
         components/ActionButton.qml

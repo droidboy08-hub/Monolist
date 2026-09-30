@@ -13,6 +13,8 @@
 #include <QSqlError>
 #include <QSqlQuery>
 #include <QTimeZone>
+#include <QDir>
+#include <QImage>
 #include <QTimer>
 #include <QWindow>
 
@@ -707,6 +709,24 @@ int main(int argc, char *argv[])
         // does, with the frame times (scrollselftest.cpp).
         if (app.arguments().contains(QStringLiteral("--scroll-test")))
             startScrollSelfTest(qobject_cast<QQuickWindow *>(window));
+
+        // --shot <file.png> [seconds] [--quit]: the window as it is drawn that
+        // long after it opens (5 s unless said), saved, then quitting if
+        // asked. Drawn for the picture, so it shows the window as it is even
+        // behind others, where Windows stops showing new frames of it.
+        if (const int shotFlag = app.arguments().indexOf(QStringLiteral("--shot"));
+                shotFlag >= 0 && shotFlag + 1 < app.arguments().size()) {
+            const QString path = app.arguments().at(shotFlag + 1);
+            const int seconds = shotFlag + 2 < app.arguments().size() ? app.arguments().at(shotFlag + 2).toInt() : 0;
+            const bool quit = app.arguments().contains(QStringLiteral("--quit"));
+            auto *quick = qobject_cast<QQuickWindow *>(window);
+            QTimer::singleShot((seconds > 0 ? seconds : 5) * 1000, quick, [quick, path, quit]() {
+                const bool saved = quick && quick->grabWindow().save(path);
+                qInfo("shot: %s %s", saved ? "saved" : "could not save", qUtf8Printable(QDir::toNativeSeparators(path)));
+                if (quit)
+                    QCoreApplication::quit();
+            });
+        }
     }
 
     // --play <videoId> [seconds]

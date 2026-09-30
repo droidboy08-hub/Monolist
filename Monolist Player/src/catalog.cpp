@@ -211,6 +211,10 @@ bool Catalog::showSaved()
             applyFeed(root, false);
         else if (part == QLatin1String("releases"))
             applyReleases(root);
+        else if (part == QLatin1String("charts"))
+            applyCharts(root);
+        else if (part == QLatin1String("moods"))
+            applyMoods(root);
         else
             continue;
         const qint64 at = query.value(1).toLongLong();
@@ -312,6 +316,75 @@ void Catalog::load(int parts)
         }
         finishHome();
     });
+}
+
+void Catalog::loadExplore()
+{
+    const QString region = InnerTube::region();
+    if (m_chartsRegion != region) {
+        m_chartsRegion = region;
+        m_innerTube.charts(region, [this, region](const QJsonObject &root, const QString &error) {
+            if (region != m_chartsRegion)
+                return;   // another country since
+            if (!error.isEmpty()) {
+                m_chartsRegion.clear();   // asked again once Home next answers
+                return;
+            }
+            applyCharts(root);
+            if (!m_chartShelves.isEmpty())
+                saveAnswer(QStringLiteral("charts"), root);
+            composeShelves();
+            Q_EMIT homeChanged();
+        });
+    }
+    if (m_moodsRegion != region) {
+        m_moodsRegion = region;
+        m_innerTube.browse(QStringLiteral("FEmusic_moods_and_genres"),
+                           [this, region](const QJsonObject &root, const QString &error) {
+            if (region != m_moodsRegion)
+                return;
+            if (!error.isEmpty()) {
+                m_moodsRegion.clear();
+                return;
+            }
+            applyMoods(root);
+            if (!m_moods.isEmpty())
+                saveAnswer(QStringLiteral("moods"), root);
+        });
+    }
+}
+
+void Catalog::applyCharts(const QJsonObject &root)
+{
+    const InnerTube::Charts charts = InnerTube::parseCharts(root);
+    m_chartShelves.clear();
+    const QString strapline = charts.country.isEmpty()
+        ? QStringLiteral("CHARTS · %1").arg(InnerTube::region())
+        : QStringLiteral("CHARTS · %1").arg(charts.country.toUpper());
+    for (const InnerTube::Shelf &shelf : charts.shelves) {
+        QVariantMap map = feedShelfToMap(shelf, false);
+        map.insert(QStringLiteral("strapline"), strapline);
+        m_chartShelves.append(map);
+    }
+}
+
+void Catalog::applyMoods(const QJsonObject &root)
+{
+    QVariantList groups;
+    for (const InnerTube::MoodGroup &group : InnerTube::parseMoods(root)) {
+        QVariantList chips;
+        for (const InnerTube::MoodChip &chip : group.chips) {
+            chips.append(QVariantMap{ { QStringLiteral("title"), chip.title },
+                                      { QStringLiteral("browseId"), chip.browseId },
+                                      { QStringLiteral("params"), chip.params },
+                                      { QStringLiteral("color"), chip.color } });
+        }
+        groups.append(QVariantMap{ { QStringLiteral("title"), group.title }, { QStringLiteral("chips"), chips } });
+    }
+    if (groups.isEmpty())
+        return;
+    m_moods = groups;
+    Q_EMIT moodsChanged();
 }
 
 void Catalog::applyReleases(const QJsonObject &root)
@@ -525,10 +598,10 @@ void Catalog::composeShelves()
     if (m_personalFeed) {
         // The account's feed first, in its own order; this week's releases,
         // the same for everyone, after it.
-        m_shelves = m_homeShelves + m_releaseShelves;
+        m_shelves = m_homeShelves + m_releaseShelves + m_chartShelves;
         m_quickPicksAt = m_quickPicks.rowCount() > 0 && m_feedQuickPicksAt < m_shelves.size() ? m_feedQuickPicksAt : -1;
     } else {
-        m_shelves = m_releaseShelves + m_homeShelves;
+        m_shelves = m_releaseShelves + m_homeShelves + m_chartShelves;
         m_quickPicksAt = -1;
     }
 }
@@ -555,10 +628,15 @@ void Catalog::finishHome()
         return;
     }
     composeShelves();
+    qInfo("catalog: Home answered: %d shelves, %d quick picks%s", int(m_shelves.size()), m_quickPicks.rowCount(),
+          m_error.isEmpty() ? "" : qPrintable(QStringLiteral(", and an error: ") + m_error));
     // Answered in full: what Home shows is fresh now, not the last launch's.
     const bool answered = m_error.isEmpty();
-    if (answered)
+    if (answered) {
         m_savedAt.clear();
+        // The charts and moods after Home itself, rather than beside it.
+        loadExplore();
+    }
     // One failed request out of two still leaves a page worth showing. The
     // last launch's page, shown while nothing fresh has come, is shown on,
     // and asked for again by itself as an empty one is.

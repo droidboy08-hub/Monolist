@@ -78,6 +78,10 @@ class Catalog : public QObject
     // reader nears the end (loadMoreHome), after `shelves`.
     Q_PROPERTY(ShelfModel *moreShelves READ moreShelves CONSTANT)
     Q_PROPERTY(bool homeHasMore READ homeHasMore NOTIFY homeMoreChanged)
+    // YouTube Music's Moods & genres: [{ title, chips: [{ title, browseId,
+    // params, color }] }], "Moods & moments" then "Genres". A chip opens its
+    // category's shelves as a listing (Nav.openMore, kind "browse").
+    Q_PROPERTY(QVariantList moods READ moods NOTIFY moodsChanged)
     Q_PROPERTY(bool homeLoadingMore READ homeLoadingMore NOTIFY homeMoreChanged)
     // The newest release, for the poster: { browseId, title, subtitle, artwork }.
     Q_PROPERTY(QVariantMap featured READ featured NOTIFY homeChanged)
@@ -157,6 +161,7 @@ public:
     QVariantList shelves() const { return m_shelves; }
     ShelfModel *moreShelves() { return &m_moreShelves; }
     bool homeHasMore() const { return !m_homeNext.isEmpty(); }
+    QVariantList moods() const { return m_moods; }
     bool homeLoadingMore() const { return m_homeLoadingMore; }
     // The feed's next page of shelves, asked as its first page was (the
     // account's feed as the account), and at most a few pages a feed: each
@@ -224,6 +229,7 @@ public Q_SLOTS:
 Q_SIGNALS:
     void homeChanged();
     void homeMoreChanged();
+    void moodsChanged();
     void pageChanged();
     void pageMoreChanged();
     void listingChanged();
@@ -265,6 +271,11 @@ private:
     QVariantMap feedShelfToMap(const InnerTube::Shelf &shelf, bool personal);
     // The feed's pages after its first forgotten: a new feed, or none.
     void resetMoreHome();
+    // The charts and Moods & genres, the same for everyone in a country:
+    // asked signed out once Home has come, once a country.
+    void loadExplore();
+    void applyCharts(const QJsonObject &root);
+    void applyMoods(const QJsonObject &root);
     // New releases' answer into its shelves and the poster.
     void applyReleases(const QJsonObject &root);
     // A good answer kept for the next launch, as it came.
@@ -317,7 +328,11 @@ private:
     QSet<QString> m_feedAccountIds;
     QVariantList m_homeShelves;       // from the home feed
     QVariantList m_releaseShelves;    // from new releases
-    QVariantList m_shelves;           // both, in the order Home shows them
+    QVariantList m_chartShelves;      // the country's charts
+    QVariantList m_shelves;           // all three, in the order Home shows them
+    QVariantList m_moods;
+    QString m_chartsRegion;           // the country the charts were asked for, or are being
+    QString m_moodsRegion;            // the same for Moods & genres
     // The feed after its first page: its shelves so far, the token for the
     // next page, and how many pages have come; the generation moves on with
     // every new feed, so a page asked for an old one is not shown under it.

@@ -122,7 +122,8 @@ Priority runs from 1 (first) to 9. Size: S under an hour, M a few hours, L a day
   Done when: The last good Home result is saved, shown immediately at launch and refreshed in the background, and it stays on screen when the network fails.
 - [ ] **X07** Video and fallback search results aren't re-ranked or cleaned of junk *(P7, S)*
   Done when: A shared ranking step, reusing pickResult's term list, reorders video and fallback results. YouTube Music's own song results keep their order.
-- [ ] **X08** Home has no charts and no moods & genres *(P7, M)*
+- [x] **X08** Home has no charts and no moods & genres *(P7, M)*
+  Done 2026-09-30: once Home has answered, the country's charts (FEmusic_charts, asked with the page's own country menu value, since the context's country does not choose them; podcasts left out) follow the feed's first shelves under "CHARTS · <country>", and Moods & genres sit under the poster as a row of chips in YouTube Music's colours; a chip opens its category's shelves of playlists. Both signed out, once a country, and kept for the next launch with Home. `--home-account-test` part 7d.
   Done when: Home adds chart shelves for the current country and a Moods & genres row whose chips open category shelves.
 
 ## Library & playlists

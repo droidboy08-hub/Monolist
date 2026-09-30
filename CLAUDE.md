@@ -65,6 +65,9 @@ owner's iPhone app (AryaMusix / "Mediano", Swift, not in this repo).
   `--download-cleanup-test`, `--download-queue-test`, `--download-folder-test`, `--loudness-test`, `--library-edit-test`, `--recovery-test`, `--session-test` … Each
   prints `N checks, 0 failed`. All must pass, except `--scrobble-send-test`,
   which needs its local stand-in (`scripts/lastfm-mock.ps1`).
+- Screenshots: `--shot <file.png> [seconds] [--quit]` (with `--view`, `--settings-section`) saves the
+  window as the app draws it. Capturing the window from outside (PrintWindow) returns the last frame
+  shown, which is stale while the window is behind others.
 - Recommender checks (need the data): `--artist-test <EmbeddingData> <GraphData>`
   (baseline 17 graph / 5 sounds-like / 0 none, 0 leaks), `--graph-test` (22
   countries, 0 leaks), `--content-test <EmbeddingData> <report>` (0 of 19 and
