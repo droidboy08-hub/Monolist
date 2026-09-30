@@ -43,7 +43,12 @@ param(
     [string] $InstallRoot = 'C:\dev\monolist-deps',
     [string] $QtVersion   = '6.11.2',
     [switch] $Update,
-    [switch] $SkipGit
+    [switch] $SkipGit,
+    # For package-windows.ps1 -Installer: Inno Setup, portable, in innosetup\.
+    [switch] $Installer,
+    # For a package made where Windows has no Vulkan runtime (a build server):
+    # the Vulkan loader libmpv links against, from LunarG, in bin\.
+    [switch] $Vulkan
 )
 
 $ErrorActionPreference = 'Stop'
@@ -322,6 +327,51 @@ if ((Test-Path -LiteralPath $denoExe) -and -not $Update) {
     $archive = Save-Asset (Get-Asset $release ('^' + [regex]::Escape($name) + '$')) (Get-ReleaseHash $release $name)
     Expand-To $archive $binDir   # the archive holds deno.exe alone
     Write-Ok "$denoExe ($($release.tag_name))"
+}
+
+# ---------------------------------------------------------- packaging tools
+
+if ($Installer) {
+    Write-Step 'Inno Setup (builds the installer; portable, nothing registered)'
+    $innoRoot = Join-Path $InstallRoot 'innosetup'
+    $iscc = Join-Path $innoRoot 'ISCC.exe'
+    if (Test-Path -LiteralPath $iscc) {
+        Write-Skip $iscc
+    } else {
+        $release = Get-Release 'jrsoftware/issrc'
+        $asset = Get-Asset $release '^innosetup-[0-9.]+-x64\.exe$'
+        $archive = Save-Asset $asset (Get-ReleaseHash $release $asset.name)
+        # Run only once it is known to be Jordan Russell's own, signed.
+        $signature = Get-AuthenticodeSignature -LiteralPath $archive
+        if ($signature.Status -ne 'Valid') { throw "The Inno Setup download is not validly signed ($($signature.Status))." }
+        $process = Start-Process -FilePath $archive -Wait -PassThru -ArgumentList @(
+            '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-', '/CURRENTUSER', '/PORTABLE=1', "/DIR=`"$innoRoot`"")
+        if (-not (Test-Path -LiteralPath $iscc)) { throw "Inno Setup did not unpack to $innoRoot (exit code $($process.ExitCode))" }
+        Write-Ok "$iscc ($($release.tag_name), signed: $($signature.SignerCertificate.Subject))"
+    }
+}
+
+if ($Vulkan) {
+    Write-Step 'Vulkan loader (for libmpv; LunarG''s runtime components)'
+    $vulkanDll = Join-Path $binDir 'vulkan-1.dll'
+    if ((Test-Path -LiteralPath $vulkanDll) -and -not $Update) {
+        Write-Skip $vulkanDll
+    } else {
+        $archive = Join-Path $cacheDir 'vulkan-runtime-components.zip'
+        Invoke-Download 'https://sdk.lunarg.com/sdk/download/latest/windows/vulkan-runtime-components.zip' $archive
+        $staging = Join-Path $cacheDir 'vulkan-staging'
+        if (Test-Path -LiteralPath $staging) { Remove-Item -LiteralPath $staging -Recurse -Force }
+        Expand-To $archive $staging
+        $found = Get-ChildItem -LiteralPath $staging -Recurse -Filter 'vulkan-1.dll' |
+            Where-Object { $_.DirectoryName -match '(?i)x64' } | Select-Object -First 1
+        if (-not $found) { throw 'No x64 vulkan-1.dll in LunarG''s runtime components.' }
+        # No published checksum: the DLL's own signature stands in for one.
+        $signature = Get-AuthenticodeSignature -LiteralPath $found.FullName
+        if ($signature.Status -ne 'Valid') { throw "vulkan-1.dll is not validly signed ($($signature.Status))." }
+        Copy-Item -LiteralPath $found.FullName -Destination $vulkanDll -Force
+        Remove-Item -LiteralPath $staging -Recurse -Force
+        Write-Ok "$vulkanDll ($($found.VersionInfo.FileVersion))"
+    }
 }
 
 # ----------------------------------------------------------------------- git

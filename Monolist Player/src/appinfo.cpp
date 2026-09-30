@@ -120,9 +120,12 @@ QString AppInfo::updateFeed()
     QSqlQuery query(AppDatabase::connection());
     query.prepare(QStringLiteral("SELECT value FROM settings WHERE key = ?"));
     query.addBindValue(QStringLiteral("update.feed"));
-    if (query.exec() && query.next())
+    if (query.exec() && query.next() && !query.value(0).toString().isEmpty())
         return query.value(0).toString();
-    return {};
+    // The project's own releases on GitHub, where the Windows installer is
+    // published (.github/workflows/release-windows.yml), tagged
+    // v<version>.<build>.
+    return QStringLiteral("https://api.github.com/repos/droidboy08-hub/Monolist/releases/latest");
 }
 
 void AppInfo::setUpdateFeed(const QString &url)
@@ -353,7 +356,9 @@ void AppInfo::checkForUpdate()
         if (tag.startsWith(QLatin1Char('v')))
             tag.remove(0, 1);
 
-        if (compareVersions(version(), tag) < 0) {
+        // Releases are tagged with the build number after the version
+        // (v0.1.130), which is what tells two builds of one version apart.
+        if (compareVersions(version() + QLatin1Char('.') + buildNumber(), tag) < 0) {
             setUpdate(Available, QStringLiteral("Monolist %1 is available.").arg(tag), page);
         } else {
             setUpdate(UpToDate,

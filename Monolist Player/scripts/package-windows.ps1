@@ -20,13 +20,17 @@
 
     It then checks every program and library in the package for a DLL it
     needs that is neither in the package nor part of Windows, and fails if it
-    finds one. The zip goes beside the folder, with its SHA-256.
+    finds one. The zip goes beside the folder, with its SHA-256; with
+    -Installer, a setup program too (packaging\monolist.iss, Inno Setup), with
+    its own.
 
-    Needs the toolchain setup-windows.ps1 installs (for vulkan-1.dll, a
-    Vulkan runtime on this PC: any current GPU driver has one).
+    Needs the toolchain setup-windows.ps1 installs, with -Installer for Inno
+    Setup, and for vulkan-1.dll either its -Vulkan or a Vulkan runtime on this
+    PC (any current GPU driver has one).
 
 .EXAMPLE
     .\package-windows.ps1                 # build Release, stage, check, zip
+    .\package-windows.ps1 -Installer      # and the installer
     .\package-windows.ps1 -SkipBuild      # re-stage the last Release build
 #>
 [CmdletBinding()]
@@ -36,7 +40,8 @@ param(
     [string] $QtVersion   = '6.11.2',
     [string] $OutDir      = '',
     [switch] $SkipBuild,
-    [switch] $NoZip
+    [switch] $NoZip,
+    [switch] $Installer
 )
 
 $ErrorActionPreference = 'Stop'
@@ -77,7 +82,10 @@ $version = Read-Define 'MONOLIST_VERSION'
 $build   = Read-Define 'MONOLIST_BUILD_NUMBER'
 $commit  = Read-Define 'MONOLIST_COMMIT'
 $dirty   = (Read-Define 'MONOLIST_DIRTY') -eq 'true'
-$name    = "Monolist-$version-build$build-win64" + $(if ($dirty) { '-dirty' } else { '' })
+# The version as releases are tagged: v0.1.130 is version 0.1, build 130.
+$fullVersion = "$version.$build"
+$suffix  = if ($dirty) { '-dirty' } else { '' }
+$name    = "Monolist-$fullVersion-win64$suffix"
 if ($dirty) { Write-Warning 'The source tree has uncommitted changes: the package is marked -dirty.' }
 
 # ---------------------------------------------------------------- stage
@@ -107,7 +115,9 @@ foreach ($file in 'qmldir', 'plugins.qmltypes', 'qtquickcontrols2plugin.dll') {
 $mpv = Get-ChildItem -LiteralPath (Join-Path $InstallRoot 'libmpv') -Recurse -Filter 'libmpv*.dll' | Select-Object -First 1
 if (-not $mpv) { throw 'No libmpv DLL in the toolchain.' }
 Copy-Item -LiteralPath $mpv.FullName -Destination $stage
-$vulkan = Join-Path $env:WINDIR 'System32\vulkan-1.dll'
+# LunarG's (setup-windows.ps1 -Vulkan) where there is one, else this PC's.
+$vulkan = Join-Path $InstallRoot 'bin\vulkan-1.dll'
+if (-not (Test-Path -LiteralPath $vulkan)) { $vulkan = Join-Path $env:WINDIR 'System32\vulkan-1.dll' }
 if (Test-Path -LiteralPath $vulkan) {
     Copy-Item -LiteralPath $vulkan -Destination $stage
 } else {
@@ -261,5 +271,25 @@ if (-not $NoZip) {
     $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $zip).Hash.ToLowerInvariant()
     Set-Content -LiteralPath "$zip.sha256" -Value "$hash  $name.zip" -Encoding ASCII
     Write-Host ("  {0} ({1:N0} MB)`n  SHA-256 {2}" -f $zip, ((Get-Item -LiteralPath $zip).Length / 1MB), $hash) -ForegroundColor Green
+}
+
+# ---------------------------------------------------------------- installer
+
+if ($Installer) {
+    Write-Step 'Installer'
+    $iscc = @((Join-Path $InstallRoot 'innosetup\ISCC.exe'),
+              (Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'),
+              (Join-Path $env:ProgramFiles 'Inno Setup 7\ISCC.exe')) |
+        Where-Object { $_ -and (Test-Path -LiteralPath $_) } | Select-Object -First 1
+    if (-not $iscc) { throw 'Inno Setup is not installed: run setup-windows.ps1 -Installer.' }
+    $setupName = "Monolist-$fullVersion-setup-win64$suffix"
+    $setup = Join-Path $OutDir "$setupName.exe"
+    if (Test-Path -LiteralPath $setup) { Remove-Item -LiteralPath $setup -Force }
+    & $iscc /Q "/DAppVersion=$fullVersion" "/DSourceDir=$stage" "/DOutputDir=$OutDir" "/DOutputName=$setupName" `
+        "/DIconFile=$(Join-Path $packaging 'monolist.ico')" (Join-Path $packaging 'monolist.iss')
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $setup)) { throw 'Inno Setup could not build the installer.' }
+    $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $setup).Hash.ToLowerInvariant()
+    Set-Content -LiteralPath "$setup.sha256" -Value "$hash  $setupName.exe" -Encoding ASCII
+    Write-Host ("  {0} ({1:N0} MB)`n  SHA-256 {2}" -f $setup, ((Get-Item -LiteralPath $setup).Length / 1MB), $hash) -ForegroundColor Green
 }
 Write-Host "`nPackaged $stage" -ForegroundColor Green

@@ -405,6 +405,9 @@ if(WIN32)
     set_target_properties(monolist PROPERTIES
         WIN32_EXECUTABLE $<NOT:$<CONFIG:Debug>>
     )
+    # The icon (packaging/make-icon.ps1), built into the executable.
+    enable_language(RC)
+    target_sources(monolist PRIVATE src/monolist.rc)
 endif()
 
 install(TARGETS monolist

@@ -1,0 +1,119 @@
+# The Windows release: the installer and the portable zip, built on GitHub's
+# own Windows machine and published as a GitHub Release.
+#
+# To release, push a tag v<version>.<build>, where the build number is the
+# commit count of what is tagged (`git rev-list --count HEAD`), e.g. v0.1.130:
+#     git tag v0.1.130 && git push origin v0.1.130
+# The app's update check reads the latest release (AppInfo::updateFeed).
+#
+# Run by hand (Actions > Windows release > Run workflow), it builds the same
+# files as a downloadable artifact and releases nothing.
+name: Windows release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 150
+    env:
+      # Built in when the repository has them as secrets; without them the
+      # app builds all the same and says it has no Last.fm key.
+      MONOLIST_LASTFM_API_KEY: ${{ secrets.MONOLIST_LASTFM_API_KEY }}
+      MONOLIST_LASTFM_SHARED_SECRET: ${{ secrets.MONOLIST_LASTFM_SHARED_SECRET }}
+    steps:
+      - name: Source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # the build number is the number of commits
+
+      - name: The tag is this commit's version
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: powershell
+        run: |
+          $build = git rev-list --count HEAD
+          $version = (Select-String -Path "Monolist Player\CMakeLists.txt" -Pattern 'project\(Monolist VERSION ([0-9.]+)').Matches[0].Groups[1].Value
+          $expected = "v$version.$build"
+          if ($env:GITHUB_REF_NAME -ne $expected) {
+            throw "The tag $env:GITHUB_REF_NAME names another build: this commit is $expected."
+          }
+
+      # Qt, MinGW, CMake and libmpv change only with the setup script; yt-dlp,
+      # FFmpeg and Deno are fetched fresh every time, since an old yt-dlp is
+      # what stops working first.
+      - name: Toolchain cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            C:\dev\monolist-deps\Qt
+            C:\dev\monolist-deps\libmpv
+          key: monolist-toolchain-${{ hashFiles('Monolist Player/scripts/setup-windows.ps1') }}
+
+      - name: Toolchain
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File "Monolist Player\scripts\setup-windows.ps1" -Update -SkipGit -Installer -Vulkan
+
+      - name: Build, package and installer
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File "Monolist Player\scripts\package-windows.ps1" -Installer
+
+      - name: Offline self-tests of the Release build
+        shell: powershell
+        run: |
+          $exe = 'C:\dev\monolist-build\package\Monolist\monolist.exe'
+          $failed = @()
+          foreach ($test in '--account-guard-test', '--cookie-test', '--secret-test', '--lastfm-test', '--saavn-test', '--lyrics-query-test', '--format-test') {
+            $data = Join-Path $env:RUNNER_TEMP ($test.TrimStart('-'))
+            New-Item -ItemType Directory -Force $data | Out-Null
+            $env:MONOLIST_DATA_DIR = $data
+            $env:QT_FORCE_STDERR_LOGGING = '1'
+            $p = Start-Process $exe -ArgumentList $test -Wait -PassThru -NoNewWindow -RedirectStandardError "$data\err.txt" -RedirectStandardOutput "$data\out.txt"
+            $summary = (Get-Content "$data\err.txt", "$data\out.txt" | Select-String 'checks?, \d+ failed' | Select-Object -Last 1).Line
+            Write-Host "$test  exit $($p.ExitCode)  $summary"
+            if ($p.ExitCode -ne 0) { $failed += $test }
+          }
+          if ($failed.Count -gt 0) { throw "Self-tests failed: $($failed -join ', ')" }
+
+      - name: Keep the files
+        uses: actions/upload-artifact@v4
+        with:
+          name: monolist-windows
+          path: |
+            C:\dev\monolist-build\package\*.exe
+            C:\dev\monolist-build\package\*.zip
+            C:\dev\monolist-build\package\*.sha256
+
+      - name: Publish the release
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $out = 'C:\dev\monolist-build\package'
+          $files = Get-ChildItem $out -File | Where-Object { $_.Extension -in '.exe', '.zip', '.sha256' } | ForEach-Object { $_.FullName }
+          $setup = Get-ChildItem $out -Filter '*-setup-win64.exe' | Select-Object -First 1
+          $zip = Get-ChildItem $out -Filter '*-win64.zip' | Select-Object -First 1
+          $sums = Get-ChildItem $out -Filter '*.sha256' | ForEach-Object { '    ' + (Get-Content $_.FullName) }
+          $version = $env:GITHUB_REF_NAME.TrimStart('v')
+          $notes = @(
+            "Monolist $version for Windows 10 and 11 (64-bit).",
+            '',
+            "- **$($setup.Name)**: the installer. Installs for your user alone by default (no administrator rights), with a Start-menu shortcut and an uninstaller; upgrades an earlier Monolist in place.",
+            "- **$($zip.Name)**: the same, portable: unzip anywhere and run monolist.exe.",
+            '',
+            'Everything the app needs is inside: the Qt runtime, mpv, yt-dlp, FFmpeg and Deno. The builds are not code-signed, so Windows may say "Windows protected your PC": choose More info, then Run anyway.',
+            '',
+            'SHA-256:',
+            '',
+            ($sums -join "`n"),
+            '',
+            "Built from $env:GITHUB_SHA by the Windows release workflow."
+          ) -join "`n"
+          [IO.File]::WriteAllText((Join-Path (Get-Location) 'notes.md'), $notes)
+          gh release create $env:GITHUB_REF_NAME @files --title "Monolist $version" --notes-file notes.md
