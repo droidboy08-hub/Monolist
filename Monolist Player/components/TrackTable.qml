@@ -25,7 +25,49 @@ Column {
     // scrolls it, so a song can be carried further than the window shows.
     // Found by itself when not given.
     property Flickable flickable: null
+    // The list's filter and order (TrackFilterModel), when its headers put
+    // it in order: a click sorts by that column, a second the other way, a
+    // third back to the list's own order.
+    property TrackFilterModel sortModel: null
     signal trackActivated(int index)
+
+    function sortBy(key) {
+        if (!sortModel)
+            return
+        if (sortModel.sortKey !== key) {
+            sortModel.descending = false
+            sortModel.sortKey = key
+        } else if (!sortModel.descending) {
+            sortModel.descending = true
+        } else {
+            sortModel.descending = false
+            sortModel.sortKey = ""
+        }
+    }
+
+    // A column's heading, which puts the list in its order where it can.
+    component HeadLabel: Text {
+        id: head
+        property string key: ""
+        readonly property bool sorted: root.sortModel !== null && root.sortModel.sortKey === key
+        text: label + (sorted ? (root.sortModel.descending ? "  ↓" : "  ↑") : "")
+        property string label: ""
+        font.family: Theme.fontFamily
+        font.pixelSize: 11
+        font.letterSpacing: Theme.tracking(11, 0.08)
+        font.weight: sorted ? Font.Bold : Font.Normal
+        color: sorted || headHover.hovered ? Theme.text : Theme.neutral700
+
+        HoverHandler {
+            id: headHover
+            enabled: root.sortModel !== null
+            cursorShape: Qt.PointingHandCursor
+        }
+        TapHandler {
+            enabled: root.sortModel !== null
+            onTapped: root.sortBy(head.key)
+        }
+    }
 
     // Only the rows near what the page shows are made (ROADMAP F28): a
     // thousand-song playlist would otherwise hold a thousand rows, each with
@@ -238,43 +280,59 @@ Column {
             font.letterSpacing: Theme.tracking(11, 0.08)
             color: Theme.neutral700
         }
-        Text {
+        HeadLabel {
             x: root.indexWidth
             anchors.verticalCenter: parent.verticalCenter
-            text: "TITLE"
-            font.family: Theme.fontFamily
-            font.pixelSize: 11
-            font.letterSpacing: Theme.tracking(11, 0.08)
-            color: Theme.neutral700
+            label: "TITLE"
+            key: "title"
         }
-        Text {
+        HeadLabel {
             visible: root.showArtist
             x: root.indexWidth + root.titleColumnWidth
             anchors.verticalCenter: parent.verticalCenter
-            text: "ARTIST"
-            font.family: Theme.fontFamily
-            font.pixelSize: 11
-            font.letterSpacing: Theme.tracking(11, 0.08)
-            color: Theme.neutral700
+            label: "ARTIST"
+            key: "artist"
         }
-        Text {
+        HeadLabel {
             visible: root.showAlbum
             x: root.indexWidth + root.titleColumnWidth + root.artistColumnWidth
             anchors.verticalCenter: parent.verticalCenter
-            text: "ALBUM"
-            font.family: Theme.fontFamily
-            font.pixelSize: 11
-            font.letterSpacing: Theme.tracking(11, 0.08)
-            color: Theme.neutral700
+            label: "ALBUM"
+            key: "album"
         }
-        Icon {
-            name: "clock"
-            width: 14
-            height: 14
+        Row {
             anchors.right: parent.right
             anchors.rightMargin: root.moreWidth
             anchors.verticalCenter: parent.verticalCenter
-            color: Theme.neutral700
+            spacing: Theme.space1
+
+            Text {
+                visible: root.sortModel !== null && root.sortModel.sortKey === "duration"
+                anchors.verticalCenter: parent.verticalCenter
+                text: root.sortModel !== null && root.sortModel.descending ? "↓" : "↑"
+                font.family: Theme.fontFamily
+                font.pixelSize: 11
+                font.weight: Font.Bold
+                color: Theme.text
+            }
+            Icon {
+                name: "clock"
+                width: 14
+                height: 14
+                anchors.verticalCenter: parent.verticalCenter
+                color: durationHover.hovered || (root.sortModel !== null && root.sortModel.sortKey === "duration")
+                       ? Theme.text : Theme.neutral700
+
+                HoverHandler {
+                    id: durationHover
+                    enabled: root.sortModel !== null
+                    cursorShape: Qt.PointingHandCursor
+                }
+                TapHandler {
+                    enabled: root.sortModel !== null
+                    onTapped: root.sortBy("duration")
+                }
+            }
         }
 
         Rectangle {

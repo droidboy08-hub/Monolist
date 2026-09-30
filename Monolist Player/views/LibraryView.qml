@@ -9,10 +9,35 @@ import "../components"
 ScrollPage {
     id: root
 
-    // "playlists", "albums", "history", or "history-ytm" for the YouTube
+    // "playlists", "songs", "artists", "albums", "history", or "history-ytm" for the YouTube
     // Music account's history as its last sync read it (AccountLibrary)
     property string tab: "playlists"
     readonly property bool historyTab: tab === "history" || tab === "history-ytm"
+    // Every song the library holds, and their artists: read when one of the
+    // two tabs is shown, and again as the library changes under it.
+    readonly property bool songsTab: tab === "songs" || tab === "artists"
+    property var artists: []
+    function refreshSongs() {
+        if (!songsTab)
+            return
+        Library.reloadSongs()
+        artists = Library.songArtists()
+    }
+    Connections {
+        target: Library
+        function onRevisionChanged() { root.refreshSongs() }
+        function onLikesChanged() { root.refreshSongs() }
+    }
+    Connections {
+        target: Downloads
+        function onLibraryChanged() { root.refreshSongs() }
+    }
+    onVisibleChanged: if (visible) refreshSongs()
+
+    TrackFilterModel {
+        id: songsView
+        sourceModel: Library.songs
+    }
     readonly property bool accountHistory: tab === "history-ytm" && AccountLibrary.shown
     signal tabRequested(string tab)
     signal viewRequested(string view)
@@ -30,6 +55,7 @@ ScrollPage {
     onTabChanged: {
         clearArmed = false
         contentY = 0
+        refreshSongs()
     }
 
     Timer {
@@ -88,6 +114,16 @@ ScrollPage {
                 label: "PLAYLISTS"
                 selected: root.tab === "playlists"
                 onPicked: root.tabRequested("playlists")
+            }
+            ChoiceChip {
+                label: "SONGS"
+                selected: root.tab === "songs"
+                onPicked: root.tabRequested("songs")
+            }
+            ChoiceChip {
+                label: "ARTISTS"
+                selected: root.tab === "artists"
+                onPicked: root.tabRequested("artists")
             }
             ChoiceChip {
                 label: "ALBUMS"
@@ -234,6 +270,158 @@ ScrollPage {
                     hasMenu: model.browseId.length > 0
                     onPlayRequested: root.pageRequested(model.browseId)
                     onMenuRequested: Menus.openCard(root.savedCard("album", model), "library")
+                }
+            }
+        }
+
+        // — songs: every one the library holds, once —
+        Item {
+            visible: root.tab === "songs"
+            width: parent.width
+            height: Math.max(songsFilter.implicitHeight, songsActions.implicitHeight)
+
+            ListFilter {
+                id: songsFilter
+                width: parent.width - songsActions.width - Theme.space4
+                model: songsView
+                settingKey: "sort.library.songs"
+            }
+            Row {
+                id: songsActions
+                anchors.right: parent.right
+                spacing: Theme.space3
+
+                ActionButton {
+                    primary: true
+                    iconName: "play"
+                    text: "Play"
+                    enabled: songsView.count > 0
+                    onClicked: Player.playModel(songsView, 0, "library")
+                }
+                ActionButton {
+                    iconName: "shuffle"
+                    text: "Shuffle"
+                    enabled: songsView.count > 1
+                    onClicked: {
+                        Player.shuffle = true
+                        Player.playModel(songsView, Math.floor(Math.random() * songsView.count), "library")
+                    }
+                }
+            }
+        }
+
+        // One artist's songs, from the Artists tab: back to all of them, or
+        // on to the artist's page.
+        Row {
+            visible: root.tab === "songs" && songsView.artist.length > 0
+            spacing: Theme.space4
+
+            Text {
+                text: "SONGS BY " + songsView.artist.toUpperCase()
+                font.family: Theme.fontFamily
+                font.pixelSize: 12
+                font.weight: Font.Bold
+                font.letterSpacing: Theme.tracking(12, 0.12)
+                color: Theme.text
+            }
+            Text {
+                text: "ALL SONGS"
+                font.family: Theme.fontFamily
+                font.pixelSize: 12
+                font.weight: Font.Bold
+                font.letterSpacing: Theme.tracking(12, 0.12)
+                color: allHover.hovered ? Theme.accent700 : Theme.neutral700
+                HoverHandler { id: allHover; cursorShape: Qt.PointingHandCursor }
+                TapHandler { onTapped: songsView.artist = "" }
+            }
+            Text {
+                text: "ARTIST PAGE →"
+                font.family: Theme.fontFamily
+                font.pixelSize: 12
+                font.weight: Font.Bold
+                font.letterSpacing: Theme.tracking(12, 0.12)
+                color: pageHover.hovered ? Theme.accent700 : Theme.neutral700
+                HoverHandler { id: pageHover; cursorShape: Qt.PointingHandCursor }
+                TapHandler { onTapped: Nav.openArtist(songsView.artist, "") }
+            }
+        }
+
+        Note {
+            visible: root.tab === "songs" && Library.songs.count === 0
+            text: "No songs yet. Like a song, download one or add it to a playlist, and it shows up here."
+        }
+        Note {
+            visible: root.tab === "songs" && Library.songs.count > 0 && songsView.count === 0
+            text: "Nothing here matches."
+        }
+
+        TrackTable {
+            visible: root.tab === "songs" && songsView.count > 0
+            width: parent.width
+            model: songsView
+            sortModel: songsView
+            showDownloads: true
+            onTrackActivated: function(index) { Player.playModel(songsView, index, "library") }
+        }
+
+        // — artists: the songs' artists, the most songs first —
+        Note {
+            visible: root.tab === "artists" && root.artists.length === 0
+            text: "No artists yet: they come with the songs you like, download or add to playlists."
+        }
+        Flow {
+            visible: root.tab === "artists"
+            width: parent.width
+            spacing: Theme.space6
+
+            Repeater {
+                model: root.tab === "artists" ? root.artists : []
+
+                delegate: Item {
+                    id: artistTile
+                    required property var modelData
+
+                    width: root.cardWidth
+                    height: artistColumn.implicitHeight
+
+                    Column {
+                        id: artistColumn
+                        width: parent.width
+                        spacing: Theme.space2
+
+                        Artwork {
+                            width: parent.width
+                            height: width
+                            source: artistTile.modelData.artwork
+                            placeholder: artistTile.modelData.name
+                            colour: tileHover.hovered
+                        }
+                        Text {
+                            width: parent.width
+                            text: artistTile.modelData.name
+                            elide: Text.ElideRight
+                            font.family: Theme.fontFamily
+                            font.pixelSize: 15
+                            font.weight: Font.Bold
+                            color: tileHover.hovered ? Theme.accent700 : Theme.text
+                        }
+                        Text {
+                            text: root.songs(artistTile.modelData.count)
+                            font.family: Theme.fontFamily
+                            font.pixelSize: 11
+                            font.weight: Font.Bold
+                            font.letterSpacing: Theme.tracking(11, 0.08)
+                            color: Theme.neutral700
+                        }
+                    }
+
+                    HoverHandler { id: tileHover; cursorShape: Qt.PointingHandCursor }
+                    TapHandler {
+                        onTapped: {
+                            songsView.artist = artistTile.modelData.name
+                            root.tabRequested("songs")
+                        }
+                    }
                 }
             }
         }

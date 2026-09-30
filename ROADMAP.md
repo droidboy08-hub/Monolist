@@ -135,9 +135,10 @@ Priority runs from 1 (first) to 9. Size: S under an hour, M a few hours, L a day
   Done when: Right-click and a more button open TrackMenu on download, queue and suggestion rows. Sidebar playlists get Play, Rename and Delete, saved cards get Remove from library, and Liked songs gets Add all to queue and Add all to playlist.
 - [x] **L03** The song menu lacks Copy link, Open on YouTube, Remove from history and Remove from library *(P5, S)*
   Done when: TrackMenu adds Copy link (music.youtube.com/watch?v=<id>), Open on YouTube, Remove from history (when shown in History) and Remove from library.
-- [ ] **L04** The library has no Songs or Artists view *(P5, M)*
+- [x] **L04** The library has no Songs or Artists view *(P5, M)*
+  Done 2026-09-30: SONGS lists every distinct liked, downloaded and playlist song (Library.songs), the latest added first, with Play and Shuffle, a filter field, and Recent / A–Z / Artist plus clickable column headers (TrackFilterModel). ARTISTS groups them by each name in the credits, the most songs first; an artist opens their songs, with a link on to their artist page. `--library-edit-test` covers both.
   Done when: A SONGS tab lists every distinct liked, playlist and downloaded song with Shuffle all. An ARTISTS tab groups them, and an artist opens their songs, or the A01 artist page once it exists.
-- [ ] **L05** No filter or sort in the library, playlists or Downloads, and playlists can't be pinned or reordered *(P5, M)*
+- [ ] **L05** *(Partly done: the filter, the order and the column headers, for the library's Songs; playlists, Liked songs and Downloads, and pinning and reordering playlists, are still to do.)* No filter or sort in the library, playlists or Downloads, and playlists can't be pinned or reordered *(P5, M)*
   Done when: A filter field and Recent / A–Z / Artist sort, remembered per view, on the library, playlists, Liked songs and Downloads, with clickable column headers. Playlists can be pinned and dragged into order, saved to playlists.position.
 - [ ] **X01** No library export or import (the iPhone app's backup JSON) *(P7, M)*
   Done when: Settings exports playlists and likes in the iPhone's format and imports such a file, with a Merge or Replace choice and a result toast.

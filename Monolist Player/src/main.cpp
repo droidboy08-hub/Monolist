@@ -64,6 +64,7 @@
 #include "resolveselftest.h"
 #include "rec/taste.h"
 #include "rec/vectorsearch.h"
+#include "trackfiltermodel.h"
 #include "ytdlp.h"
 #ifdef Q_OS_MACOS
 #include "macos/mediasession.h"

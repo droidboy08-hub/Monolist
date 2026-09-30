@@ -30,6 +30,9 @@ class Library : public QObject
     Q_PROPERTY(SearchResultModel *liked READ liked CONSTANT)
     // Every song played, the latest first.
     Q_PROPERTY(SearchResultModel *history READ history CONSTANT)
+    // Every song the library holds, once each: liked, downloaded, or in any
+    // of the playlists; the latest added first (reloadSongs).
+    Q_PROPERTY(SearchResultModel *songs READ songs CONSTANT)
     // The playlist open now: { playlistId, name, trackCount, durationText, artworks }.
     Q_PROPERTY(QVariantMap playlist READ playlist NOTIFY playlistChanged)
     Q_PROPERTY(SearchResultModel *playlistTracks READ playlistTracks CONSTANT)
@@ -58,6 +61,13 @@ public:
     TrackModel *tracks() { return &m_tracks; }
     SearchResultModel *liked() { return &m_liked; }
     SearchResultModel *history() { return &m_history; }
+    SearchResultModel *songs() { return &m_songs; }
+    // Read again when the Songs or Artists tab is opened, and while it is
+    // open as the library changes: nothing else needs it.
+    Q_INVOKABLE void reloadSongs();
+    // The artists of songs(), with how many songs each and a cover from one
+    // of them: [{ name, count, artwork }], the most songs first.
+    Q_INVOKABLE QVariantList songArtists() const;
     QVariantMap playlist() const { return m_playlist; }
     SearchResultModel *playlistTracks() { return &m_playlistTracks; }
     int revision() const { return m_revision; }
@@ -171,6 +181,7 @@ private:
     TrackModel m_tracks;
     SearchResultModel m_liked;
     SearchResultModel m_history;
+    SearchResultModel m_songs;
     SearchResultModel m_playlistTracks;
     QVariantMap m_playlist;
     int m_openPlaylistId = 0;

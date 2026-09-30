@@ -226,6 +226,7 @@ qt_add_qml_module(monolist
     # compiler know them like any other component.
     SOURCES
         src/videosurface.h             src/videosurface.cpp
+        src/trackfiltermodel.h         src/trackfiltermodel.cpp
         src/systempip.h
     QML_FILES
         Main.qml
@@ -256,6 +257,7 @@ qt_add_qml_module(monolist
         components/CardShelf.qml
         components/MoodChip.qml
         components/MoodStrip.qml
+        components/ListFilter.qml
         components/ShelfCard.qml
         components/CardGrid.qml
         components/ActionButton.qml

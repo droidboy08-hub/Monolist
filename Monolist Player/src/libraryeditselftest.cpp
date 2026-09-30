@@ -3,6 +3,7 @@
 #include "appdatabase.h"
 #include "library.h"
 #include "queuemodel.h"
+#include "trackfiltermodel.h"
 
 #include <QClipboard>
 #include <QGuiApplication>
@@ -278,6 +279,117 @@ void testCopyLink(Checks &checks, Library *library)
 
 } // namespace
 
+QString titlesOf(const TrackFilterModel &view)
+{
+    QStringList titles;
+    for (int row = 0; row < view.rowCount(); ++row)
+        titles << view.get(row).value(QStringLiteral("title")).toString();
+    return titles.join(QLatin1Char('|'));
+}
+
+void testFilter(Checks &checks)
+{
+    checks.note(QStringLiteral("- a list filtered and put in order"));
+    const auto song = [](const char *id, const char *title, const char *artist, const char *album, qint64 ms) {
+        SearchResultModel::Item item;
+        item.sourceId = QString::fromUtf8(id);
+        item.title = QString::fromUtf8(title);
+        item.artist = QString::fromUtf8(artist);
+        item.album = QString::fromUtf8(album);
+        item.durationMs = ms;
+        return item;
+    };
+    SearchResultModel songs;
+    songs.replace({ song("a", "Numb", "Linkin Park", "Meteora", 187000),
+                    song("b", "Despacito", "Luis Fonsi & Daddy Yankee", "VIDA", 281000),
+                    song("c", "bohemian rhapsody", "Queen", "A Night at the Opera", 354000),
+                    song("d", "Song 10", "Daddy Yankee", "Barrio Fino", 200000),
+                    song("e", "Song 9", "Queen", "Innuendo", 150000) });
+    TrackFilterModel view;
+    view.setSourceModel(&songs);
+    checks.same(titlesOf(view), QStringLiteral("Numb|Despacito|bohemian rhapsody|Song 10|Song 9"),
+                QStringLiteral("nothing asked: the list as it is"));
+    checks.check(!view.rearranged(), QStringLiteral("  and not rearranged"));
+    view.setFilterText(QStringLiteral("queen opera"));
+    checks.same(titlesOf(view), QStringLiteral("bohemian rhapsody"),
+                QStringLiteral("every word typed must be in the title, the artist or the album"));
+    view.setFilterText(QString());
+    view.setArtist(QStringLiteral("daddy yankee"));
+    checks.same(titlesOf(view), QStringLiteral("Despacito|Song 10"),
+                QStringLiteral("one artist's songs, their collaborations too, whatever the case"));
+    view.setArtist(QString());
+    view.setSortKey(QStringLiteral("title"));
+    checks.same(titlesOf(view), QStringLiteral("bohemian rhapsody|Despacito|Numb|Song 9|Song 10"),
+                QStringLiteral("A-Z, without regard to case, and numbers as numbers"));
+    view.setDescending(true);
+    checks.same(titlesOf(view), QStringLiteral("Song 10|Song 9|Numb|Despacito|bohemian rhapsody"),
+                QStringLiteral("  and Z-A"));
+    view.setDescending(false);
+    view.setSortKey(QStringLiteral("artist"));
+    checks.same(titlesOf(view), QStringLiteral("Song 10|Numb|Despacito|bohemian rhapsody|Song 9"),
+                QStringLiteral("by artist, each artist's songs by title"));
+    view.setSortKey(QStringLiteral("duration"));
+    checks.same(titlesOf(view), QStringLiteral("Song 9|Numb|Song 10|Despacito|bohemian rhapsody"),
+                QStringLiteral("by length"));
+    checks.check(view.rearranged(), QStringLiteral("  which is rearranged"));
+    view.setSortKey(QString());
+    checks.same(titlesOf(view), QStringLiteral("Numb|Despacito|bohemian rhapsody|Song 10|Song 9"),
+                QStringLiteral("and back to the list's own order"));
+    checks.same(TrackFilterModel::artistsIn(QStringLiteral("A, B & C feat. D x E ft. F")).join(QLatin1Char('|')),
+                QStringLiteral("A|B|C|D|E|F"), QStringLiteral("the names a credit line holds"));
+}
+
+void testSongs(Checks &checks, Library *library)
+{
+    checks.note(QStringLiteral("- every song the library holds"));
+    QSqlQuery(AppDatabase::connection()).exec(QStringLiteral(
+        "INSERT INTO tracks (position, title, artist, album, duration_ms, source_url, source_id, artwork, favourite,"
+        " liked_at) VALUES (900, 'Liked one', 'Artist One', '', 1000, '', 'songsA', '', 1, '2026-01-01 10:00:00')"));
+    QSqlQuery(AppDatabase::connection()).exec(QStringLiteral(
+        "INSERT INTO playlists (name) VALUES ('Songs test')"));
+    QSqlQuery id(AppDatabase::connection());
+    id.exec(QStringLiteral("SELECT id FROM playlists WHERE name = 'Songs test'"));
+    const int playlist = id.next() ? id.value(0).toInt() : 0;
+    QSqlQuery add(AppDatabase::connection());
+    add.prepare(QStringLiteral(
+        "INSERT INTO playlist_tracks (playlist_id, position, video_id, title, artist, album, duration_ms, added_at)"
+        " VALUES (?, ?, ?, ?, ?, '', 1000, ?)"));
+    for (const auto &[position, video, title, artist, when] :
+         { std::tuple{ 0, "songsA", "Liked one", "Artist One", "2026-02-01 10:00:00" },
+           std::tuple{ 1, "songsB", "Listed one", "Artist One & Artist Two", "2026-03-01 10:00:00" } }) {
+        add.addBindValue(playlist);
+        add.addBindValue(position);
+        add.addBindValue(QString::fromUtf8(video));
+        add.addBindValue(QString::fromUtf8(title));
+        add.addBindValue(QString::fromUtf8(artist));
+        add.addBindValue(QString::fromUtf8(when));
+        add.exec();
+    }
+    library->reloadSongs();
+    QStringList ids;
+    for (int row = 0; row < library->songs()->rowCount(); ++row) {
+        const QString video = library->songs()->get(row).value(QStringLiteral("sourceId")).toString();
+        if (video.startsWith(QLatin1String("songs")))
+            ids << video;
+    }
+    checks.same(ids.join(QLatin1Char('|')), QStringLiteral("songsB|songsA"),
+                QStringLiteral("a song liked and in a playlist is listed once, the latest added first"));
+    int one = 0;
+    int two = 0;
+    for (const QVariant &artist : library->songArtists()) {
+        const QVariantMap map = artist.toMap();
+        if (map.value(QStringLiteral("name")).toString() == QLatin1String("Artist One"))
+            one = map.value(QStringLiteral("count")).toInt();
+        if (map.value(QStringLiteral("name")).toString() == QLatin1String("Artist Two"))
+            two = map.value(QStringLiteral("count")).toInt();
+    }
+    checks.check(one == 2 && two == 1, QStringLiteral("their artists, each with their songs, collaborations counted for both"),
+                 QStringLiteral("Artist One %1, Artist Two %2").arg(one).arg(two));
+    QSqlQuery(AppDatabase::connection()).exec(QStringLiteral("DELETE FROM tracks WHERE source_id = 'songsA'"));
+    QSqlQuery(AppDatabase::connection()).exec(QStringLiteral("DELETE FROM playlists WHERE name = 'Songs test'"));
+    QSqlQuery(AppDatabase::connection()).exec(QStringLiteral("DELETE FROM playlist_tracks WHERE video_id LIKE 'songs%'"));
+}
+
 void testSearches(Checks &checks, Library *library)
 {
     checks.note(QStringLiteral("- recent searches"));
@@ -319,5 +431,7 @@ int runLibraryEditSelfTest(Library *library)
     testHistory(checks, library);
     testCopyLink(checks, library);
     testSearches(checks, library);
+    testFilter(checks);
+    testSongs(checks, library);
     return checks.finish();
 }

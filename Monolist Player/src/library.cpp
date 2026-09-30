@@ -1,4 +1,5 @@
 #include "library.h"
+#include "trackfiltermodel.h"
 #include <QDateTime>
 #include "appdatabase.h"
 #include "innertube.h"
@@ -102,6 +103,57 @@ void markUpdated(int playlistId)
 
 Library::Library(QObject *parent)
     : QObject(parent) {}
+
+void Library::reloadSongs()
+{
+    // One row a song, from whichever copy was added last: a like, a
+    // download, a playlist's entry. SQLite takes the other columns from the
+    // row MAX() picks.
+    QSqlQuery q(AppDatabase::connection());
+    q.exec(QStringLiteral(
+        "SELECT source_id, title, artist, album, artwork, duration_ms, is_video, MAX(added) FROM ("
+        "   SELECT t.source_id, t.title, t.artist, t.album, t.artwork, t.duration_ms, t.is_video,"
+        "          COALESCE(NULLIF(t.liked_at, ''), d.downloaded_at, '') AS added"
+        "   FROM tracks t LEFT JOIN downloads d ON d.video_id = t.source_id"
+        "   WHERE t.source_id <> ''"
+        " UNION ALL"
+        "   SELECT video_id, title, artist, album, artwork, duration_ms, is_video, added_at"
+        "   FROM playlist_tracks WHERE video_id <> ''"
+        ") GROUP BY source_id ORDER BY MAX(added) DESC, title COLLATE NOCASE"));
+    m_songs.replace(readSongs(q, /*withEntryId=*/false));
+}
+
+QVariantList Library::songArtists() const
+{
+    struct Artist {
+        QString name;
+        int count = 0;
+        QString artwork;
+    };
+    QHash<QString, Artist> byName;   // by the name folded, so "ABBA" and "Abba" are one
+    for (int row = 0; row < m_songs.rowCount(); ++row) {
+        const QVariantMap song = m_songs.get(row);
+        for (const QString &name : TrackFilterModel::artistsIn(song.value(QStringLiteral("artist")).toString())) {
+            Artist &artist = byName[name.toCaseFolded()];
+            if (artist.name.isEmpty())
+                artist.name = name;
+            ++artist.count;
+            if (artist.artwork.isEmpty())
+                artist.artwork = song.value(QStringLiteral("artwork")).toString();
+        }
+    }
+    QList<Artist> artists = byName.values();
+    std::sort(artists.begin(), artists.end(), [](const Artist &a, const Artist &b) {
+        return a.count != b.count ? a.count > b.count : a.name.compare(b.name, Qt::CaseInsensitive) < 0;
+    });
+    QVariantList list;
+    for (const Artist &artist : std::as_const(artists)) {
+        list.append(QVariantMap{ { QStringLiteral("name"), artist.name },
+                                 { QStringLiteral("count"), artist.count },
+                                 { QStringLiteral("artwork"), artist.artwork } });
+    }
+    return list;
+}
 
 void Library::rememberSearch(const QString &term)
 {
