@@ -4,30 +4,35 @@ import Monolist.Backend
 
 // What can be done with one of the user's playlists, or with Liked songs, as
 // a whole: play it, queue it, copy it into another, and for a playlist,
-// rename or delete it. The same menu on its page, its card and its line in
+// rename or delete it. For Liked on YouTube Music ("ytliked"), the account's
+// liked songs as they were read, the same less renaming and deleting (it is
+// read-only), and Sync now instead. The same menu on its page, its card and its line in
 // the sidebar; renaming and deleting are asked of whoever opened it, since
 // both happen on the playlist's page (the name is edited in place there, and
 // deleting is confirmed there, with its songs in view).
 MonoMenu {
     id: menu
 
-    // "liked", or a playlist's id.
+    // "liked", "ytliked", or a playlist's id.
     property string key: ""
     signal renameRequested(int playlistId)
     signal deleteRequested(int playlistId)
 
     readonly property bool liked: key === "liked"
-    readonly property int playlistId: liked ? 0 : (parseInt(key) || 0)
+    readonly property bool account: key === "ytliked"
+    readonly property bool own: !liked && !account
+    readonly property int playlistId: own ? (parseInt(key) || 0) : 0
     // Counted as the menu opens: a playlist that is not open has no model.
     property int songCount: 0
 
     function songs() {
-        return liked ? Library.likedTrackList() : Library.playlistTracksFor(playlistId)
+        return liked ? Library.likedTrackList() : account ? AccountLibrary.likedTrackList()
+                                                          : Library.playlistTracksFor(playlistId)
     }
 
     function show(newKey, anchor) {
         key = newKey
-        songCount = songs().length
+        songCount = account ? AccountLibrary.likedCount : songs().length
         if (anchor)
             popup(anchor, 0, anchor.height + Theme.space1)
         else
@@ -65,15 +70,23 @@ MonoMenu {
     MonoMenuRule { visible: !menu.liked }
 
     MonoMenuItem {
-        visible: !menu.liked
-        enabled: !menu.liked
+        visible: menu.own
+        enabled: menu.own
         text: "Rename"
         onTriggered: menu.renameRequested(menu.playlistId)
     }
     MonoMenuItem {
-        visible: !menu.liked
-        enabled: !menu.liked
+        visible: menu.own
+        enabled: menu.own
         text: "Delete playlist…"
         onTriggered: menu.deleteRequested(menu.playlistId)
+    }
+    // Read again from YouTube Music, as Settings' SYNC NOW; at most once in
+    // a quarter of an hour, to go easy on the account.
+    MonoMenuItem {
+        visible: menu.account
+        enabled: menu.account && AccountLibrary.canSyncNow
+        text: "Sync now"
+        onTriggered: AccountLibrary.syncNow()
     }
 }

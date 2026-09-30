@@ -48,6 +48,18 @@ void AlbumModel::reload()
     beginResetModel();
     m_items.clear();
     QSqlQuery q(AppDatabase::connection());
+    if (m_kind == AccountPlaylists) {
+        q.exec(QStringLiteral(
+            "SELECT rowid, title, subtitle, artwork, browse_id FROM ytm_playlists"
+            " WHERE browse_id NOT IN (SELECT browse_id FROM albums)"
+            " ORDER BY position"));
+        while (q.next())
+            m_items.append({ q.value(0).toInt(), q.value(1).toString(), q.value(2).toString(), QString(),
+                             QStringLiteral("PLAYLIST"), q.value(3).toString(), q.value(4).toString() });
+        endResetModel();
+        Q_EMIT countChanged();
+        return;
+    }
     // Rows without a page to open are the interface prototype's; nothing can
     // be done with them, so they are not shown.
     q.exec(QStringLiteral(

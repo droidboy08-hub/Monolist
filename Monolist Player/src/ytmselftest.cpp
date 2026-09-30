@@ -8,6 +8,7 @@
 #include "secretstore.h"
 #include "streamresolver.h"
 #include "ytdlp.h"
+#include "ytmimport.h"
 #include "ytmsession.h"
 
 #include <QCoreApplication>
@@ -4256,5 +4257,506 @@ int runAccountGuardSelfTest()
     }
 
     AccountGuard::setClock({});
+    return t.finish();
+}
+
+// ---------------------------------------------------------------- the account's library
+
+namespace {
+
+QByteArray loggedInContext(const QByteArray &loggedIn)
+{
+    return R"("responseContext":{"serviceTrackingParams":[{"service":"GFEEDBACK","params":[{"key":"logged_in","value":")"
+           + loggedIn + R"("}]}]})";
+}
+
+QByteArray continuationItem(const QByteArray &token)
+{
+    return R"({"continuationItemRenderer":{"continuationEndpoint":{"continuationCommand":{"token":")" + token
+           + R"("}}}})";
+}
+
+// `count` song rows from number `from`, with ids of YouTube's eleven
+// characters: TESTLK00001 and on.
+QByteArray songRows(const QByteArray &prefix, int from, int count)
+{
+    QByteArray rows;
+    for (int i = from; i < from + count; ++i) {
+        const QByteArray id = prefix + QByteArray::number(i).rightJustified(11 - prefix.size(), '0');
+        rows += (rows.isEmpty() ? "" : ",") + songJson(id, "Song " + QByteArray::number(i));
+    }
+    return rows;
+}
+
+// A playlist's page (VLLM, VL<id>) as parseCollection reads one.
+QByteArray playlistPage(const QByteArray &loggedIn, const QByteArray &title, const QByteArray &rows,
+                        const QByteArray &next = QByteArray())
+{
+    return "{" + loggedInContext(loggedIn)
+           + R"(,"contents":{"twoColumnBrowseResultsRenderer":{"tabs":[{"tabRenderer":{"content":{"sectionListRenderer":{"contents":[)"
+             R"({"musicResponsiveHeaderRenderer":{"title":{"runs":[{"text":")" + title + R"("}]}}}]}}}}],)"
+             R"("secondaryContents":{"sectionListRenderer":{"contents":[{"musicPlaylistShelfRenderer":{"contents":[)"
+           + rows + (next.isEmpty() ? QByteArray() : "," + continuationItem(next)) + "]}}]}}}}}";
+}
+
+// The next rows, in today's shape.
+QByteArray appendedRows(const QByteArray &loggedIn, const QByteArray &rows, const QByteArray &next = QByteArray())
+{
+    return "{" + loggedInContext(loggedIn) + R"(,"onResponseReceivedActions":[{"appendContinuationItemsAction":{"continuationItems":[)"
+           + rows + (next.isEmpty() ? QByteArray() : "," + continuationItem(next)) + "]}}]}";
+}
+
+// The account's playlists: a grid, wrapped as the library's pages wrap it,
+// with the older kind of token.
+QByteArray playlistGrid(const QByteArray &loggedIn, const QByteArray &cards, const QByteArray &next)
+{
+    return "{" + loggedInContext(loggedIn)
+           + R"(,"contents":{"singleColumnBrowseResultsRenderer":{"tabs":[{"tabRenderer":{"content":{"sectionListRenderer":{"contents":[)"
+             R"({"itemSectionRenderer":{"contents":[{"gridRenderer":{"items":[)" + cards
+           + R"(],"continuations":[{"nextContinuationData":{"continuation":")" + next + R"("}}]}}]}}]}}}}]}}})";
+}
+
+QByteArray gridMore(const QByteArray &loggedIn, const QByteArray &cards)
+{
+    return "{" + loggedInContext(loggedIn) + R"(,"continuationContents":{"gridContinuation":{"items":[)" + cards + "]}}}";
+}
+
+// The history: one shelf of songs a day.
+QByteArray historyPage(const QByteArray &loggedIn, const QList<QPair<QByteArray, QByteArray>> &days)
+{
+    QByteArray shelves;
+    for (const auto &day : days) {
+        shelves += (shelves.isEmpty() ? "" : ",") + QByteArray(R"({"musicShelfRenderer":{"title":{"runs":[{"text":")")
+                   + day.first + R"("}]},"contents":[)" + day.second + "]}}";
+    }
+    return "{" + loggedInContext(loggedIn)
+           + R"(,"contents":{"singleColumnBrowseResultsRenderer":{"tabs":[{"tabRenderer":{"content":{"sectionListRenderer":{"contents":[)"
+           + shelves + "]}}}}]}}}";
+}
+
+// How many rows each of the user's own tables holds: none of them may move
+// with a sync.
+QString ownTables()
+{
+    QStringList counts;
+    QSqlQuery q(AppDatabase::connection());
+    for (const char *table : { "playlists", "playlist_tracks", "albums", "tracks", "recent", "history", "play_events",
+                               "scrobble_queue" }) {
+        q.exec(QStringLiteral("SELECT COUNT(*) FROM %1").arg(QLatin1String(table)));
+        counts << QStringLiteral("%1=%2").arg(QLatin1String(table)).arg(q.next() ? q.value(0).toInt() : -1);
+    }
+    return counts.join(QLatin1Char(' '));
+}
+
+int rowsIn(const char *table)
+{
+    QSqlQuery q(AppDatabase::connection());
+    q.exec(QStringLiteral("SELECT COUNT(*) FROM %1").arg(QLatin1String(table)));
+    return q.next() ? q.value(0).toInt() : -1;
+}
+
+}
+
+int runYtmLibrarySelfTest(Library *library)
+{
+    Checks t("ytmlibrary");
+    if (qEnvironmentVariableIsEmpty("MONOLIST_DATA_DIR")) {
+        t.check(false, QStringLiteral("MONOLIST_DATA_DIR is set"),
+                QStringLiteral("refusing to run: this test replaces the stored YouTube Music session"));
+        return t.finish();
+    }
+    const QString secretName = QStringLiteral("ytmusic.cookies");
+    const QString nameKey = QStringLiteral("ytmusic.account_name");
+    const QString importKey = QStringLiteral("ytmusic.import_library");
+    const QString manualKey = QStringLiteral("ytmusic.library_manual_at");
+
+    QStringList captured;
+    g_captured = &captured;
+    g_previousHandler = qInstallMessageHandler(captureMessage);
+    StandIn standIn;
+    if (!t.check(standIn.listen(), QStringLiteral("a stand-in server on this computer"))) {
+        qInstallMessageHandler(g_previousHandler);
+        g_captured = nullptr;
+        return t.finish();
+    }
+    InnerTube::setTestServer(standIn.base());   // before anything that asks is made
+    InnerTube::setRegion(QString());
+
+    // What the stand-in's account holds, as each step needs it.
+    int likedCount = 212;
+    QByteArray libraryLoggedIn = "1";
+    int authedStatus = 200;
+    bool holdLiked = false;
+    QElapsedTimer clock;
+    clock.start();
+    QList<qint64> libraryAt;   // when each call for the library arrived
+    standIn.respond = [&](const StandIn::Request &request) {
+        StandIn::Answer answer;
+        const bool authed = request.authed();
+        const QJsonObject body = request.json();
+        const QByteArray id = body.value(QStringLiteral("browseId")).toString().toUtf8();
+        const QByteArray token = body.value(QStringLiteral("continuation")).toString().toUtf8();
+        if (request.path.contains("account/account_menu")) {
+            answer.body = authed ? menuAnswer(QStringLiteral("Monolist Test")) : kSignedOutMenu;
+            return answer;
+        }
+        if (id == "FEmusic_home") {   // the session's check
+            answer.body = trackingAnswer(authed ? "1" : "0", QString(), authed ? QStringLiteral("TESTLIBRARY01||") : QString());
+            return answer;
+        }
+        // What only the account can see: signed out, a signed-out page with
+        // nothing in it, which must never be taken for an empty library.
+        const bool library = id == "VLLM" || id == "FEmusic_liked_playlists" || id == "FEmusic_history"
+                             || id == "VLTESTPRIVATE1" || token.startsWith("TESTTOK");
+        if (library && authed)
+            libraryAt << clock.elapsed();
+        if (!authed && library) {
+            answer.body = trackingAnswer("0");
+            return answer;
+        }
+        if (authed && authedStatus != 200) {
+            answer.status = authedStatus;
+            answer.body = R"({"error":{"code":)" + QByteArray::number(authedStatus) + R"(,"status":"REFUSED"}})";
+            return answer;
+        }
+        if (id == "VLLM") {
+            if (holdLiked) {
+                answer.hold = true;
+                return answer;
+            }
+            answer.body = playlistPage(libraryLoggedIn, "Liked music", songRows("TESTLK", 1, std::min(100, likedCount)),
+                                       likedCount > 100 ? "TESTTOKliked2" : "");
+        } else if (token == "TESTTOKliked2") {
+            answer.body = appendedRows(libraryLoggedIn, songRows("TESTLK", 101, std::min(100, likedCount - 100)),
+                                       likedCount > 200 ? "TESTTOKliked3" : "");
+        } else if (token == "TESTTOKliked3") {
+            answer.body = appendedRows(libraryLoggedIn, songRows("TESTLK", 201, likedCount - 200));
+        } else if (id == "FEmusic_liked_playlists") {
+            answer.body = playlistGrid(libraryLoggedIn,
+                                       cardJson("Liked music", "VLLM", "MUSIC_PAGE_TYPE_PLAYLIST") + ','
+                                           + cardJson("Public mix", "VLTESTPUBLIC01", "MUSIC_PAGE_TYPE_PLAYLIST") + ','
+                                           + cardJson("Private mix", "VLTESTPRIVATE1", "MUSIC_PAGE_TYPE_PLAYLIST"),
+                                       "TESTTOKlists2");
+        } else if (token == "TESTTOKlists2") {
+            answer.body = gridMore(libraryLoggedIn, cardJson("Third", "VLTESTTHIRD01", "MUSIC_PAGE_TYPE_PLAYLIST"));
+        } else if (id == "FEmusic_history") {
+            answer.body = historyPage(libraryLoggedIn, { { "Today", songRows("TESTHS", 1, 3) },
+                                                         { "Yesterday", songRows("TESTHS", 4, 2) } });
+        } else if (id == "VLTESTPRIVATE1" || id == "VLTESTPUBLIC99") {
+            answer.body = playlistPage("1", id, songRows("TESTPL", 1, 5));
+        } else {
+            answer.body = trackingAnswer(authed ? "1" : "0");
+        }
+        return answer;
+    };
+
+    // The fixtures read as the real parsers read them.
+    {
+        const InnerTube::Collection page = InnerTube::parseCollection(
+            QStringLiteral("VLLM"), QJsonDocument::fromJson(playlistPage("1", "Liked music", songRows("TESTLK", 1, 100), "T")).object());
+        const InnerTube::Listing grid = InnerTube::parseListing(QJsonDocument::fromJson(
+            playlistGrid("1", cardJson("A", "VLTESTA", "MUSIC_PAGE_TYPE_PLAYLIST"), "T2")).object());
+        const InnerTube::Listing days = InnerTube::parseListing(
+            QJsonDocument::fromJson(historyPage("1", { { "Today", songRows("TESTHS", 1, 3) } })).object());
+        t.check(page.tracks.size() == 100 && page.continuation == QLatin1String("T") && grid.sections.size() == 1
+                    && grid.sections.first().cards.size() == 1 && grid.itemsContinuation == QLatin1String("T2")
+                    && days.sections.size() == 1 && days.sections.first().songs.size() == 3
+                    && days.sections.first().title == QLatin1String("Today"),
+                QStringLiteral("the stand-in's pages read as the parsers read YouTube Music's (a grid wrapped in an "
+                               "itemSectionRenderer too)"));
+    }
+
+    // A clean slate.
+    SecretStore::remove(secretName);
+    for (const QString &key : { nameKey, importKey, manualKey, kGuardKey })
+        library->setSetting(key, QString());
+    {
+        QSqlQuery q(AppDatabase::connection());
+        for (const char *table : { "ytm_tracks", "ytm_playlists", "ytm_lists" })
+            q.exec(QStringLiteral("DELETE FROM %1").arg(QLatin1String(table)));
+    }
+    const QString ownBefore = ownTables();
+
+    YtmSession::Timing timing;
+    timing.launchCheckMs = 100;
+    timing.recheckMs = 300;
+    timing.retryMinMs = 10 * 60 * 1000;
+    timing.saveDelayMs = 300;
+    timing.guard = unpaced();
+    YtmImport::Timing pacing;
+    pacing.startDelayMs = 100;
+    pacing.startJitterMs = 0;
+    pacing.pageGapMs = 150;
+    pacing.pageJitterMs = 0;
+    pacing.restEveryPages = 0;
+    pacing.manualCooldownMs = 0;
+
+    auto session = std::make_unique<YtmSession>(library);
+    session->setTiming(timing);
+    QStringList verdicts;
+    QObject::connect(session.get(), &YtmSession::checked, session.get(), [&verdicts](const QString &o) { verdicts << o; });
+    session->start();
+    auto importer = std::make_unique<YtmImport>(library, session.get());
+    importer->setTiming(pacing);
+    QStringList syncs;
+    QStringList notices;
+    QObject::connect(importer.get(), &YtmImport::synced, importer.get(), [&syncs](const QString &o) { syncs << o; });
+    QObject::connect(importer.get(), &YtmImport::notice, importer.get(), [&notices](const QString &n) { notices << n; });
+    const auto waitSynced = [&syncs](int before) {
+        return waitUntil([&syncs, before]() { return syncs.size() > before; }, 30000);
+    };
+    const QByteArray fixture = QByteArray(netscapeFixture()).replace("\n", "\r\n");
+    const Result expected = CookieImport::parse(fixture);
+    const QByteArray expectedCookie =
+        CookieImport::header(expected.cookies, CookieImport::kMusicHost, CookieImport::kApiPath + QStringLiteral("browse"));
+    const auto libraryRequests = [&standIn](int from) {
+        QList<StandIn::Request> found;
+        for (int i = from; i < standIn.requests.size(); ++i) {
+            const StandIn::Request &request = standIn.requests.at(i);
+            const QJsonObject body = request.json();
+            const QString id = body.value(QStringLiteral("browseId")).toString();
+            if (id == QLatin1String("VLLM") || id == QLatin1String("FEmusic_liked_playlists")
+                || id == QLatin1String("FEmusic_history")
+                || body.value(QStringLiteral("continuation")).toString().startsWith(QLatin1String("TESTTOK")))
+                found << request;
+        }
+        return found;
+    };
+
+    // — 1. signed out: nothing is asked, nothing is shown —
+    {
+        settle(400);
+        const int from = int(standIn.requests.size());
+        importer->syncNow();
+        settle(300);
+        t.check(standIn.requests.size() == from && !importer->shown() && !importer->syncing() && importer->enabled()
+                    && !notices.isEmpty(),
+                QStringLiteral("signed out: SYNC NOW asks nothing and says why; nothing is shown; the switch is on "
+                               "by default"),
+                notices.value(notices.size() - 1));
+    }
+
+    // — 2. signed in: read once YouTube Music confirms the session —
+    int from = int(standIn.requests.size());
+    int syncsBefore = int(syncs.size());
+    session->importText(QString::fromUtf8(fixture));
+    waitUntil([&verdicts]() { return !verdicts.isEmpty(); }, 15000);
+    t.check(session->state() == QLatin1String("active"), QStringLiteral("a session imports and is confirmed"), session->state());
+    t.check(libraryRequests(from).isEmpty(), QStringLiteral("nothing of the library is asked while the session is checked"));
+    waitSynced(syncsBefore);
+    {
+        const QList<StandIn::Request> asked = libraryRequests(from);
+        QStringList ids;
+        bool allAuthed = !asked.isEmpty();
+        bool rightCookie = !asked.isEmpty();
+        for (const StandIn::Request &request : asked) {
+            const QJsonObject body = request.json();
+            ids << (body.contains(QStringLiteral("browseId")) ? body.value(QStringLiteral("browseId")).toString()
+                                                              : body.value(QStringLiteral("continuation")).toString());
+            allAuthed = allAuthed && request.authed();
+            rightCookie = rightCookie && request.header("cookie") == expectedCookie;
+        }
+        t.check(syncs.value(syncsBefore) == QLatin1String("done")
+                    && ids.join(QLatin1Char(' ')) == QLatin1String("VLLM TESTTOKliked2 TESTTOKliked3 FEmusic_liked_playlists "
+                                                                   "TESTTOKlists2 FEmusic_history"),
+                QStringLiteral("one sync, a page at a time and a list after another: liked songs (three pages), "
+                               "playlists (two), the history (one call)"),
+                ids.join(QLatin1Char(' ')) + QStringLiteral(" / ") + syncs.join(QLatin1Char(',')));
+        t.check(allAuthed && rightCookie,
+                QStringLiteral("every one of them with the account, the later pages too (F41), carrying what a "
+                               "browser sends music.youtube.com"));
+    }
+    t.check(importer->shown() && importer->likedCount() == 212 && importer->playlistCount() == 3
+                && importer->historyCount() == 5 && rowsIn("ytm_tracks") == 217 && rowsIn("ytm_playlists") == 3,
+            QStringLiteral("the counts match the account: 212 liked songs in its order, 3 playlists (Liked music "
+                           "itself not among them), 5 songs of history"),
+            QStringLiteral("%1 liked, %2 playlists, %3 history").arg(importer->likedCount()).arg(importer->playlistCount())
+                .arg(importer->historyCount()));
+    {
+        const QVariantList liked = importer->likedTrackList();
+        t.check(liked.size() == 212 && liked.first().toMap().value(QStringLiteral("sourceId")) == QLatin1String("TESTLK00001")
+                    && liked.last().toMap().value(QStringLiteral("sourceId")) == QLatin1String("TESTLK00212"),
+                QStringLiteral("Liked on YouTube Music holds them all, first to last, for Play"));
+        waitUntil([&importer]() { return importer->liked()->rowCount() == 212; }, 5000);
+        t.check(importer->liked()->rowCount() == 212, QStringLiteral("and its table fills, a few rows a frame"));
+    }
+    t.check(ownTables() == ownBefore,
+            QStringLiteral("the user's own likes, playlists, saves, history, listens and scrobbles are untouched"),
+            ownBefore + QStringLiteral(" -> ") + ownTables());
+    {
+        bool readOnly = true;
+        QStringList seen;
+        for (const StandIn::Request &request : std::as_const(standIn.requests)) {
+            const QByteArray path = request.path.left(request.path.indexOf('?'));
+            const bool read = path == "/youtubei/v1/browse" || path == "/youtubei/v1/account/account_menu";
+            readOnly = readOnly && read;
+            if (!read)
+                seen << QString::fromLatin1(path);
+        }
+        t.check(readOnly, QStringLiteral("read-only: every call was a browse or the account menu; no like, playlist, "
+                                         "feedback or history edit was ever sent"),
+                seen.join(QStringLiteral(", ")));
+        bool spaced = libraryAt.size() >= 6;
+        for (int i = 1; i < libraryAt.size(); ++i)
+            spaced = spaced && libraryAt.at(i) - libraryAt.at(i - 1) >= pacing.pageGapMs - 20;
+        t.check(spaced, QStringLiteral("the pages came one at a time, at least the gap between pages apart"),
+                QString::number(libraryAt.size()));
+    }
+    t.check(importer->isAccountPage(QStringLiteral("VLTESTPRIVATE1")) && importer->isAccountPage(QStringLiteral("VLLM"))
+                && !importer->isAccountPage(QStringLiteral("VLTESTPUBLIC99")),
+            QStringLiteral("its playlists and Liked music are the account's pages; anything else is not"));
+
+    // — 3. an account's playlist opens with the account; any other signed out —
+    {
+        Catalog catalog;
+        catalog.followAccount(session.get());
+        catalog.setAccountPages([&importer](const QString &id) { return importer->isAccountPage(id); });
+        int at = int(standIn.requests.size());
+        catalog.openPage(QStringLiteral("VLTESTPRIVATE1"));
+        waitUntil([&catalog]() { return !catalog.pageLoading(); }, 10000);
+        bool authed = false;
+        for (int i = at; i < standIn.requests.size(); ++i) {
+            if (standIn.requests.at(i).json().value(QStringLiteral("browseId")).toString() == QLatin1String("VLTESTPRIVATE1"))
+                authed = standIn.requests.at(i).authed();
+        }
+        t.check(authed && catalog.pageTracks()->rowCount() == 5,
+                QStringLiteral("a private playlist of the account's opens with the account, and shows its songs"));
+        at = int(standIn.requests.size());
+        catalog.openPage(QStringLiteral("VLTESTPUBLIC99"));
+        waitUntil([&catalog]() { return !catalog.pageLoading(); }, 10000);
+        bool anonymous = false;
+        for (int i = at; i < standIn.requests.size(); ++i) {
+            if (standIn.requests.at(i).json().value(QStringLiteral("browseId")).toString() == QLatin1String("VLTESTPUBLIC99"))
+                anonymous = !standIn.requests.at(i).authed();
+        }
+        t.check(anonymous, QStringLiteral("any other playlist opens signed out, as it always did"));
+    }
+
+    // — 4. a second sync: the library as it is now —
+    {
+        likedCount = 150;
+        from = int(standIn.requests.size());
+        syncsBefore = int(syncs.size());
+        importer->syncNow();
+        waitSynced(syncsBefore);
+        t.check(syncs.value(syncsBefore) == QLatin1String("done") && importer->likedCount() == 150
+                    && rowsIn("ytm_tracks") == 155 && ownTables() == ownBefore,
+                QStringLiteral("SYNC NOW reads it again: a like taken back on YouTube Music is gone here too, with "
+                               "nothing doubled and nothing of the user's own touched"),
+                QString::number(importer->likedCount()));
+    }
+
+    // — 5. what never replaces what was kept —
+    {
+        libraryLoggedIn = "0";
+        syncsBefore = int(syncs.size());
+        importer->syncNow();
+        waitSynced(syncsBefore);
+        libraryLoggedIn = "1";
+        t.check(syncs.value(syncsBefore) == QLatin1String("failed") && importer->likedCount() == 150
+                    && rowsIn("ytm_tracks") == 155 && importer->status().contains(QLatin1String("stopped")),
+                QStringLiteral("an answer made as if signed out: the sync stops, what was kept stays, and the status "
+                               "says so"),
+                importer->status());
+        waitUntil([&session]() { return session->state() == QLatin1String("active"); }, 5000);
+
+        authedStatus = 500;
+        syncsBefore = int(syncs.size());
+        importer->syncNow();
+        waitSynced(syncsBefore);
+        authedStatus = 200;
+        t.check(syncs.value(syncsBefore) == QLatin1String("failed") && importer->likedCount() == 150,
+                QStringLiteral("an error part-way: the sync stops and nothing is replaced"));
+    }
+
+    // — 6. while the account rests, nothing is read —
+    {
+        session->guard().trip(QStringLiteral("a test's rest"));
+        from = int(standIn.requests.size());
+        importer->syncNow();
+        settle(400);
+        t.check(!importer->canSyncNow() && libraryRequests(from).isEmpty() && importer->status().contains(QLatin1String("rests")),
+                QStringLiteral("while the account rests: SYNC NOW asks nothing, and the status says it is paused"),
+                importer->status());
+        session->guard().forgive();
+        waitUntil([&session]() { return session->state() == QLatin1String("active") && !session->resting(); }, 5000);
+    }
+
+    // — 7. SYNC NOW's cooldown —
+    {
+        pacing.manualCooldownMs = 15 * 60 * 1000;
+        importer->setTiming(pacing);
+        library->setSetting(manualKey, QString::number(QDateTime::currentMSecsSinceEpoch()));
+        const int noticesBefore = int(notices.size());
+        from = int(standIn.requests.size());
+        importer->syncNow();
+        settle(300);
+        t.check(!importer->canSyncNow() && libraryRequests(from).isEmpty() && notices.size() > noticesBefore
+                    && notices.last().contains(QLatin1String("go easy on your account")),
+                QStringLiteral("SYNC NOW again within a quarter of an hour: refused, saying when it works again"),
+                notices.value(notices.size() - 1));
+        pacing.manualCooldownMs = 0;
+        importer->setTiming(pacing);
+    }
+
+    // — 8. the switch —
+    {
+        importer->setEnabled(false);
+        t.check(library->settingValue(importKey) == QLatin1String("0") && !importer->shown()
+                    && rowsIn("ytm_tracks") == 0 && rowsIn("ytm_playlists") == 0 && rowsIn("ytm_lists") == 0,
+                QStringLiteral("off: kept as ytmusic.import_library=0, and what was read is deleted"));
+        {
+            YtmImport probe(library, nullptr);
+            t.check(!probe.enabled(), QStringLiteral("a new importer reads it back off"));
+        }
+        syncsBefore = int(syncs.size());
+        importer->setEnabled(true);
+        waitSynced(syncsBefore);
+        t.check(syncs.value(syncsBefore) == QLatin1String("done") && importer->shown() && importer->likedCount() == 150,
+                QStringLiteral("on again: read again, a moment later"));
+    }
+
+    // — 9. signed out mid-sync: it stops, and nothing of the account is left —
+    {
+        holdLiked = true;
+        syncsBefore = int(syncs.size());
+        importer->syncNow();
+        waitUntil([&importer]() { return importer->syncing(); }, 5000);
+        settle(200);
+        const bool wasSyncing = importer->syncing();
+        session->signOut();
+        holdLiked = false;
+        settle(200);
+        t.check(wasSyncing && syncs.value(syncsBefore) == QLatin1String("stopped") && !importer->syncing()
+                    && !importer->shown() && rowsIn("ytm_tracks") == 0 && rowsIn("ytm_playlists") == 0
+                    && rowsIn("ytm_lists") == 0 && importer->liked()->rowCount() == 0,
+                QStringLiteral("signed out while it reads: the sync stops, and everything imported is deleted"),
+                syncs.join(QLatin1Char(',')));
+        t.check(!importer->isAccountPage(QStringLiteral("VLTESTPRIVATE1")),
+                QStringLiteral("and its playlists are no longer opened with an account"));
+    }
+
+    // — last: the log and the settings table —
+    g_captured = nullptr;
+    qInstallMessageHandler(g_previousHandler);
+    QStringList found;
+    for (const QString &line : std::as_const(captured)) {
+        found << leaks(line);
+        if (line.contains(QLatin1String("TESTLIBRARY01")))
+            found << line.left(80);
+    }
+    t.check(found.isEmpty(), QStringLiteral("none of %1 lines logged holds a cookie value, a hash or the account's id")
+                                 .arg(captured.size()),
+            found.join(QStringLiteral(", ")));
+    t.check(settingsLeaks().isEmpty(), QStringLiteral("no cookie value in the settings table"),
+            settingsLeaks().join(QStringLiteral(", ")));
+
+    importer.reset();
+    session.reset();
+    SecretStore::remove(secretName);
+    for (const QString &key : { nameKey, importKey, manualKey, kGuardKey })
+        library->setSetting(key, QString());
+    InnerTube::setTestServer(QString());
+    settle(50);
     return t.finish();
 }

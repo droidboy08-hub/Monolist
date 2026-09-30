@@ -9,8 +9,11 @@ import "../components"
 ScrollPage {
     id: root
 
-    // "playlists", "albums" or "history"
+    // "playlists", "albums", "history", or "history-ytm" for the YouTube
+    // Music account's history as its last sync read it (AccountLibrary)
     property string tab: "playlists"
+    readonly property bool historyTab: tab === "history" || tab === "history-ytm"
+    readonly property bool accountHistory: tab === "history-ytm" && AccountLibrary.shown
     signal tabRequested(string tab)
     signal viewRequested(string view)
     signal pageRequested(string browseId)
@@ -64,7 +67,7 @@ ScrollPage {
             width: parent.width
             number: "01"
             title: "Your Library"
-            action: root.tab === "history" && Library.history.count > 0
+            action: root.historyTab && !root.accountHistory && Library.history.count > 0
                     ? (root.clearArmed ? "CLICK AGAIN TO CLEAR" : "CLEAR HISTORY") : ""
             onActionTriggered: {
                 if (root.clearArmed) {
@@ -93,8 +96,27 @@ ScrollPage {
             }
             ChoiceChip {
                 label: "HISTORY"
+                selected: root.historyTab
+                onPicked: root.tabRequested("history")
+            }
+        }
+
+        // The history played here, and the account's on YouTube Music, side
+        // by side and never mixed: one is this computer's, the other what
+        // YouTube Music keeps, as its last sync read it.
+        Row {
+            visible: root.historyTab && AccountLibrary.shown
+            spacing: -Theme.ruleWidth
+
+            ChoiceChip {
+                label: "ON MONOLIST"
                 selected: root.tab === "history"
                 onPicked: root.tabRequested("history")
+            }
+            ChoiceChip {
+                label: "ON YOUTUBE MUSIC"
+                selected: root.tab === "history-ytm"
+                onPicked: root.tabRequested("history-ytm")
             }
         }
 
@@ -115,6 +137,20 @@ ScrollPage {
                 hasMenu: true
                 onPlayRequested: root.viewRequested("playlist:liked")
                 onMenuRequested: Menus.openPlaylist("liked")
+            }
+
+            // The account's liked songs, as read: its own list, never mixed
+            // into the one above.
+            AlbumCard {
+                visible: AccountLibrary.shown
+                width: root.cardWidth
+                plate: "liked"
+                title: "Liked on YouTube Music"
+                artist: AccountLibrary.stale ? "As last read from your account" : "Read from your YouTube Music account"
+                footer: root.songs(AccountLibrary.likedCount)
+                hasMenu: true
+                onPlayRequested: root.viewRequested("playlist:ytliked")
+                onMenuRequested: Menus.openPlaylist("ytliked")
             }
 
             Repeater {
@@ -155,6 +191,23 @@ ScrollPage {
                     onMenuRequested: Menus.openCard(root.savedCard("playlist", model), "library")
                 }
             }
+
+            // The account's own playlists, private ones among them, opened
+            // with the account; one also saved here shows once, above.
+            Repeater {
+                model: AccountLibrary.shown ? AccountLibrary.playlists : null
+
+                delegate: AlbumCard {
+                    width: root.cardWidth
+                    artwork: model.artwork
+                    title: model.title
+                    artist: model.artist
+                    footer: "PLAYLIST · YOUTUBE MUSIC"
+                    hasMenu: model.browseId.length > 0
+                    onPlayRequested: root.pageRequested(model.browseId)
+                    onMenuRequested: Menus.openCard(root.savedCard("playlist", model), "library")
+                }
+            }
         }
 
         // — albums —
@@ -187,17 +240,39 @@ ScrollPage {
 
         // — history —
         Note {
-            visible: root.tab === "history" && Library.history.count === 0
+            visible: root.historyTab && !root.accountHistory && Library.history.count === 0
             text: "Nothing played yet. Songs you play show up here, the latest first."
+        }
+        Note {
+            visible: root.accountHistory
+            textFormat: Text.PlainText
+            text: AccountLibrary.historyCount === 0
+                  ? "No history read from YouTube Music yet. " + AccountLibrary.status
+                  : "What YouTube Music keeps of your listening, the latest first, as read from your account. "
+                    + AccountLibrary.status
         }
 
         TrackTable {
-            visible: root.tab === "history" && Library.history.count > 0
+            visible: root.historyTab && !root.accountHistory && Library.history.count > 0
             width: parent.width
             model: Library.history
             history: true
             showDownloads: true
             onTrackActivated: function(index) { Player.playModel(Library.history, index, "library") }
+        }
+
+        // Made only while shown: the account's history is not rebuilt with
+        // every play, as the local one is.
+        Loader {
+            active: root.accountHistory && AccountLibrary.historyCount > 0
+            visible: active
+            width: parent.width
+            sourceComponent: TrackTable {
+                width: parent ? parent.width : 0
+                model: AccountLibrary.history
+                showDownloads: true
+                onTrackActivated: function(index) { Player.playModel(AccountLibrary.history, index, "library") }
+            }
         }
     }
 }

@@ -134,6 +134,23 @@ void Catalog::followAccount(YtmSession *account)
 // once taken and once confirmed, and only the second makes it the account's.
 void Catalog::accountChanged()
 {
+    // A page of the account's own (a private playlist, Liked music), open
+    // when the session ends or changes: gone from the screen with it.
+    if (m_pageAuth != InnerTube::Auth::Anonymous
+        && !(m_account && m_account->stateValue() == YtmSession::State::Active)) {
+        ++m_pageGeneration;
+        m_pageAuth = InnerTube::Auth::Anonymous;
+        m_pageTracks.clear();
+        m_pageFeed.clear();
+        m_pageNext.clear();
+        m_pageLoading = false;
+        m_page = { { QStringLiteral("browseId"), m_pageId },
+                   { QStringLiteral("error"), QStringLiteral("This playlist is your YouTube Music account's, and you "
+                                                            "are no longer signed in.") } };
+        m_pageId.clear();
+        Q_EMIT pageChanged();
+        Q_EMIT pageMoreChanged();
+    }
     const bool asAccount = m_account && m_account->accountForHome();
     if (asAccount == m_feedAsAccount)
         return;
@@ -337,6 +354,7 @@ void Catalog::openPage(const QString &browseId)
     Q_EMIT pageChanged();
     Q_EMIT pageMoreChanged();
 
+    m_pageAuth = m_accountPages && m_accountPages(browseId) ? InnerTube::Auth::IfSignedIn : InnerTube::Auth::Anonymous;
     m_innerTube.browse(browseId, [this, browseId, generation](const QJsonObject &root, const QString &error) {
         if (generation != m_pageGeneration)
             return;   // another page was opened meanwhile, or this one again
@@ -374,7 +392,12 @@ void Catalog::openPage(const QString &browseId)
         updatePageLoadingMore();
         Q_EMIT pageChanged();
         Q_EMIT pageMoreChanged();
-    });
+    }, m_pageAuth);
+}
+
+void Catalog::setAccountPages(std::function<bool(const QString &browseId)> isAccountPage)
+{
+    m_accountPages = std::move(isAccountPage);
 }
 
 void Catalog::loadMorePage()
@@ -494,7 +517,7 @@ void Catalog::fetchPagePart()
             m_pageWantsAll = false;
         updatePageLoadingMore();
         Q_EMIT pageMoreChanged();   // pageHasMore may have changed with it
-    });
+    }, m_pageAuth);
 }
 
 void Catalog::openListing(const QString &browseId, const QString &params, const QString &title)
@@ -676,7 +699,7 @@ void Catalog::playCollection(const QString &browseId, const QString &title, cons
             return;
         }
         Q_EMIT collectionReady(origin, toMaps(collection.tracks));
-    });
+    }, m_accountPages && m_accountPages(browseId) ? InnerTube::Auth::IfSignedIn : InnerTube::Auth::Anonymous);
 }
 
 QVariantList Catalog::pageTrackList() const

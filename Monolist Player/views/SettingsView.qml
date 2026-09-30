@@ -17,7 +17,8 @@ ScrollPage {
     readonly property bool automatic: Library.region.length === 0
 
     // A part of the page to open on, for a link elsewhere that names one
-    // ("recommendations"): scrolled to once, then said done, so the same
+    // ("recommendations", "connections", or "ytmusic" for the YouTube Music
+    // account's switches): scrolled to once, then said done, so the same
     // link works again later.
     property string section: ""
     signal sectionRevealed()
@@ -43,7 +44,9 @@ ScrollPage {
         if (section.length === 0)
             return
         column.forceLayout()
-        var target = section === "recommendations" ? recommendationsHeader : null
+        var target = section === "recommendations" ? recommendationsHeader
+                   : section === "connections" ? connectionsHeader
+                   : section === "ytmusic" ? homeToggle : null
         if (target)
             contentY = Math.max(0, Math.min(target.y - Theme.space4, contentHeight - height))
         sectionRevealed()
@@ -576,6 +579,7 @@ ScrollPage {
         // keep working that way; what an account buys is your own library
         // and your own history, not a better player.
         SectionHeader {
+            id: connectionsHeader
             width: parent.width
             number: "05"
             title: "Connections"
@@ -1063,6 +1067,7 @@ ScrollPage {
         // default: Home is the first thing an account changes. New releases
         // are the same for everyone, so they never go as the account.
         ToggleRow {
+            id: homeToggle
             visible: Account.state === "active" || Account.state === "checking" || Account.state === "unreachable"
             width: parent.width
             label: "Use my account for Home"
@@ -1073,6 +1078,40 @@ ScrollPage {
             onToggled: Account.useForHome = !Account.useForHome
         }
 
+        // The account's library, read in and never written back. On by
+        // default, as Home is: the owner asked for it with the sign-in.
+        ToggleRow {
+            visible: Account.state === "active" || Account.state === "checking" || Account.state === "unreachable"
+            width: parent.width
+            label: "Import my YouTube Music library"
+            hint: "Your liked songs, as the playlist “Liked on YouTube Music”, your library’s playlists (private "
+                  + "ones too) and your recent history are read into Monolist, a page at a time and gently, then "
+                  + "read again twice a day at most. Nothing is ever changed in your account, and your own likes "
+                  + "and playlists here stay as they are. Off, nothing is read, and what was is deleted."
+            checked: AccountLibrary.enabled
+            onToggled: AccountLibrary.enabled = !AccountLibrary.enabled
+        }
+
+        Column {
+            visible: AccountLibrary.enabled
+                     && (Account.state === "active" || Account.state === "checking" || Account.state === "unreachable")
+            width: parent.width
+            spacing: Theme.space3
+            leftPadding: 18 + Theme.space3
+
+            Note {
+                width: parent.width - parent.leftPadding
+                textFormat: Text.PlainText
+                text: AccountLibrary.status
+            }
+
+            ActionButton {
+                text: AccountLibrary.syncing ? "SYNCING…" : "SYNC NOW"
+                enabled: AccountLibrary.canSyncNow
+                onClicked: AccountLibrary.syncNow()
+            }
+        }
+
         // On by default, as the owner chose: a song the account can play is
         // better played than skipped. Only ever for a song YouTube refuses
         // signed out, and never ahead of time.
@@ -1081,9 +1120,9 @@ ScrollPage {
             width: parent.width
             label: "Play with my account when needed"
             hint: "A song YouTube will not play signed out (one it keeps behind an age check, or holds back to ask "
-                  + "whether you are a bot) is asked for once more with your account, through yt-dlp. Every other "
-                  + "song plays signed out, and at most 120 an hour go through the account. Off, such a song is "
-                  + "skipped."
+                  + "whether you are a bot) is asked for once more with your account, through yt-dlp, after yt-dlp "
+                  + "signed out has tried too. Every other song plays signed out, and at most 15 an hour (60 a "
+                  + "day) go through the account. Off, such a song is skipped."
             checked: Account.playWhenNeeded
             onToggled: Account.playWhenNeeded = !Account.playWhenNeeded
         }
@@ -1286,7 +1325,8 @@ ScrollPage {
                       + (Scrobbler.state === "connected" || Account.state === "active"
                          || Account.state === "checking" || Account.state === "unreachable"
                          ? (Account.state === "active"
-                            && (Account.useForHome || Account.playWhenNeeded || Account.reportListens)
+                            && (Account.useForHome || Account.playWhenNeeded || Account.reportListens
+                                || AccountLibrary.enabled)
                             ? "They are fetched without an account, but for what Connections says your YouTube "
                               + "Music account is used for; what a connected account is told is set out there."
                             : "They are fetched without an account; what a connected account is told is set out "

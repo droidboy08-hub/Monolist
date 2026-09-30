@@ -51,7 +51,7 @@ owner's iPhone app (AryaMusix / "Mediano", Swift, not in this repo).
   for tests. Never touch the owner's real library, database or Music folder.
 - Self-tests are flags on the app (grep `src/main.cpp` for `-test"`): e.g.
   `--saavn-test`, `--listen-test`, `--scrobble-test`, `--lyrics-race-test`,
-  `--cookie-test`, `--account-guard-test`, `--ytm-session-test`, `--visitor-test`, `--format-test`,
+  `--cookie-test`, `--account-guard-test`, `--ytm-session-test`, `--ytm-library-test`, `--visitor-test`, `--format-test`,
   `--download-cleanup-test`, `--library-edit-test`, `--recovery-test` … Each
   prints `N checks, 0 failed`. All must pass, except `--scrobble-send-test`,
   which needs its local stand-in (`scripts/lastfm-mock.ps1`).

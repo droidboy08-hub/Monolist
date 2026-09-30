@@ -45,6 +45,7 @@
 #include "systempip.h"
 #include "windowchrome.h"
 #include "ytmselftest.h"
+#include "ytmimport.h"
 #include "ytmsession.h"
 #include "appinfo.h"
 #include "rec/catalog.h"
@@ -201,6 +202,10 @@ int main(int argc, char *argv[])
         // program standing in for yt-dlp.
         if (arguments.contains(QStringLiteral("--account-play-test")))
             return runAccountPlaySelfTest(&library) == 0 ? 0 : 1;
+        // The account's library, read into Monolist and never written back,
+        // against the same stand-in.
+        if (arguments.contains(QStringLiteral("--ytm-library-test")))
+            return runYtmLibrarySelfTest(&library) == 0 ? 0 : 1;
         // The one visitor id every InnerTube shares, against the same
         // stand-in, with its store in memory.
         if (arguments.contains(QStringLiteral("--visitor-test")))
@@ -330,9 +335,12 @@ int main(int argc, char *argv[])
     // --ytm-demo <state>[+file]: the Settings row in that state (active,
     // checking, unreachable, rejected, notsignedin, unreadable, signedout),
     // with an invented account and no cookies, for a look or a screenshot.
-    if (const int demoFlag = app.arguments().indexOf(QStringLiteral("--ytm-demo"));
-        demoFlag >= 0 && demoFlag + 1 < app.arguments().size())
-        ytmSession.showDemo(app.arguments().at(demoFlag + 1));
+    // "+library" adds an invented imported library (under MONOLIST_DATA_DIR).
+    const int demoFlag = int(app.arguments().indexOf(QStringLiteral("--ytm-demo")));
+    const QString demo = demoFlag >= 0 && demoFlag + 1 < app.arguments().size() ? app.arguments().at(demoFlag + 1)
+                                                                                 : QString();
+    if (!demo.isEmpty())
+        ytmSession.showDemo(QString(demo).remove(QStringLiteral("+library")));
 
     // — engines —
     MpvEngine engine;
@@ -481,6 +489,15 @@ int main(int argc, char *argv[])
     // signed-out feed it always was. New releases always are.
     Catalog catalog;
     catalog.followAccount(&ytmSession);
+    // The account's own library, read into Monolist and never written back:
+    // Liked on YouTube Music, its playlists, its history. Its playlists (and
+    // Liked music) open with the account, so a private one opens.
+    YtmImport accountLibrary(&library, &ytmSession);
+    catalog.setAccountPages([&accountLibrary](const QString &browseId) {
+        return accountLibrary.isAccountPage(browseId);
+    });
+    if (demo.contains(QLatin1String("+library")))
+        accountLibrary.showDemo();
     catalog.refresh();
     catalog.reloadRecent();
     QObject::connect(&player, &PlaybackController::playRecorded, &catalog, &Catalog::reloadRecent);
@@ -559,6 +576,7 @@ int main(int argc, char *argv[])
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Scrobbler", &scrobbler);
     // The YouTube Music sign-in: the Settings row's import, check and sign-out.
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Account",   &ytmSession);
+    qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "AccountLibrary", &accountLibrary);
     qmlRegisterUncreatableType<SearchResultModel>(
         "Monolist.Backend", 1, 0, "SearchResultModel",
         QStringLiteral("Obtained from Extractor.results"));
@@ -608,6 +626,12 @@ int main(int argc, char *argv[])
         if (queryFlag >= 0 && queryFlag + 1 < arguments.size()) {
             initial.insert(QStringLiteral("currentView"), QStringLiteral("search"));
             initial.insert(QStringLiteral("initialQuery"), arguments.at(queryFlag + 1));
+        }
+        // Settings opened at one of its sections (SettingsView.revealSection).
+        const int sectionFlag = arguments.indexOf(QStringLiteral("--settings-section"));
+        if (sectionFlag >= 0 && sectionFlag + 1 < arguments.size()) {
+            initial.insert(QStringLiteral("currentView"), QStringLiteral("settings"));
+            initial.insert(QStringLiteral("settingsSection"), arguments.at(sectionFlag + 1));
         }
         if (arguments.contains(QStringLiteral("--open-queue")))
             initial.insert(QStringLiteral("queueOpen"), true);

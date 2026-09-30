@@ -5,10 +5,13 @@ import "../components"
 
 // One of the user's playlists, or Liked songs: the same page as an album's,
 // with the cover a mosaic of the songs' own, and the title theirs to change.
+// Also Liked on YouTube Music, the account's liked songs as its last sync
+// read them (AccountLibrary): the same page, read-only, since nothing here is
+// ever written back to the account.
 ScrollPage {
     id: root
 
-    // "liked", or a playlist's id.
+    // "liked", "ytliked", or a playlist's id.
     property string key: ""
     // Set for a playlist just made, so its name is ready to be typed.
     property bool renameOnOpen: false
@@ -20,11 +23,15 @@ ScrollPage {
     signal deleted()
 
     readonly property bool liked: key === "liked"
-    readonly property int playlistId: liked ? 0 : parseInt(key)
+    // The account's, read-only: no renaming, reordering or deleting.
+    readonly property bool account: key === "ytliked"
+    readonly property bool own: !liked && !account
+    readonly property int playlistId: own ? parseInt(key) : 0
     readonly property var info: Library.playlist
-    readonly property bool ready: liked || (info.playlistId === playlistId)
-    readonly property bool missing: !liked && ready && !info.exists
-    readonly property var songs: liked ? Library.liked : Library.playlistTracks
+    readonly property bool ready: !own || (info.playlistId === playlistId)
+    // Signed out, or the import turned off: nothing of the account is left.
+    readonly property bool missing: account ? !AccountLibrary.shown : (own && ready && !info.exists)
+    readonly property var songs: liked ? Library.liked : account ? AccountLibrary.liked : Library.playlistTracks
     readonly property int songCount: songs ? songs.count : 0
     readonly property bool wide: width >= 900
 
@@ -42,7 +49,7 @@ ScrollPage {
 
     // A new playlist opens with its name selected, the way a new file does.
     function startRenaming() {
-        if (liked || missing)
+        if (!own || missing)
             return
         titleField.text = info.name
         renaming = true
@@ -68,7 +75,7 @@ ScrollPage {
     // Later rather than at once, so it lands after onKeyChanged, which
     // clears the question for the playlist it is leaving.
     function askDelete() {
-        if (liked || missing || !confirmDeleteOnOpen)
+        if (!own || missing || !confirmDeleteOnOpen)
             return
         confirmingDelete = true
         deleteAsked()
@@ -76,7 +83,7 @@ ScrollPage {
     onConfirmDeleteOnOpenChanged: if (confirmDeleteOnOpen && ready) Qt.callLater(askDelete)
 
     function trackList() {
-        return liked ? Library.likedTrackList() : Library.playlistTrackList()
+        return liked ? Library.likedTrackList() : account ? AccountLibrary.likedTrackList() : Library.playlistTrackList()
     }
 
     // In one call, video flags and all (Downloads.enqueueAll).
@@ -86,7 +93,10 @@ ScrollPage {
 
     // Asked again whenever a download starts, ends or fails, and whenever
     // the playlist changes.
-    readonly property var downloadCounts: Downloads.revision >= 0 && Library.revision >= 0 && root.songCount >= 0
+    // The account's list fills a few rows a frame: counted once for the
+    // list (likedCount), not again at every few rows.
+    readonly property var downloadCounts: Downloads.revision >= 0 && Library.revision >= 0
+                                          && (root.account ? AccountLibrary.likedCount >= 0 : root.songCount >= 0)
                                           ? Downloads.downloadCounts(trackList()) : ({})
 
     function songsLabel(n) { return n + (n === 1 ? " song" : " songs") }
@@ -110,7 +120,10 @@ ScrollPage {
         Text {
             visible: root.missing
             width: parent.width
-            text: "This playlist no longer exists."
+            text: root.account
+                  ? "Your YouTube Music library is shown here while you are signed in and importing it is on "
+                    + "(Settings, Connections)."
+                  : "This playlist no longer exists."
             font.family: Theme.fontFamily
             font.pixelSize: 14
             color: Theme.neutral700
@@ -126,8 +139,8 @@ ScrollPage {
                 id: cover
                 width: root.wide ? 248 : 168
                 height: width
-                plate: root.liked ? "liked" : ""
-                artworks: root.liked || !root.ready ? [] : root.info.artworks
+                plate: root.liked || root.account ? "liked" : ""
+                artworks: !root.own || !root.ready ? [] : root.info.artworks
                 colour: true
             }
 
@@ -140,7 +153,7 @@ ScrollPage {
                 spacing: Theme.space2
 
                 Text {
-                    text: "PLAYLIST"
+                    text: root.account ? "PLAYLIST · YOUTUBE MUSIC" : "PLAYLIST"
                     font.family: Theme.fontFamily
                     font.pixelSize: 12
                     font.weight: Font.Bold
@@ -156,7 +169,8 @@ ScrollPage {
                         id: title
                         visible: !root.renaming
                         width: parent.width
-                        text: root.liked ? "Liked songs" : (root.ready ? root.info.name : "")
+                        text: root.liked ? "Liked songs" : root.account ? "Liked on YouTube Music"
+                                                                    : (root.ready ? root.info.name : "")
                         wrapMode: Text.WordWrap
                         maximumLineCount: 2
                         elide: Text.ElideRight
@@ -170,11 +184,11 @@ ScrollPage {
 
                         // Clicking the name of one's own playlist edits it.
                         HoverHandler {
-                            enabled: !root.liked
+                            enabled: root.own
                             cursorShape: Qt.IBeamCursor
                         }
                         TapHandler {
-                            enabled: !root.liked
+                            enabled: root.own
                             onTapped: root.startRenaming()
                         }
                     }
@@ -209,7 +223,8 @@ ScrollPage {
 
                 Text {
                     width: parent.width
-                    text: "By " + Library.userName
+                    text: "By " + (root.account ? (Account.accountName.length > 0 ? Account.accountName : "your account")
+                                                : Library.userName)
                     elide: Text.ElideRight
                     font.family: Theme.fontFamily
                     font.pixelSize: 18
@@ -218,9 +233,23 @@ ScrollPage {
                 }
 
                 Text {
-                    text: root.songsLabel(root.songCount)
-                          + (!root.liked && root.ready && root.info.durationText
+                    text: root.songsLabel(root.account ? AccountLibrary.likedCount : root.songCount)
+                          + (root.own && root.ready && root.info.durationText
                              ? " · " + root.info.durationText : "")
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 13
+                    color: Theme.neutral700
+                }
+
+                // Where the list came from, and that it is read, never
+                // written: a like changed on YouTube Music shows at the next
+                // sync, and nothing done here goes back.
+                Text {
+                    visible: root.account
+                    width: parent.width
+                    text: AccountLibrary.status
+                    wrapMode: Text.WordWrap
+                    textFormat: Text.PlainText
                     font.family: Theme.fontFamily
                     font.pixelSize: 13
                     color: Theme.neutral700
@@ -236,7 +265,13 @@ ScrollPage {
                         iconName: "play"
                         text: "Play"
                         enabled: root.songCount > 0
-                        onClicked: Player.playModel(root.songs, 0, "playlist")
+                        onClicked: {
+                            // The whole list, not only the rows made so far.
+                            if (root.account)
+                                Player.playTracks(root.trackList(), 0, "playlist")
+                            else
+                                Player.playModel(root.songs, 0, "playlist")
+                        }
                     }
                     ActionButton {
                         iconName: "shuffle"
@@ -244,7 +279,12 @@ ScrollPage {
                         enabled: root.songCount > 1
                         onClicked: {
                             Player.shuffle = true
-                            Player.playModel(root.songs, Math.floor(Math.random() * root.songCount), "playlist")
+                            if (root.account) {
+                                const all = root.trackList()
+                                Player.playTracks(all, Math.floor(Math.random() * all.length), "playlist")
+                            } else {
+                                Player.playModel(root.songs, Math.floor(Math.random() * root.songCount), "playlist")
+                            }
                         }
                     }
                     DownloadAllButton {
@@ -309,7 +349,10 @@ ScrollPage {
             width: Math.min(parent.width, 640)
             text: root.liked
                   ? "Songs you like show up here. Press the heart on any song, or in the player bar."
-                  : "Nothing here yet. Add songs from any song's menu (the three dots, or a right click): Add to playlist."
+                  : root.account
+                    ? "No liked songs read from YouTube Music yet. They are read a minute or two after you sign in, "
+                      + "or with SYNC NOW in Settings, Connections."
+                    : "Nothing here yet. Add songs from any song's menu (the three dots, or a right click): Add to playlist."
             wrapMode: Text.WordWrap
             font.family: Theme.fontFamily
             font.pixelSize: 14
@@ -324,7 +367,7 @@ ScrollPage {
             width: parent.width
             model: root.songs
             playlistId: root.playlistId
-            reorderable: !root.liked
+            reorderable: root.own
             flickable: root
             showDownloads: true
             onTrackActivated: function(index) { Player.playModel(root.songs, index, "playlist") }

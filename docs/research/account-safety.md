@@ -89,16 +89,19 @@ Around it:
   carry it.
 - Timers are jittered: the launch check 4-8 s in, the periodic check 6 h
   give or take 30 min, back-offs 75-125 %.
-- The library import (being built) reads only, one page at a time with 3-6 s
-  between pages, caps the pages, replaces what it holds only when a list was
-  read to its end, never fetches every playlist's songs, and syncs on its own
-  at most twice a day.
+- The library import (`src/ytmimport.*`) reads only, one page at a time with
+  3-6 s between pages and a longer pause every ten, caps the pages (50 of
+  liked songs, 20 of playlists, one call of history), replaces what it holds
+  only when a list was read to its end, never fetches every playlist's songs
+  (one is read when it is opened), syncs on its own at most every 12 hours
+  and never at the moment of a launch, and allows SYNC NOW at most every 15
+  minutes.
 - Nothing is ever written back to the account (likes, playlists, feedback);
   listen reports are the one write, behind their own switch.
 
 Tested by `--account-guard-test` (the limits and rests, on a clock of the
 test's), and by `--ytm-session-test`, `--home-account-test` and
-`--account-play-test` against a stand-in server.
+`--account-play-test` and `--ytm-library-test` against a stand-in server.
 
 ## Still unknown (for the live test, docs/testing-your-youtube-account.md)
 

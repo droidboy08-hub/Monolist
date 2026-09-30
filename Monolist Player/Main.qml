@@ -136,8 +136,9 @@ ApplicationWindow {
     // only by name until it is looked up, "shelf:<browse id>[|<params>]" for
     // a shelf's "show all", "recs:<key>" for a suggestion shelf's (the page
     // it was on, its place there, its kind and title: Recs.moreKey), and
-    // "playlist:<id>" or "playlist:liked" for the user's own. Back and forward
-    // step through them.
+    // "playlist:<id>" or "playlist:liked" for the user's own, and
+    // "playlist:ytliked" for the YouTube Music account's liked songs as its
+    // last sync read them (AccountLibrary). Back and forward step through them.
     function openPage(browseId) {
         nowPlayingOpen = false
         navigate("page:" + browseId)
@@ -204,7 +205,8 @@ ApplicationWindow {
             Catalog.openListing(bar < 0 ? key : key.substring(0, bar), bar < 0 ? "" : key.substring(bar + 1),
                                 pendingListingTitle)
         }
-        else if (currentView.indexOf("playlist:") === 0 && currentView !== "playlist:liked")
+        else if (currentView.indexOf("playlist:") === 0 && currentView !== "playlist:liked"
+                 && currentView !== "playlist:ytliked")
             Library.openPlaylist(parseInt(currentView.substring(9)))
         else if (currentView.indexOf("recs:") === 0)
             Recs.openMore(currentView.substring(5))
@@ -289,6 +291,7 @@ ApplicationWindow {
                   : currentView.indexOf("shelf:") === 0 ? "SHOW ALL"
                   : currentView.indexOf("recs:") === 0 ? "SEARCH / SHOW ALL"
                   : currentView === "playlist:liked" ? "YOUR LIBRARY / LIKED SONGS"
+                  : currentView === "playlist:ytliked" ? "YOUR LIBRARY / LIKED ON YOUTUBE MUSIC"
                   : currentView.indexOf("playlist:") === 0 ? "YOUR LIBRARY / PLAYLIST"
                   : "YOUR LIBRARY";
         return label + " / " + Qt.formatDate(new Date(), "dddd d MMMM yyyy").toUpperCase();
@@ -763,6 +766,12 @@ ApplicationWindow {
     // The YouTube Music sign-in's answers: a file deleted or kept.
     Connections {
         target: Account
+        function onNotice(text) { toast.show(text) }
+    }
+
+    // The account's library: a sync asked for, and how it went.
+    Connections {
+        target: AccountLibrary
         function onNotice(text) { toast.show(text) }
     }
 

@@ -201,6 +201,8 @@ target_sources(monolist PRIVATE
     src/accountguard.h             src/accountguard.cpp
     src/cookieimport.h             src/cookieimport.cpp
     src/ytmsession.h               src/ytmsession.cpp
+    # The account's library, read in and never written back (--ytm-library-test).
+    src/ytmimport.h                src/ytmimport.cpp
     src/ytmselftest.h              src/ytmselftest.cpp)
 
 # components/ and views/ hold .qml files outside the module root. Qt 6.8+ wants

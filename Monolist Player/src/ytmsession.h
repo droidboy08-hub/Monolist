@@ -161,6 +161,11 @@ public:
     State stateValue() const { return m_state; }
     QString accountName() const { return m_name; }
     QString accountHandle() const { return m_handle; }
+    // Which account (or brand channel) the session is, as a hash that tells
+    // one from another and says nothing else: of the DATASYNC_ID where it is
+    // known, else the handle and name. Empty with no session. What imported
+    // data is kept against (YtmImport), so another account's never shows.
+    QString accountKey() const;
     QString headline() const { return m_headline; }
     QString statusLine() const { return m_statusLine; }
     QString importError() const { return m_importError; }

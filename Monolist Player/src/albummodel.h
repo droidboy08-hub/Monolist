@@ -14,13 +14,15 @@ struct AlbumItem {
 
 // Albums and playlists saved from YouTube Music, the latest saved first. One
 // instance lists the albums (singles and EPs among them), another the
-// playlists.
+// playlists; a third the YouTube Music account's own playlists, as its last
+// sync read them (YtmImport), in the account's order, less any the user has
+// also saved here.
 class AlbumModel : public QAbstractListModel
 {
     Q_OBJECT
     Q_PROPERTY(int count READ rowCount NOTIFY countChanged)
 public:
-    enum Kind { Albums, Playlists };
+    enum Kind { Albums, Playlists, AccountPlaylists };
     enum Roles { IdRole = Qt::UserRole + 1, TitleRole, ArtistRole, YearRole, FormatRole, ArtworkRole,
                  BrowseIdRole };
 

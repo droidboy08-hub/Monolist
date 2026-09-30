@@ -85,6 +85,11 @@ public:
     // parseLoggedIn: "1", "0", or empty). For the self-tests and the log.
     bool feedAsAccount() const { return m_feedAsAccount; }
     QString feedLoggedIn() const { return m_feedLoggedIn; }
+    // Which pages are the account's own (YtmImport::isAccountPage: Liked
+    // music and the account's playlists, private ones among them): those
+    // are opened, paged and played with the account (Auth::IfSignedIn),
+    // every other page signed out as before. Unset, every page is.
+    void setAccountPages(std::function<bool(const QString &browseId)> isAccountPage);
 
     bool loading() const { return m_pendingHome > 0; }
     QString error() const { return m_error; }
@@ -225,6 +230,10 @@ private:
     quint64 m_pageGeneration = 0;
     QVariantMap m_page;
     bool m_pageLoading = false;
+    std::function<bool(const QString &)> m_accountPages;
+    // How the open page was asked for, which its later parts are asked for
+    // the same way.
+    InnerTube::Auth m_pageAuth = InnerTube::Auth::Anonymous;
     // The rest of a long playlist: the header its later songs are completed
     // from, the token for the next part, the rows shown so far (by their
     // playlist row id), the rows still to go into the table, whether a part

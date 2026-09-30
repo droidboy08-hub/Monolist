@@ -84,6 +84,21 @@ int runHomeAccountSelfTest(Library *library);
 // confirmed session. No cookie value, info JSON or link in
 // the log. Refuses to run without MONOLIST_DATA_DIR.
 int runAccountPlaySelfTest(Library *library);
+
+// --ytm-library-test: the account's library read into Monolist (YtmImport),
+// against the same stand-in: nothing asked signed out or while the session is
+// checked; once confirmed, one sync, a page at a time and at least the gap
+// apart, every page with the account (continuations too), liked songs,
+// playlists (Liked music not among them; a grid wrapped as the library's
+// are) and the history counted as the account holds them; read-only (only
+// browse and the account menu ever asked); the user's own tables untouched;
+// an account playlist opened with the account and any other signed out; a
+// second sync replacing the first; a signed-out answer or an error replacing
+// nothing; nothing read while the account rests; SYNC NOW's cooldown; the
+// switch (off deletes); a sign-out mid-sync stopping it and deleting
+// everything; no cookie value or account id in the log. Refuses to run
+// without MONOLIST_DATA_DIR.
+int runYtmLibrarySelfTest(Library *library);
 // --fake-yt-dlp <folder> <yt-dlp's arguments>: this program in yt-dlp's
 // place, for the test above. It writes each run to <folder>/calls.jsonl (the
 // arguments, and the cookies file as it was given), sleeps

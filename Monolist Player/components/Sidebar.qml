@@ -205,14 +205,30 @@ Rectangle {
         boundsBehavior: Flickable.StopAtBounds
         bottomMargin: Theme.space6
 
-        header: PlaylistRow {
+        // Liked songs, and under it, while an account's library is
+        // imported, its liked songs as they were read (never mixed in).
+        header: Column {
             width: ListView.view ? ListView.view.width : 0
-            iconName: "heart-filled"
-            name: "Liked songs"
-            trackCount: Library.liked.count
-            active: root.currentView === "playlist:liked"
-            onActivated: root.viewRequested("playlist:liked")
-            onMenuRequested: Menus.openPlaylist("liked")
+
+            PlaylistRow {
+                width: parent.width
+                iconName: "heart-filled"
+                name: "Liked songs"
+                trackCount: Library.liked.count
+                active: root.currentView === "playlist:liked"
+                onActivated: root.viewRequested("playlist:liked")
+                onMenuRequested: Menus.openPlaylist("liked")
+            }
+            PlaylistRow {
+                visible: AccountLibrary.shown
+                width: parent.width
+                iconName: "heart"
+                name: "Liked on YouTube Music"
+                trackCount: AccountLibrary.likedCount
+                active: root.currentView === "playlist:ytliked"
+                onActivated: root.viewRequested("playlist:ytliked")
+                onMenuRequested: Menus.openPlaylist("ytliked")
+            }
         }
 
         // Roles through `model`: the row's own properties share their names.

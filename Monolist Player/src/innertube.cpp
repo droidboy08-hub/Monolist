@@ -2603,7 +2603,12 @@ InnerTube::Listing InnerTube::parseListing(const QJsonObject &root)
 
     const QJsonValue list = dig(root, { "contents", "singleColumnBrowseResultsRenderer", "tabs", "#0",
                                         "tabRenderer", "content", "sectionListRenderer" });
-    for (const QJsonValue &section : dig(list, { "contents" }).toArray()) {
+    for (QJsonValue section : dig(list, { "contents" }).toArray()) {
+        // The library's pages (the account's playlists, say) wrap their grid
+        // in one more layer.
+        const QJsonValue wrapped = dig(section, { "itemSectionRenderer", "contents", "#0" });
+        if (!wrapped.isUndefined())
+            section = wrapped;
         Shelf shelf;
         QString more;
         const QJsonValue grid = dig(section, { "gridRenderer" });

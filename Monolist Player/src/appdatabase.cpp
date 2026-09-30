@@ -265,6 +265,50 @@ void AppDatabase::createSchema()
         " expires_at INTEGER NOT NULL DEFAULT 0,"
         " signature TEXT NOT NULL DEFAULT '',"
         " matcher INTEGER NOT NULL DEFAULT 0)"));
+
+    // The YouTube Music account's library, read into Monolist and never
+    // written back (YtmImport). Kept apart from everything above: the
+    // user's own likes, playlists, saves and history never change with a
+    // sync, and none of this feeds the recommendations or Last.fm. All of it
+    // goes when the user signs out.
+    //
+    // ytm_lists: how each list's last sync went ('liked', 'playlists',
+    // 'history'); `account` a hash that tells one account from another,
+    // never its id; `complete` 0 when a cap stopped the reading.
+    q.exec(QStringLiteral(
+        "CREATE TABLE IF NOT EXISTS ytm_lists ("
+        " list TEXT PRIMARY KEY,"
+        " account TEXT NOT NULL DEFAULT '',"
+        " synced_at INTEGER NOT NULL DEFAULT 0,"
+        " item_count INTEGER NOT NULL DEFAULT 0,"
+        " complete INTEGER NOT NULL DEFAULT 1)"));
+    // The songs of Liked on YouTube Music and of the account's history, in
+    // YouTube Music's own order; `section` is a history day's heading.
+    q.exec(QStringLiteral(
+        "CREATE TABLE IF NOT EXISTS ytm_tracks ("
+        " id INTEGER PRIMARY KEY AUTOINCREMENT,"
+        " list TEXT NOT NULL,"
+        " position INTEGER NOT NULL DEFAULT 0,"
+        " section TEXT NOT NULL DEFAULT '',"
+        " video_id TEXT NOT NULL DEFAULT '',"
+        " title TEXT NOT NULL DEFAULT '',"
+        " artist TEXT NOT NULL DEFAULT '',"
+        " primary_artist TEXT NOT NULL DEFAULT '',"
+        " album TEXT NOT NULL DEFAULT '',"
+        " album_id TEXT NOT NULL DEFAULT '',"
+        " artwork TEXT NOT NULL DEFAULT '',"
+        " duration_ms INTEGER NOT NULL DEFAULT 0,"
+        " is_video INTEGER NOT NULL DEFAULT 0)"));
+    q.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS idx_ytm_tracks_list ON ytm_tracks(list, position)"));
+    // The account's own playlists, by reference: their songs are read when
+    // one is opened, with the account, rather than all of them at every sync.
+    q.exec(QStringLiteral(
+        "CREATE TABLE IF NOT EXISTS ytm_playlists ("
+        " browse_id TEXT PRIMARY KEY,"
+        " position INTEGER NOT NULL DEFAULT 0,"
+        " title TEXT NOT NULL DEFAULT '',"
+        " subtitle TEXT NOT NULL DEFAULT '',"
+        " artwork TEXT NOT NULL DEFAULT '')"));
 }
 
 bool AppDatabase::hasColumn(const QString &table, const QString &column)

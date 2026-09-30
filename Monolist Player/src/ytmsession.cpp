@@ -161,6 +161,17 @@ YtmSession::YtmSession(Library *library, QObject *parent)
     updateStatus();
 }
 
+QString YtmSession::accountKey() const
+{
+    if (m_jar.isEmpty())
+        return QString();
+    const QString who = !m_info.dataSyncId.isEmpty() ? m_info.dataSyncId : m_handle + QLatin1Char('|') + m_name;
+    if (who == QLatin1String("|"))
+        return QString();
+    return QString::fromLatin1(
+        QCryptographicHash::hash("monolist-account:" + who.toUtf8(), QCryptographicHash::Sha256).toHex().left(16));
+}
+
 QString YtmSession::restLine() const
 {
     if (!m_guard.paused())
@@ -476,7 +487,8 @@ void YtmSession::updateStatus()
             if (!m_useForHome)
                 line += QStringLiteral("Home stays signed out. ");
         }
-        line += QStringLiteral("Your library comes next. Search, lyrics and radio always stay signed out.");
+        line += QStringLiteral("Search, lyrics and radio always stay signed out, and nothing is ever changed in "
+                               "your account.");
         if (m_memoryOnly) {
             line += QStringLiteral(" It is forgotten when Monolist closes: %1")
                         .arg(SecretStore::unavailableReason().toHtmlEscaped());
@@ -1538,7 +1550,7 @@ void YtmSession::showDemo(const QString &demo)
         setState(State::Unreachable);
     } else if (which == QLatin1String("rejected")) {
         m_ended = Ended::Refused;
-        m_endedStatus = 403;
+        m_endedStatus = 401;
         setState(State::Rejected);
     } else if (which == QLatin1String("notsignedin")) {
         // Straight after an import: YouTube Music has not named anyone.
