@@ -14,6 +14,8 @@ Item {
     property string name: ""
     property int trackCount: 0
     property bool active: false
+    // Pinned above the rest: its mark in the number's place, in the accent.
+    property bool pinned: false
     signal activated()
     signal menuRequested()
 
@@ -43,7 +45,7 @@ Item {
             width: 20
             font.family: Theme.fontFamily
             font.pixelSize: 11
-            color: root.active ? Theme.accent700 : Theme.neutral500
+            color: root.active || root.pinned ? Theme.accent700 : Theme.neutral500
         }
 
         Icon {

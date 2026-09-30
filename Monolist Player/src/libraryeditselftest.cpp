@@ -390,6 +390,38 @@ void testSongs(Checks &checks, Library *library)
     QSqlQuery(AppDatabase::connection()).exec(QStringLiteral("DELETE FROM playlist_tracks WHERE video_id LIKE 'songs%'"));
 }
 
+void testPlaylistOrder(Checks &checks, Library *library)
+{
+    checks.note(QStringLiteral("- the playlists' order"));
+    const int a = library->createPlaylist(QStringLiteral("Order A"));
+    const int b = library->createPlaylist(QStringLiteral("Order B"));
+    const int c = library->createPlaylist(QStringLiteral("Order C"));
+    const auto order = [library, a, b, c]() {
+        QStringList names;
+        for (int row = 0; row < library->playlists()->rowCount(); ++row) {
+            const QVariantMap item = library->playlists()->get(row);
+            const int id = item.value(QStringLiteral("playlistId")).toInt();
+            if (id == a || id == b || id == c)
+                names << item.value(QStringLiteral("name")).toString().mid(6)
+                             + (item.value(QStringLiteral("pinned")).toBool() ? QStringLiteral("*") : QString());
+        }
+        return names.join(QLatin1Char(' '));
+    };
+    checks.same(order(), QStringLiteral("A B C"), QStringLiteral("new playlists in the order they were made"));
+    library->setPlaylistPinned(c, true);
+    checks.same(order(), QStringLiteral("C* A B"), QStringLiteral("a pinned one goes above the rest"));
+    library->movePlaylist(b, library->playlistRow(a));
+    checks.same(order(), QStringLiteral("C* B A"), QStringLiteral("one moved goes where it is put"));
+    library->movePlaylist(a, 0);
+    checks.same(order(), QStringLiteral("C* A B"), QStringLiteral("  and not above the pinned ones"));
+    library->playlists()->reload();
+    checks.same(order(), QStringLiteral("C* A B"), QStringLiteral("  and the order is kept"));
+    library->setPlaylistPinned(c, false);
+    checks.check(!library->isPlaylistPinned(c), QStringLiteral("unpinned, it is with the rest again"), order());
+    for (const int id : { a, b, c })
+        library->deletePlaylist(id);
+}
+
 void testSearches(Checks &checks, Library *library)
 {
     checks.note(QStringLiteral("- recent searches"));
@@ -433,5 +465,6 @@ int runLibraryEditSelfTest(Library *library)
     testSearches(checks, library);
     testFilter(checks);
     testSongs(checks, library);
+    testPlaylistOrder(checks, library);
     return checks.finish();
 }

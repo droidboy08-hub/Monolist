@@ -155,6 +155,65 @@ QVariantList Library::songArtists() const
     return list;
 }
 
+void Library::setPlaylistPinned(int playlistId, bool pinned)
+{
+    QSqlQuery q(AppDatabase::connection());
+    q.prepare(QStringLiteral("UPDATE playlists SET pinned = ? WHERE id = ?"));
+    q.addBindValue(pinned ? 1 : 0);
+    q.addBindValue(playlistId);
+    q.exec();
+    m_playlists.reload();
+    touch();
+    Q_EMIT notice(pinned ? QStringLiteral("Pinned to the top") : QStringLiteral("Unpinned"));
+}
+
+bool Library::isPlaylistPinned(int playlistId) const
+{
+    const int row = m_playlists.indexOf(playlistId);
+    return row >= 0 && m_playlists.get(row).value(QStringLiteral("pinned")).toBool();
+}
+
+int Library::playlistRow(int playlistId) const
+{
+    return m_playlists.indexOf(playlistId);
+}
+
+void Library::movePlaylist(int playlistId, int to)
+{
+    const int from = m_playlists.indexOf(playlistId);
+    if (from < 0)
+        return;
+    QList<int> ids;
+    int pinnedCount = 0;
+    for (int row = 0; row < m_playlists.rowCount(); ++row) {
+        const QVariantMap item = m_playlists.get(row);
+        ids << item.value(QStringLiteral("playlistId")).toInt();
+        if (item.value(QStringLiteral("pinned")).toBool())
+            ++pinnedCount;
+    }
+    // Within its group: a pinned playlist among the pinned, any other below them.
+    const bool pinned = from < pinnedCount;
+    const int first = pinned ? 0 : pinnedCount;
+    const int last = pinned ? pinnedCount - 1 : int(ids.size()) - 1;
+    to = qBound(first, to, last);
+    if (to == from)
+        return;
+    ids.move(from, to);
+
+    QSqlDatabase db = AppDatabase::connection();
+    db.transaction();
+    QSqlQuery q(db);
+    q.prepare(QStringLiteral("UPDATE playlists SET position = ? WHERE id = ?"));
+    for (int row = 0; row < ids.size(); ++row) {
+        q.addBindValue(row);
+        q.addBindValue(ids.at(row));
+        q.exec();
+    }
+    db.commit();
+    m_playlists.reload();
+    touch();
+}
+
 void Library::rememberSearch(const QString &term)
 {
     const QString kept = term.simplified();

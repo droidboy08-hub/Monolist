@@ -8,15 +8,18 @@ struct PlaylistItem {
     QString name;
     int trackCount = 0;
     QStringList artworks;   // up to four distinct covers, for the mosaic
+    bool pinned = false;
 };
 
-// The user's own playlists, oldest first, so their numbers stay put.
+// The user's own playlists: the pinned ones first, then the rest, each in the
+// order the user put them in (playlists.position), the oldest first until
+// then, so their numbers stay put.
 class PlaylistModel : public QAbstractListModel
 {
     Q_OBJECT
     Q_PROPERTY(int count READ rowCount NOTIFY countChanged)
 public:
-    enum Roles { IdRole = Qt::UserRole + 1, NameRole, TrackCountRole, NumberRole, ArtworksRole };
+    enum Roles { IdRole = Qt::UserRole + 1, NameRole, TrackCountRole, NumberRole, ArtworksRole, PinnedRole };
 
     explicit PlaylistModel(QObject *parent = nullptr);
 

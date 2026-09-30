@@ -33,6 +33,12 @@ ScrollPage {
     readonly property bool missing: account ? !AccountLibrary.shown : (own && ready && !info.exists)
     readonly property var songs: liked ? Library.liked : account ? AccountLibrary.liked : Library.playlistTracks
     readonly property int songCount: songs ? songs.count : 0
+    // The songs as the filter and the order above them leave them. A
+    // playlist is put in order by hand only while they leave it as it is.
+    TrackFilterModel {
+        id: shown
+        sourceModel: root.songs
+    }
     readonly property bool wide: width >= 900
 
     property bool renaming: false
@@ -44,6 +50,7 @@ ScrollPage {
         renaming = false
         confirmingDelete = false
         contentY = 0
+        songFilter.clear()
     }
     onVisibleChanged: if (!visible) { renaming = false; confirmingDelete = false }
 
@@ -267,10 +274,10 @@ ScrollPage {
                         enabled: root.songCount > 0
                         onClicked: {
                             // The whole list, not only the rows made so far.
-                            if (root.account)
+                            if (root.account && !shown.rearranged)
                                 Player.playTracks(root.trackList(), 0, "playlist")
                             else
-                                Player.playModel(root.songs, 0, "playlist")
+                                Player.playModel(shown, 0, "playlist")
                         }
                     }
                     ActionButton {
@@ -279,11 +286,11 @@ ScrollPage {
                         enabled: root.songCount > 1
                         onClicked: {
                             Player.shuffle = true
-                            if (root.account) {
+                            if (root.account && !shown.rearranged) {
                                 const all = root.trackList()
                                 Player.playTracks(all, Math.floor(Math.random() * all.length), "playlist")
                             } else {
-                                Player.playModel(root.songs, Math.floor(Math.random() * root.songCount), "playlist")
+                                Player.playModel(shown, Math.floor(Math.random() * shown.count), "playlist")
                             }
                         }
                     }
@@ -359,18 +366,37 @@ ScrollPage {
             color: Theme.neutral700
         }
 
-        // A playlist's songs are in the order the user gives them: dragged by
-        // the grip, or moved from a row's menu or with Alt+Up and Alt+Down.
-        // Liked songs keeps the order they were liked in.
-        TrackTable {
-            visible: root.songCount > 0 && !root.missing
+        ListFilter {
+            id: songFilter
+            visible: root.songCount > 1 && !root.missing
             width: parent.width
-            model: root.songs
+            model: shown
+            settingKey: root.liked ? "sort.liked" : root.account ? "sort.ytliked" : "sort.playlist"
+            ownOrder: root.own ? "PLAYLIST ORDER" : "RECENT"
+        }
+
+        Text {
+            visible: root.songCount > 0 && shown.count === 0 && !root.missing
+            text: "Nothing here matches."
+            font.family: Theme.fontFamily
+            font.pixelSize: 14
+            color: Theme.neutral700
+        }
+
+        // A playlist's songs are in the order the user gives them: dragged by
+        // the grip, or moved from a row's menu or with Alt+Up and Alt+Down,
+        // while nothing above filters or reorders them. Liked songs keeps the
+        // order they were liked in.
+        TrackTable {
+            visible: shown.count > 0 && !root.missing
+            width: parent.width
+            model: shown
+            sortModel: shown
             playlistId: root.playlistId
-            reorderable: root.own
+            reorderable: root.own && !shown.rearranged
             flickable: root
             showDownloads: true
-            onTrackActivated: function(index) { Player.playModel(root.songs, index, "playlist") }
+            onTrackActivated: function(index) { Player.playModel(shown, index, "playlist") }
         }
     }
 }

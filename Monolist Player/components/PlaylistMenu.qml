@@ -24,6 +24,9 @@ MonoMenu {
     readonly property int playlistId: own ? (parseInt(key) || 0) : 0
     // Counted as the menu opens: a playlist that is not open has no model.
     property int songCount: 0
+    // Where it is among the playlists, and whether it is pinned, as it opens.
+    property int row: -1
+    property bool pinned: false
 
     function songs() {
         return liked ? Library.likedTrackList() : account ? AccountLibrary.likedTrackList()
@@ -33,6 +36,8 @@ MonoMenu {
     function show(newKey, anchor) {
         key = newKey
         songCount = account ? AccountLibrary.likedCount : songs().length
+        row = own ? Library.playlistRow(playlistId) : -1
+        pinned = own && Library.isPlaylistPinned(playlistId)
         if (anchor)
             popup(anchor, 0, anchor.height + Theme.space1)
         else
@@ -68,6 +73,27 @@ MonoMenu {
     }
 
     MonoMenuRule { visible: !menu.liked }
+
+    // Where it sits among the playlists: pinned above the rest, or moved
+    // within them (the sidebar's rows can be dragged too).
+    MonoMenuItem {
+        visible: menu.own
+        enabled: menu.own
+        text: menu.pinned ? "Unpin" : "Pin to the top"
+        onTriggered: Library.setPlaylistPinned(menu.playlistId, !menu.pinned)
+    }
+    MonoMenuItem {
+        visible: menu.own
+        enabled: menu.own && menu.row > 0
+        text: "Move up"
+        onTriggered: Library.movePlaylist(menu.playlistId, menu.row - 1)
+    }
+    MonoMenuItem {
+        visible: menu.own
+        enabled: menu.own && menu.row >= 0 && menu.row < Library.playlists.count - 1
+        text: "Move down"
+        onTriggered: Library.movePlaylist(menu.playlistId, menu.row + 1)
+    }
 
     MonoMenuItem {
         visible: menu.own

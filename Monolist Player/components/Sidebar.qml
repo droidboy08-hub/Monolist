@@ -203,6 +203,9 @@ Rectangle {
         clip: true
         model: Library.playlists
         boundsBehavior: Flickable.StopAtBounds
+        // Scrolled by the wheel alone: a drag on a row moves the playlist
+        // (below), and the list must not take it for a flick.
+        interactive: false
         bottomMargin: Theme.space6
 
         // Liked songs, and under it, while an account's library is
@@ -232,14 +235,44 @@ Rectangle {
         }
 
         // Roles through `model`: the row's own properties share their names.
+        // A row dragged up or down goes where it is dropped, among the
+        // pinned if it is pinned, among the rest if not.
         delegate: PlaylistRow {
+            id: playlistRow
+            // The row it is at (the delegate's own index; no required
+            // properties here, which would take away `model`).
+            readonly property int row: index
             width: ListView.view ? ListView.view.width : 0
-            number: model.number
+            number: model.pinned ? "▲" : model.number
+            pinned: model.pinned
             name: model.name
             trackCount: model.trackCount
             active: root.currentView === "playlist:" + model.playlistId
             onActivated: root.viewRequested("playlist:" + model.playlistId)
             onMenuRequested: Menus.openPlaylist(model.playlistId)
+
+            z: rowDrag.active ? 2 : 0
+            transform: Translate { y: rowDrag.active ? rowDrag.activeTranslation.y : 0 }
+
+            DragHandler {
+                id: rowDrag
+                // How far it has been carried, kept as it goes: the handler's
+                // own translation is back at nothing by the time the release
+                // is told.
+                property real carried: 0
+                target: null
+                xAxis.enabled: false
+                onActiveTranslationChanged: if (active) carried = activeTranslation.y
+                onActiveChanged: {
+                    if (active) {
+                        carried = 0
+                        return
+                    }
+                    const to = playlistRow.row + Math.round(carried / playlistRow.height)
+                    if (to !== playlistRow.row)
+                        Library.movePlaylist(model.playlistId, to)
+                }
+            }
         }
 
         ScrollBar.vertical: MonoScrollBar {}

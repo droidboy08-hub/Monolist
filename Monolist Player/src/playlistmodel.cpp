@@ -23,6 +23,7 @@ QVariant PlaylistModel::data(const QModelIndex &index, int role) const
     case TrackCountRole: return item.trackCount;
     case NumberRole:     return QStringLiteral("%1").arg(index.row() + 1, 2, 10, QLatin1Char('0'));
     case ArtworksRole:   return item.artworks;
+    case PinnedRole:     return item.pinned;
     default:             return {};
     }
 }
@@ -34,7 +35,8 @@ QHash<int, QByteArray> PlaylistModel::roleNames() const
         { NameRole, "name" },
         { TrackCountRole, "trackCount" },
         { NumberRole, "number" },
-        { ArtworksRole, "artworks" }
+        { ArtworksRole, "artworks" },
+        { PinnedRole, "pinned" }
     };
 }
 
@@ -59,13 +61,14 @@ void PlaylistModel::reload()
     m_items.clear();
     QSqlQuery q(AppDatabase::connection());
     q.exec(QStringLiteral(
-        "SELECT p.id, p.name, (SELECT COUNT(*) FROM playlist_tracks t WHERE t.playlist_id = p.id)"
-        " FROM playlists p ORDER BY p.position ASC, p.id ASC"));
+        "SELECT p.id, p.name, (SELECT COUNT(*) FROM playlist_tracks t WHERE t.playlist_id = p.id), p.pinned"
+        " FROM playlists p ORDER BY p.pinned DESC, p.position ASC, p.id ASC"));
     while (q.next()) {
         PlaylistItem item;
         item.id = q.value(0).toInt();
         item.name = q.value(1).toString();
         item.trackCount = q.value(2).toInt();
+        item.pinned = q.value(3).toBool();
         m_items.append(item);
     }
     for (PlaylistItem &item : m_items)
@@ -82,7 +85,8 @@ QVariantMap PlaylistModel::get(int row) const
     return { { QStringLiteral("playlistId"), item.id },
              { QStringLiteral("name"), item.name },
              { QStringLiteral("trackCount"), item.trackCount },
-             { QStringLiteral("artworks"), item.artworks } };
+             { QStringLiteral("artworks"), item.artworks },
+             { QStringLiteral("pinned"), item.pinned } };
 }
 
 int PlaylistModel::indexOf(int playlistId) const

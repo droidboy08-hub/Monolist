@@ -381,6 +381,9 @@ void AppDatabase::migrate()
     // When a song was liked, so Liked songs can list the latest first. SQLite
     // cannot add a column whose default is a function, hence '' and the
     // explicit values the writes give.
+    // Playlists pinned above the rest, in the sidebar and the library.
+    if (!hasColumn(QStringLiteral("playlists"), QStringLiteral("pinned")))
+        q.exec(QStringLiteral("ALTER TABLE playlists ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0"));
     if (!hasColumn(QStringLiteral("tracks"), QStringLiteral("liked_at")))
         q.exec(QStringLiteral("ALTER TABLE tracks ADD COLUMN liked_at TEXT NOT NULL DEFAULT ''"));
 

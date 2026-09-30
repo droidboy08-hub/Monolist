@@ -126,6 +126,16 @@ public:
     // An empty name goes back to the one the system knows the user by.
     Q_INVOKABLE void setUserName(const QString &name);
 
+    // — the playlists' order —
+    // Pinned playlists sit above the rest, each group in its own order.
+    Q_INVOKABLE void setPlaylistPinned(int playlistId, bool pinned);
+    Q_INVOKABLE bool isPlaylistPinned(int playlistId) const;
+    // Where one is in the list as shown (0 the first); -1 when it is not.
+    Q_INVOKABLE int playlistRow(int playlistId) const;
+    // One of the playlists to row `to` of the list as shown, kept within its
+    // group (the pinned or the rest), and the order kept.
+    Q_INVOKABLE void movePlaylist(int playlistId, int to);
+
     // — searches —
     // A search that was used: Enter pressed, a suggestion picked, one of its
     // results played or opened. Not every pause in the typing, which would

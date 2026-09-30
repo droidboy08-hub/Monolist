@@ -40,6 +40,11 @@ Item {
         }
     }
 
+    // The words gone, as when the list shown becomes another.
+    function clear() {
+        field.text = ""
+    }
+
     function order(key) {
         if (!model)
             return

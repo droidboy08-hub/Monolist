@@ -245,12 +245,33 @@ ScrollPage {
             color: Theme.neutral700
         }
 
+        ListFilter {
+            visible: Downloads.library.count > 1
+            width: parent.width
+            model: savedView
+            settingKey: "sort.downloads"
+        }
+
+        Text {
+            visible: Downloads.library.count > 0 && savedView.count === 0
+            text: "Nothing here matches."
+            font.family: Theme.fontFamily
+            font.pixelSize: 14
+            color: Theme.neutral700
+        }
+
+        // The saved songs as the filter and the order above leave them.
+        TrackFilterModel {
+            id: savedView
+            sourceModel: Downloads.library
+        }
+
         Column {
-            visible: Downloads.library.count > 0
+            visible: savedView.count > 0
             width: parent.width
 
             Repeater {
-                model: Downloads.library
+                model: savedView
 
                 delegate: Item {
                     id: saved
@@ -403,7 +424,7 @@ ScrollPage {
 
                     HoverHandler { id: savedHover; cursorShape: Qt.PointingHandCursor }
                     // The offline set becomes the queue, starting here.
-                    TapHandler { onTapped: Player.playModel(Downloads.library, saved.index, "library") }
+                    TapHandler { onTapped: Player.playModel(savedView, saved.index, "library") }
                     TapHandler {
                         acceptedButtons: Qt.RightButton
                         onTapped: saved.openMenu()
