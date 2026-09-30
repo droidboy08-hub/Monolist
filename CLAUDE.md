@@ -44,6 +44,16 @@ owner's iPhone app (AryaMusix / "Mediano", Swift, not in this repo).
 3. Run with logs: `$env:QT_FORCE_STDERR_LOGGING='1'; $env:MONOLIST_MPV_LOG='warn'`.
 4. macOS: `Monolist Player/scripts/setup-macos.sh`, then `build-macos.sh`
    (Monolist.app, Xcode project). Mac-only code lives in `src/macos/`.
+5. Package and installer: `package-windows.ps1 -Installer` (needs
+   `setup-windows.ps1 -Installer` once, for Inno Setup): Release build, a
+   self-contained folder with real copies of the tools and the Vulkan loader,
+   a DLL check that fails on anything neither in it nor in Windows, the zip
+   and `Monolist-<version>.<build>-setup-win64.exe` in
+   `C:\dev\monolist-build\package`.
+6. Releases: push a tag `v<version>.<build>` (build = `git rev-list --count
+   HEAD` of the tagged commit); `.github/workflows/release-windows.yml` builds
+   the installer and zip on GitHub, runs offline self-tests on them and
+   publishes the GitHub Release, which the app's update check reads.
 
 ## Testing
 

@@ -102,6 +102,12 @@ Copy-Item -LiteralPath $exe -Destination $stage
 & windeployqt --qmldir $source --no-translations --compiler-runtime (Join-Path $stage 'monolist.exe') | Out-Null
 if ($LASTEXITCODE -ne 0) { throw 'windeployqt failed.' }
 
+# SQLite is the one database: the other drivers windeployqt adds (Oracle,
+# PostgreSQL, Firebird, Mimer, ODBC) would each want a client library the
+# package does not have, and nothing loads them.
+Get-ChildItem -LiteralPath (Join-Path $stage 'sqldrivers') -File -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -ne 'qsqlite.dll' } | Remove-Item -Force
+
 # The one tool tip every ToolTip.text shows is built from QtQuick.Controls,
 # which windeployqt leaves out (see build-windows.ps1).
 $controlsFrom = Join-Path $qtPrefix 'qml\QtQuick\Controls'

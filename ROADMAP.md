@@ -175,8 +175,10 @@ Priority runs from 1 (first) to 9. Size: S under an hour, M a few hours, L a day
 ## Distribution
 
 - [ ] **G01** The app has no icon on any platform *(P8, S)*
+  Windows done 2026-09-29: packaging/make-icon.ps1 draws "M." (Archivo, paper on ink, the point in red) into monolist.ico, built into monolist.exe (IDI_ICON1, the window's and the taskbar's) and the installer. Left: the .icns for the Mac bundle.
   Done when: An icon made from the 'MONOLIST.' wordmark ships as .ico on Windows (via an .rc file), .icns in the Mac bundle, and PNG for the window icon.
-- [ ] **G02** No Windows build that can be given to someone else *(P8, M)*
+- [x] **G02** No Windows build that can be given to someone else *(P8, M)*
+  Done 2026-09-29: package-windows.ps1 (-Installer), packaging/monolist.iss, .github/workflows/release-windows.yml. Installed and run with the toolchain out of PATH: self-tests, playback, a download through the bundled yt-dlp and FFmpeg; uninstalled clean.
   Done when: A -Package option, or an Inno Setup/CPack step, produces a self-contained zip or installer with real copies of the tools, a Start-menu shortcut and the icon.
 - [ ] **G03** *(Partly done: the recommendation data is credited in Settings and About; bundled components still have no notices.)* No licence notices for bundled components, and no credit for the recommendation data *(P8, S)*
   Done when: About → Acknowledgements lists every component with its licence text, and the texts ship in the Windows package and inside the Mac app. A credit line for the data appears whenever a catalogue or graph is loaded.
@@ -316,7 +318,7 @@ Built so far (batch 2): Last.fm connect, listening-time tracking, offline scrobb
 ## Decisions waiting on the owner
 
 - [x] **Decided: build both.** Connections: should YouTube Music sign-in (a cookie file kept in the Mac Keychain or Windows Credential Manager) and/or Last.fm scrobbling be built now, later, or should the 'Designed, not built' section be hidden until then? (SettingsView.qml:393-431)
-- [ ] Update checks: the repo is public, so GitHub Releases on droidboy08-hub/Monolist can be the update feed (api.github.com/repos/droidboy08-hub/Monolist/releases/latest, appinfo.cpp:214-221). Will builds be published as Releases there?
+- [x] **Decided 2026-09-29: yes, releases are published there** (the Windows installer, by the release workflow), and the app reads that feed by default. Update checks: the repo is public, so GitHub Releases on droidboy08-hub/Monolist can be the update feed (api.github.com/repos/droidboy08-hub/Monolist/releases/latest, appinfo.cpp:214-221). Will builds be published as Releases there?
 - [ ] Country shelf title: keep 'From <country>' (current; the list is ranked by MusicBrainz ratings, not plays, shelves.h:61-69) or go back to 'Popular in <country>' as you first asked? The Settings note (SettingsView.qml:371) will be changed to match either way.
 - [x] **Decided: Burzum is not blocked; add a "Hide explicit titles" setting.** Should Burzum be added to the suggestion block list (suitable.cpp:73), and do you want a 'Hide explicit titles' setting (suitable.h:29)?
 - [ ] Should 'Clear history' also reset recommendations by deleting the listening events, or keep them and add a separate 'Reset recommendations'? Today it clears only Recently played and History (library.cpp:697-705), so Search still says 'Because you played…' for cleared songs.
