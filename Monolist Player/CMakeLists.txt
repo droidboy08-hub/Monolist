@@ -244,6 +244,8 @@ qt_add_qml_module(monolist
         components/SectionHeader.qml
         components/AlbumCard.qml
         components/Artwork.qml
+        components/TrackCover.qml
+        components/PlayingBars.qml
         components/TrackTable.qml
         components/NowPlayingBar.qml
         components/ProgressSlider.qml

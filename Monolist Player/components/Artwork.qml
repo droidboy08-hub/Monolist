@@ -5,7 +5,8 @@ import Monolist
 // Cover slot. Photographs print black and white in this system, so any
 // supplied artwork is desaturated; with no source it stays a flat plate.
 // `colour` lets a cover bloom into colour: under the pointer, or when it is
-// the cover a whole page is about.
+// the cover a whole page is about. A `radius` rounds the picture's corners
+// as well as the plate's (a list row's small cover, TrackCover).
 Rectangle {
     id: root
 
@@ -15,6 +16,9 @@ Rectangle {
 
     color: Theme.neutral300
     clip: true
+
+    // A picture is shown (rather than the plate, waiting or with none).
+    readonly property bool ready: image.status === Image.Ready
 
     // How many pixels this plate really covers on this screen.
     readonly property int wanted: Math.ceil(Math.max(width, height) * Screen.devicePixelRatio)
@@ -62,11 +66,31 @@ Rectangle {
         visible: false
     }
 
+    // The rounded corners, as a mask: clipping cuts square.
+    Item {
+        id: corners
+        anchors.fill: parent
+        visible: false
+        layer.enabled: root.radius > 0
+        layer.smooth: true
+
+        Rectangle {
+            anchors.fill: parent
+            radius: root.radius
+            antialiasing: true
+        }
+    }
+
     MultiEffect {
         anchors.fill: parent
         source: image
         saturation: root.colour ? 0.0 : -1.0
         visible: image.status === Image.Ready
+        maskEnabled: root.radius > 0
+        maskSource: corners
+        // Soft at the curve, so the corners are not stepped.
+        maskThresholdMin: 0.5
+        maskSpreadAtMin: 1.0
 
         // Colour arriving means "this is the subject", so it is worth seeing
         // happen rather than switching.

@@ -29,6 +29,9 @@ Column {
     // it in order: a click sorts by that column, a second the other way, a
     // third back to the list's own order.
     property TrackFilterModel sortModel: null
+    // Each song's cover at the head of its row (TrackCover). Off where every
+    // row would show the one cover printed above them, an album's.
+    property bool showArtwork: true
     signal trackActivated(int index)
 
     function sortBy(key) {
@@ -133,12 +136,18 @@ Column {
     readonly property int moreWidth: 36
     readonly property int likeWidth: 36
     readonly property int downloadWidth: showDownloads && Downloads.available ? 40 : 0
-    readonly property int freeWidth: width - indexWidth - timeWidth - likeWidth - downloadWidth - moreWidth
+    readonly property int coverSize: 40
+    // The cover and the gap after it, before the title.
+    readonly property int coverWidth: showArtwork ? coverSize + Theme.space3 : 0
+    readonly property int titleX: indexWidth + coverWidth
+    readonly property int freeWidth: width - titleX - timeWidth - likeWidth - downloadWidth - moreWidth
     readonly property int albumColumnWidth: showAlbum ? Math.round(freeWidth * 0.30) : 0
     readonly property int artistColumnWidth: showArtist ? Math.round(freeWidth * 0.28) : 0
     readonly property int titleColumnWidth: freeWidth - albumColumnWidth - artistColumnWidth
     readonly property int headHeight: 32
-    readonly property int rowHeight: 40
+    // As tall as a queue row where there are covers, so the two lists keep
+    // one rhythm; a row of type alone keeps to the type.
+    readonly property int rowHeight: showArtwork ? 56 : 40
 
     // — a drag under way —
     // The row held (-1 when none), the gap between rows it would drop into
@@ -298,21 +307,21 @@ Column {
             color: Theme.neutral700
         }
         HeadLabel {
-            x: root.indexWidth
+            x: root.titleX
             anchors.verticalCenter: parent.verticalCenter
             label: "TITLE"
             key: "title"
         }
         HeadLabel {
             visible: root.showArtist
-            x: root.indexWidth + root.titleColumnWidth
+            x: root.titleX + root.titleColumnWidth
             anchors.verticalCenter: parent.verticalCenter
             label: "ARTIST"
             key: "artist"
         }
         HeadLabel {
             visible: root.showAlbum
-            x: root.indexWidth + root.titleColumnWidth + root.artistColumnWidth
+            x: root.titleX + root.titleColumnWidth + root.artistColumnWidth
             anchors.verticalCenter: parent.verticalCenter
             label: "ALBUM"
             key: "album"
@@ -458,15 +467,26 @@ Column {
                     color: Theme.accent
                 }
 
+                // The number; for the song playing, in red, and where there
+                // is no cover to carry its bars, the bars in its place.
                 Text {
                     x: 0
                     width: root.indexWidth
-                    visible: !row.gripShown
+                    visible: !row.gripShown && !(row.isActive && !root.showArtwork)
                     anchors.verticalCenter: parent.verticalCenter
-                    text: row.isActive && Player.playing ? "▶" : String(row.index + 1)
+                    text: String(row.index + 1)
                     font.family: Theme.fontFamily
                     font.pixelSize: 13
                     color: row.isActive ? Theme.accent700 : Theme.text
+                }
+                PlayingBars {
+                    visible: !row.gripShown && row.isActive && !root.showArtwork
+                    x: 1
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 12
+                    height: 11
+                    color: Theme.accent700
+                    running: Player.playing
                 }
 
                 // The grip, in the number's place. Pressed, it holds the row;
@@ -516,23 +536,52 @@ Column {
                     }
                 }
 
-                Text {
+                TrackCover {
+                    visible: root.showArtwork
                     x: root.indexWidth
+                    width: root.coverSize
+                    height: root.coverSize
+                    anchors.verticalCenter: parent.verticalCenter
+                    source: row.artwork
+                    sourceId: row.sourceId
+                    hovered: rowHover.hovered && !row.held
+                    active: row.isActive
+                    onPlayRequested: root.trackActivated(row.index)
+                }
+
+                // The title; and where the window is too narrow for the
+                // artist's column, the artist under it.
+                Column {
+                    x: root.titleX
                     width: Math.max(0, root.titleColumnWidth - Theme.space4)
                     anchors.verticalCenter: parent.verticalCenter
-                    text: row.title
-                    elide: Text.ElideRight
-                    font.family: Theme.fontFamily
-                    font.pixelSize: 14
-                    font.weight: row.isActive ? Font.Bold : Theme.weightRegular
-                    color: row.isActive ? Theme.accent700 : Theme.text
+                    spacing: 2
+
+                    Text {
+                        width: parent.width
+                        text: row.title
+                        elide: Text.ElideRight
+                        font.family: Theme.fontFamily
+                        font.pixelSize: 14
+                        font.weight: row.isActive ? Font.Bold : Theme.weightRegular
+                        color: row.isActive ? Theme.accent700 : Theme.text
+                    }
+                    ArtistLine {
+                        visible: !root.showArtist && row.artist.length > 0
+                        width: parent.width
+                        artist: row.artist
+                        credits: row.credits
+                        font.family: Theme.fontFamily
+                        font.pixelSize: 12
+                        color: Theme.neutral700
+                    }
                 }
 
                 // Each name opens its artist's page; a click anywhere else in
                 // the row still plays it.
                 ArtistLine {
                     visible: root.showArtist
-                    x: root.indexWidth + root.titleColumnWidth
+                    x: root.titleX + root.titleColumnWidth
                     width: Math.max(0, root.artistColumnWidth - Theme.space4)
                     anchors.verticalCenter: parent.verticalCenter
                     artist: row.artist
@@ -546,7 +595,7 @@ Column {
                 // And the album its page, where the list knows which it is.
                 ArtistLine {
                     visible: root.showAlbum
-                    x: root.indexWidth + root.titleColumnWidth + root.artistColumnWidth
+                    x: root.titleX + root.titleColumnWidth + root.artistColumnWidth
                     width: Math.max(0, root.albumColumnWidth - Theme.space4)
                     anchors.verticalCenter: parent.verticalCenter
                     artist: row.album
