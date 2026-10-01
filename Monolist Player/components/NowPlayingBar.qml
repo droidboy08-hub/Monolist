@@ -122,10 +122,22 @@ Rectangle {
 
             // The cover and the title open Now Playing.
             Artwork {
+                id: barArt
                 width: 52
                 height: 52
-                placeholder: "Art"
+                placeholder: ""
                 source: Player.currentTrack.artwork !== undefined ? Player.currentTrack.artwork : ""
+
+                // No cover, or nothing playing: a note on the plate, as a
+                // song row has.
+                Icon {
+                    visible: !barArt.ready
+                    anchors.centerIn: parent
+                    width: 20
+                    height: 20
+                    name: "music"
+                    color: Theme.neutral600
+                }
 
                 HoverHandler { cursorShape: Qt.PointingHandCursor }
                 TapHandler { onTapped: root.nowPlayingToggled() }

@@ -2948,7 +2948,8 @@ void InnerTube::searchCards(const QString &query, Filter filter,
 }
 
 void InnerTube::searchTracks(const QString &query, Filter filter,
-                             std::function<void(const QList<Track> &, const QString &)> done)
+                             std::function<void(const QList<Track> &, const QString &)> done,
+                             int retries)
 {
     const QJsonObject body{
         { QStringLiteral("query"), query },
@@ -2960,7 +2961,8 @@ void InnerTube::searchTracks(const QString &query, Filter filter,
                  done({}, error);
              else
                  done(parseSearch(root), QString());
-         });
+         },
+         retries);
 }
 
 void InnerTube::searchArtists(const QString &query,

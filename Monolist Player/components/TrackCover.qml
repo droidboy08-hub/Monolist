@@ -29,6 +29,8 @@ Item {
     // A list's covers are small and many: softened corners set them apart
     // from the square type around them.
     property real radius: 6
+    // Something stands over the list (Now Playing): the bars hold still.
+    property bool covered: false
 
     signal playRequested()
 
@@ -48,8 +50,9 @@ Item {
         radius: root.radius
     }
 
+    // The note, where there is no picture and nothing drawn over it.
     Icon {
-        visible: !art.ready
+        visible: !art.ready && !root.marked && !root.active
         anchors.centerIn: parent
         width: Math.round(parent.width * 0.4)
         height: width
@@ -61,11 +64,14 @@ Item {
     Rectangle {
         anchors.fill: parent
         radius: root.radius
-        color: Theme.text
+        color: Theme.ink
         opacity: root.marked || root.active ? 0.45 : 0
 
+        // In at once with the pointer, out over a moment (DESIGN 2.6), so
+        // the glyph never sits on a cover not yet darkened.
         Behavior on opacity {
-            NumberAnimation { duration: Theme.quick; easing.type: Theme.enterCurve }
+            enabled: !root.marked
+            NumberAnimation { duration: Theme.quick; easing.type: Theme.exitCurve }
         }
     }
 
@@ -74,8 +80,9 @@ Item {
         anchors.centerIn: parent
         width: Math.round(parent.width * 0.4)
         height: Math.round(parent.width * 0.35)
-        color: Theme.bg
+        color: Theme.paper
         running: Player.playing
+        covered: root.covered
     }
 
     Icon {
@@ -84,7 +91,7 @@ Item {
         width: Math.round(parent.width * 0.4)
         height: width
         name: root.active && Player.playing ? "pause" : "play"
-        color: Theme.bg
+        color: Theme.paper
     }
 
     // Taken here, so a click on the cover is not also the row's.
@@ -99,5 +106,9 @@ Item {
             else
                 root.playRequested()
         }
+        // Taken, so a double-click's second click is not a second clicked:
+        // the first started the song, and a toggle now would pause it
+        // before it is heard.
+        onDoubleClicked: function(mouse) { mouse.accepted = true }
     }
 }

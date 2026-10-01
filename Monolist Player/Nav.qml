@@ -21,6 +21,14 @@ QtObject {
     // it. Main sets it.
     property real pageClearance: 0
 
+    // Now Playing, or the video full screen, stands over every page: what
+    // moves on them (the playing song's bars) can hold still. Main sets it.
+    property bool pagesCovered: false
+
+    // The rounded corners of a list's covers (Artwork's radius), drawn once
+    // for all of them rather than once a cover. Main makes it.
+    property Item coverMask: null
+
     function openSuggestions(shelf) {
         if (shelf >= 0)
             suggestionsRequested(shelf)

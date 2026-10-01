@@ -45,7 +45,8 @@ Row {
             color: root.round
                    ? Qt.rgba(root.ink.r, root.ink.g, root.ink.b,
                              button.down ? 0.28 : button.hovered ? 0.18 : 0.1)
-                   : button.danger ? (button.down ? Theme.accent700 : button.hovered ? Theme.accent : "transparent")
+                   : button.danger ? (button.down ? (Theme.dark ? Theme.accent600 : Theme.accent700)
+                                                  : button.hovered ? Theme.accent : "transparent")
                                    : (button.down ? Theme.neutral300 : button.hovered ? Theme.surface : "transparent")
         }
 

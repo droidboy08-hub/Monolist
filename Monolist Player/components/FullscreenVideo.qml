@@ -42,7 +42,8 @@ Rectangle {
         stillness.restart()
     }
 
-    color: Theme.text
+    // Full screen is ink in either appearance.
+    color: Theme.ink
     visible: active
     onActiveChanged: if (active) poke()
 
@@ -100,7 +101,7 @@ Rectangle {
         id: strip
         width: parent.width
         height: Theme.titleBarHeight
-        color: Theme.text
+        color: Theme.ink
         opacity: root.chromeShown ? 1 : 0
         visible: opacity > 0
 
@@ -129,8 +130,8 @@ Rectangle {
                 anchors.verticalCenter: parent.verticalCenter
                 iconName: "fullscreen-exit"
                 iconSize: 18
-                iconColor: Theme.neutral500
-                hoverColor: Theme.bg
+                iconColor: Theme.inkGrey
+                hoverColor: Theme.paper
                 onClicked: root.leaveRequested()
                 ToolTip.visible: hovered
                 ToolTip.delay: 600
@@ -148,7 +149,7 @@ Rectangle {
                 font.family: Theme.fontFamily
                 font.pixelSize: 16
                 font.weight: Theme.weightBlack
-                color: Theme.bg
+                color: Theme.paper
             }
         }
     }

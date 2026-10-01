@@ -177,6 +177,17 @@ void AppDatabase::createSchema()
         " term TEXT PRIMARY KEY COLLATE NOCASE,"
         " searched_at INTEGER NOT NULL DEFAULT 0)"));
 
+    // The song a suggestion's name was found to be (Recommender's covers):
+    // its title and artist joined by a line break, the video id and cover
+    // the search chose, and when. An empty id is a name YouTube Music did
+    // not know, asked again after a week.
+    q.exec(QStringLiteral(
+        "CREATE TABLE IF NOT EXISTS rec_covers ("
+        " key TEXT PRIMARY KEY,"
+        " video_id TEXT NOT NULL DEFAULT '',"
+        " artwork TEXT NOT NULL DEFAULT '',"
+        " looked_at INTEGER NOT NULL DEFAULT 0)"));
+
     // How loud YouTube measured each song (Loudness): the chosen format's
     // loudnessDb, kept so a download or a later launch levels it the same.
     q.exec(QStringLiteral(

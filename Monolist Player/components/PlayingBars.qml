@@ -11,6 +11,19 @@ Item {
 
     property bool running: false
     property color color: Theme.accent
+    // Something stands over it (Now Playing over the pages): held still.
+    property bool covered: false
+    // Moving only where it can be seen: not covered, and the window neither
+    // minimised nor hidden, where nothing is drawn but the animation would
+    // still tick.
+    readonly property bool moving: running && visible && !covered
+                                   && Window.visibility !== Window.Minimized
+                                   && Window.visibility !== Window.Hidden
+
+    // On whole pixels, the three as a group centred in the box.
+    readonly property int step: Math.round(width / 3)
+    readonly property int bar: Math.max(2, step - 2)
+    readonly property int x0: Math.floor((width - (2 * step + bar)) / 2)
 
     implicitWidth: 14
     implicitHeight: 12
@@ -27,8 +40,8 @@ Item {
             readonly property var highs: [0.1, 0.0, 0.2]
             readonly property var paces: [420, 330, 510]
 
-            x: index * root.width / 3
-            width: Math.max(2, Math.round(root.width / 3) - 2)
+            x: root.x0 + index * root.step
+            width: root.bar
             height: root.height
             clip: true
 
@@ -39,7 +52,7 @@ Item {
                 y: root.height * slot.lows[slot.index]
 
                 SequentialAnimation on y {
-                    running: root.running && root.visible
+                    running: root.moving
                     loops: Animation.Infinite
                     NumberAnimation {
                         to: root.height * slot.highs[slot.index]

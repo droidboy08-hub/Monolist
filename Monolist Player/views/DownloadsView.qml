@@ -143,13 +143,15 @@ ScrollPage {
                         onTapped: job.openMenu()
                     }
 
-                    Artwork {
+                    // A picture only: a song still coming has nothing to play.
+                    TrackCover {
                         id: jobArt
                         width: 44
                         height: 44
                         anchors.verticalCenter: parent.verticalCenter
-                        placeholder: ""
                         source: job.artwork
+                        sourceId: job.videoId
+                        clickable: false
                     }
 
                     Column {
@@ -310,13 +312,17 @@ ScrollPage {
                         }
                     }
 
-                    Artwork {
+                    TrackCover {
                         id: savedArt
                         width: 40
                         height: 40
                         anchors.verticalCenter: parent.verticalCenter
-                        placeholder: ""
                         source: saved.artwork
+                        sourceId: saved.videoId
+                        hovered: savedHover.hovered
+                        active: saved.isCurrent
+                        covered: Nav.pagesCovered
+                        onPlayRequested: Player.playModel(savedView, saved.index, "library")
                     }
 
                     Column {

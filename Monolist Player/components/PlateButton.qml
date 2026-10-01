@@ -22,7 +22,8 @@ Rectangle {
 
     width: 40
     height: 40
-    color: live ? Theme.text : Theme.bg
+    // Over a picture or the red cover, so printed ink and paper.
+    color: live ? Theme.ink : Theme.paper
     opacity: available ? 1 : 0.45
 
     Behavior on color {
@@ -35,7 +36,7 @@ Rectangle {
         width: 18
         height: 18
         name: root.iconName
-        color: root.live ? Theme.bg : Theme.text
+        color: root.live ? Theme.paper : Theme.ink
     }
 
     HoverHandler {

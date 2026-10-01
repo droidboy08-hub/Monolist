@@ -40,14 +40,23 @@ ScrollPage {
 
     // After the page has been laid out, which a page built this moment has
     // not been yet: the column is asked to place everything first.
+    function setAppearance(mode) {
+        Theme.mode = mode
+        Library.setSetting("appearance", mode)
+    }
+
     function revealSection() {
         if (section.length === 0)
             return
         column.forceLayout()
+        // "signin": the account's row, its sign-in open unless signed in.
+        if (section === "signin" && ytmRow.serviceState !== "connected")
+            ytmRow.openSignIn()
         var target = section === "recommendations" ? recommendationsHeader
                    : section === "downloads" ? downloadsHeader
                    : section === "connections" ? connectionsHeader
-                   : section === "ytmusic" ? homeToggle : null
+                   : section === "signin" ? ytmRow
+                   : section === "ytmusic" ? (homeToggle.visible ? homeToggle : ytmRow) : null
         if (target)
             contentY = Math.max(0, Math.min(target.y - Theme.space4, contentHeight - height))
         sectionRevealed()
@@ -291,10 +300,58 @@ ScrollPage {
 
         HRule { width: parent.width }
 
-        // — playback —
+        // — appearance —
+        // Paper and ink, or ink and paper, or as Windows has it; and the
+        // song's colour through it all.
         SectionHeader {
             width: parent.width
             number: "02"
+            title: "Appearance"
+        }
+
+        Row {
+            spacing: -Theme.ruleWidth
+
+            ChoiceChip {
+                label: "LIGHT"
+                selected: Theme.mode === "light"
+                onPicked: root.setAppearance("light")
+            }
+            ChoiceChip {
+                label: "DARK"
+                selected: Theme.mode === "dark"
+                onPicked: root.setAppearance("dark")
+            }
+            ChoiceChip {
+                label: "MATCH WINDOWS"
+                selected: Theme.mode !== "light" && Theme.mode !== "dark"
+                onPicked: root.setAppearance("system")
+            }
+        }
+
+        Note {
+            visible: Theme.mode !== "light" && Theme.mode !== "dark"
+            text: "Following Windows, which is set to " + (Theme.dark ? "dark" : "light")
+                  + " (Settings > Personalisation > Colours)."
+        }
+
+        ToggleRow {
+            width: parent.width
+            label: "Ambient colour"
+            hint: "The playing song's cover lends the whole app a little of its colour, changing with each song."
+            checked: Theme.ambientEnabled
+            onToggled: {
+                Theme.ambientEnabled = !Theme.ambientEnabled
+                Library.setSetting("ambient", Theme.ambientEnabled ? "1" : "0")
+            }
+        }
+
+        HRule { width: parent.width }
+
+        // — playback —
+        SectionHeader {
+            width: parent.width
+            number: "03"
             title: "Playback"
         }
 
@@ -431,7 +488,7 @@ ScrollPage {
         SectionHeader {
             id: downloadsHeader
             width: parent.width
-            number: "03"
+            number: "04"
             title: "Downloads"
             action: "OPEN FOLDER →"
             onActionTriggered: Downloads.openDownloadFolder()
@@ -499,7 +556,7 @@ ScrollPage {
         SectionHeader {
             id: recommendationsHeader
             width: parent.width
-            number: "04"
+            number: "05"
             title: "Recommendations"
         }
 
@@ -563,6 +620,9 @@ ScrollPage {
                 font.family: Theme.fontFamily
                 font.pixelSize: 13
                 color: Theme.text
+                placeholderTextColor: Theme.neutral500
+                selectionColor: Theme.accent
+                selectedTextColor: Theme.accentForeground
                 background: Rectangle {
                     color: "transparent"
                     border.width: Theme.ruleWidth
@@ -607,6 +667,9 @@ ScrollPage {
             font.family: Theme.fontFamily
             font.pixelSize: 13
             color: Theme.text
+            placeholderTextColor: Theme.neutral500
+            selectionColor: Theme.accent
+            selectedTextColor: Theme.accentForeground
             background: Rectangle {
                 color: "transparent"
                 border.width: Theme.ruleWidth
@@ -644,7 +707,7 @@ ScrollPage {
         SectionHeader {
             id: connectionsHeader
             width: parent.width
-            number: "05"
+            number: "06"
             title: "Connections"
         }
 
@@ -835,7 +898,8 @@ ScrollPage {
             ]
             // The last refusal's reason belongs to the last try: a panel
             // opened or closed starts clean.
-            onConnectRequested: {
+            onConnectRequested: openSignIn()
+            function openSignIn() {
                 Account.clearImportError()
                 importing = true
             }
@@ -1208,7 +1272,7 @@ ScrollPage {
         // — updates —
         SectionHeader {
             width: parent.width
-            number: "06"
+            number: "07"
             title: "Updates"
         }
 
@@ -1363,7 +1427,7 @@ ScrollPage {
         // — about —
         SectionHeader {
             width: parent.width
-            number: "07"
+            number: "08"
             title: "About"
             action: "COPY FOR A BUG REPORT →"
             onActionTriggered: About.copyReport()

@@ -13,6 +13,7 @@
 #include <QFileInfo>
 #include <QHash>
 #include <QLocale>
+#include <QRandomGenerator>
 #include <QRegularExpression>
 #include <QSet>
 #include <QSqlQuery>
@@ -171,6 +172,16 @@ QString keyOf(const QVariantMap &row)
 
 // How many rows each See all page adds: two screens or so.
 constexpr int kMorePage = 24;
+
+// The covers' pace (Recommender::wantCover): the least gap between two
+// searches (a second more at random, so never on a beat), how many an hour,
+// how long to rest after one fails, how long before a name not found is
+// asked again, and how many may wait.
+constexpr int kCoverGapMs = 1800;
+constexpr int kCoverHourCap = 120;
+constexpr qint64 kCoverRestSecs = 15 * 60;
+constexpr qint64 kCoverMissRetrySecs = 7 * 24 * 3600;
+constexpr int kCoverQueueCap = 200;
 
 const QString kNotInterested = QStringLiteral("notInterested");
 const QString kNotInterestedArtist = QStringLiteral("notInterestedArtist");
@@ -360,6 +371,10 @@ Recommender::Recommender(QObject *parent)
     // shows one page of explicit titles before the setting catches up.
     m_hideExplicit = storedSetting(kHideExplicitKey) == QLatin1String("1");
     loadTurnedDown();
+    loadCovers();
+    m_coverClock.start();
+    m_coverTimer.setSingleShot(true);
+    connect(&m_coverTimer, &QTimer::timeout, this, &Recommender::nextCover);
 
     m_worker = new RecommenderWorker;
     m_worker->moveToThread(&m_thread);
@@ -383,6 +398,10 @@ Recommender::Recommender(QObject *parent)
                 m_shelves = shelves;
                 m_personal = personal;
                 m_shownGeneration = generation;
+                // A new page: what the old one asked covers for is no longer
+                // shown, and its rows ask again, top first, as they are made.
+                m_coverQueue.clear();
+                m_coverRows.clear();
                 setState(false, m_message);
                 Q_EMIT shelvesChanged();
                 if (std::exchange(m_refreshQueued, false))
@@ -549,6 +568,8 @@ void Recommender::reload()
     m_shelves.clear();
     m_rows = 0;
     m_graphShards = 0;
+    m_coverQueue.clear();
+    m_coverRows.clear();
     Q_EMIT shelvesChanged();
     setState(true, QString());
     ++m_loadsPending;
@@ -694,7 +715,7 @@ QVariantList Recommender::homeShelves() const
 
 // ------------------------------------------------------------- looking up
 
-void Recommender::lookUp(const QVariantMap &row, Found done)
+void Recommender::lookUp(const QVariantMap &row, Found done, int retries)
 {
     const QString title = titleOf(row);
     const QString artist = artistOf(row);
@@ -709,15 +730,157 @@ void Recommender::lookUp(const QVariantMap &row, Found done)
     // of its own, and one per ask, so a suggestion being looked up never
     // cancels whatever the listener is typing, or another look-up.
     const QString query = artist.isEmpty() ? title : artist + QLatin1Char(' ') + title;
+    const QString key = keyOf(row);
     m_innerTube.searchTracks(query, InnerTube::Filter::Songs,
-                             [title, lengthMs, done](const QList<InnerTube::Track> &tracks, const QString &error) {
+                             [this, key, title, lengthMs, done](const QList<InnerTube::Track> &tracks,
+                                                                const QString &error) {
                                  if (!error.isEmpty()) {
                                      done(nullptr, error);
                                      return;
                                  }
                                  const int picked = pickResult(tracks, title, lengthMs);
-                                 done(picked >= 0 ? &tracks.at(picked) : nullptr, QString());
-                             });
+                                 const InnerTube::Track *track = picked >= 0 ? &tracks.at(picked) : nullptr;
+                                 // Whatever asked, the row now has its cover.
+                                 rememberCover(key, track ? track->videoId : QString(),
+                                               track ? track->artwork : QString());
+                                 done(track, QString());
+                             },
+                             retries);
+}
+
+// ------------------------------------------------------------------ covers
+
+void Recommender::loadCovers()
+{
+    QSqlQuery q(AppDatabase::connection());
+    if (!q.exec(QStringLiteral("SELECT key, video_id, artwork, looked_at FROM rec_covers")))
+        return;
+    while (q.next())
+        m_covers.insert(q.value(0).toString(),
+                        Cover{ q.value(1).toString(), q.value(2).toString(), q.value(3).toLongLong() });
+}
+
+void Recommender::rememberCover(const QString &key, const QString &videoId, const QString &artwork)
+{
+    if (key.isEmpty())
+        return;
+    const Cover before = m_covers.value(key);
+    // A later miss does not forget what an earlier search found.
+    if (videoId.isEmpty() && !before.videoId.isEmpty())
+        return;
+    const qint64 now = QDateTime::currentSecsSinceEpoch();
+    m_covers.insert(key, Cover{ videoId, artwork, now });
+    QSqlQuery q(AppDatabase::connection());
+    q.prepare(QStringLiteral("INSERT OR REPLACE INTO rec_covers (key, video_id, artwork, looked_at)"
+                             " VALUES (?, ?, ?, ?)"));
+    q.addBindValue(key);
+    q.addBindValue(AppDatabase::text(videoId));
+    q.addBindValue(AppDatabase::text(artwork));
+    q.addBindValue(now);
+    q.exec();
+    if (before.videoId != videoId || before.artwork != artwork) {
+        ++m_coversRevision;
+        Q_EMIT coversChanged();
+    }
+}
+
+QString Recommender::coverOf(const QString &title, const QString &artist) const
+{
+    const auto found = m_covers.constFind(title + QLatin1Char('\n') + artist);
+    if (found == m_covers.constEnd())
+        return QString();
+    if (!found->artwork.isEmpty())
+        return found->artwork;
+    return PlaybackController::artworkForSource(found->videoId);
+}
+
+bool Recommender::coverSettled(const QString &key) const
+{
+    const auto known = m_covers.constFind(key);
+    return known != m_covers.constEnd()
+           && (!known->videoId.isEmpty()
+               || QDateTime::currentSecsSinceEpoch() - known->lookedAt < kCoverMissRetrySecs);
+}
+
+void Recommender::wantCover(const QVariantMap &row)
+{
+    if (titleOf(row).isEmpty())
+        return;
+    const QString key = keyOf(row);
+    if (coverSettled(key) || key == m_coverInFlight || m_coverRows.contains(key))
+        return;
+    // Full: the name asked for longest ago is the likeliest to be off the
+    // page by now.
+    if (m_coverQueue.size() >= kCoverQueueCap)
+        m_coverRows.remove(m_coverQueue.takeFirst());
+    m_coverQueue.append(key);
+    m_coverRows.insert(key, row);
+    scheduleCover();
+}
+
+void Recommender::dropCover(const QVariantMap &row)
+{
+    const QString key = keyOf(row);
+    if (m_coverRows.remove(key) > 0)
+        m_coverQueue.removeOne(key);
+}
+
+// The next search, no sooner than the gap after the last one answered.
+void Recommender::scheduleCover()
+{
+    if (m_coverBusy || m_coverTimer.isActive() || m_coverQueue.isEmpty())
+        return;
+    qint64 wait = 400;
+    if (m_coverLastMs >= 0)
+        wait = qMax<qint64>(wait, kCoverGapMs + QRandomGenerator::global()->bounded(1000)
+                                      - (m_coverClock.elapsed() - m_coverLastMs));
+    m_coverTimer.start(int(wait));
+}
+
+// One name looked up, then the next after a pause; the rows asked first
+// (the top of the page) first.
+void Recommender::nextCover()
+{
+    if (m_coverBusy || m_coverQueue.isEmpty())
+        return;
+    const qint64 now = m_coverClock.elapsed();
+    if (m_coverRestUntilMs >= 0 && now < m_coverRestUntilMs) {
+        m_coverTimer.start(int(qMin<qint64>(m_coverRestUntilMs - now, 3600 * 1000)));
+        return;
+    }
+    if (m_coverHourStartMs < 0 || now - m_coverHourStartMs >= 3600 * 1000) {
+        m_coverHourStartMs = now;
+        m_coverHourCount = 0;
+    }
+    if (m_coverHourCount >= kCoverHourCap) {
+        m_coverTimer.start(int(qBound(qint64(1000), m_coverHourStartMs + 3600 * 1000 - now, qint64(3600 * 1000))));
+        return;
+    }
+    const QString key = m_coverQueue.takeFirst();
+    const QVariantMap row = m_coverRows.take(key);
+    // Looked up meanwhile, by a press or a menu.
+    if (coverSettled(key)) {
+        m_coverTimer.start(0);
+        return;
+    }
+    ++m_coverHourCount;
+    m_coverBusy = true;
+    m_coverInFlight = key;
+    lookUp(row, [this, key, row](const InnerTube::Track *, const QString &error) {
+        m_coverBusy = false;
+        m_coverInFlight.clear();
+        m_coverLastMs = m_coverClock.elapsed();
+        // YouTube did not answer, or would not: no more for a while, then
+        // this one again first.
+        if (!error.isEmpty()) {
+            m_coverRestUntilMs = m_coverLastMs + kCoverRestSecs * 1000;
+            if (!m_coverRows.contains(key)) {
+                m_coverQueue.prepend(key);
+                m_coverRows.insert(key, row);
+            }
+        }
+        scheduleCover();
+    }, /*retries=*/0);
 }
 
 void Recommender::setPending(const QString &key)

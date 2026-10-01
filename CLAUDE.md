@@ -131,7 +131,9 @@ owner's iPhone app (AryaMusix / "Mediano", Swift, not in this repo).
   fallback; macOS-only code in `src/macos/`.
 - Ask before downloading or installing anything (say what, where from, size).
   Never hard-delete the owner's files.
-- Read `Monolist Player/DESIGN.md` before touching QML: flat, zero radius, 2 px
+- Read `Monolist Player/DESIGN.md` before touching QML: flat, zero radius (but
+  list-row covers, 6 px), light and dark (`Theme.dark`; `Theme.ink`/`paper` for
+  marks on pictures and red), ambient colour, 2 px
   rules, Archivo only, signal red; hover in instantly, fade out; grey at rest,
   ink under the pointer, red = on; no scale/rotate/overshoot.
 

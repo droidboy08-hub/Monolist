@@ -15,8 +15,9 @@ import Monolist
 //   red   `accent`       the thing it controls is on
 //
 // A glyph that is already signalling cannot go to ink without losing what it
-// says, so it brightens instead (`accent600`) — which is how the play button
-// has always answered a pointer.
+// says, so it brightens instead (`accentGlyphHover`: the deeper red on paper,
+// the lighter on ink) — which is how the play button has always answered a
+// pointer.
 //
 // Focus still draws a ring: a pointer can see what it is over, a keyboard
 // cannot.
@@ -30,7 +31,7 @@ Button {
     // Under the pointer. Derived, so almost no call site has to say it.
     property color hoverColor: Qt.colorEqual(control.iconColor, Theme.accent)
                                || Qt.colorEqual(control.iconColor, Theme.accent700)
-                               ? Theme.accent600 : Theme.text
+                               ? Theme.accentGlyphHover : Theme.text
     property int iconSize: 16
     property int side: 32
 

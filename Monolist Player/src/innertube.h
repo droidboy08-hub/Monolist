@@ -444,8 +444,11 @@ public:
     // `done` rather than by signal. Not cancellable, so several can be in
     // flight at once: the recommender looks a suggestion up for a press, for
     // a menu and for Play all, and none of them may silence another.
+    // `retries`: how many more tries after a failed one (send()); a search
+    // made in the background passes 0, so a refusal is taken at once.
     void searchTracks(const QString &query, Filter filter,
-                      std::function<void(const QList<Track> &tracks, const QString &error)> done);
+                      std::function<void(const QList<Track> &tracks, const QString &error)> done,
+                      int retries = 1);
     // The songs behind a Watch — an artist's Shuffle or Mix — as the queue
     // YouTube Music would play, the first song first.
     void watchPlaylist(const Watch &watch,

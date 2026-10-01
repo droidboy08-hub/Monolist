@@ -43,6 +43,44 @@ ApplicationWindow {
     // The part of Settings a link asked for, until Settings has scrolled to it.
     property string settingsSection: ""
 
+    // — ambient colour —
+    // The playing song's colour, measured from its cover (CoverPalette),
+    // eased from one song's to the next, and handed to the theme, which
+    // washes the paper and the surfaces with it and glows it at the top of
+    // the page (Settings > Appearance turns it off). A grey cover, or none,
+    // gives none.
+    readonly property string ambientCover: Player.currentTrack.artwork !== undefined ? Player.currentTrack.artwork : ""
+    property color ambientColour: "transparent"
+    onAmbientCoverChanged: measureAmbient()
+    function measureAmbient() {
+        if (ambientCover.length > 0)
+            CoverPalette.request(ambientCover)
+        else
+            ambientColour = "transparent"
+    }
+    // The cover's hue at an even strength: never glaring, never mud.
+    function ambientFrom(c) {
+        if (c.hslSaturation < 0.08)
+            return Qt.rgba(0, 0, 0, 0)
+        return Qt.hsla(c.hslHue < 0 ? 0 : c.hslHue, Math.max(0.35, Math.min(0.85, c.hslSaturation)), 0.5, 1)
+    }
+    Connections {
+        target: CoverPalette
+        function onColourReady(source, colour) {
+            if (source === window.ambientCover)
+                window.ambientColour = window.ambientFrom(colour)
+        }
+    }
+    // Atmosphere: nobody waits on it, so it takes its time.
+    Behavior on ambientColour {
+        ColorAnimation { duration: Theme.slow; easing.type: Theme.enterCurve }
+    }
+    Binding {
+        target: Theme
+        property: "ambient"
+        value: Theme.ambientEnabled ? window.ambientColour : Qt.rgba(0, 0, 0, 0)
+    }
+
     // — the picture —
     // Where the video goes while there is one: full screen when asked for,
     // Now Playing while that is open, and picture in picture only when its
@@ -129,6 +167,10 @@ ApplicationWindow {
     }
 
     Component.onCompleted: {
+        // Before the first frame, so the window never shows the wrong one.
+        Theme.mode = Library.settingValue("appearance", "system")
+        Theme.ambientEnabled = Library.settingValue("ambient", "1") !== "0"
+        measureAmbient()
         if (initialQuery.length > 0)
             topBar.searchText = initialQuery
         openCurrentPage()
@@ -265,6 +307,19 @@ ApplicationWindow {
     // the cursor in the field ready to type. Not what navigate("search")
     // does for typing, which is already in the field and must not have its
     // text selected under it. Now Playing covers the field, so it closes.
+    // Signing in to YouTube Music, from the sidebar's corner: Settings, at
+    // the account's row, with its sign-in open.
+    function signIn() {
+        window.settingsSection = "signin"
+        window.navigate("settings")
+    }
+
+    // The signed-in account's row and switches.
+    function openAccountSettings() {
+        window.settingsSection = "ytmusic"
+        window.navigate("settings")
+    }
+
     function openSearch() {
         nowPlayingOpen = false
         navigate("search")
@@ -364,9 +419,10 @@ ApplicationWindow {
             if (!tip)
                 return
             tip.font = Qt.font({ family: Theme.fontFamily, pixelSize: 12, weight: Theme.weightMedium })
-            tip.palette.toolTipBase = Theme.text
-            tip.palette.toolTipText = Theme.bg
-            tip.palette.dark = Theme.text
+            // Bound, so a change of appearance reprints it.
+            tip.palette.toolTipBase = Qt.binding(function() { return Theme.text })
+            tip.palette.toolTipText = Qt.binding(function() { return Theme.bg })
+            tip.palette.dark = Qt.binding(function() { return Theme.text })
             tip.horizontalPadding = Theme.space2
         }
 
@@ -385,6 +441,8 @@ ApplicationWindow {
                     window.navigate(view)
             }
             onNewPlaylistRequested: window.createPlaylist()
+            onSignInRequested: window.signIn()
+            onAccountSettingsRequested: window.openAccountSettings()
         }
 
         // The top bar spans to the window's right edge, so its window buttons
@@ -419,6 +477,7 @@ ApplicationWindow {
             anchors.bottom: parent.bottom
             anchors.right: parent.right
             onCloseRequested: window.queueOpen = false
+            covered: nowPlaying.settled
 
             Behavior on width {
                 NumberAnimation {
@@ -445,6 +504,27 @@ ApplicationWindow {
                 opacity: shown ? 1 : 0
                 Behavior on opacity {
                     NumberAnimation { duration: Theme.quick }
+                }
+            }
+
+            // Ambient colour's glow: the song's colour at the head of the
+            // page, gone a little way down, under every page.
+            Rectangle {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                height: Math.min(parent.height * 0.6, 460)
+                visible: Theme.ambient.a > 0
+                gradient: Gradient {
+                    GradientStop {
+                        position: 0
+                        color: Qt.rgba(Theme.ambient.r, Theme.ambient.g, Theme.ambient.b,
+                                       Theme.ambient.a * (Theme.dark ? 0.24 : 0.17))
+                    }
+                    GradientStop {
+                        position: 1
+                        color: Qt.rgba(Theme.ambient.r, Theme.ambient.g, Theme.ambient.b, 0)
+                    }
                 }
             }
 
@@ -664,6 +744,30 @@ ApplicationWindow {
         property: "pageClearance"
         value: miniVideo.active ? miniVideo.height + miniVideo.anchors.bottomMargin : 0
     }
+    Binding {
+        target: Nav
+        property: "pagesCovered"
+        value: nowPlaying.settled || fullscreenVideo.active
+    }
+
+    // The corner mask every list cover shares (Nav.coverMask): one small
+    // layer, stretched to each cover by its effect, rather than one each.
+    Item {
+        id: coverMask
+        width: 40
+        height: 40
+        visible: false
+        layer.enabled: true
+        layer.smooth: true
+
+        Rectangle {
+            anchors.fill: parent
+            radius: 6
+            antialiasing: true
+        }
+
+        Component.onCompleted: Nav.coverMask = coverMask
+    }
 
     // — the picture, full screen —
     // Over everything but the player bar, which stands on it while the
@@ -692,7 +796,8 @@ ApplicationWindow {
 
     Rectangle {
         anchors.fill: parent
-        color: "#66201e1d"
+        // Darker than the page in either appearance.
+        color: Theme.dark ? Qt.rgba(0, 0, 0, 0.6) : "#66201e1d"
         visible: opacity > 0
         opacity: window.sidebarOverlayOpen ? 1 : 0
         // Over the player bar as well: the sidebar is asked for, and covers
@@ -726,6 +831,14 @@ ApplicationWindow {
         onNewPlaylistRequested: {
             window.sidebarOverlayOpen = false
             window.createPlaylist()
+        }
+        onSignInRequested: {
+            window.sidebarOverlayOpen = false
+            window.signIn()
+        }
+        onAccountSettingsRequested: {
+            window.sidebarOverlayOpen = false
+            window.openAccountSettings()
         }
 
         Behavior on x {

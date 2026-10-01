@@ -1,9 +1,11 @@
 #pragma once
 
+#include <QElapsedTimer>
 #include <QObject>
 #include <QPointer>
 #include <QSet>
 #include <QThread>
+#include <QTimer>
 #include <QVariantList>
 #include <QVariantMap>
 
@@ -103,6 +105,14 @@ class Recommender : public QObject
     Q_PROPERTY(bool moreLoading READ moreLoading NOTIFY moreStateChanged)
     // The shelf's anchor has nothing more worth showing.
     Q_PROPERTY(bool moreExhausted READ moreExhausted NOTIFY moreStateChanged)
+    // Covers for the suggestions, which come as names alone. Each is found
+    // by the same search a press makes, signed out as that one is, for the
+    // rows shown (wantCover): one search at a time, two seconds or so
+    // apart, at most kCoverHourCap an hour, resting a quarter of an hour
+    // after one fails. What is found is kept for good (rec_covers), so a
+    // name is searched for once; a press, a menu or Play all keeps what it
+    // finds too. Goes up as covers arrive, for the rows to ask again.
+    Q_PROPERTY(int coversRevision READ coversRevision NOTIFY coversChanged)
 
 public:
     explicit Recommender(QObject *parent = nullptr);
@@ -130,6 +140,7 @@ public:
     QVariantList moreRows() const { return m_moreRows; }
     bool moreLoading() const { return m_moreLoading; }
     bool moreExhausted() const { return m_moreExhausted; }
+    int coversRevision() const { return m_coversRevision; }
 
     // Both folders at once, with one reload rather than one each: how the
     // downloaded data (RecData) is put to use. An empty graph means "beside
@@ -202,6 +213,13 @@ public:
     // What names a shelf's See all in the view history, for openMore: the
     // index alone would name another shelf once the page is drawn again.
     Q_INVOKABLE QString moreKey(int shelf) const;
+    // The cover a suggestion was found to have: its own, or its video's
+    // thumbnail; empty while none is known.
+    Q_INVOKABLE QString coverOf(const QString &title, const QString &artist) const;
+    // A row shown asks for its cover, searched for in turn if none is known;
+    // a row going away takes its turn back.
+    Q_INVOKABLE void wantCover(const QVariantMap &row);
+    Q_INVOKABLE void dropCover(const QVariantMap &row);
 
 Q_SIGNALS:
     // What resolve() found, as a track map with the app's track roles.
@@ -225,6 +243,7 @@ Q_SIGNALS:
     // The worker holds exactly what the settings name, with no other load
     // queued behind: any file read before is closed and unmapped.
     void dataLoaded();
+    void coversChanged();
 
 private:
     // Rows taken off the page by a "Not interested", and where each stood.
@@ -252,7 +271,8 @@ private:
     void setState(bool busy, const QString &message);
     void reload();
     // One suggestion's search, and the result pickResult() chooses.
-    void lookUp(const QVariantMap &row, Found done);
+    // `retries` as InnerTube::searchTracks has it: 0 for a cover's.
+    void lookUp(const QVariantMap &row, Found done, int retries = 1);
     void feedNext();
     void setPending(const QString &key);
     void clearPending(const QString &key);
@@ -268,6 +288,18 @@ private:
     // The rotation for now: this stretch of the clock, and this many
     // REFRESHes since launch.
     quint64 currentRotation() const;
+    // — covers —
+    struct Cover {
+        QString videoId;       // empty: looked for, and not found
+        QString artwork;
+        qint64 lookedAt = 0;
+    };
+    void loadCovers();
+    void rememberCover(const QString &key, const QString &videoId, const QString &artwork);
+    // A cover known, or a name not found too lately to ask again.
+    bool coverSettled(const QString &key) const;
+    void scheduleCover();
+    void nextCover();
 
     QThread m_thread;
     RecommenderWorker *m_worker = nullptr;
@@ -315,4 +347,22 @@ private:
     quint64 m_moreSerial = 0;
     bool m_moreLoading = false;
     bool m_moreExhausted = false;
+
+    // Covers by keyOf, those still to look for (the rows, by key, in the
+    // order asked), and the pace.
+    QHash<QString, Cover> m_covers;
+    QStringList m_coverQueue;
+    QHash<QString, QVariantMap> m_coverRows;
+    QTimer m_coverTimer;
+    bool m_coverBusy = false;
+    QString m_coverInFlight;
+    int m_coversRevision = 0;
+    // The pace, on a clock that only goes forward (milliseconds since the
+    // Recommender was made): when the last search answered, when this
+    // hour's count began, and until when to rest; -1 for never.
+    QElapsedTimer m_coverClock;
+    qint64 m_coverLastMs = -1;
+    qint64 m_coverHourStartMs = -1;
+    int m_coverHourCount = 0;
+    qint64 m_coverRestUntilMs = -1;
 };

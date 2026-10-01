@@ -18,7 +18,8 @@ Rectangle {
     property string buttonIcon: "play"
     signal playRequested()
 
-    color: Theme.accent
+    // The poster red as printed: its paper type reads on it in either.
+    color: Theme.red
     implicitHeight: Math.max(content.implicitHeight, cover.visible ? cover.height : 0) + Theme.space8 * 2
 
     Artwork {
@@ -28,6 +29,8 @@ Rectangle {
         anchors.top: parent.top
         anchors.margins: Theme.space8
         width: visible ? Math.min(280, Math.round(root.width * 0.26)) : 0
+        // A deeper red under the cover while it loads, not a grey plate.
+        color: Theme.accent600
         height: width
         placeholder: ""
         source: root.artwork

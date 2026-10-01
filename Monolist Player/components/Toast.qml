@@ -87,7 +87,10 @@ Rectangle {
             font.pixelSize: 12
             font.weight: Font.Bold
             font.letterSpacing: Theme.tracking(12, 0.12)
-            color: actionArea.containsMouse ? Theme.accent600 : Theme.accent
+            // Red on the plate, which is ink in light and paper in dark:
+            // the brighter red on ink, the deeper on paper.
+            color: Theme.dark ? (actionArea.containsMouse ? Theme.accent600 : "#ae1800")
+                              : (actionArea.containsMouse ? Theme.accent600 : Theme.accent)
 
             MouseArea {
                 id: actionArea

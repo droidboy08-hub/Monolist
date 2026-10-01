@@ -11,6 +11,9 @@ Rectangle {
     signal viewRequested(string view)
     signal newPlaylistRequested()
     signal closeRequested()
+    // The account corner: signing in, and the signed-in account's settings.
+    signal signInRequested()
+    signal accountSettingsRequested()
 
     color: Theme.bg
     implicitWidth: Theme.sidebarWidth
@@ -279,9 +282,12 @@ Rectangle {
         SmoothWheel { flickable: playlistList }
     }
 
-    // — the user —
-    // The name the system knows them by, and what they keep here. The name
-    // can be changed in place: the pencil, then Enter.
+    // — the account —
+    // The YouTube Music account, in the corner where the app's own name for
+    // the user used to be. Signed out it is the way in: Sign in, which opens
+    // the sign-in. Signed in, the account's initials and name, and a click
+    // opens the library, as it always did; the gear opens the account's
+    // settings. A session that ended asks, in red, to be signed in again.
     Item {
         id: userStrip
         anchors.bottom: parent.bottom
@@ -290,18 +296,23 @@ Rectangle {
         anchors.rightMargin: Theme.ruleWidth
         height: 68
 
-        property bool editing: false
-
-        function commit() {
-            if (!editing)
-                return
-            editing = false
-            Library.setUserName(nameField.text)
+        readonly property string accountState: Account.state
+        // Checking and unreachable keep the session, so they count as in.
+        readonly property bool signedIn: accountState === "active" || accountState === "checking"
+                                         || accountState === "unreachable"
+        readonly property bool ended: accountState === "rejected"
+        readonly property string name: Account.accountName
+        readonly property string initials: {
+            const parts = name.trim().split(/\s+/).filter(function(part) { return part.length > 0 })
+            if (parts.length === 0)
+                return ""
+            const first = parts[0].charAt(0).toUpperCase()
+            return parts.length > 1 ? first + parts[parts.length - 1].charAt(0).toUpperCase() : first
         }
 
         Rectangle {
             anchors.fill: parent
-            color: userHover.hovered && !userStrip.editing ? Theme.surface : "transparent"
+            color: userHover.hovered ? Theme.surface : "transparent"
 
             Behavior on color {
                 enabled: !userHover.hovered
@@ -316,87 +327,78 @@ Rectangle {
             color: Theme.divider
         }
 
-        HoverHandler { id: userHover; cursorShape: userStrip.editing ? Qt.ArrowCursor : Qt.PointingHandCursor }
+        HoverHandler { id: userHover; cursorShape: Qt.PointingHandCursor }
         TapHandler {
-            enabled: !userStrip.editing
-            onTapped: root.viewRequested("library")
+            onTapped: {
+                if (userStrip.signedIn)
+                    root.viewRequested("library")
+                else
+                    root.signInRequested()
+            }
         }
 
+        // The account's initials in ink, signed in; signed out, a figure in
+        // an ink frame, which the pointer fills red: the way in.
         Rectangle {
-            id: initials
+            id: mark
             anchors.left: parent.left
             anchors.leftMargin: Theme.space6
             anchors.verticalCenter: parent.verticalCenter
             width: 32
             height: 32
-            color: Theme.text
+            color: userStrip.signedIn ? Theme.text
+                   : userHover.hovered ? Theme.accent : "transparent"
+            border.width: userStrip.signedIn ? 0 : Theme.ruleWidth
+            border.color: userHover.hovered || userStrip.ended ? Theme.accent : Theme.text
 
             Text {
+                visible: userStrip.signedIn && userStrip.initials.length > 0
                 anchors.centerIn: parent
-                text: Library.userInitials
+                text: userStrip.initials
                 color: Theme.bg
                 font.family: Theme.fontFamily
                 font.pixelSize: 13
                 font.weight: Theme.weightBlack
             }
+            Icon {
+                visible: !(userStrip.signedIn && userStrip.initials.length > 0)
+                anchors.centerIn: parent
+                width: 16
+                height: 16
+                name: "user"
+                color: userStrip.signedIn ? Theme.bg
+                       : userHover.hovered ? Theme.accentForeground
+                       : userStrip.ended ? Theme.accent700 : Theme.text
+            }
         }
 
         Column {
-            anchors.left: initials.right
+            anchors.left: mark.right
             anchors.leftMargin: Theme.space3
-            anchors.right: editButton.left
+            anchors.right: tail.left
             anchors.rightMargin: Theme.space2
             anchors.verticalCenter: parent.verticalCenter
-            spacing: 0
+            spacing: 1
 
-            Item {
+            Text {
                 width: parent.width
-                height: 18
-
-                Text {
-                    visible: !userStrip.editing
-                    width: parent.width
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: Library.userName
-                    elide: Text.ElideRight
-                    font.family: Theme.fontFamily
-                    font.pixelSize: 13
-                    font.weight: Font.Bold
-                    color: Theme.text
-                }
-
-                TextInput {
-                    id: nameField
-                    visible: userStrip.editing
-                    width: parent.width
-                    anchors.verticalCenter: parent.verticalCenter
-                    font.family: Theme.fontFamily
-                    font.pixelSize: 13
-                    font.weight: Font.Bold
-                    color: Theme.text
-                    selectionColor: Theme.accent
-                    selectedTextColor: Theme.accentForeground
-                    maximumLength: 40
-                    clip: true
-                    onAccepted: userStrip.commit()
-                    onActiveFocusChanged: if (!activeFocus) userStrip.commit()
-                    Keys.onEscapePressed: {
-                        userStrip.editing = false
-                        focus = false
-                    }
-
-                    Rectangle {
-                        anchors.top: parent.bottom
-                        width: parent.width
-                        height: Theme.ruleWidth
-                        color: Theme.accent
-                    }
-                }
+                text: userStrip.signedIn ? (userStrip.name.length > 0 ? userStrip.name : "YouTube Music")
+                      : userStrip.ended ? "Sign in again"
+                      : "Sign in to YouTube Music"
+                elide: Text.ElideRight
+                font.family: Theme.fontFamily
+                font.pixelSize: 13
+                font.weight: Font.Bold
+                color: userStrip.ended || (!userStrip.signedIn && userHover.hovered) ? Theme.accent700 : Theme.text
             }
 
             Text {
                 width: parent.width
-                text: Library.liked.count + " LIKED · " + Downloads.storedCount + " DOWNLOADED"
+                text: userStrip.accountState === "checking" ? "CHECKING YOUR SIGN-IN…"
+                      : userStrip.accountState === "unreachable" ? "YOUTUBE MUSIC · OFFLINE"
+                      : userStrip.signedIn ? "YOUTUBE MUSIC · SIGNED IN"
+                      : userStrip.ended ? "YOUR SESSION ENDED"
+                      : "YOUR PLAYLISTS AND LIKES"
                 elide: Text.ElideRight
                 font.family: Theme.fontFamily
                 font.pixelSize: 11
@@ -405,25 +407,36 @@ Rectangle {
             }
         }
 
-        IconButton {
-            id: editButton
+        // Signed in, the account's settings under the pointer; signed out,
+        // the arrow in.
+        Item {
+            id: tail
             anchors.right: parent.right
             anchors.rightMargin: Theme.space6 - Theme.space1
             anchors.verticalCenter: parent.verticalCenter
-            visible: userHover.hovered && !userStrip.editing
-            side: 28
-            iconName: "pencil"
-            iconSize: 14
-            iconColor: Theme.neutral700
-            onClicked: {
-                nameField.text = Library.userName
-                userStrip.editing = true
-                nameField.forceActiveFocus()
-                nameField.selectAll()
+            width: 28
+            height: 28
+
+            IconButton {
+                anchors.fill: parent
+                visible: userStrip.signedIn && userHover.hovered
+                side: 28
+                iconName: "settings"
+                iconSize: 14
+                iconColor: Theme.neutral700
+                onClicked: root.accountSettingsRequested()
+                ToolTip.visible: hovered
+                ToolTip.delay: 600
+                ToolTip.text: "Your YouTube Music account"
             }
-            ToolTip.visible: hovered
-            ToolTip.delay: 600
-            ToolTip.text: "Change the name shown here"
+            Icon {
+                visible: !userStrip.signedIn
+                anchors.centerIn: parent
+                width: 16
+                height: 16
+                name: "log-in"
+                color: userHover.hovered || userStrip.ended ? Theme.accent : Theme.neutral700
+            }
         }
     }
 }

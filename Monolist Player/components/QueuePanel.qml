@@ -36,6 +36,8 @@ Rectangle {
     readonly property int dropIndex: dragGap > dragFrom ? dragGap - 1 : dragGap
     readonly property bool dropMoves: dragFrom >= 0 && dropIndex !== dragFrom
     readonly property int rowHeight: 56
+    // Now Playing stands over it (the docked panel): the bars hold still.
+    property bool covered: false
 
     function openMenu(index, anchor) {
         Menus.openTrack(Player.queue.get(index), { queueIndex: index, anchor: anchor ? anchor : null })
@@ -204,6 +206,7 @@ Rectangle {
             id: entry
 
             required property int index
+            required property string videoId
             required property string title
             required property string artist
             required property string artwork
@@ -330,14 +333,20 @@ Rectangle {
                     onCanceled: root.endDrag(false)
                 }
 
-                Artwork {
+                // As in a track table: a click on the cover plays the song,
+                // or pauses and goes on with the one playing.
+                TrackCover {
                     id: art
                     x: Theme.space6
                     width: 40
                     height: 40
                     anchors.verticalCenter: parent.verticalCenter
-                    placeholder: ""
                     source: entry.artwork
+                    sourceId: entry.videoId
+                    hovered: entryHover.hovered && !entry.held
+                    active: entry.isCurrent
+                    covered: root.covered
+                    onPlayRequested: Player.playIndex(entry.index)
                 }
 
                 Column {

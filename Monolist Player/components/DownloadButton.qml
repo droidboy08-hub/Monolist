@@ -74,9 +74,10 @@ Button {
     readonly property bool live: control.hovered || control.down
     readonly property color glyphColour:
           downloadState === "" ? (live ? Theme.text : Theme.neutral700)
-        : downloadState === "failed" ? (live ? Theme.accent600 : Theme.accent700)
+        : downloadState === "failed" ? (live ? (Theme.dark ? Qt.lighter(Theme.accent700, 1.15) : Theme.accent600)
+                                             : Theme.accent700)
         : downloadState === "queued" ? (live ? Theme.text : Theme.neutral700)
-        : (live ? Theme.accent600 : Theme.accent)
+        : (live ? Theme.accentGlyphHover : Theme.accent)
 
     contentItem: Item {
         // The arrow, for the two states that still look like one. It falls

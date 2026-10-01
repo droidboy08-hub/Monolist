@@ -66,12 +66,15 @@ Rectangle {
         visible: false
     }
 
-    // The rounded corners, as a mask: clipping cuts square.
+    // The rounded corners, as a mask: clipping cuts square. A list cover's
+    // (6px) is the one Main draws for all of them; any other radius, or
+    // before that one is made, its own.
+    readonly property bool sharedCorners: root.radius === 6 && Nav.coverMask !== null
     Item {
         id: corners
         anchors.fill: parent
         visible: false
-        layer.enabled: root.radius > 0
+        layer.enabled: root.radius > 0 && !root.sharedCorners
         layer.smooth: true
 
         Rectangle {
@@ -87,7 +90,7 @@ Rectangle {
         saturation: root.colour ? 0.0 : -1.0
         visible: image.status === Image.Ready
         maskEnabled: root.radius > 0
-        maskSource: corners
+        maskSource: root.sharedCorners ? Nav.coverMask : corners
         // Soft at the curve, so the corners are not stepped.
         maskThresholdMin: 0.5
         maskSpreadAtMin: 1.0

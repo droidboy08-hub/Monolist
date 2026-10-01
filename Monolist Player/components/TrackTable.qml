@@ -32,6 +32,9 @@ Column {
     // Each song's cover at the head of its row (TrackCover). Off where every
     // row would show the one cover printed above them, an album's.
     property bool showArtwork: true
+    // And only where the table is wide enough that the title keeps its
+    // room: narrower, the rows are numbered.
+    readonly property bool coversShown: showArtwork && width >= 420
     signal trackActivated(int index)
 
     function sortBy(key) {
@@ -138,7 +141,7 @@ Column {
     readonly property int downloadWidth: showDownloads && Downloads.available ? 40 : 0
     readonly property int coverSize: 40
     // The cover and the gap after it, before the title.
-    readonly property int coverWidth: showArtwork ? coverSize + Theme.space3 : 0
+    readonly property int coverWidth: coversShown ? coverSize + Theme.space3 : 0
     readonly property int titleX: indexWidth + coverWidth
     readonly property int freeWidth: width - titleX - timeWidth - likeWidth - downloadWidth - moreWidth
     readonly property int albumColumnWidth: showAlbum ? Math.round(freeWidth * 0.30) : 0
@@ -147,7 +150,7 @@ Column {
     readonly property int headHeight: 32
     // As tall as a queue row where there are covers, so the two lists keep
     // one rhythm; a row of type alone keeps to the type.
-    readonly property int rowHeight: showArtwork ? 56 : 40
+    readonly property int rowHeight: coversShown ? 56 : 40
 
     // — a drag under way —
     // The row held (-1 when none), the gap between rows it would drop into
@@ -472,7 +475,7 @@ Column {
                 Text {
                     x: 0
                     width: root.indexWidth
-                    visible: !row.gripShown && !(row.isActive && !root.showArtwork)
+                    visible: !row.gripShown && !(row.isActive && !root.coversShown)
                     anchors.verticalCenter: parent.verticalCenter
                     text: String(row.index + 1)
                     font.family: Theme.fontFamily
@@ -480,13 +483,14 @@ Column {
                     color: row.isActive ? Theme.accent700 : Theme.text
                 }
                 PlayingBars {
-                    visible: !row.gripShown && row.isActive && !root.showArtwork
+                    visible: !row.gripShown && row.isActive && !root.coversShown
                     x: 1
                     anchors.verticalCenter: parent.verticalCenter
                     width: 12
                     height: 11
                     color: Theme.accent700
                     running: Player.playing
+                    covered: Nav.pagesCovered
                 }
 
                 // The grip, in the number's place. Pressed, it holds the row;
@@ -536,14 +540,16 @@ Column {
                     }
                 }
 
+                // Not shown, it asks for no picture.
                 TrackCover {
-                    visible: root.showArtwork
+                    visible: root.coversShown
                     x: root.indexWidth
                     width: root.coverSize
                     height: root.coverSize
                     anchors.verticalCenter: parent.verticalCenter
-                    source: row.artwork
-                    sourceId: row.sourceId
+                    source: root.coversShown ? row.artwork : ""
+                    sourceId: root.coversShown ? row.sourceId : ""
+                    covered: Nav.pagesCovered
                     hovered: rowHover.hovered && !row.held
                     active: row.isActive
                     onPlayRequested: root.trackActivated(row.index)

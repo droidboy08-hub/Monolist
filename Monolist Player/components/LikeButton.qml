@@ -25,7 +25,7 @@ Button {
     property int iconSize: 16
     property int side: 32
 
-    readonly property color live: control.hovered || control.down ? Theme.accent600 : Theme.accent
+    readonly property color live: control.hovered || control.down ? Theme.accentGlyphHover : Theme.accent
 
     implicitWidth: side
     implicitHeight: side

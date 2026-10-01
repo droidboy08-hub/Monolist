@@ -44,12 +44,13 @@ Rectangle {
                                           ? Player.streamInfo.toUpperCase() : ""
 
     // The cover's colour as the field, signal red until it is known.
-    property color field: Theme.accent
+    property color field: Theme.red
     // Ink or paper, whichever reads better on the field; paper when it is
-    // close, as on the red poster. (Not "onField": a name starting "on" and a
-    // capital is taken for a signal handler, and read as nothing.)
-    readonly property color posterInk: contrast(field, Theme.bg) * 1.1 >= contrast(field, Theme.text)
-                                       ? Theme.bg : Theme.text
+    // close, as on the red poster. Printed ink and paper, so a cover's field
+    // reads the same in either appearance. (Not "onField": a name starting
+    // "on" and a capital is taken for a signal handler, and read as nothing.)
+    readonly property color posterInk: contrast(field, Theme.paper) * 1.1 >= contrast(field, Theme.ink)
+                                       ? Theme.paper : Theme.ink
 
     color: Theme.bg
 

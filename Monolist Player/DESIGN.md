@@ -17,6 +17,18 @@ hierarchy instead, and then every screen needs more decoration than the last to
 stay legible. A printed page also survives being dense: this app shows long
 lists of small text, which is exactly what editorial layout is good at.
 
+**Three exceptions, the owner's (2026-09-30).** A song's cover at the head of
+a list row has its corners softened (6px, TrackCover): small and many, the
+covers read as pictures set into the list rather than as more of its rules.
+**Dark** prints the same page in reverse: paper `#141312`, ink `#ebe9e8`, the
+greys stepped the other way, red type lighter so it still reads as red; the red
+itself, and anything printed over a picture or on a red field, stays as it is
+(`Theme.ink`, `Theme.paper`). **Ambient colour** washes the paper with a little
+of the playing song's cover colour (11% light, 16% dark) and glows it, as a
+gradient, at the head of the page; a grey cover gives none, and Settings >
+Appearance turns it off. Both are atmosphere, not hierarchy: nothing reads only
+by them, and the page is legible without either.
+
 **One accent, used sparingly.** Red marks what is *active* (the song playing,
 the open page, the line being sung) and what is *primary* (Play, and nothing
 else on the same screen).
