@@ -62,6 +62,10 @@ $mingwBin = Join-Path $qtRoot 'Tools\mingw1310_64\bin'
 $cmakeBin = Join-Path $qtRoot 'Tools\CMake_64\bin'
 $ninjaDir = Join-Path $qtRoot 'Tools\Ninja'
 $mpvRoot  = Join-Path $InstallRoot 'libmpv'
+# The WebView2 SDK (NuGet Microsoft.Web.WebView2, unpacked): the Google
+# sign-in window's headers and loader. Optional; without it the app signs in
+# by cookie import only.
+$webView2 = Join-Path $InstallRoot 'webview2\sdk\build\native'
 $binDir   = Join-Path $InstallRoot 'bin'
 foreach ($path in $qtPrefix, $mingwBin, $cmakeBin, $ninjaDir, $binDir) {
     if (-not (Test-Path -LiteralPath $path)) { throw "Missing $path. Run setup-windows.ps1 first." }
@@ -83,6 +87,9 @@ if ($NoMpv) {
     $configure += '-DMONOLIST_NO_MPV=ON'
 } else {
     $configure += @('-DMONOLIST_NO_MPV=OFF', "-DMPV_ROOT=$mpvRoot")
+}
+if (Test-Path -LiteralPath (Join-Path $webView2 'include\WebView2.h')) {
+    $configure += "-DMONOLIST_WEBVIEW2_DIR=$webView2"
 }
 
 Write-Host "Source: $source`nBuild:  $buildDir" -ForegroundColor Cyan
@@ -183,6 +190,10 @@ if (-not $NoMpv) {
     $mpvDll = Get-ChildItem -LiteralPath $mpvRoot -Recurse -Filter 'libmpv*.dll' | Select-Object -First 1
     if (-not $mpvDll) { throw "No libmpv DLL under $mpvRoot." }
     Install-File $mpvDll.FullName (Join-Path $buildDir $mpvDll.Name)
+}
+$webView2Loader = Join-Path $webView2 'x64\WebView2Loader.dll'
+if (Test-Path -LiteralPath $webView2Loader) {
+    Install-File $webView2Loader (Join-Path $buildDir 'WebView2Loader.dll')
 }
 
 # The runtime tools go in tools\ beside the exe, where the app looks first, so

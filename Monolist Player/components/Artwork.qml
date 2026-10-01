@@ -69,7 +69,8 @@ Rectangle {
     // The rounded corners, as a mask: clipping cuts square. A list cover's
     // (6px) is the one Main draws for all of them; any other radius, or
     // before that one is made, its own.
-    readonly property bool sharedCorners: root.radius === 6 && Nav.coverMask !== null
+    readonly property bool sharedCorners: root.radius === 6 && root.width === 40 && root.height === 40
+                                          && Nav.coverMask !== null
     Item {
         id: corners
         anchors.fill: parent

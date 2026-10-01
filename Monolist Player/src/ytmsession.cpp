@@ -624,6 +624,11 @@ bool YtmSession::importText(const QString &text)
     return importResult(CookieImport::parse(text.toUtf8()), QStringLiteral("pasted text"));
 }
 
+bool YtmSession::importSignIn(const QByteArray &cookies)
+{
+    return importResult(CookieImport::parse(cookies), QStringLiteral("the sign-in window"));
+}
+
 void YtmSession::clearImportError()
 {
     if (m_importError.isEmpty())

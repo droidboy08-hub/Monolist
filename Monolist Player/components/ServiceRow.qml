@@ -84,6 +84,16 @@ Item {
     signal cancelRequested()
     signal confirmRequested()
     signal retryRequested()
+    // A link of the app's own ("monolist:..."), in the status or the credit
+    // line, for the page to act on; any other opens in the browser.
+    signal linkRequested(string link)
+
+    function followLink(link) {
+        if (link.indexOf("monolist:") === 0)
+            linkRequested(link)
+        else
+            Qt.openUrlExternally(link)
+    }
 
     // The steps, opened by hand from a row not built yet, or not able to work
     // here; a working one shows them on its own while it waits on the
@@ -150,7 +160,7 @@ Item {
                     color: root.needsAttention ? Theme.accent : Theme.neutral700
                     linkColor: Theme.text
                     topPadding: headlineText.visible ? 0 : Theme.space1
-                    onLinkActivated: function(link) { Qt.openUrlExternally(link) }
+                    onLinkActivated: function(link) { root.followLink(link) }
 
                     HoverHandler {
                         cursorShape: status.hoveredLink.length > 0 ? Qt.PointingHandCursor : Qt.ArrowCursor
@@ -168,7 +178,7 @@ Item {
                     color: Theme.neutral700
                     linkColor: Theme.text
                     topPadding: Theme.space1
-                    onLinkActivated: function(link) { Qt.openUrlExternally(link) }
+                    onLinkActivated: function(link) { root.followLink(link) }
 
                     HoverHandler {
                         cursorShape: creditLine.hoveredLink.length > 0 ? Qt.PointingHandCursor : Qt.ArrowCursor

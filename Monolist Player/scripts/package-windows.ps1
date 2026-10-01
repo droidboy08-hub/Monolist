@@ -14,6 +14,8 @@
             libmpv-2.dll            playback
             vulkan-1.dll            the Vulkan loader libmpv links against,
                                     which a PC without a Vulkan driver lacks
+            WebView2Loader.dll      opens the Google sign-in window on the
+                                    WebView2 engine Windows carries
             tools\yt-dlp\           yt-dlp, unpacked
             tools\ffmpeg.exe, ffprobe.exe, deno.exe
             LICENSES\, THIRD-PARTY-NOTICES.txt, README.txt
@@ -129,6 +131,16 @@ if (Test-Path -LiteralPath $vulkan) {
 } else {
     Write-Warning 'No Vulkan runtime on this PC to bundle: the package will need one on the PC it runs on.'
 }
+# The Google sign-in window's loader (WebView2 SDK, unpacked by hand from
+# NuGet's Microsoft.Web.WebView2 into webview2\sdk); the engine itself is
+# Windows' own. Without it the app signs in by cookie import only.
+$webView2Sdk = Join-Path $InstallRoot 'webview2\sdk'
+$webView2Loader = Join-Path $webView2Sdk 'build\native\x64\WebView2Loader.dll'
+if (Test-Path -LiteralPath $webView2Loader) {
+    Copy-Item -LiteralPath $webView2Loader -Destination $stage
+} else {
+    Write-Warning 'No WebView2 SDK: the package will sign in by cookie import only.'
+}
 
 # The tools, as real copies (the development build links them in).
 $tools = Join-Path $stage 'tools'
@@ -170,6 +182,10 @@ $ffmpegVersion = First-Line (Join-Path $tools 'ffmpeg.exe') @('-version')
 $denoVersion   = First-Line (Join-Path $tools 'deno.exe') @('--version')
 $mpvVersion    = (Get-Item -LiteralPath $mpv.FullName).VersionInfo.ProductVersion
 $vulkanVersion = if (Test-Path -LiteralPath $vulkan) { (Get-Item -LiteralPath $vulkan).VersionInfo.FileVersion } else { 'not bundled' }
+$webView2Version = if (Test-Path -LiteralPath $webView2Loader) { (Get-Item -LiteralPath $webView2Loader).VersionInfo.FileVersion } else { 'not bundled' }
+if (Test-Path -LiteralPath (Join-Path $webView2Sdk 'LICENSE.txt')) {
+    Copy-Item -LiteralPath (Join-Path $webView2Sdk 'LICENSE.txt') -Destination (Join-Path $licenses 'WebView2-BSD-3-Clause.txt')
+}
 
 $notices = @"
 Monolist $version (build $build, commit $commit)
@@ -200,6 +216,12 @@ libmpv ($mpvVersion, libmpv-2.dll): the mpv developers, built by shinchiro
 Vulkan loader ($vulkanVersion, vulkan-1.dll): The Khronos Group and LunarG
   Apache-2.0 (LICENSES\Apache-2.0.txt).
   Source: https://github.com/KhronosGroup/Vulkan-Loader
+
+WebView2 loader ($webView2Version, WebView2Loader.dll): Microsoft Corporation
+  BSD 3-Clause (LICENSES\WebView2-BSD-3-Clause.txt). It opens the Google
+  sign-in window on the Microsoft Edge WebView2 Runtime that Windows carries,
+  which is not part of this package.
+  Source: https://www.nuget.org/packages/Microsoft.Web.WebView2
 
 FFmpeg ($ffmpegVersion; tools\ffmpeg.exe, tools\ffprobe.exe): the FFmpeg developers,
   built by yt-dlp's FFmpeg-Builds

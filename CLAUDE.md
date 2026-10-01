@@ -103,10 +103,14 @@ owner's iPhone app (AryaMusix / "Mediano", Swift, not in this repo).
   JioSaavn never contacted) / *High · 320 kbps*. Under High it sends the
   Indian region headers (X-Forwarded-For / X-Real-IP 49.36.0.1) by default —
   the owner's explicit choice and risk; a switch turns them off.
-- YouTube account: signing in is **only by cookie import** (the user signs in on
-  Google's own page and imports the session). Do NOT build an in-app sign-in
-  window, and do not read cookies out of browser profiles — a safety check
-  ruled both out. The account is used for playback only *when needed*
+- YouTube account: **the owner chose (2026-10-01) an in-app sign-in window**:
+  Google's own page in WebView2 (`GoogleSignIn`), the engine untouched (no
+  user-agent change, no script injection, no request interception, no
+  automation or debugging port), a fresh private profile per sign-in deleted
+  afterwards, only YouTube's cookies taken (into `YtmSession` as an import),
+  and Google's refusal taken as final (no retry; the cookie import instead).
+  The cookie import stays as the fallback. Still never read cookies out of
+  browser profiles. The account is used for playback only *when needed*
   (login-required / age / bot-check), for the personal Home, library import,
   and listen reports to YouTube history (on by default).
 - Search result click plays that song, then similar songs (autoplay radio).

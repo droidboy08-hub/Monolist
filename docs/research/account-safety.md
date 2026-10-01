@@ -103,7 +103,43 @@ Tested by `--account-guard-test` (the limits and rests, on a clock of the
 test's), and by `--ytm-session-test`, `--home-account-test` and
 `--account-play-test` and `--ytm-library-test` against a stand-in server.
 
+## Signing in inside Monolist (researched 2026-09-30, chosen 2026-10-01)
+
+The owner asked for a Sign in that goes to Google and is done, and chose it
+over the cookie import when the trade-off below was put to them.
+
+- Google's help page "Sign in with a supported browser"
+  (support.google.com/accounts/answer/7675428) says it may block sign-in from
+  browsers "embedded in a different application", controlled by automation,
+  or with JavaScript off [official]. Microsoft's WebView2 guidance (2021) is
+  to use the system browser [official]. WebView2 was hard-blocked in 2021;
+  from 2023 reports say an unmodified WebView2 signs in (WebView2Feedback
+  #1647, #2552, #4603) [anecdotal]. In August 2026 Google began refusing
+  apps that fake the user agent and strip client hints (an Electron app's
+  "401 malformed") [anecdotal]; a clean session still signed in. No report
+  of an account suspended for signing in through WebView2 was found; the
+  documented answer is a refused sign-in [official, anecdotal].
+- Many YouTube Music clients sign in this way and keep the cookies for their
+  own calls: Metrolist, OuterTune, InnerTune and Meld (Android WebView), Kaset
+  (WKWebView), Zuno (WebView2 on Windows) [read in their sources].
+
+What Monolist does (`src/googlesignin*`): WebView2 as it comes (its own user
+agent and client hints, no injected script, no intercepted or rewritten
+request, no automation, no debugging port, the developer tools off); a new
+private profile for every sign-in, deleted when the window closes and at the
+next launch if anything was left; links that open a new window go to the
+user's own browser; once a page on youtube.com shows a signed-in session
+(SAPISID or __Secure-3PAPISID), only youtube.com's cookies are taken, and they
+go through the same import as a copied session (encrypted, never logged,
+checked with YouTube Music before Signed in); Google's "couldn't sign you in"
+page ends it, with no retry, and the cookie import is offered instead. Never
+signs out in the window (that would end the session it hands over).
+
 ## Still unknown (for the live test, docs/testing-your-youtube-account.md)
+
+- Whether Google lets the account sign in in the window today, and how long
+  a session made there lasts outside it (device-bound sessions, DBSC, were
+  not confirmed for WebView2 either way).
 
 - How many requests one yt-dlp lookup with cookies makes, and whether yt-dlp
   retries a 429 itself.

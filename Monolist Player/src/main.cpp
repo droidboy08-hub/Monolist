@@ -50,6 +50,7 @@
 #include "ytmselftest.h"
 #include "ytmimport.h"
 #include "ytmsession.h"
+#include "googlesignin.h"
 #include "appinfo.h"
 #include "rec/catalog.h"
 #include "rec/suitable.h"
@@ -358,6 +359,11 @@ int main(int argc, char *argv[])
     // exactly as signed out as it always was.
     YtmSession ytmSession(&library);
     ytmSession.start();
+    // Signing in on Google's own page, in a window of Monolist's own
+    // (WebView2 on Windows); its session goes to ytmSession as an import
+    // does. What an earlier window left behind goes first.
+    GoogleSignIn::removeLeftovers();
+    GoogleSignIn googleSignIn(&ytmSession);
     // --ytm-demo <state>[+file]: the Settings row in that state (active,
     // checking, unreachable, rejected, notsignedin, unreadable, signedout),
     // with an invented account and no cookies, for a look or a screenshot.
@@ -612,6 +618,7 @@ int main(int argc, char *argv[])
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Scrobbler", &scrobbler);
     // The YouTube Music sign-in: the Settings row's import, check and sign-out.
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Account",   &ytmSession);
+    qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "SignIn",    &googleSignIn);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "AccountLibrary", &accountLibrary);
     qmlRegisterUncreatableType<ShelfModel>(
         "Monolist.Backend", 1, 0, "ShelfModel",
@@ -687,6 +694,7 @@ int main(int argc, char *argv[])
     if (auto *window = qobject_cast<QWindow *>(qmlEngine.rootObjects().value(0))) {
         chrome.attach(window);
         window->show();
+        googleSignIn.setOwner(window);
 #ifdef Q_OS_WIN
         mediaSession.attach(window);
 #endif

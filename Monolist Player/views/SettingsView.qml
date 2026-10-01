@@ -22,6 +22,9 @@ ScrollPage {
     // link works again later.
     property string section: ""
     signal sectionRevealed()
+    // Sign in on Google's page: asked of the window, which says what it
+    // means first (Main's signIn()).
+    signal signInRequested()
 
     contentHeight: column.implicitHeight
 
@@ -786,8 +789,10 @@ ScrollPage {
             onToggled: Scrobbler.enabled = !Scrobbler.enabled
         }
 
-        // YouTube Music: a session imported from the user's own browser, since
-        // Google allows no sign-in from inside an app like this one. The row
+        // YouTube Music: signed in on Google's own page in a window of
+        // Monolist's (SignIn, WebView2 on Windows), the owner's choice of
+        // 2026-10-01; or, where that is not here or Google will not sign in
+        // there, a session imported from the user's own browser. The row
         // says Signed in only once YouTube Music has confirmed the session
         // (Account checks it online); while that is under way, or YouTube
         // Music cannot be reached, it says so, offers SIGN OUT, and uses the
@@ -851,9 +856,14 @@ ScrollPage {
             width: parent.width
             name: "YouTube Music"
             detail: "Your own playlists, likes and listening history, instead of this computer's."
-            caution: "Use an account you can afford to lose: Google restricts accounts used by outside players, "
-                     + "and that would take the account with it. Sign in only on Google's own page, in a private "
-                     + "window of your own browser. Monolist never asks for your password."
+            caution: SignIn.available && !SignIn.refused
+                     ? "Use an account you can afford to lose: Google restricts accounts used by outside players, "
+                       + "and that would take the account with it. Sign in shows Google's own page in a window of "
+                       + "Monolist's; your password goes to Google alone, and Monolist keeps only the session Google "
+                       + "gives back."
+                     : "Use an account you can afford to lose: Google restricts accounts used by outside players, "
+                       + "and that would take the account with it. Sign in only on Google's own page, in a private "
+                       + "window of your own browser. Monolist never asks for your password."
             built: true
             serviceState: importing ? "waiting"
                           : account === "active" || account === "checking" || account === "unreachable"
@@ -871,10 +881,15 @@ ScrollPage {
             credit: serviceState === "connected"
                     ? "Signing out deletes Monolist's copy only. To end the session at Google too: Google Account → "
                       + "Security → <a href=\"https://myaccount.google.com/device-activity\">Your devices</a>."
-                    : ""
+                    : SignIn.available && !SignIn.refused && !importing
+                      ? "Or <a href=\"monolist:import\">import a sign-in</a> from your own browser instead."
+                      : SignIn.available && SignIn.refused && !importing
+                        ? "Google refused to sign in from inside Monolist lately, so the import is the way in. "
+                          + "<a href=\"monolist:retry\">Try Google's page again</a>"
+                        : ""
             actionText: serviceState === "connected" ? "SIGN OUT"
-                        : serviceState === "expired" ? "IMPORT AGAIN"
-                        : serviceState === "off" ? "IMPORT SIGN-IN"
+                        : serviceState === "expired" ? (SignIn.available && !SignIn.refused ? "SIGN IN AGAIN" : "IMPORT AGAIN")
+                        : serviceState === "off" ? (SignIn.available && !SignIn.refused ? "SIGN IN" : "IMPORT SIGN-IN")
                         : ""
             // A session that ended can be forgotten, name and all, instead
             // of imported again; one that never signed anyone in is only
@@ -883,7 +898,20 @@ ScrollPage {
             // The check could not be made: kept, and asked again later, or
             // now.
             retryText: account === "unreachable" ? "CHECK NOW" : ""
-            steps: [
+            // How the sign-in window works; while importing, how the import does.
+            steps: SignIn.available && !SignIn.refused && !importing ? windowSteps : importSteps
+            readonly property var windowSteps: [
+                "SIGN IN opens Google's own sign-in page in a window of Monolist's: a fresh, private one each time, "
+                + "as a private window in a browser is. You sign in there as on any website, two-step verification "
+                + "and all; your password goes to Google, never to Monolist.",
+                "Once YouTube Music opens signed in, the window closes by itself. Monolist keeps only the session "
+                + "YouTube gives back, encrypted with your Windows sign-in, never in the music database or any log, "
+                + "and the window's own copy is deleted. It then asks YouTube Music whether it works, and says "
+                + "Signed in only once YouTube Music does.",
+                "If Google will not sign in there (“This browser or app may not be secure”), Monolist does "
+                + "not try again: it opens the import instead, the way to copy a sign-in from your own browser."
+            ]
+            readonly property var importSteps: [
                 "In your own browser, open a private window (how, in each browser, is below) and sign in at music.youtube.com, "
                 + "on Google's own page. You are signed in once your picture shows at the top right. Firefox is the one "
                 + "to prefer: Chrome on Windows can tie a session to itself, which may end a copied one sooner.",
@@ -898,7 +926,22 @@ ScrollPage {
             ]
             // The last refusal's reason belongs to the last try: a panel
             // opened or closed starts clean.
-            onConnectRequested: openSignIn()
+            // Google's own page in Monolist's window where there is one;
+            // the import otherwise.
+            onConnectRequested: {
+                if (SignIn.available && !SignIn.refused)
+                    root.signInRequested()
+                else
+                    openSignIn()
+            }
+            onLinkRequested: function(link) {
+                if (link === "monolist:import") {
+                    openSignIn()
+                } else if (link === "monolist:retry") {
+                    SignIn.forgetRefusal()
+                    root.signInRequested()
+                }
+            }
             function openSignIn() {
                 Account.clearImportError()
                 importing = true

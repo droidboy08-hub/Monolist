@@ -254,6 +254,9 @@ public:
     // importError saying why, when it is not a signed-in session.
     Q_INVOKABLE bool importFile(const QUrl &file);
     Q_INVOKABLE bool importText(const QString &text);
+    // The session Google's sign-in window ended on (GoogleSignIn), as
+    // cookies.txt text: taken exactly as an imported one is.
+    bool importSignIn(const QByteArray &cookies);
     // Forgets why the last import was refused: the panel opens, or closes,
     // clean.
     Q_INVOKABLE void clearImportError();

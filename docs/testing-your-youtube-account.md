@@ -27,13 +27,34 @@ limited or banned, and Monolist's limits make that unlikely, not impossible
 
 ## 1. Sign in (C02)
 
+### 1a. In Monolist's own window (the way the sidebar offers)
+
+1. Click **Sign in to YouTube Music** at the bottom of the sidebar (or SIGN IN
+   in Settings → Connections → YouTube Music). A window opens on Google's own
+   page, "Sign in to continue to YouTube Music".
+2. Sign in with the spare account, as on any website (two-step verification
+   works there too). The log says `signin: opening Google's sign-in page`.
+3. Expect: when YouTube Music opens signed in, the window closes by itself,
+   the toast says *Signed in. Checking with YouTube Music…*, and the corner of
+   the sidebar shows the account's initials and name; the Settings row says
+   *Checking…*, then *Signed in as <name>*. The log says `signin: the window's
+   session was handed to the account`, then `logged_in=1`.
+4. If Google says *Couldn't sign you in / This browser or app may not be
+   secure*, expect the window to close and Settings to open on the import
+   (1b): note it and the time; Monolist does not try again.
+5. Note how long the session lasts (days): whether a session made in this
+   window ends sooner than an imported one is still unknown.
+
+### 1b. By import (when 1a is refused, or to compare)
+
 1. Open a **private window** in Firefox (suggested: Chrome on Windows may bind
    the session to the device, and an export from it can stop working within
    minutes).
 2. Go to music.youtube.com and sign in with the spare account. Your picture
    shows at the top right.
-3. In Monolist: Settings → Connections → YouTube Music → IMPORT SIGN-IN, and
-   follow the steps there (a cookies.txt from an extension, or the Cookie
+3. In Monolist: Settings → Connections → YouTube Music → the *import a
+   sign-in* link under SIGN IN (IMPORT SIGN-IN where there is no sign-in
+   window), and follow the steps there (a cookies.txt from an extension, or the Cookie
    header / Copy as cURL from the developer tools).
 4. **Close the private window without signing out and without using it
    again.** Using the same session in the browser rotates it out from under

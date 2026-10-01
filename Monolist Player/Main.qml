@@ -307,9 +307,18 @@ ApplicationWindow {
     // the cursor in the field ready to type. Not what navigate("search")
     // does for typing, which is already in the field and must not have its
     // text selected under it. Now Playing covers the field, so it closes.
-    // Signing in to YouTube Music, from the sidebar's corner: Settings, at
-    // the account's row, with its sign-in open.
+    // Signing in to YouTube Music, from the sidebar's corner: Google's own
+    // page in a window of Monolist's (SignIn); where there is none, or
+    // Google will not sign in there, Settings, at the account's row, with
+    // the import open.
     function signIn() {
+        if (SignIn.available && !SignIn.refused)
+            signInCaution.open()
+        else
+            openSignInImport()
+    }
+
+    function openSignInImport() {
         window.settingsSection = "signin"
         window.navigate("settings")
     }
@@ -652,6 +661,7 @@ ApplicationWindow {
                             SettingsView {
                                 section: window.settingsSection
                                 onSectionRevealed: window.settingsSection = ""
+                                onSignInRequested: window.signIn()
                             }
                         }
                     }
@@ -862,6 +872,85 @@ ApplicationWindow {
     Connections {
         target: Library
         function onNotice(text) { toast.show(text) }
+    }
+
+    Connections {
+        target: SignIn
+        function onNotice(text) { toast.show(text) }
+        function onFallbackRequested() { window.openSignInImport() }
+    }
+
+    // Before Google's page opens, from wherever it is asked for: whose
+    // account to use, and where the password goes. Paper in a 2px ink frame,
+    // like a menu, over a dimmed window.
+    Popup {
+        id: signInCaution
+        anchors.centerIn: Overlay.overlay
+        width: Math.min(460, window.width - Theme.space8 * 2)
+        modal: true
+        focus: true
+        padding: Theme.space6
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+
+        Overlay.modal: Rectangle { color: Theme.dark ? Qt.rgba(0, 0, 0, 0.6) : "#66201e1d" }
+        background: Rectangle {
+            color: Theme.bg
+            border.width: Theme.ruleWidth
+            border.color: Theme.text
+        }
+
+        contentItem: Column {
+            spacing: Theme.space4
+
+            Text {
+                width: parent.width
+                text: "Sign in to YouTube Music"
+                wrapMode: Text.WordWrap
+                font.family: Theme.fontFamily
+                font.pixelSize: 22
+                font.weight: Theme.weightBlack
+                font.letterSpacing: Theme.tracking(22, -0.02)
+                color: Theme.text
+            }
+            Text {
+                width: parent.width
+                text: "Google's own sign-in page opens in a window of Monolist's. Your password goes to Google "
+                      + "alone; Monolist keeps only the session Google gives back, encrypted on this PC."
+                wrapMode: Text.WordWrap
+                font.family: Theme.fontFamily
+                font.pixelSize: 14
+                lineHeight: 1.3
+                color: Theme.text
+            }
+            Text {
+                width: parent.width
+                text: "Use an account you can afford to lose: Google restricts accounts used by outside players, "
+                      + "and that would take the account with it. Google may also refuse to sign in from inside an "
+                      + "app; Monolist then offers the other way, copying a sign-in from your own browser."
+                wrapMode: Text.WordWrap
+                font.family: Theme.fontFamily
+                font.pixelSize: 13
+                lineHeight: 1.3
+                color: Theme.accent700
+            }
+            Row {
+                spacing: Theme.space3
+                topPadding: Theme.space2
+
+                ActionButton {
+                    text: "CONTINUE TO GOOGLE"
+                    primary: true
+                    onClicked: {
+                        signInCaution.close()
+                        SignIn.start()
+                    }
+                }
+                ActionButton {
+                    text: "CANCEL"
+                    onClicked: signInCaution.close()
+                }
+            }
+        }
     }
 
     // — menus —
