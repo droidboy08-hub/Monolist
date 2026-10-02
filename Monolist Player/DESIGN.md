@@ -40,7 +40,10 @@ be found instantly.
 **Photographs are black and white, except where a page is about one.** Covers in
 lists, shelves and cards print grey; the cover of an album page, a playlist page
 or Now Playing is in colour, and a card's cover turns to colour under the
-pointer.
+pointer. Settings > Appearance's **Monochrome covers**, the owner's
+(2026-10-02), turns this off: every picture in colour, everywhere. Nothing
+reads only by colour (a playing row has its bars, a card under the pointer
+its play button), so the page still works with it off.
 
 *Why.* Album art is the loudest thing in a music app; left alone it fights the
 type on every screen. Desaturating it makes colour mean "this is the subject" —

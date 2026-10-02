@@ -21,6 +21,10 @@ QtObject {
     property color ambient: "transparent"
     // Settings > Appearance's "Ambient colour", kept in the settings.
     property bool ambientEnabled: true
+    // Settings > Appearance's "Monochrome covers", kept in the settings: on,
+    // pictures print black and white until they are the subject (Artwork's
+    // `colour`); off, every picture is in colour throughout.
+    property bool monochrome: true
     readonly property real ambientShare: ambient.a * (dark ? 0.16 : 0.11)
     function ambientOver(base, share) {
         return share > 0 ? Qt.tint(base, Qt.rgba(ambient.r, ambient.g, ambient.b, share)) : base

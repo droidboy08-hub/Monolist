@@ -170,6 +170,7 @@ ApplicationWindow {
         // Before the first frame, so the window never shows the wrong one.
         Theme.mode = Library.settingValue("appearance", "system")
         Theme.ambientEnabled = Library.settingValue("ambient", "1") !== "0"
+        Theme.monochrome = Library.settingValue("monochrome", "1") !== "0"
         sidebarCollapsed = Library.settingValue("sidebar.collapsed", "0") === "1"
         measureAmbient()
         if (initialQuery.length > 0)

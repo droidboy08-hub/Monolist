@@ -5,8 +5,10 @@ import Monolist
 // Cover slot. Photographs print black and white in this system, so any
 // supplied artwork is desaturated; with no source it stays a flat plate.
 // `colour` lets a cover bloom into colour: under the pointer, or when it is
-// the cover a whole page is about. A `radius` rounds the picture's corners
-// as well as the plate's (a list row's small cover, TrackCover).
+// the cover a whole page is about. With monochrome covers turned off
+// (Settings > Appearance, Theme.monochrome) every picture is in colour. A
+// `radius` rounds the picture's corners as well as the plate's (a list row's
+// small cover, TrackCover).
 Rectangle {
     id: root
 
@@ -88,7 +90,7 @@ Rectangle {
     MultiEffect {
         anchors.fill: parent
         source: image
-        saturation: root.colour ? 0.0 : -1.0
+        saturation: root.colour || !Theme.monochrome ? 0.0 : -1.0
         visible: image.status === Image.Ready
         maskEnabled: root.radius > 0
         maskSource: root.sharedCorners ? Nav.coverMask : corners

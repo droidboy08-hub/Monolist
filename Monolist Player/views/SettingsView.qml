@@ -349,6 +349,18 @@ ScrollPage {
             }
         }
 
+        ToggleRow {
+            width: parent.width
+            label: "Monochrome covers"
+            hint: "Covers print in black and white, coming to colour under the pointer and for the song "
+                  + "playing. Turn it off to see every cover in colour."
+            checked: Theme.monochrome
+            onToggled: {
+                Theme.monochrome = !Theme.monochrome
+                Library.setSetting("monochrome", Theme.monochrome ? "1" : "0")
+            }
+        }
+
         HRule { width: parent.width }
 
         // — playback —
