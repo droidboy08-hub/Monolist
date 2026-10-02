@@ -277,9 +277,6 @@ ScrollPage {
             width: parent.width
             model: Catalog.pageTracks
             showDownloads: true
-            // An album's songs share the cover printed above them, so its
-            // rows are numbered, as a record's sleeve lists them.
-            showArtwork: root.page.type !== "album"
             onTrackActivated: function(index) { Player.playModel(Catalog.pageTracks, index, "playlist") }
         }
 

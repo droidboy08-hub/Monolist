@@ -29,8 +29,8 @@ Column {
     // it in order: a click sorts by that column, a second the other way, a
     // third back to the list's own order.
     property TrackFilterModel sortModel: null
-    // Each song's cover at the head of its row (TrackCover). Off where every
-    // row would show the one cover printed above them, an album's.
+    // Each song's cover at the head of its row (TrackCover), on every list,
+    // an album's too (the owner's choice); off, the rows are numbered.
     property bool showArtwork: true
     // And only where the table is wide enough that the title keeps its
     // room: narrower, the rows are numbered.
