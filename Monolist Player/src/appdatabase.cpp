@@ -12,12 +12,87 @@
 
 namespace {
 const char *kConnectionName = "monolist_local";
+const char *kProbeName = "monolist_check";
 QString s_recoveryNote;
+QString s_recoveryFolder;
 
-QString backupPath()
+// How many daily copies of the library are kept (monolist.backup-yyyyMMdd.db).
+constexpr int kBackupsKept = 7;
+
+QString dataFolder()
 {
-    return QDir(QFileInfo(AppDatabase::databaseFilePath()).absolutePath())
-        .filePath(QStringLiteral("monolist.backup.db"));
+    return QFileInfo(AppDatabase::databaseFilePath()).absolutePath();
+}
+
+// Every copy that could be put back, the newest first: the daily ones, the
+// single copy of the first version that made them, and a copy left half
+// made (each is checked before it is used).
+QFileInfoList backupCandidates()
+{
+    return QDir(dataFolder()).entryInfoList({ QStringLiteral("monolist.backup*.db"), QStringLiteral("monolist.backup*.db.new") },
+                                            QDir::Files, QDir::Time);
+}
+
+QFileInfoList dailyBackups()
+{
+    return QDir(dataFolder()).entryInfoList({ QStringLiteral("monolist.backup-*.db") }, QDir::Files,
+                                            QDir::Name | QDir::Reversed);
+}
+
+// What a check found. Unknown is a check that could not be made (the file
+// busy, no rights, no room): never taken for damage.
+enum class Health { Sound, Damaged, Unknown };
+
+Health checkHealth(QSqlDatabase &db, const QString &pragma)
+{
+    QSqlQuery check(db);
+    if (!check.exec(pragma)) {
+        // Qt reports SQLite's extended codes; the primary one is the low byte.
+        const int code = check.lastError().nativeErrorCode().toInt() & 0xff;
+        return code == 11 /* SQLITE_CORRUPT */ || code == 26 /* SQLITE_NOTADB */ ? Health::Damaged : Health::Unknown;
+    }
+    return check.next() && check.value(0).toString() == QLatin1String("ok") ? Health::Sound : Health::Damaged;
+}
+
+// Looked at read-only, so looking changes nothing: a read-only connection
+// never folds the journal into the file, and a damaged library is set aside
+// exactly as it was found.
+Health probe(const QString &path)
+{
+    if (!QFileInfo::exists(path))
+        return Health::Sound;   // a library about to begin
+    Health health = Health::Unknown;
+    {
+        QSqlDatabase db = QSqlDatabase::addDatabase(QStringLiteral("QSQLITE"), QLatin1String(kProbeName));
+        db.setDatabaseName(path);
+        db.setConnectOptions(QStringLiteral("QSQLITE_OPEN_READONLY"));
+        if (db.open())
+            health = checkHealth(db, QStringLiteral("PRAGMA quick_check"));
+        db.close();
+    }
+    QSqlDatabase::removeDatabase(QLatin1String(kProbeName));
+    return health;
+}
+
+// The library and its journal into `aside`, all of it or none: what moved
+// goes back if anything could not.
+bool setAside(const QString &path, const QString &aside)
+{
+    if (!QDir().mkpath(aside))
+        return false;
+    QStringList moved;
+    for (const QString &suffix : { QString(), QStringLiteral("-wal"), QStringLiteral("-shm") }) {
+        if (!QFileInfo::exists(path + suffix))
+            continue;
+        if (!QFile::rename(path + suffix, QDir(aside).filePath(QStringLiteral("monolist.db") + suffix))) {
+            for (const QString &back : std::as_const(moved))
+                QFile::rename(QDir(aside).filePath(QStringLiteral("monolist.db") + back), path + back);
+            QDir().rmdir(aside);
+            return false;
+        }
+        moved << suffix;
+    }
+    return true;
 }
 }
 
@@ -26,21 +101,28 @@ QString AppDatabase::recoveryNote()
     return s_recoveryNote;
 }
 
-// Read whole, the schema included: a file whose schema cannot be read fails
-// here, before anything else would read it.
-bool AppDatabase::sound(QSqlDatabase &db)
+QString AppDatabase::recoveryFolder()
 {
-    QSqlQuery check(db);
-    return check.exec(QStringLiteral("PRAGMA quick_check")) && check.next()
-           && check.value(0).toString() == QLatin1String("ok");
+    return s_recoveryFolder;
 }
 
+bool AppDatabase::sound(QSqlDatabase &db)
+{
+    return checkHealth(db, QStringLiteral("PRAGMA quick_check")) == Health::Sound;
+}
+
+// Once a day, after the full check: a dated copy, the newest seven kept.
 void AppDatabase::keepBackup(QSqlDatabase &db)
 {
-    const QString path = backupPath();
-    const QFileInfo kept(path);
-    if (kept.exists() && kept.lastModified().secsTo(QDateTime::currentDateTime()) < 20 * 3600)
+    const QFileInfoList kept = dailyBackups();
+    if (!kept.isEmpty() && kept.first().lastModified().secsTo(QDateTime::currentDateTime()) < 20 * 3600)
         return;
+    if (checkHealth(db, QStringLiteral("PRAGMA integrity_check")) != Health::Sound) {
+        qWarning("Monolist: the library did not pass the full check; no backup taken today");
+        return;
+    }
+    const QString path = QDir(dataFolder()).filePath(
+        QStringLiteral("monolist.backup-%1.db").arg(QDate::currentDate().toString(QStringLiteral("yyyyMMdd"))));
     const QString fresh = path + QStringLiteral(".new");
     QFile::remove(fresh);
     QSqlQuery vacuum(db);
@@ -52,7 +134,13 @@ void AppDatabase::keepBackup(QSqlDatabase &db)
         return;
     }
     QFile::remove(path);
-    QFile::rename(fresh, path);
+    if (!QFile::rename(fresh, path))
+        return;   // the .new stays, and is tried if ever needed
+    const QFileInfoList all = dailyBackups();
+    for (int i = kBackupsKept; i < all.size(); ++i)
+        QFile::remove(all.at(i).filePath());
+    // The single copy the first version made is superseded by the daily ones.
+    QFile::remove(QDir(dataFolder()).filePath(QStringLiteral("monolist.backup.db")));
 }
 
 AppDatabase::AppDatabase() = default;
@@ -82,46 +170,55 @@ bool AppDatabase::open()
     QSqlDatabase db = connection();
     if (db.isOpen())
         return true;
+    const QString path = databaseFilePath();
+    const Health health = probe(path);
+
+    if (health == Health::Damaged) {
+        // Damaged: kept whole, never deleted, in a dated folder beside it,
+        // and the newest sound backup put in its place.
+        const QString aside = QDir(dataFolder()).filePath(
+            QStringLiteral("damaged-") + QDateTime::currentDateTime().toString(QStringLiteral("yyyyMMdd-HHmmss")));
+        s_recoveryFolder = QDir::toNativeSeparators(aside);
+        if (!setAside(path, aside)) {
+            s_recoveryNote = QStringLiteral("Monolist's library file is damaged, but it could not be moved aside "
+                                            "(another program may be using it), so it was left as it is. Close "
+                                            "Monolist and anything else that may have it open, then start Monolist "
+                                            "again.");
+            s_recoveryFolder.clear();
+            qWarning("Monolist: the database is damaged and could not be moved aside");
+        } else {
+            QString restoredFrom;
+            for (const QFileInfo &candidate : backupCandidates()) {
+                QFile::remove(path);
+                if (!QFile::copy(candidate.filePath(), path))
+                    continue;
+                QFile(path).setPermissions(QFile(path).permissions() | QFileDevice::WriteOwner);
+                if (probe(path) == Health::Sound) {
+                    restoredFrom = QLocale().toString(candidate.lastModified(), QLocale::ShortFormat);
+                    break;
+                }
+                QFile::remove(path);
+            }
+            s_recoveryNote = !restoredFrom.isEmpty()
+                ? QStringLiteral("Monolist's library file was damaged, so it was put back as it was on %1. "
+                                 "The damaged copy is kept in %2.").arg(restoredFrom, s_recoveryFolder)
+                : QStringLiteral("Monolist's library file was damaged and no backup could be put back, so it "
+                                 "starts afresh. The damaged copy is kept in %1.").arg(s_recoveryFolder);
+            qWarning("Monolist: the database was damaged; %s (kept in %s)",
+                     restoredFrom.isEmpty() ? "started afresh" : "restored from a backup", qPrintable(aside));
+        }
+    } else if (health == Health::Unknown) {
+        qWarning("Monolist: the library could not be checked at launch; it is used as it is");
+    }
+
     if (!db.open()) {
         qWarning("Monolist: cannot open database: %s", qPrintable(db.lastError().text()));
         return false;
     }
-    if (!sound(db)) {
-        // Damaged: kept, never deleted, in a folder of its own beside it,
-        // with its journal; the day's backup, where it is sound, in its place.
-        db.close();
-        const QString path = databaseFilePath();
-        const QDir folder = QFileInfo(path).absoluteDir();
-        const QString aside = QStringLiteral("damaged-") + QDateTime::currentDateTime().toString(QStringLiteral("yyyyMMdd-HHmmss"));
-        folder.mkpath(aside);
-        for (const QString &suffix : { QString(), QStringLiteral("-wal"), QStringLiteral("-shm") }) {
-            if (QFileInfo::exists(path + suffix))
-                QFile::rename(path + suffix, folder.filePath(aside + QStringLiteral("/monolist.db") + suffix));
-        }
-        bool restored = false;
-        const QFileInfo backup(backupPath());
-        if (backup.exists() && QFile::copy(backup.filePath(), path)) {
-            if (db.open() && sound(db)) {
-                restored = true;
-            } else {
-                db.close();
-                QFile::remove(path);
-            }
-        }
-        if (!restored && !db.isOpen() && !db.open()) {
-            qWarning("Monolist: cannot open database: %s", qPrintable(db.lastError().text()));
-            return false;
-        }
-        s_recoveryNote = restored
-            ? QStringLiteral("Monolist's library file was damaged, so it was put back as it was on %1. "
-                             "The damaged copy is kept in the folder %2.")
-                  .arg(QLocale().toString(backup.lastModified(), QLocale::ShortFormat), aside)
-            : QStringLiteral("Monolist's library file was damaged and there was no backup to put back, so it "
-                             "starts afresh. The damaged copy is kept in the folder %1.").arg(aside);
-        qWarning("Monolist: the database was damaged; %s (kept in %s)",
-                 restored ? "restored from the backup" : "started afresh", qPrintable(aside));
-    }
-    keepBackup(db);
+    // Backed up only on a launch whose check passed: never a library just
+    // put back, begun afresh, or not checked.
+    if (health == Health::Sound)
+        keepBackup(db);
     QSqlQuery pragma(db);
     pragma.exec(QStringLiteral("PRAGMA foreign_keys = ON"));
     pragma.exec(QStringLiteral("PRAGMA journal_mode = WAL"));

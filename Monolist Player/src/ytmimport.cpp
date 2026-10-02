@@ -233,6 +233,13 @@ void YtmImport::forget(const QString &why)
         stop(QStringLiteral("stopped"), why);
     m_autoTimer.stop();
     const bool had = m_hasData;
+    // The account's own pages leave Home's Jump back in with it.
+    if (m_library) {
+        for (const QString &id : std::as_const(m_playlistIds))
+            m_library->forgetPlace(QStringLiteral("page"), id);
+        m_library->forgetPlace(QStringLiteral("page"), QStringLiteral("VLLM"));
+        m_library->forgetPlace(QStringLiteral("playlist"), QStringLiteral("ytliked"));
+    }
     QSqlDatabase db = AppDatabase::connection();
     db.transaction();
     QSqlQuery q(db);

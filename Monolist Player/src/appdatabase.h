@@ -24,6 +24,8 @@ public:
     // dated folder beside it, and the day's backup put in its place where
     // there is a sound one; otherwise the library starts afresh.
     static QString recoveryNote();
+    // Where the damaged copy was put, in full; empty when nothing was.
+    static QString recoveryFolder();
 
     // For binding to a NOT NULL text column. Qt binds a null QString — what an
     // absent map value or a default-constructed field gives — as SQL NULL, and
@@ -33,8 +35,9 @@ public:
 
 private:
     static bool sound(QSqlDatabase &db);
-    // A copy of a sound library (monolist.backup.db), made at most once a
-    // day, for open() to fall back on.
+    // A dated copy of a sound library (monolist.backup-yyyyMMdd.db), made at
+    // most once a day after the full check, the newest seven kept, for
+    // open() to fall back on.
     static void keepBackup(QSqlDatabase &db);
     static bool hasColumn(const QString &table, const QString &column);
     // One-time removal of the interface prototype's invented content.

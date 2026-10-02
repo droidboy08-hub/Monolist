@@ -17,6 +17,14 @@ InstanceGuard::InstanceGuard(const QString &dataDirectory, QObject *parent)
     // power) is stale at once: QLockFile asks whether its process still runs.
     m_lock.setStaleLockTime(0);
     m_first = m_lock.tryLock(300);
+    if (!m_first && m_lock.error() == QLockFile::LockFailedError) {
+        // Held: by a Monolist that answers, or by a lock Qt cannot judge
+        // (empty, or written on another machine), which goes if nothing
+        // holds the file open.
+        m_answered = wakeFirst();
+        if (!m_answered && m_lock.removeStaleLockFile())
+            m_first = m_lock.tryLock(300);
+    }
     if (!m_first)
         return;
     QLocalServer::removeServer(m_name);

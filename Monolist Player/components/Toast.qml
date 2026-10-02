@@ -13,14 +13,20 @@ Rectangle {
     // The link's word, and what it does; empty for a plain answer.
     property string actionText: ""
     property var action: null
+    property bool sticky: false
 
-    function show(message, actionLabel, onAction) {
+    // `sticky`: stays until its action is pressed, for what must be read.
+    function show(message, actionLabel, onAction, sticky) {
         label.text = message
         actionText = actionLabel ? actionLabel : ""
         action = typeof onAction === "function" ? onAction : null
         hideTimer.interval = actionText.length > 0 ? 6000 : 2600
+        root.sticky = sticky === true
         opacity = 1
-        hideTimer.restart()
+        if (root.sticky)
+            hideTimer.stop()
+        else
+            hideTimer.restart()
     }
 
     // Once: the answer has been given, and the toast goes with it.
@@ -112,6 +118,6 @@ Rectangle {
 
     // Hovering keeps it up long enough to read.
     HoverHandler {
-        onHoveredChanged: hovered ? hideTimer.stop() : hideTimer.restart()
+        onHoveredChanged: hovered || root.sticky ? hideTimer.stop() : hideTimer.restart()
     }
 }

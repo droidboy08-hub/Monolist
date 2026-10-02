@@ -413,4 +413,5 @@ private:
 
     QVariantMap m_moreLike;
     QString m_moreLikeFor;            // the artist it is for, or being found for
+    qint64 m_moreLikeFailedAt = 0;    // when an ask last failed (seconds), to wait a while
 };

@@ -131,6 +131,9 @@ Q_SIGNALS:
     void toolsChanged();
     // A sentence for the toast: something was updated, or could be.
     void notice(const QString &text);
+    // The library was found damaged at launch (AppDatabase::recoveryNote),
+    // and where its damaged copy is kept.
+    void recovered(const QString &text, const QString &folder);
     // The setup script has run, so the tools on disk may not be the ones the
     // rest of the app looked for at launch.
     void toolsUpdated();

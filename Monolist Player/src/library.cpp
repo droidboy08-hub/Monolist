@@ -330,13 +330,18 @@ QString Library::topArtist() const
         " WHERE kind = 'play' AND artist <> '' AND started_at >= datetime('now', '-56 days')"
         "   AND (listened_ms >= 30000 OR completed = 1)"
         " GROUP BY artist"));
+    // As the suggestions read a credit (rec/shelves.cpp firstPerformer):
+    // spaced joiners only, so "AC/DC" and "Malcolm X" stay whole, and the
+    // " - Topic" of an auto-generated channel off.
     static const QRegularExpression joints(
-        QStringLiteral(R"(\s*(?:,|&|\bfeat\.?|\bft\.?|\bx\b|\bwith\b)\s*)"),
+        QStringLiteral(R"(\s*(?:,|&|;|/)\s*|\s+(?:feat\.?|ft\.?|with|x)\s+)"),
         QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression topic(QStringLiteral(R"(\s+-\s+topic\s*$)"),
+                                          QRegularExpression::CaseInsensitiveOption);
     QHash<QString, int> counts;
     QHash<QString, QString> spelling;
     while (query.next()) {
-        const QString first = query.value(0).toString().split(joints, Qt::SkipEmptyParts).value(0).trimmed();
+        const QString first = query.value(0).toString().remove(topic).section(joints, 0, 0).trimmed();
         if (first.isEmpty())
             continue;
         const QString key = first.toLower();

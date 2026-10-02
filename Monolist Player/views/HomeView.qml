@@ -64,11 +64,15 @@ ScrollPage {
     // playlists to fill the rows: eight at most, each once.
     readonly property var jumpTiles: {
         const revision = Library.revision + Library.playlists.count   // read again as they change
+        const group = root.filter                                      // and as the filter does
         const places = Library.recentPlaces
         const out = []
         const seen = {}
+        // The filter applies before the count, so a filtered grid is full too.
         function add(tile) {
             if (out.length >= 8 || seen[tile.key] || revision < 0)
+                return
+            if (group !== "all" && tile.group !== group)
                 return
             seen[tile.key] = true
             out.push(tile)
@@ -114,8 +118,7 @@ ScrollPage {
         }
         return out
     }
-    readonly property var shownTiles: filter === "all" ? jumpTiles
-                                    : jumpTiles.filter(function(tile) { return tile.group === filter })
+    readonly property var shownTiles: jumpTiles
 
     function openTile(tile) {
         if (tile.kind === "playlist")
@@ -132,7 +135,7 @@ ScrollPage {
         } else if (tile.ref === "liked") {
             Player.playModel(Library.liked, 0, "library")
         } else if (tile.ref === "ytliked") {
-            Player.playModel(AccountLibrary.liked, 0, "library")
+            Player.playTracks(AccountLibrary.likedTrackList(), 0, "playlist")
         } else {
             const tracks = Library.playlistTracksFor(Number(tile.ref))
             if (tracks.length > 0)
@@ -153,6 +156,10 @@ ScrollPage {
                 subtitle: song.artist,
                 artist: song.artist,
                 artwork: song.artwork,
+                album: song.album,
+                albumId: song.albumId,
+                credits: song.credits,
+                durationMs: song.durationMs,
                 primaryArtist: song.primaryArtist ? song.primaryArtist : "",
                 quickIndex: i
             })

@@ -20,6 +20,9 @@ public:
 
     // This is the only Monolist on its library.
     bool first() const { return m_first; }
+    // A second start whose first answered; false when the lock could not be
+    // judged (no rights, a lock nobody holds), and this one should run anyway.
+    bool answered() const { return m_answered; }
     // From a second start: asks the first to show its window. True when it
     // answered.
     bool wakeFirst();
@@ -33,4 +36,5 @@ private:
     QLocalServer m_server;
     QString m_name;
     bool m_first = false;
+    bool m_answered = false;
 };

@@ -68,7 +68,7 @@ Rectangle {
                 font.pixelSize: 28
                 font.weight: Theme.weightBlack
                 font.letterSpacing: Theme.tracking(28, -0.02)
-                color: nameArea.containsMouse ? Theme.accent700 : Theme.text
+                color: nameHover.hovered ? Theme.accent700 : Theme.text
             }
             Text {
                 text: "."
@@ -79,20 +79,20 @@ Rectangle {
             }
         }
 
-        // The name folds the sidebar: taken here, so a click on it does not
-        // start moving the window.
-        MouseArea {
-            id: nameArea
+        // A click on the name folds the sidebar; a drag on it still moves
+        // the window, and a double-click still maximises it (the handlers
+        // only watch, and the title bar's take over past the threshold).
+        Item {
             enabled: root.collapsible
             x: brandName.x - Theme.space1
             y: brandName.y - Theme.space1
             width: brandName.width + Theme.space2
             height: brandName.height + Theme.space2
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onClicked: root.collapseRequested()
+
+            HoverHandler { id: nameHover; cursorShape: Qt.PointingHandCursor }
+            TapHandler { onTapped: root.collapseRequested() }
         }
-        ToolTip.visible: nameArea.containsMouse
+        ToolTip.visible: nameHover.hovered && root.collapsible
         ToolTip.delay: 600
         ToolTip.text: "Fold the sidebar"
 

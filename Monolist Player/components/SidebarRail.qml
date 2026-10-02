@@ -52,7 +52,7 @@ Rectangle {
                 font.family: Theme.fontFamily
                 font.pixelSize: 28
                 font.weight: Theme.weightBlack
-                color: markArea.containsMouse ? Theme.accent700 : Theme.text
+                color: markHover.hovered ? Theme.accent700 : Theme.text
             }
             Text {
                 text: "."
@@ -63,17 +63,16 @@ Rectangle {
             }
         }
 
-        // Taken here, so a click on the mark opens the sidebar rather than
-        // starting to move the window.
-        MouseArea {
-            id: markArea
+        // A click on the mark opens the sidebar; a drag still moves the
+        // window (the handlers only watch).
+        Item {
             anchors.fill: mark
             anchors.margins: -Theme.space2
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onClicked: root.expandRequested()
+
+            HoverHandler { id: markHover; cursorShape: Qt.PointingHandCursor }
+            TapHandler { onTapped: root.expandRequested() }
         }
-        ToolTip.visible: markArea.containsMouse
+        ToolTip.visible: markHover.hovered
         ToolTip.delay: 600
         ToolTip.text: "Open the sidebar"
 

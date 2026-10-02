@@ -143,6 +143,15 @@ owner's iPhone app (AryaMusix / "Mediano", Swift, not in this repo).
 
 ## Traps met before
 
+- 2026-10-01: the owner's library database was damaged: the schema root
+  overwritten with Home's cache, other tables' pages crossed. It happened
+  while a development build and the installed app had the same database open.
+  It was repaired from the pages, and the damaged copy is kept beside it. Never
+  run a build on the owner's real data folder while their app is open. Use
+  MONOLIST_DATA_DIR scratch folders for every GUI check. The app now refuses a
+  second instance per data folder (InstanceGuard), checks the database at
+  launch, and keeps a daily backup.
+
 - mpv list options: never `change-list <opt> set` with a URL (it splits on ':'
   on macOS/Linux — videos lost their sound); clear, then `append`.
 - PowerShell 5.1: no `&&`; write commit messages to a file and `git commit -F`;

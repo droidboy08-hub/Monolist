@@ -39,7 +39,9 @@ ScrollPage {
 
     // Opened, once it is known: one of Home's Jump back in places.
     function rememberArtist() {
+        // Once the page has come (it has its shelves then), with its picture.
         if (!visible || lookingUp || artist.error !== undefined || name.length === 0
+                || artist.shelves === undefined
                 || artist.browseId === undefined || artist.browseId.length === 0)
             return
         Library.rememberPlace({ kind: "artist", ref: artist.browseId, title: name,

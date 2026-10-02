@@ -310,7 +310,13 @@ ApplicationWindow {
     // text selected under it. Now Playing covers the field, so it closes.
     // The docked sidebar folded to its rail (SidebarRail), as last left.
     property bool sidebarCollapsed: false
+    property double sidebarToggledAt: 0
     function setSidebarCollapsed(collapsed) {
+        // A double-click on the name is one fold, not a fold and an unfold.
+        const now = Date.now()
+        if (now - sidebarToggledAt < Application.styleHints.mouseDoubleClickInterval)
+            return
+        sidebarToggledAt = now
         sidebarCollapsed = collapsed
         Library.setSetting("sidebar.collapsed", collapsed ? "1" : "0")
     }
@@ -456,15 +462,17 @@ ApplicationWindow {
         Item {
             id: dockedSidebar
             readonly property bool folded: window.sidebarCollapsed && !Chrome.buttonsOnLeft
+            // Only folding animates; crossing the docking breakpoint snaps.
+            property real dockWidth: folded ? 72 : Theme.sidebarWidth
             visible: window.sidebarDocked
-            width: visible ? (folded ? 72 : Theme.sidebarWidth) : 0
+            width: visible ? dockWidth : 0
             anchors.top: parent.top
             anchors.bottom: parent.bottom
             anchors.left: parent.left
             clip: true
 
             // Not at launch, where it opens as it was left.
-            Behavior on width {
+            Behavior on dockWidth {
                 enabled: window.visible
                 NumberAnimation { duration: Theme.page; easing.type: Theme.moveCurve }
             }
@@ -483,6 +491,7 @@ ApplicationWindow {
                 onCollapseRequested: window.setSidebarCollapsed(true)
 
                 Behavior on opacity {
+                    enabled: window.visible
                     NumberAnimation { duration: Theme.quick }
                 }
             }
@@ -499,6 +508,7 @@ ApplicationWindow {
                 onExpandRequested: window.setSidebarCollapsed(false)
 
                 Behavior on opacity {
+                    enabled: window.visible
                     NumberAnimation { duration: Theme.quick }
                 }
             }
@@ -922,6 +932,15 @@ ApplicationWindow {
     Connections {
         target: Library
         function onNotice(text) { toast.show(text) }
+    }
+
+    Connections {
+        target: About
+        function onRecovered(text, folder) {
+            toast.show(text, folder.length > 0 ? "OPEN FOLDER" : "OK",
+                       function() { if (folder.length > 0) Qt.openUrlExternally("file:///" + folder.replace(/\\/g, "/")) },
+                       true)
+        }
     }
 
     Connections {

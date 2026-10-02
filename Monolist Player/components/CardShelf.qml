@@ -54,8 +54,11 @@ Item {
                 sourceId: card.videoId,
                 title: card.title,
                 artist: card.artist ? card.artist : card.subtitle,
+                album: card.album ? card.album : "",
+                albumId: card.albumId ? card.albumId : "",
+                credits: card.credits ? card.credits : [],
                 artwork: card.artwork,
-                durationMs: 0,
+                durationMs: card.durationMs ? card.durationMs : 0,
                 isVideo: card.type === "video",
                 primaryArtist: card.primaryArtist ? card.primaryArtist : ""
             })

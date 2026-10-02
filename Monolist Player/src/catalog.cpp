@@ -1200,6 +1200,9 @@ void Catalog::loadMoreLike(const QString &artist)
     const QString name = artist.trimmed();
     if (name == m_moreLikeFor)
         return;   // shown, or being found
+    // An ask that failed is tried again, five minutes on.
+    if (!name.isEmpty() && QDateTime::currentSecsSinceEpoch() - m_moreLikeFailedAt < 300)
+        return;
     m_moreLikeFor = name;
     if (name.isEmpty()) {
         if (!m_moreLike.isEmpty()) {
@@ -1230,8 +1233,13 @@ void Catalog::loadMoreLike(const QString &artist)
     // The artist by that very name (or that name written another way), never
     // whoever sounds nearest; then their page, and its shelf of artists.
     m_innerTube.searchArtists(name, [this, name](const QList<InnerTube::ArtistHit> &hits, const QString &error) {
-        if (name != m_moreLikeFor || !error.isEmpty())
+        if (name != m_moreLikeFor)
             return;
+        if (!error.isEmpty()) {
+            m_moreLikeFor.clear();
+            m_moreLikeFailedAt = QDateTime::currentSecsSinceEpoch();
+            return;
+        }
         const InnerTube::ArtistHit *found = nullptr;
         for (const InnerTube::ArtistHit &hit : hits) {
             if (hit.name == name) {
@@ -1252,8 +1260,13 @@ void Catalog::loadMoreLike(const QString &artist)
             return;
         const InnerTube::ArtistHit hit = *found;
         m_innerTube.browse(hit.browseId, [this, name, hit](const QJsonObject &root, const QString &error) {
-            if (name != m_moreLikeFor || !error.isEmpty())
+            if (name != m_moreLikeFor)
                 return;
+            if (!error.isEmpty()) {
+                m_moreLikeFor.clear();
+                m_moreLikeFailedAt = QDateTime::currentSecsSinceEpoch();
+                return;
+            }
             const InnerTube::Artist page = InnerTube::parseArtist(hit.browseId, root);
             // The shelf whose every card is an artist's ("Fans might also
             // like"), in whatever language it is titled.

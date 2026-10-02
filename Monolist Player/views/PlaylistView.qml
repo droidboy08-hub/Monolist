@@ -59,7 +59,14 @@ ScrollPage {
         if (visible && key.length > 0)
             Library.rememberPlace({ kind: "playlist", ref: key })
     }
-    onVisibleChanged: if (!visible) { renaming = false; confirmingDelete = false }
+    onVisibleChanged: {
+        if (!visible) {
+            renaming = false
+            confirmingDelete = false
+        } else {
+            rememberPlace()
+        }
+    }
 
     // A new playlist opens with its name selected, the way a new file does.
     function startRenaming() {

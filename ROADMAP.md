@@ -96,7 +96,7 @@ Priority runs from 1 (first) to 9. Size: S under an hour, M a few hours, L a day
   Done when: The visitor ID is fetched only by the instance that resolves streams, or shared, so it is downloaded once per session.
 - [ ] **G07** The self-tests can't fail, and there are no automated tests *(P8, M)*
   Done when: Each self-test exits non-zero when an expectation fails. A CTest target checks the golden match keys, a taste profile built from fixed events, and fixed search results when a catalogue path is given, and GitHub CI can run it.
-- [ ] **G08** If the database can't be opened, the app fails silently *(P8, S)*
+- [x] **G08** If the database can't be opened, the app fails silently *(P8, S)* — done 2026-10-01: every launch checks the library (quick_check) and keeps a daily backup; a damaged one is moved aside into a dated folder and the backup put back (or a fresh start), with a toast; and one Monolist a library (InstanceGuard), after a library was damaged with two open at once.
   Done when: The app falls back to an in-memory database and tells the user that the library couldn't be opened, where the file is, and that changes won't be kept.
 
 ## Video

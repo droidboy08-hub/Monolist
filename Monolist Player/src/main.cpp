@@ -172,11 +172,12 @@ int main(int argc, char *argv[])
     // One Monolist a library (InstanceGuard): a second start on the same
     // data folder brings the first one's window forward, and ends.
     InstanceGuard instance(QFileInfo(AppDatabase::databaseFilePath()).absolutePath());
-    if (!instance.first()) {
-        qWarning("Monolist: already open on this library; bringing that window forward");
-        instance.wakeFirst();
+    if (!instance.first() && instance.answered()) {
+        qWarning("Monolist: already open on this library; its window was brought forward");
         return 0;
     }
+    if (!instance.first())
+        qWarning("Monolist: the library's lock could not be taken; running without it");
 
     AppDatabase database;
     if (!database.open())
@@ -714,7 +715,9 @@ int main(int argc, char *argv[])
         // A damaged library put back from its backup, or begun afresh: said
         // once the window is up.
         if (!AppDatabase::recoveryNote().isEmpty()) {
-            QTimer::singleShot(1500, &appInfo, [&appInfo]() { Q_EMIT appInfo.notice(AppDatabase::recoveryNote()); });
+            QTimer::singleShot(1500, &appInfo, [&appInfo]() {
+                Q_EMIT appInfo.recovered(AppDatabase::recoveryNote(), AppDatabase::recoveryFolder());
+            });
         }
 #ifdef Q_OS_WIN
         mediaSession.attach(window);
