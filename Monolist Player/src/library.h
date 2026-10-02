@@ -50,6 +50,12 @@ class Library : public QObject
     Q_PROPERTY(int videoQuality READ videoQuality WRITE setVideoQuality NOTIFY videoQualityChanged)
     // What was searched for and used, the latest first (rememberSearch).
     Q_PROPERTY(QStringList recentSearches READ recentSearches NOTIFY recentSearchesChanged)
+    // The places opened lately, for Home's Jump back in, the latest first,
+    // 16 at most: { kind, ref, title, subtitle, artwork, type }. A kind is
+    // "playlist" (ref: the user's playlist's id, "liked" or "ytliked"),
+    // "page" (an album's or a YouTube Music playlist's browse id; type
+    // "album" or "playlist") or "artist" (the artist's browse id).
+    Q_PROPERTY(QVariantList recentPlaces READ recentPlaces NOTIFY recentPlacesChanged)
 public:
     explicit Library(QObject *parent = nullptr);
 
@@ -146,6 +152,16 @@ public:
     Q_INVOKABLE void clearSearches();
     QStringList recentSearches() const { return m_recentSearches; }
 
+    // A place opened (rememberPlace: a map as recentPlaces has them; the
+    // latest 40 are kept), or taken out of the list.
+    Q_INVOKABLE void rememberPlace(const QVariantMap &place);
+    Q_INVOKABLE void forgetPlace(const QString &kind, const QString &ref);
+    QVariantList recentPlaces() const { return m_recentPlaces; }
+    // The artist played most these last eight weeks, by the first name of
+    // each credit, for Home's "More like"; empty while too little has been
+    // played to say (three plays of someone at least).
+    Q_INVOKABLE QString topArtist() const;
+
     QString region() const;
     void setRegion(const QString &code);
     QString regionInUse() const;
@@ -171,9 +187,11 @@ Q_SIGNALS:
     void regionChanged();
     void videoQualityChanged();
     void recentSearchesChanged();
+    void recentPlacesChanged();
 
 private:
     void reloadSearches();
+    void reloadPlaces();
     void reloadLiked();
     void reloadSaved();
     void reloadOpenPlaylist();
@@ -200,4 +218,5 @@ private:
     QSet<QString> m_playlistSongIds;   // every video id in any playlist
     int m_revision = 0;
     QStringList m_recentSearches;
+    QVariantList m_recentPlaces;
 };

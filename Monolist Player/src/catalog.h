@@ -122,6 +122,11 @@ class Catalog : public QObject
     Q_PROPERTY(bool artistLoading READ artistLoading NOTIFY artistChanged)
     // "shuffle" or "radio" while that is being fetched, otherwise empty.
     Q_PROPERTY(QString artistMixLoading READ artistMixLoading NOTIFY artistMixLoadingChanged)
+    // Home's "More like …": the artists YouTube Music links with the one
+    // the listener plays most (Library::topArtist), read from that artist's
+    // own page, as { artist, name, browseId, artwork, items: [cards] };
+    // empty until there is one. Kept a day (home_cache "moreLike").
+    Q_PROPERTY(QVariantMap moreLike READ moreLike NOTIFY moreLikeChanged)
 public:
     explicit Catalog(QObject *parent = nullptr);
 
@@ -167,6 +172,10 @@ public:
     // account's feed as the account), and at most a few pages a feed: each
     // is a request. Nothing while one is out, or Home is loading.
     Q_INVOKABLE void loadMoreHome();
+    // Finds `artist`'s page and the artists on it, signed out, unless that
+    // artist's were found within the day; an empty name clears it.
+    Q_INVOKABLE void loadMoreLike(const QString &artist);
+    QVariantMap moreLike() const { return m_moreLike; }
     QVariantMap featured() const { return m_featured; }
     SearchResultModel *recent() { return &m_recent; }
     QVariantMap page() const { return m_page; }
@@ -245,6 +254,7 @@ Q_SIGNALS:
     void artistResolved(const QString &name, const QString &browseId);
     void artistNotFound(const QString &name);
     void artistMixReady(const QString &kind, const QVariantList &tracks);
+    void moreLikeChanged();
     // Something the user should be told, for the toast.
     void notice(const QString &text);
 
@@ -400,4 +410,7 @@ private:
     InnerTube::Watch m_radio;
     QString m_mixLoading;
     quint64 m_mixGeneration = 0;      // moves on for each Shuffle or Mix asked for
+
+    QVariantMap m_moreLike;
+    QString m_moreLikeFor;            // the artist it is for, or being found for
 };

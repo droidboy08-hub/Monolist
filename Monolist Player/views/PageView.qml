@@ -31,7 +31,25 @@ ScrollPage {
     }
     onContentYChanged: loadMoreIfNear()
     onContentHeightChanged: loadMoreIfNear()
-    onVisibleChanged: loadMoreIfNear()
+    onVisibleChanged: {
+        loadMoreIfNear()
+        rememberPage()
+    }
+
+    // Opened, once it has its title: one of Home's Jump back in places.
+    function rememberPage() {
+        if (!visible || page.error !== undefined || page.title === undefined || page.title.length === 0
+                || page.browseId === undefined)
+            return
+        Library.rememberPlace({ kind: "page", ref: page.browseId, title: page.title,
+                                subtitle: page.artist !== undefined ? page.artist : "",
+                                artwork: page.artwork !== undefined ? page.artwork : "",
+                                type: page.type !== undefined ? page.type : "" })
+    }
+    Connections {
+        target: Catalog
+        function onPageChanged() { root.rememberPage() }
+    }
 
     // What takes the whole playlist — Play, Shuffle, Download all, Add all —
     // waits for the rest of a long one to arrive first (Catalog.loadRestOfPage),

@@ -18,6 +18,13 @@ public:
     static QSqlDatabase connection();
     static QString databaseFilePath();
 
+    // What became of a damaged library at this launch, in a sentence for
+    // the user; empty when it was sound. open() checks the file (quick_check)
+    // before anything reads it: a damaged one is moved aside, whole, into a
+    // dated folder beside it, and the day's backup put in its place where
+    // there is a sound one; otherwise the library starts afresh.
+    static QString recoveryNote();
+
     // For binding to a NOT NULL text column. Qt binds a null QString — what an
     // absent map value or a default-constructed field gives — as SQL NULL, and
     // the column's DEFAULT does not apply to an explicit NULL, so the whole row
@@ -25,6 +32,10 @@ public:
     static QString text(const QString &value) { return value.isNull() ? QStringLiteral("") : value; }
 
 private:
+    static bool sound(QSqlDatabase &db);
+    // A copy of a sound library (monolist.backup.db), made at most once a
+    // day, for open() to fall back on.
+    static void keepBackup(QSqlDatabase &db);
     static bool hasColumn(const QString &table, const QString &column);
     // One-time removal of the interface prototype's invented content.
     static void removeSampleData();

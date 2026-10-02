@@ -1,6 +1,10 @@
 #include "appdatabase.h"
 
+#include <QDateTime>
 #include <QDir>
+#include <QFile>
+#include <QFileInfo>
+#include <QLocale>
 #include <QSqlError>
 #include <QSqlQuery>
 #include <QStandardPaths>
@@ -8,6 +12,47 @@
 
 namespace {
 const char *kConnectionName = "monolist_local";
+QString s_recoveryNote;
+
+QString backupPath()
+{
+    return QDir(QFileInfo(AppDatabase::databaseFilePath()).absolutePath())
+        .filePath(QStringLiteral("monolist.backup.db"));
+}
+}
+
+QString AppDatabase::recoveryNote()
+{
+    return s_recoveryNote;
+}
+
+// Read whole, the schema included: a file whose schema cannot be read fails
+// here, before anything else would read it.
+bool AppDatabase::sound(QSqlDatabase &db)
+{
+    QSqlQuery check(db);
+    return check.exec(QStringLiteral("PRAGMA quick_check")) && check.next()
+           && check.value(0).toString() == QLatin1String("ok");
+}
+
+void AppDatabase::keepBackup(QSqlDatabase &db)
+{
+    const QString path = backupPath();
+    const QFileInfo kept(path);
+    if (kept.exists() && kept.lastModified().secsTo(QDateTime::currentDateTime()) < 20 * 3600)
+        return;
+    const QString fresh = path + QStringLiteral(".new");
+    QFile::remove(fresh);
+    QSqlQuery vacuum(db);
+    vacuum.prepare(QStringLiteral("VACUUM INTO ?"));
+    vacuum.addBindValue(fresh);
+    if (!vacuum.exec()) {
+        qWarning("Monolist: could not back up the library: %s", qPrintable(vacuum.lastError().text()));
+        QFile::remove(fresh);
+        return;
+    }
+    QFile::remove(path);
+    QFile::rename(fresh, path);
 }
 
 AppDatabase::AppDatabase() = default;
@@ -41,6 +86,42 @@ bool AppDatabase::open()
         qWarning("Monolist: cannot open database: %s", qPrintable(db.lastError().text()));
         return false;
     }
+    if (!sound(db)) {
+        // Damaged: kept, never deleted, in a folder of its own beside it,
+        // with its journal; the day's backup, where it is sound, in its place.
+        db.close();
+        const QString path = databaseFilePath();
+        const QDir folder = QFileInfo(path).absoluteDir();
+        const QString aside = QStringLiteral("damaged-") + QDateTime::currentDateTime().toString(QStringLiteral("yyyyMMdd-HHmmss"));
+        folder.mkpath(aside);
+        for (const QString &suffix : { QString(), QStringLiteral("-wal"), QStringLiteral("-shm") }) {
+            if (QFileInfo::exists(path + suffix))
+                QFile::rename(path + suffix, folder.filePath(aside + QStringLiteral("/monolist.db") + suffix));
+        }
+        bool restored = false;
+        const QFileInfo backup(backupPath());
+        if (backup.exists() && QFile::copy(backup.filePath(), path)) {
+            if (db.open() && sound(db)) {
+                restored = true;
+            } else {
+                db.close();
+                QFile::remove(path);
+            }
+        }
+        if (!restored && !db.isOpen() && !db.open()) {
+            qWarning("Monolist: cannot open database: %s", qPrintable(db.lastError().text()));
+            return false;
+        }
+        s_recoveryNote = restored
+            ? QStringLiteral("Monolist's library file was damaged, so it was put back as it was on %1. "
+                             "The damaged copy is kept in the folder %2.")
+                  .arg(QLocale().toString(backup.lastModified(), QLocale::ShortFormat), aside)
+            : QStringLiteral("Monolist's library file was damaged and there was no backup to put back, so it "
+                             "starts afresh. The damaged copy is kept in the folder %1.").arg(aside);
+        qWarning("Monolist: the database was damaged; %s (kept in %s)",
+                 restored ? "restored from the backup" : "started afresh", qPrintable(aside));
+    }
+    keepBackup(db);
     QSqlQuery pragma(db);
     pragma.exec(QStringLiteral("PRAGMA foreign_keys = ON"));
     pragma.exec(QStringLiteral("PRAGMA journal_mode = WAL"));
@@ -176,6 +257,20 @@ void AppDatabase::createSchema()
         "CREATE TABLE IF NOT EXISTS search_history ("
         " term TEXT PRIMARY KEY COLLATE NOCASE,"
         " searched_at INTEGER NOT NULL DEFAULT 0)"));
+
+    // The places opened lately, for Home's Jump back in (Library): a
+    // playlist of the user's, an album's or a YouTube Music playlist's page,
+    // an artist's; what to call it and show for it, and when.
+    q.exec(QStringLiteral(
+        "CREATE TABLE IF NOT EXISTS recent_places ("
+        " kind TEXT NOT NULL,"
+        " ref TEXT NOT NULL,"
+        " title TEXT NOT NULL DEFAULT '',"
+        " subtitle TEXT NOT NULL DEFAULT '',"
+        " artwork TEXT NOT NULL DEFAULT '',"
+        " type TEXT NOT NULL DEFAULT '',"
+        " opened_at INTEGER NOT NULL DEFAULT 0,"
+        " PRIMARY KEY (kind, ref))"));
 
     // The song a suggestion's name was found to be (Recommender's covers):
     // its title and artist joined by a line break, the video id and cover

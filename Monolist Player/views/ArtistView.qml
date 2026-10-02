@@ -37,6 +37,20 @@ ScrollPage {
 
     function pad(n) { return n < 10 ? "0" + n : String(n) }
 
+    // Opened, once it is known: one of Home's Jump back in places.
+    function rememberArtist() {
+        if (!visible || lookingUp || artist.error !== undefined || name.length === 0
+                || artist.browseId === undefined || artist.browseId.length === 0)
+            return
+        Library.rememberPlace({ kind: "artist", ref: artist.browseId, title: name,
+                                artwork: artist.artwork !== undefined ? artist.artwork : "" })
+    }
+    onVisibleChanged: rememberArtist()
+    Connections {
+        target: Catalog
+        function onArtistChanged() { root.rememberArtist() }
+    }
+
     function openCard(card) {
         if (card.type === "album" || card.type === "playlist")
             pageRequested(card.browseId)

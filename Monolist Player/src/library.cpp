@@ -1,6 +1,7 @@
 #include "library.h"
 #include "trackfiltermodel.h"
 #include <QDateTime>
+#include <QHash>
 #include "appdatabase.h"
 #include "innertube.h"
 
@@ -262,9 +263,101 @@ void Library::reloadSearches()
     Q_EMIT recentSearchesChanged();
 }
 
+void Library::rememberPlace(const QVariantMap &place)
+{
+    const QString kind = place.value(QStringLiteral("kind")).toString();
+    const QString ref = place.value(QStringLiteral("ref")).toString();
+    if (kind.isEmpty() || ref.isEmpty())
+        return;
+    QSqlQuery query(AppDatabase::connection());
+    query.prepare(QStringLiteral(
+        "INSERT OR REPLACE INTO recent_places (kind, ref, title, subtitle, artwork, type, opened_at)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?)"));
+    query.addBindValue(kind);
+    query.addBindValue(ref);
+    query.addBindValue(AppDatabase::text(place.value(QStringLiteral("title")).toString()));
+    query.addBindValue(AppDatabase::text(place.value(QStringLiteral("subtitle")).toString()));
+    query.addBindValue(AppDatabase::text(place.value(QStringLiteral("artwork")).toString()));
+    query.addBindValue(AppDatabase::text(place.value(QStringLiteral("type")).toString()));
+    query.addBindValue(QDateTime::currentMSecsSinceEpoch());
+    query.exec();
+    query.exec(QStringLiteral(
+        "DELETE FROM recent_places WHERE rowid NOT IN"
+        " (SELECT rowid FROM recent_places ORDER BY opened_at DESC LIMIT 40)"));
+    reloadPlaces();
+}
+
+void Library::forgetPlace(const QString &kind, const QString &ref)
+{
+    QSqlQuery query(AppDatabase::connection());
+    query.prepare(QStringLiteral("DELETE FROM recent_places WHERE kind = ? AND ref = ?"));
+    query.addBindValue(kind);
+    query.addBindValue(ref);
+    query.exec();
+    reloadPlaces();
+}
+
+void Library::reloadPlaces()
+{
+    QVariantList places;
+    QSqlQuery query(AppDatabase::connection());
+    query.exec(QStringLiteral(
+        "SELECT kind, ref, title, subtitle, artwork, type FROM recent_places"
+        " ORDER BY opened_at DESC LIMIT 16"));
+    while (query.next()) {
+        places.append(QVariantMap{
+            { QStringLiteral("kind"), query.value(0).toString() },
+            { QStringLiteral("ref"), query.value(1).toString() },
+            { QStringLiteral("title"), query.value(2).toString() },
+            { QStringLiteral("subtitle"), query.value(3).toString() },
+            { QStringLiteral("artwork"), query.value(4).toString() },
+            { QStringLiteral("type"), query.value(5).toString() }
+        });
+    }
+    if (places == m_recentPlaces)
+        return;
+    m_recentPlaces = places;
+    Q_EMIT recentPlacesChanged();
+}
+
+QString Library::topArtist() const
+{
+    // Plays that were heard (half a minute, or to the end), by credit, the
+    // first name of a joint one standing for it.
+    QSqlQuery query(AppDatabase::connection());
+    query.exec(QStringLiteral(
+        "SELECT artist, COUNT(*) FROM play_events"
+        " WHERE kind = 'play' AND artist <> '' AND started_at >= datetime('now', '-56 days')"
+        "   AND (listened_ms >= 30000 OR completed = 1)"
+        " GROUP BY artist"));
+    static const QRegularExpression joints(
+        QStringLiteral(R"(\s*(?:,|&|\bfeat\.?|\bft\.?|\bx\b|\bwith\b)\s*)"),
+        QRegularExpression::CaseInsensitiveOption);
+    QHash<QString, int> counts;
+    QHash<QString, QString> spelling;
+    while (query.next()) {
+        const QString first = query.value(0).toString().split(joints, Qt::SkipEmptyParts).value(0).trimmed();
+        if (first.isEmpty())
+            continue;
+        const QString key = first.toLower();
+        counts[key] += query.value(1).toInt();
+        spelling.insert(key, first);
+    }
+    QString best;
+    int most = 2;   // three plays at least
+    for (auto it = counts.constBegin(); it != counts.constEnd(); ++it) {
+        if (it.value() > most || (it.value() == most && !best.isEmpty() && it.key() < best.toLower())) {
+            most = it.value();
+            best = spelling.value(it.key());
+        }
+    }
+    return best;
+}
+
 void Library::load()
 {
     reloadSearches();
+    reloadPlaces();
     m_playlists.reload();
     m_tracks.reload();
     reloadLiked();

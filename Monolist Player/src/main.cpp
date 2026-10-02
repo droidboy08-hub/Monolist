@@ -51,6 +51,7 @@
 #include "ytmimport.h"
 #include "ytmsession.h"
 #include "googlesignin.h"
+#include "instanceguard.h"
 #include "appinfo.h"
 #include "rec/catalog.h"
 #include "rec/suitable.h"
@@ -167,6 +168,15 @@ int main(int argc, char *argv[])
     // on fixtures, with no network (saavnselftest.cpp).
     if (app.arguments().contains(QStringLiteral("--saavn-test")))
         return runSaavnSelfTest() == 0 ? 0 : 1;
+
+    // One Monolist a library (InstanceGuard): a second start on the same
+    // data folder brings the first one's window forward, and ends.
+    InstanceGuard instance(QFileInfo(AppDatabase::databaseFilePath()).absolutePath());
+    if (!instance.first()) {
+        qWarning("Monolist: already open on this library; bringing that window forward");
+        instance.wakeFirst();
+        return 0;
+    }
 
     AppDatabase database;
     if (!database.open())
@@ -695,6 +705,17 @@ int main(int argc, char *argv[])
         chrome.attach(window);
         window->show();
         googleSignIn.setOwner(window);
+        QObject::connect(&instance, &InstanceGuard::wakeRequested, window, [window]() {
+            if (window->visibility() == QWindow::Minimized || !window->isVisible())
+                window->showNormal();
+            window->raise();
+            window->requestActivate();
+        });
+        // A damaged library put back from its backup, or begun afresh: said
+        // once the window is up.
+        if (!AppDatabase::recoveryNote().isEmpty()) {
+            QTimer::singleShot(1500, &appInfo, [&appInfo]() { Q_EMIT appInfo.notice(AppDatabase::recoveryNote()); });
+        }
 #ifdef Q_OS_WIN
         mediaSession.attach(window);
 #endif

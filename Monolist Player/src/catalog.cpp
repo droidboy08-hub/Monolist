@@ -1195,6 +1195,102 @@ void Catalog::showArtist(const QString &browseId, const QString &name)
     });
 }
 
+void Catalog::loadMoreLike(const QString &artist)
+{
+    const QString name = artist.trimmed();
+    if (name == m_moreLikeFor)
+        return;   // shown, or being found
+    m_moreLikeFor = name;
+    if (name.isEmpty()) {
+        if (!m_moreLike.isEmpty()) {
+            m_moreLike.clear();
+            Q_EMIT moreLikeChanged();
+        }
+        return;
+    }
+
+    // Within the day, for the same artist and country: no request.
+    {
+        QSqlQuery query(AppDatabase::connection());
+        query.prepare(QStringLiteral("SELECT region, saved_at, body FROM home_cache WHERE part = ?"));
+        query.addBindValue(QStringLiteral("moreLike"));
+        if (query.exec() && query.next() && query.value(0).toString() == InnerTube::region()
+            && QDateTime::currentSecsSinceEpoch() - query.value(1).toLongLong() < 24 * 3600) {
+            const QVariantMap kept = QJsonDocument::fromJson(qUncompress(query.value(2).toByteArray()))
+                                         .toVariant().toMap();
+            if (kept.value(QStringLiteral("artist")).toString() == name
+                && !kept.value(QStringLiteral("items")).toList().isEmpty()) {
+                m_moreLike = kept;
+                Q_EMIT moreLikeChanged();
+                return;
+            }
+        }
+    }
+
+    // The artist by that very name (or that name written another way), never
+    // whoever sounds nearest; then their page, and its shelf of artists.
+    m_innerTube.searchArtists(name, [this, name](const QList<InnerTube::ArtistHit> &hits, const QString &error) {
+        if (name != m_moreLikeFor || !error.isEmpty())
+            return;
+        const InnerTube::ArtistHit *found = nullptr;
+        for (const InnerTube::ArtistHit &hit : hits) {
+            if (hit.name == name) {
+                found = &hit;
+                break;
+            }
+        }
+        if (!found) {
+            const QString loose = ArtistLinks::looseKey(name);
+            for (const InnerTube::ArtistHit &hit : hits) {
+                if (!loose.isEmpty() && ArtistLinks::looseKey(hit.name) == loose) {
+                    found = &hit;
+                    break;
+                }
+            }
+        }
+        if (!found || found->browseId.isEmpty())
+            return;
+        const InnerTube::ArtistHit hit = *found;
+        m_innerTube.browse(hit.browseId, [this, name, hit](const QJsonObject &root, const QString &error) {
+            if (name != m_moreLikeFor || !error.isEmpty())
+                return;
+            const InnerTube::Artist page = InnerTube::parseArtist(hit.browseId, root);
+            // The shelf whose every card is an artist's ("Fans might also
+            // like"), in whatever language it is titled.
+            QVariantList items;
+            for (const InnerTube::Shelf &shelf : page.shelves) {
+                if (shelf.cards.isEmpty())
+                    continue;
+                bool artists = true;
+                for (const InnerTube::Card &card : shelf.cards)
+                    artists = artists && card.type == QLatin1String("artist");
+                if (artists) {
+                    items = shelfToMap(shelf).value(QStringLiteral("items")).toList();
+                    break;
+                }
+            }
+            if (items.isEmpty())
+                return;
+            m_moreLike = {
+                { QStringLiteral("artist"), name },
+                { QStringLiteral("name"), page.name.isEmpty() ? hit.name : page.name },
+                { QStringLiteral("browseId"), hit.browseId },
+                { QStringLiteral("artwork"), hit.artwork },
+                { QStringLiteral("items"), items }
+            };
+            QSqlQuery query(AppDatabase::connection());
+            query.prepare(QStringLiteral(
+                "INSERT OR REPLACE INTO home_cache (part, region, saved_at, body) VALUES (?, ?, ?, ?)"));
+            query.addBindValue(QStringLiteral("moreLike"));
+            query.addBindValue(InnerTube::region());
+            query.addBindValue(QDateTime::currentSecsSinceEpoch());
+            query.addBindValue(qCompress(QJsonDocument::fromVariant(m_moreLike).toJson(QJsonDocument::Compact)));
+            query.exec();
+            Q_EMIT moreLikeChanged();
+        });
+    });
+}
+
 void Catalog::openArtistNamed(const QString &name)
 {
     const QString wanted = name.trimmed();

@@ -203,6 +203,7 @@ target_sources(monolist PRIVATE
     src/accountguard.h             src/accountguard.cpp
     src/cookieimport.h             src/cookieimport.cpp
     src/ytmsession.h               src/ytmsession.cpp
+    src/instanceguard.h            src/instanceguard.cpp
     # The account's library, read in and never written back (--ytm-library-test).
     src/ytmimport.h                src/ytmimport.cpp
     src/ytmselftest.h              src/ytmselftest.cpp)
@@ -245,6 +246,9 @@ qt_add_qml_module(monolist
         components/AlbumCard.qml
         components/Artwork.qml
         components/TrackCover.qml
+        components/QuickTile.qml
+        components/MixTile.qml
+        components/SidebarRail.qml
         components/PlayingBars.qml
         components/TrackTable.qml
         components/NowPlayingBar.qml

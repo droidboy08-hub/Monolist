@@ -170,6 +170,7 @@ ApplicationWindow {
         // Before the first frame, so the window never shows the wrong one.
         Theme.mode = Library.settingValue("appearance", "system")
         Theme.ambientEnabled = Library.settingValue("ambient", "1") !== "0"
+        sidebarCollapsed = Library.settingValue("sidebar.collapsed", "0") === "1"
         measureAmbient()
         if (initialQuery.length > 0)
             topBar.searchText = initialQuery
@@ -307,6 +308,19 @@ ApplicationWindow {
     // the cursor in the field ready to type. Not what navigate("search")
     // does for typing, which is already in the field and must not have its
     // text selected under it. Now Playing covers the field, so it closes.
+    // The docked sidebar folded to its rail (SidebarRail), as last left.
+    property bool sidebarCollapsed: false
+    function setSidebarCollapsed(collapsed) {
+        sidebarCollapsed = collapsed
+        Library.setSetting("sidebar.collapsed", collapsed ? "1" : "0")
+    }
+    function sideNavigate(view) {
+        if (view === "search")
+            openSearch()
+        else
+            navigate(view)
+    }
+
     // Signing in to YouTube Music, from the sidebar's corner: Google's own
     // page in a window of Monolist's (SignIn); where there is none, or
     // Google will not sign in there, Settings, at the account's row, with
@@ -435,23 +449,59 @@ ApplicationWindow {
             tip.horizontalPadding = Theme.space2
         }
 
-        Sidebar {
+        // The docked sidebar, or folded to its rail (the name folds it, the
+        // rail's mark opens it again; kept in the settings). Its width is
+        // the animation, so the page beside it reflows with it. Not folded
+        // where the window's buttons sit in its corner (a Mac's).
+        Item {
             id: dockedSidebar
+            readonly property bool folded: window.sidebarCollapsed && !Chrome.buttonsOnLeft
             visible: window.sidebarDocked
-            width: visible ? Theme.sidebarWidth : 0
+            width: visible ? (folded ? 72 : Theme.sidebarWidth) : 0
             anchors.top: parent.top
             anchors.bottom: parent.bottom
             anchors.left: parent.left
-            currentView: window.currentView
-            onViewRequested: function(view) {
-                if (view === "search")
-                    window.openSearch()
-                else
-                    window.navigate(view)
+            clip: true
+
+            // Not at launch, where it opens as it was left.
+            Behavior on width {
+                enabled: window.visible
+                NumberAnimation { duration: Theme.page; easing.type: Theme.moveCurve }
             }
-            onNewPlaylistRequested: window.createPlaylist()
-            onSignInRequested: window.signIn()
-            onAccountSettingsRequested: window.openAccountSettings()
+
+            Sidebar {
+                width: Theme.sidebarWidth
+                height: parent.height
+                visible: opacity > 0
+                opacity: dockedSidebar.folded ? 0 : 1
+                collapsible: !Chrome.buttonsOnLeft
+                currentView: window.currentView
+                onViewRequested: function(view) { window.sideNavigate(view) }
+                onNewPlaylistRequested: window.createPlaylist()
+                onSignInRequested: window.signIn()
+                onAccountSettingsRequested: window.openAccountSettings()
+                onCollapseRequested: window.setSidebarCollapsed(true)
+
+                Behavior on opacity {
+                    NumberAnimation { duration: Theme.quick }
+                }
+            }
+
+            SidebarRail {
+                width: 72
+                height: parent.height
+                visible: opacity > 0
+                opacity: dockedSidebar.folded ? 1 : 0
+                currentView: window.currentView
+                onViewRequested: function(view) { window.sideNavigate(view) }
+                onNewPlaylistRequested: window.createPlaylist()
+                onSignInRequested: window.signIn()
+                onExpandRequested: window.setSidebarCollapsed(false)
+
+                Behavior on opacity {
+                    NumberAnimation { duration: Theme.quick }
+                }
+            }
         }
 
         // The top bar spans to the window's right edge, so its window buttons

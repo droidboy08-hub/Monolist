@@ -51,6 +51,13 @@ ScrollPage {
         confirmingDelete = false
         contentY = 0
         songFilter.clear()
+        Qt.callLater(root.rememberPlace)
+    }
+
+    // Opened: one of Home's Jump back in places.
+    function rememberPlace() {
+        if (visible && key.length > 0)
+            Library.rememberPlace({ kind: "playlist", ref: key })
     }
     onVisibleChanged: if (!visible) { renaming = false; confirmingDelete = false }
 

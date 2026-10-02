@@ -8,6 +8,9 @@ Rectangle {
 
     property string currentView: "home"
     property bool showCloseButton: false
+    // The name folds the sidebar to a rail (SidebarRail), where it is docked.
+    property bool collapsible: false
+    signal collapseRequested()
     signal viewRequested(string view)
     signal newPlaylistRequested()
     signal closeRequested()
@@ -50,6 +53,7 @@ Rectangle {
         }
 
         Row {
+            id: brandName
             anchors.left: brandButtons.visible ? brandButtons.right : parent.left
             // macOS keeps its traffic lights in the corner above the name, so
             // the name keeps its place: set in beside them, it ran into the
@@ -64,7 +68,7 @@ Rectangle {
                 font.pixelSize: 28
                 font.weight: Theme.weightBlack
                 font.letterSpacing: Theme.tracking(28, -0.02)
-                color: Theme.text
+                color: nameArea.containsMouse ? Theme.accent700 : Theme.text
             }
             Text {
                 text: "."
@@ -74,6 +78,23 @@ Rectangle {
                 color: Theme.accent
             }
         }
+
+        // The name folds the sidebar: taken here, so a click on it does not
+        // start moving the window.
+        MouseArea {
+            id: nameArea
+            enabled: root.collapsible
+            x: brandName.x - Theme.space1
+            y: brandName.y - Theme.space1
+            width: brandName.width + Theme.space2
+            height: brandName.height + Theme.space2
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: root.collapseRequested()
+        }
+        ToolTip.visible: nameArea.containsMouse
+        ToolTip.delay: 600
+        ToolTip.text: "Fold the sidebar"
 
         Text {
             visible: !root.showCloseButton
