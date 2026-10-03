@@ -54,5 +54,6 @@ private:
     // so the place is told again only when it jumps, and every few seconds.
     qint64 m_publishedPosition = 0;
     bool m_publishedPlaying = false;
+    double m_publishedRate = 1.0;   // the song's time against the wall's
     QElapsedTimer m_publishedAt;
 };

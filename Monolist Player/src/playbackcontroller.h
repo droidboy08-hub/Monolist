@@ -111,6 +111,11 @@ class PlaybackController : public QObject
     // of it (Loudness), as YouTube Music itself plays them. On unless turned
     // off in Settings (player.level_loudness=0).
     Q_PROPERTY(bool levelLoudness READ levelLoudness WRITE setLevelLoudness NOTIFY levelLoudnessChanged)
+    // How fast the song's own time runs against the clock: 1, or the speed of
+    // a sound effect that has one (Slowed 0.85, Nightcore 1.25). Positions
+    // and lengths stay the song's own; the system's media controls run their
+    // clock at this rate between updates.
+    Q_PROPERTY(double playbackRate READ playbackRate NOTIFY playbackRateChanged)
 public:
     enum RepeatMode { RepeatOff = 0, RepeatAll = 1, RepeatOne = 2 };
     Q_ENUM(RepeatMode)
@@ -189,6 +194,7 @@ public:
     void setSaavnUpgrade(bool on);
     bool levelLoudness() const { return m_levelLoudness; }
     void setLevelLoudness(bool on);
+    double playbackRate() const;
 
 public Q_SLOTS:
     void play();
@@ -275,6 +281,7 @@ Q_SIGNALS:
     void audioDevicesChanged();
     void saavnChanged();
     void levelLoudnessChanged();
+    void playbackRateChanged();
     void playbackError(const QString &reason);
     // Something the user should be told, in their words, for the toast.
     void notice(const QString &text);

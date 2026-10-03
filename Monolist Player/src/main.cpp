@@ -40,6 +40,8 @@
 #include "playbackcontroller.h"
 #include "recoveryselftest.h"
 #include "sessionselftest.h"
+#include "soundeffects.h"
+#include "soundselftest.h"
 #include "saavnselftest.h"
 #include "scrollselftest.h"
 #include "streamresolver.h"
@@ -303,6 +305,16 @@ int main(int argc, char *argv[])
         // Loudness levelling, on the real mpv against the same stand-in.
         if (arguments.contains(QStringLiteral("--loudness-test")))
             return runLoudnessSelfTest(&library) == 0 ? 0 : 1;
+        // The sound effects with no libmpv and no sound card: the chain's
+        // text, the ramps, the presets, the clipping maths and what is kept
+        // (soundselftest.cpp); in MONOLIST_DATA_DIR only.
+        if (arguments.contains(QStringLiteral("--sound-test")))
+            return runSoundSelfTest(&library) == 0 ? 0 : 1;
+        // The same effects on the real mpv, with no sound device
+        // (MONOLIST_MPV_AO=null), against files and a stand-in server on this
+        // computer; timed, so not in the release gate.
+        if (arguments.contains(QStringLiteral("--sound-live-test")))
+            return runSoundLiveSelfTest(&library) == 0 ? 0 : 1;
     }
 
     // Which page an artist's name opens: learnt from every answer that links
@@ -468,6 +480,11 @@ int main(int argc, char *argv[])
     QObject::connect(&library, &Library::videoQualityChanged, &player, [&player, &library]() {
         player.setVideoHeight(library.videoQuality());
     });
+    // The sound effects (Slowed + reverb, Nightcore, 8D, High bass, the
+    // equaliser) as they were left: before the first song is loaded below,
+    // so it plays with them from its first second.
+    SoundEffects sound(&engine, &library);
+    sound.restore();
     // Open on the queue as it was left, the song and the place in it, ready
     // and not playing; the first launch, with the library queued instead.
     if (!player.restoreSession())
@@ -585,6 +602,7 @@ int main(int argc, char *argv[])
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Library",   &library);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "SystemPip", &systemPip);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Player",    &player);
+    qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Sound",     &sound);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Extractor", &extractor);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Downloads", &downloads);
     // Not "Palette": QtQuick has a type of that name, which would win.
@@ -694,6 +712,9 @@ int main(int argc, char *argv[])
             initial.insert(QStringLiteral("queueOpen"), true);
         if (arguments.contains(QStringLiteral("--now-playing")))
             initial.insert(QStringLiteral("nowPlayingOpen"), true);
+        // The player bar's effects popup open, for a screenshot of it.
+        if (arguments.contains(QStringLiteral("--effects-popup")))
+            initial.insert(QStringLiteral("effectsPopupAtStart"), true);
         if (!initial.isEmpty())
             qmlEngine.setInitialProperties(initial);
     }

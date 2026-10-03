@@ -9,8 +9,9 @@ Rectangle {
     // As the window narrows the bar gives things up in one order: the volume
     // slider folds into a button, and the output button goes into its popup
     // with it; then the progress line moves under the buttons, then the title
-    // goes. The video, Now Playing and queue buttons never go: nothing else
-    // opens any of them.
+    // goes, and the effects button goes into the volume popup with the
+    // output's. The video, Now Playing and queue buttons never go: nothing
+    // else opens any of them.
     readonly property bool showVolume: width >= 1120
     readonly property bool showMeta: width >= 760
     // Under the buttons once one line would leave the progress line too short
@@ -61,6 +62,145 @@ Rectangle {
 
     // The button it stands over moves when the slider folds or unfolds.
     onShowVolumeChanged: outputMenu.close()
+
+    // — sound effects —
+    // Slowed + reverb, Nightcore, 8D, High bass and the equaliser (Sound).
+    // They are kept from one launch to the next, so the glyph is red while
+    // any of them is on: a slowed song the next morning is explained, and
+    // one click from being undone. Not red once the effects would not start
+    // this session, since then nothing is changing the sound.
+    readonly property bool effectsOn: Sound.active && !Sound.failed
+    readonly property string effectsTip: Sound.failed ? "Effects would not start; off until Monolist restarts"
+                                       : Sound.active ? "Effects: " + Sound.summary : "Effects"
+    // The popup's link to Settings > Playback's EFFECTS block.
+    signal effectsSettingsRequested()
+
+    // From the glyph on the bar, or, once that has gone into the volume
+    // popup, from the volume button, as the output menu is.
+    function openEffects(anchor) {
+        outputMenu.close()
+        volumePopup.close()
+        effectsPopup.anchor = anchor
+        effectsPopup.open()
+    }
+    // Wherever the glyph is now (--effects-popup).
+    function showEffects() {
+        openEffects(root.showMeta ? effectsButton : volumeButton)
+    }
+    // As far up as the window goes, short of the popups' margin.
+    readonly property real roomAbove: Window.height - height + Theme.ruleWidth - Theme.space2
+
+    // Built like the volume popup: paper in a 2px ink frame, standing on the
+    // bar's top rule with its right edge under the button, and no motion.
+    // The whole block is in it, the same as Settings has, so nothing needs
+    // a second visit; Settings adds only the longer explanations. It scrolls
+    // in a window too short for it.
+    Popup {
+        id: effectsPopup
+
+        property Item anchor: effectsButton
+        // Where the button is on the bar, read as it opens: it does not
+        // move while open (a breakpoint crossed closes it).
+        property real anchorY: 0
+
+        parent: anchor
+        width: Math.min(592, root.width - Theme.space2 * 2)
+        height: Math.min(implicitHeight, root.roomAbove)
+        x: anchor.width - width
+        // Kept standing on the rule if it grows (a Custom chip that starts a
+        // line; the panel keeps its height otherwise, `steady`).
+        y: -anchorY - height + Theme.ruleWidth
+        margins: Theme.space2
+        padding: Theme.space4
+        // A press on the button is its toggle, so it does not count as a
+        // press outside; the button closes it itself.
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutsideParent
+        focus: true
+        onAboutToShow: anchorY = anchor.mapToItem(root, 0, 0).y
+
+        background: Rectangle {
+            color: Theme.bg
+            border.width: Theme.ruleWidth
+            border.color: Theme.text
+
+            // A press on the popup's own paper, between its controls, and
+            // the wheel, stop here rather than reaching the page behind. (The
+            // controls take their presses for themselves: EffectsPanel.)
+            MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.AllButtons
+                onWheel: function(wheel) { wheel.accepted = true }
+            }
+        }
+
+        contentItem: Flickable {
+            id: effectsFlick
+            implicitHeight: effectsContent.implicitHeight
+            contentWidth: width
+            contentHeight: effectsContent.implicitHeight
+            clip: true
+            boundsBehavior: Flickable.StopAtBounds
+            interactive: contentHeight > height
+
+            ScrollBar.vertical: MonoScrollBar {}
+
+            Column {
+                id: effectsContent
+                // Clear of the scroll bar while there is one. Narrower only
+                // ever means taller, so this cannot take the bar away again.
+                width: effectsFlick.width - (effectsFlick.interactive ? Theme.space4 : 0)
+                spacing: Theme.space3
+
+                EffectsPanel {
+                    width: parent.width
+                    steady: true
+                }
+
+                Rectangle {
+                    width: parent.width
+                    height: 1
+                    color: Theme.hairline
+                }
+
+                // Drawn like a name link: ink, with a 1px rule under the
+                // pointer, arriving at once and fading over `quick`.
+                Text {
+                    id: settingsLink
+                    text: "All sound settings"
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 13
+                    color: Theme.text
+
+                    Rectangle {
+                        y: settingsLink.baselineOffset + 2
+                        width: parent.width
+                        height: 1
+                        color: settingsLink.color
+                        opacity: settingsLinkArea.containsMouse ? 1 : 0
+
+                        Behavior on opacity {
+                            enabled: !settingsLinkArea.containsMouse
+                            NumberAnimation { duration: Theme.quick }
+                        }
+                    }
+
+                    // A MouseArea, as the toast's link has: it keeps the
+                    // press from the page under the popup.
+                    MouseArea {
+                        id: settingsLinkArea
+                        anchors.fill: parent
+                        anchors.margins: -Theme.space1
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            effectsPopup.close()
+                            root.effectsSettingsRequested()
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     MonoMenu {
         id: outputMenu
@@ -411,6 +551,22 @@ Rectangle {
             ToolTip.text: root.nowPlayingOpen ? (root.queueOpen ? "Show lyrics" : "Up next")
                                               : (root.queueOpen ? "Hide queue" : "Queue")
         }
+        // The sound effects, red while any is on. On the bar for as long as
+        // the title is, so the colour shows in a window snapped to half the
+        // screen; narrower, it goes into the volume popup.
+        IconButton {
+            id: effectsButton
+            visible: root.showMeta
+            iconName: "sliders-vertical"
+            iconColor: root.effectsOn ? Theme.accent : Theme.neutral700
+            iconSize: 15
+            anchors.verticalCenter: parent.verticalCenter
+            onClicked: effectsPopup.visible ? effectsPopup.close() : root.openEffects(effectsButton)
+            onVisibleChanged: if (!visible && effectsPopup.anchor === effectsButton) effectsPopup.close()
+            ToolTip.visible: hovered && !effectsPopup.visible
+            ToolTip.delay: 600
+            ToolTip.text: root.effectsTip
+        }
         IconButton {
             id: outputButton
             visible: root.showVolume
@@ -457,8 +613,17 @@ Rectangle {
             iconColor: root.muted ? Theme.accent : Theme.neutral700
             iconSize: 15
             anchors.verticalCenter: parent.verticalCenter
-            onClicked: volumePopup.visible ? volumePopup.close() : volumePopup.open()
-            onVisibleChanged: if (!visible) volumePopup.close()
+            // The effects popup stands here too once its glyph is folded in:
+            // then this button puts that away first.
+            onClicked: effectsPopup.visible ? effectsPopup.close()
+                                            : volumePopup.visible ? volumePopup.close() : volumePopup.open()
+            onVisibleChanged: {
+                if (visible)
+                    return
+                volumePopup.close()
+                if (effectsPopup.anchor === volumeButton)
+                    effectsPopup.close()
+            }
             ToolTip.visible: hovered && !volumePopup.visible
             ToolTip.delay: 600
             ToolTip.text: root.muted ? "Volume (muted)" : "Volume"
@@ -487,6 +652,22 @@ Rectangle {
 
                 contentItem: Row {
                     spacing: Theme.space2
+
+                    // The effects glyph, once the title has gone from the
+                    // bar: red while any is on. Its popup opens where this
+                    // one was, from the volume button, as the output menu
+                    // does.
+                    IconButton {
+                        visible: !root.showMeta
+                        anchors.verticalCenter: parent.verticalCenter
+                        iconName: "sliders-vertical"
+                        iconColor: root.effectsOn ? Theme.accent : Theme.neutral700
+                        iconSize: 15
+                        onClicked: root.openEffects(volumeButton)
+                        ToolTip.visible: hovered
+                        ToolTip.delay: 600
+                        ToolTip.text: root.effectsTip
+                    }
 
                     // The output menu opens where this popup was, from the
                     // button that is still on the bar: this one goes with

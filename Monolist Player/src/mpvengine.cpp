@@ -69,6 +69,16 @@ constexpr int kUpgradeFadeStepMs = 10;
 constexpr int kUpgradeSettleMs = 400;
 // An attempt still waiting after this long is dropped.
 constexpr int kUpgradeGiveUpMs = 60000;
+
+// The sound effects (setEffects). Their values move this often, by at most
+// SoundChain::stepToward's limits each time: one jump in a gain, a weight or
+// the limiter's ceiling clicks, and steps this small were measured smooth.
+constexpr int kEffectsTickMs = 15;
+// The chain's limiter is asked each tick (the health check). Not answering
+// for this long, once the graph has been built for the latest load or seek
+// and while nothing is seeking or buffering, the chain is not running: mpv
+// plays on without a chain it could not set up, and says nothing.
+constexpr qint64 kEffectsSilentMs = 1000;
 // What yt-dlp presents itself as, and therefore what the links it hands back
 // must be fetched as.
 const char *kBrowserUserAgent =
@@ -151,6 +161,17 @@ bool numberProperty(mpv_handle *mpv, const char *name, double *out)
         ok = false;
     mpv_free_node_contents(&node);
     return ok;
+}
+
+// The rate the decoder puts the sound out at, which is the rate the effects'
+// chain reads it at (mpv changes the rate, for the device or for the speed,
+// after the chain); 0 while there is no sound.
+int sampleRateOf(mpv_handle *mpv)
+{
+    qint64 rate = 0;
+    if (!mpv || mpv_get_property(mpv, "audio-params/samplerate", MPV_FORMAT_INT64, &rate) < 0)
+        return 0;
+    return int(rate);
 }
 
 // audio-params or audio-out-params: a map of the rate, sample format and
@@ -311,6 +332,12 @@ struct MpvEngine::Upgrade {
     double firstOffset = 0.0;    // ms, once it first sounded
     double finalOffset = 0.0;    // ms, as the crossfade began
     QString url;
+    QVariantMap headers;
+    // The sound effects' chain, as it was given to it ("" none), the values
+    // that text holds, and the values its graph holds now (see setEffects).
+    QString af;
+    SoundChain::Params afParams;
+    SoundChain::Params fxLive;
     // Milliseconds since startUpgrade.
     QElapsedTimer clock;
     qint64 openedAt = -1;        // first able to play
@@ -436,6 +463,20 @@ void applyBaseOptionsTo(mpv_handle *mpv)
     // Keep libmpv from writing to the app's stderr; errors surface as signals.
     setOptionOn(mpv, "terminal", "no");
     setOptionOn(mpv, "msg-level", "all=no");
+
+    // MONOLIST_MPV_AO names mpv's sound output: "null" plays to no device at
+    // all, in real time, which is what the self-tests use, so no speaker is
+    // opened and none is needed. Unset, mpv picks the system's as always.
+    const QByteArray ao = qgetenv("MONOLIST_MPV_AO");
+    if (!ao.isEmpty())
+        setOptionOn(mpv, "ao", ao.constData());
+    // MONOLIST_MPV_VO likewise names its picture output: "null" decodes the
+    // picture and shows it nowhere, for a self-test with no surface to draw
+    // it on (libmpv's own output, with no render context, drops the picture
+    // and leaves the sound to play alone).
+    const QByteArray vo = qgetenv("MONOLIST_MPV_VO");
+    if (!vo.isEmpty())
+        setOptionOn(mpv, "vo", vo.constData());
 }
 
 // What every player reports, the upgrade's too: once it becomes the player,
@@ -536,6 +577,7 @@ void MpvEngine::drainEvents()
             switch (event->reply_userdata) {
             case PropTimePos: {
                 const double seconds = *static_cast<double *>(prop->data);
+                m_lastPositionMs = qint64(seconds * 1000.0);
                 Q_EMIT positionChanged(qint64(seconds * 1000.0));
                 if (!m_audioStarted && seconds > 0.0) {
                     m_audioStarted = true;
@@ -659,16 +701,38 @@ void MpvEngine::drainEvents()
             break;
         }
 
+        // The picture set up for the file playing: its size read now. load()
+        // forgets the last one's, and the same picture loaded again (a song
+        // played again without its effects) is the size it was, which mpv
+        // does not report again (an observed value that comes back the same
+        // is not sent); nothing would show it.
+        case MPV_EVENT_VIDEO_RECONFIG:
+            if (currentFileStarted())
+                readVideoSize();
+            break;
+
         // The sound has started (or started again, after a seek), or its
         // output was opened anew: what it is can be read now.
         case MPV_EVENT_PLAYBACK_RESTART:
         case MPV_EVENT_AUDIO_RECONFIG:
             if (!currentFileStarted())
                 break;
+            // Its sound set up (or taken down again, as a chain that will not
+            // build leaves it): from here, the chain can be what fails it.
+            if (event->event_id == MPV_EVENT_AUDIO_RECONFIG)
+                m_soundSetUp = true;
             refreshStreamInfo();
             if (event->event_id == MPV_EVENT_PLAYBACK_RESTART && !m_audioStarted && !m_paused) {
                 m_audioStarted = true;
                 Q_EMIT audioStarted();
+            }
+            // The effects' chain: rebuilt at a restart, which follows the
+            // load or seek that rebuilds it; at a new output, perhaps not.
+            if (event->event_id == MPV_EVENT_PLAYBACK_RESTART) {
+                readVideoSize();   // as at VIDEO_RECONFIG, in case that came before mpv named the entry
+                effectsRestarted();
+            } else {
+                effectsReconfigured();
             }
             break;
 
@@ -681,8 +745,21 @@ void MpvEngine::drainEvents()
                 break;
             m_fileLoaded = false;
             m_loadingFile = false;
+            m_fxRestarted = false;
             if (end->reason == MPV_END_FILE_REASON_ERROR) {
-                Q_EMIT loadFailed(QString::fromUtf8(mpv_error_string(end->error)));
+                const QString error = QString::fromUtf8(mpv_error_string(end->error));
+                // Perhaps the effects' doing, not the file's: tried again
+                // without them before the file is blamed for it. Only where
+                // they can be: a link that would not open is failed at once,
+                // as with no effects on, rather than asked twice (a minute
+                // each, for one that stalls) and the effects blamed when the
+                // second time worked.
+                if (chainCouldFail(end->error) && retryWithoutEffects(error))
+                    break;
+                // The file failed without them too: its own error, and the
+                // effects not blamed (they are back for the next file).
+                const QString first = std::exchange(m_fxRetry, {}).error;
+                Q_EMIT loadFailed(first.isEmpty() ? error : first);
             } else if (end->reason == MPV_END_FILE_REASON_EOF) {
                 Q_EMIT endOfFile();
             }
@@ -749,6 +826,22 @@ bool MpvEngine::load(const QString &urlOrPath, bool startPlaying, const QString 
     // Fetch the link the way it was obtained. Always set, so one file's
     // headers are never sent for the next one's.
     applyHeaders(headers);
+
+    // Kept, so a song whose effects would not start can be played again
+    // without them (retryWithoutEffects); a load of anyone else's ends a
+    // retry still waiting to find out.
+    if (!m_fxReloading)
+        m_fxRetry = {};
+    m_lastLoad = { urlOrPath, audioUrl, startAt, headers };
+    m_lastPositionMs = startAt;
+
+    // The sound effects: the new file's graph is built from mpv's af, so this
+    // is where the chain is written as the effects now want it, or taken out.
+    m_fxRestarted = false;
+    m_fxVerified = false;
+    m_soundSetUp = false;
+    m_fxFailingSince.invalidate();
+    syncFilterString();
 
     // Forget the previous file's duration. Change events are compared against
     // it, and reloading a file of the same length would otherwise never report
@@ -819,6 +912,11 @@ void MpvEngine::stop()
     m_fileLoaded = false;
     m_loadingFile = false;
     m_audioStarted = false;
+    // Nothing plays: the effects are written as they are, and a song being
+    // tried again without them will never say whether they were to blame.
+    m_fxRestarted = false;
+    m_soundSetUp = false;
+    m_fxRetry = {};
     if (!m_videoSize.isEmpty()) {
         m_videoSize = QSize();
         Q_EMIT videoSizeChanged(m_videoSize);
@@ -826,6 +924,20 @@ void MpvEngine::stop()
     clearStreamInfo();
     const char *args[] = { "stop", nullptr };
     mpv_command_async(m_mpv, 0, args);
+}
+
+void MpvEngine::readVideoSize()
+{
+    qint64 width = 0;
+    qint64 height = 0;
+    if (mpv_get_property(m_mpv, "dwidth", MPV_FORMAT_INT64, &width) < 0
+        || mpv_get_property(m_mpv, "dheight", MPV_FORMAT_INT64, &height) < 0 || width <= 0 || height <= 0)
+        return;
+    const QSize size{ int(width), int(height) };
+    if (size == m_videoSize)
+        return;
+    m_videoSize = size;
+    Q_EMIT videoSizeChanged(m_videoSize);
 }
 
 void MpvEngine::clearStreamInfo()
@@ -926,6 +1038,14 @@ void MpvEngine::seekAbsolute(qint64 ms)
         return;
     if (m_upgrade && m_upgrade->phase >= Upgrade::Aligning)
         cancelUpgrade(QStringLiteral("the song was moved during the takeover"));
+    // A seek builds the graph afresh, from mpv's af: the chain is written as
+    // the effects want it now (or taken out), and the health check waits for
+    // the sound to start again at the new place.
+    m_fxRestarted = false;
+    m_fxVerified = false;
+    m_fxFailingSince.invalidate();
+    syncFilterString();
+    m_lastPositionMs = ms;
     double seconds = double(ms) / 1000.0;
     mpv_set_property(m_mpv, "time-pos", MPV_FORMAT_DOUBLE, &seconds);
     // Still getting ready: it gets ready for the new place instead.
@@ -951,13 +1071,45 @@ void MpvEngine::setVolume(qreal volume)
 
 void MpvEngine::setSpeed(qreal speed)
 {
+    m_userSpeed = qBound(0.25, double(speed), 4.0);
+    applySpeed();
+}
+
+// The listener's speed times the effect's. Pitch correction (scaletempo2) is
+// taken out before the speed leaves 1 and put back only once it is 1 again:
+// put in at any other speed, it dropped 7 ms of sound.
+void MpvEngine::applySpeed()
+{
     if (!m_mpv)
         return;
-    double value = qBound(0.25, double(speed), 4.0);
-    mpv_set_property(m_mpv, "speed", MPV_FORMAT_DOUBLE, &value);
-    if (m_upgrade && m_upgrade->phase <= Upgrade::Waiting) {
-        m_upgrade->baseSpeed = m_upgrade->speed = value;
-        mpv_set_property_async(m_upgrade->mpv, 0, "speed", MPV_FORMAT_DOUBLE, &value);
+    const SoundChain::Settings effects = effectiveSettings();
+    const bool own = SoundChain::ownsSpeed(SoundChain::sanitized(effects));
+    const double rate = qBound(0.25, m_userSpeed * SoundChain::speedFactor(effects), 4.0);
+    const bool changed = std::fabs(rate - m_rate) > 1e-9;
+    // The two players of a takeover sound together from Aligning on, lined
+    // up at one speed: another now would part them, so the takeover is off.
+    if (changed && m_upgrade && m_upgrade->phase >= Upgrade::Aligning)
+        cancelUpgrade(QStringLiteral("the speed changed during the takeover"));
+    if (own && !m_pitchCorrectionOff) {
+        mpv_set_property_string(m_mpv, "audio-pitch-correction", "no");
+        m_pitchCorrectionOff = true;
+    }
+    if (changed) {
+        double value = rate;
+        mpv_set_property(m_mpv, "speed", MPV_FORMAT_DOUBLE, &value);
+        // The player getting ready to take over plays at the song's speed.
+        if (m_upgrade && m_upgrade->mpv && m_upgrade->phase <= Upgrade::Waiting) {
+            m_upgrade->baseSpeed = m_upgrade->speed = value;
+            mpv_set_property_async(m_upgrade->mpv, 0, "speed", MPV_FORMAT_DOUBLE, &value);
+        }
+    }
+    if (!own && m_pitchCorrectionOff) {
+        mpv_set_property_string(m_mpv, "audio-pitch-correction", "yes");
+        m_pitchCorrectionOff = false;
+    }
+    if (changed) {
+        m_rate = rate;
+        Q_EMIT playbackRateChanged(rate);
     }
 }
 
@@ -965,9 +1117,14 @@ void MpvEngine::setLevelling(bool on, double fallbackDb)
 {
     if (!m_mpv)
         return;
+    m_levelOn = on;
     const QByteArray fallback = QByteArray::number(on ? fallbackDb : 0.0, 'f', 2);
     const char *mode = on ? "track" : "no";
-    const char *preamp = on ? "4" : "0";
+    // Tagged files are raised 4 dB, but not while the effects' chain is in:
+    // mpv applies that gain after the chain, past its limiter. Which of the
+    // two holds changes only where the sound is rebuilt anyway (applyPreamp),
+    // never mid-song, where it is a step of 4 dB.
+    const char *preamp = on && !m_preampForChain ? "4" : "0";
     for (mpv_handle *mpv : { m_mpv, m_upgrade ? m_upgrade->mpv : nullptr }) {
         if (!mpv)
             continue;
@@ -1001,10 +1158,429 @@ void MpvEngine::setAudioDevice(const QString &name)
         return;
     const QByteArray device = (name.isEmpty() ? QStringLiteral("auto") : name).toUtf8();
     const char *value = device.constData();
+    // The sound is rebuilt for the new device: the effects' chain is written
+    // as it should be first, and what it holds sent again in case it is not.
+    syncFilterString();
+    if (chainRunning())
+        sendEffects(m_mpv, SoundChain::commandsFor(m_fxLive));
     mpv_set_property_async(m_mpv, 0, "audio-device", MPV_FORMAT_STRING, &value);
     // The player waiting to take over sounds where the song does.
     if (m_upgrade)
         mpv_set_property_async(m_upgrade->mpv, 0, "audio-device", MPV_FORMAT_STRING, &value);
+}
+
+// ------------------------------------------------------------------ effects
+
+SoundChain::Settings MpvEngine::effectiveSettings() const
+{
+    return m_fxBroken ? SoundChain::Settings() : m_fx;
+}
+
+SoundChain::Settings MpvEngine::chainSettings() const
+{
+    return m_fxBroken || m_fxRetry.active ? SoundChain::Settings() : m_fx;
+}
+
+bool MpvEngine::chainRunning() const
+{
+    return m_mpv && currentFileStarted() && m_fxRestarted;
+}
+
+QString MpvEngine::chainText(const SoundChain::Params &params) const
+{
+    QString graph = SoundChain::graph(params);
+    // A filter no FFmpeg has: the chain mpv takes while nothing plays and
+    // then fails the file with (--sound-live-test).
+    if (m_fxBreakForTest)
+        graph += QStringLiteral(",nosuchfilter=1");
+    return SoundChain::afValue(graph);
+}
+
+SoundChain::Params MpvEngine::rampGoal() const
+{
+    SoundChain::Params goal = SoundChain::paramsFor(chainSettings());
+    // The graph keeps the shape it was built with until the next load or
+    // seek: an 8D branch no longer wanted is only turned down, to 0.
+    goal.has8D = m_fxLive.has8D;
+    if (!goal.has8D)
+        goal.panWet = 0.0;
+    return goal;
+}
+
+void MpvEngine::setEffects(const SoundChain::Settings &settings)
+{
+    const SoundChain::Settings wanted = SoundChain::sanitized(settings);
+    if (wanted == m_fx)
+        return;
+    m_fx = wanted;
+    // Would not start this session: kept, and nothing done with it.
+    if (!m_mpv || m_fxBroken)
+        return;
+    applySpeed();
+    applyChain();
+}
+
+bool MpvEngine::setAudioFilters(const QString &afValue)
+{
+    if (!m_mpv)
+        return false;
+    const QByteArray value = afValue.toUtf8();
+    const char *args[] = { "af", "set", value.constData(), nullptr };
+    const int rc = mpv_command(m_mpv, args);
+    if (rc < 0) {
+        qWarning("sound: mpv would not take the effects' chain: %s", mpv_error_string(rc));
+        return false;
+    }
+    m_afGiven = afValue;
+    // The player getting ready to take over sounds as this one will. Once the
+    // two sound together, a new chain would part them: the takeover is off.
+    if (m_upgrade && m_upgrade->mpv) {
+        if (m_upgrade->phase >= Upgrade::Aligning) {
+            cancelUpgrade(QStringLiteral("the sound effects changed during the takeover"));
+        } else if (mpv_command(m_upgrade->mpv, args) < 0) {
+            cancelUpgrade(QStringLiteral("the new player would not take the sound effects"));
+        } else {
+            m_upgrade->af = afValue;
+        }
+    }
+    return true;
+}
+
+bool MpvEngine::writeChain(const SoundChain::Params &params)
+{
+    if (!setAudioFilters(chainText(params))) {
+        effectsWouldNotStart(QStringLiteral("mpv refused the chain"));
+        return false;
+    }
+    m_afGivenParams = params;
+    if (m_upgrade && m_upgrade->mpv)
+        m_upgrade->afParams = m_upgrade->fxLive = params;
+    return true;
+}
+
+// Run where the sound is rebuilt anyway: before a load, a seek, a change of
+// device; and whenever the effects change with nothing sounding. The text is
+// written only when it differs: the same text again cost 2.7 ms of sound.
+//
+// Gapless playback (QT2, not built yet) adds the next song to mpv's playlist
+// rather than loading it here, so it would start with whatever af holds then:
+// that entry must carry af as a per-file option (afValue of what the effects
+// want as it is added), or the chain be written at its START_FILE.
+void MpvEngine::syncFilterString()
+{
+    if (!m_mpv)
+        return;
+    const SoundChain::Settings settings = chainSettings();
+    const SoundChain::Params target = SoundChain::paramsFor(settings);
+    const QString text = SoundChain::needsChain(settings) ? chainText(target) : QString();
+    if (text != m_afGiven) {
+        if (setAudioFilters(text)) {
+            m_afGivenParams = text.isEmpty() ? SoundChain::neutral() : target;
+        } else if (!text.isEmpty()) {
+            // Refused (while something played, which checks it): the effects
+            // are off, and so is whatever chain was in.
+            effectsWouldNotStart(QStringLiteral("mpv refused the chain"));
+            if (setAudioFilters(QString()))
+                m_afGivenParams = SoundChain::neutral();
+        }
+        if (m_upgrade && m_upgrade->mpv)
+            m_upgrade->afParams = m_upgrade->fxLive = m_afGivenParams;
+    }
+    // The graph is built from the text: that is what it holds.
+    m_fxLive = m_afGivenParams;
+    applyPreamp();
+}
+
+void MpvEngine::applyPreamp()
+{
+    m_preampForChain = !m_afGiven.isEmpty();
+    const char *preamp = m_levelOn && !m_preampForChain ? "4" : "0";
+    for (mpv_handle *mpv : { m_mpv, m_upgrade ? m_upgrade->mpv : nullptr }) {
+        if (mpv)
+            mpv_set_property_string(mpv, "replaygain-preamp", preamp);
+    }
+}
+
+void MpvEngine::applyChain()
+{
+    if (!m_mpv)
+        return;
+    // Nothing sounding: the graph is built from the text when it next is.
+    if (!chainRunning()) {
+        syncFilterString();
+        return;
+    }
+    const SoundChain::Settings settings = chainSettings();
+    const SoundChain::Params target = SoundChain::paramsFor(settings);
+    if (m_afGiven.isEmpty()) {
+        if (!SoundChain::needsChain(settings))
+            return;
+        // Put in at rest, which is silent (it passes the sound unchanged),
+        // then moved to what is wanted. Taking it out again waits for the
+        // next load or seek: mid-song, that clicks.
+        SoundChain::Params rest = SoundChain::neutral();
+        rest.has8D = target.has8D;
+        if (!writeChain(rest))
+            return;
+        m_fxLive = rest;
+    } else if (target.has8D && !m_fxLive.has8D) {
+        // 8D turned on: its branch is not in this graph, and only a new graph
+        // can add it. Built from where everything else stands, its own weight
+        // at 0, so the rest goes on as it was; a small blip, on a dramatic
+        // change. (mpv builds it at once: commands answer within a ms.)
+        SoundChain::Params rebuilt = m_fxLive;
+        rebuilt.has8D = true;
+        rebuilt.panWet = 0.0;
+        if (!writeChain(rebuilt))
+            return;
+        m_fxLive = rebuilt;
+    }
+    startEffectsTick();
+}
+
+void MpvEngine::startEffectsTick()
+{
+    if (!m_fxTick) {
+        m_fxTick = new QTimer(this);
+        m_fxTick->setTimerType(Qt::PreciseTimer);
+        m_fxTick->setInterval(kEffectsTickMs);
+        connect(m_fxTick, &QTimer::timeout, this, &MpvEngine::effectsTick);
+    }
+    if (!m_fxTick->isActive())
+        m_fxTick->start();
+}
+
+// The limiter is asked for the ceiling it has (a command that changes
+// nothing) before anything else: a chain that answers it is running. Its
+// answer stands in for the commands sent after it in the same tick, which go
+// without waiting (their answers are not read): a graph that answered a
+// moment ago takes them, and one rebuilt in between is rewound at its
+// PLAYBACK_RESTART.
+void MpvEngine::effectsTick()
+{
+    if (!chainRunning() || m_afGiven.isEmpty()) {
+        m_fxTick->stop();
+        return;
+    }
+    if (!effectsAnswer()) {
+        // Not counted while it cannot answer anyway: seeking, waiting for the
+        // network (a stream's seek took 2.6 s), or already given up on.
+        int seeking = 0;
+        mpv_get_property(m_mpv, "seeking", MPV_FORMAT_FLAG, &seeking);
+        if (m_fxBroken) {
+            m_fxTick->stop();
+        } else if (!m_fxVerified && m_soundSetUp && !hasSoundTrack()
+                   && retryWithoutEffects(QStringLiteral("mpv dropped its sound and played its picture on"))) {
+            // Its sound set up and dropped again, the chain never heard from:
+            // a file with a picture whose chain would not build. mpv plays
+            // the picture on without the sound, and no END_FILE comes, so the
+            // song is played again without the chain here, from where it is,
+            // as a file that ended over it is. Waiting the second out first
+            // would only be a longer silence.
+            m_fxTick->stop();
+        } else if (seeking || m_buffering) {
+            m_fxFailingSince.invalidate();
+        } else if (!m_fxFailingSince.isValid()) {
+            m_fxFailingSince.start();
+        } else if (m_fxFailingSince.elapsed() >= kEffectsSilentMs) {
+            effectsWouldNotStart(QStringLiteral("the chain does not answer; mpv plays on without it"));
+            m_fxTick->stop();
+        }
+        return;
+    }
+    m_fxFailingSince.invalidate();
+    m_fxVerified = true;
+    const SoundChain::Params goal = rampGoal();
+    if (m_fxLive == goal) {
+        m_fxTick->stop();
+        return;
+    }
+    const SoundChain::Params next = SoundChain::stepToward(m_fxLive, goal);
+    sendEffects(m_mpv, SoundChain::commands(m_fxLive, next));
+    m_fxLive = next;
+    mirrorEffects();
+}
+
+void MpvEngine::mirrorEffects()
+{
+    Upgrade *upgrade = m_upgrade;
+    // Only a graph that exists can take commands; one being built takes the
+    // values at its own PLAYBACK_RESTART instead.
+    if (!upgrade || !upgrade->mpv || upgrade->af.isEmpty() || !upgrade->restarted
+        || upgrade->fxLive.has8D != m_fxLive.has8D)
+        return;
+    sendEffects(upgrade->mpv, SoundChain::commands(upgrade->fxLive, m_fxLive));
+    upgrade->fxLive = m_fxLive;
+}
+
+// Never to a band above half the sound's rate (SoundChain::commandsAt): one
+// command to it crashed the shipped libmpv. FFmpeg passed it over as it built
+// the graph, so it does nothing to the sound whatever it holds, and its value
+// is kept as if sent, for the next graph built from the text.
+void MpvEngine::sendEffects(mpv_handle *mpv, const QList<SoundChain::Command> &commands)
+{
+    if (!mpv)
+        return;
+    for (const SoundChain::Command &command : SoundChain::commandsAt(commands, sampleRateOf(mpv))) {
+        const QByteArray option = command.option.toUtf8();
+        const QByteArray value = command.value.toUtf8();
+        const QByteArray target = command.target.toUtf8();
+        const char *args[] = { "af-command", "fx", option.constData(), value.constData(), target.constData(), nullptr };
+        // Answered with user data 0, which nothing reads (drainEvents).
+        mpv_command_async(mpv, 0, args);
+    }
+}
+
+void MpvEngine::effectsRestarted()
+{
+    m_fxRestarted = true;
+    m_fxVerified = false;
+    m_fxFailingSince.invalidate();
+    // A song played again without its effects has opened, its sound with
+    // it, where with them it would not: they were what stopped it. Without
+    // its sound this time too, it was not them (a sound mpv cannot decode),
+    // and they are back for the next song.
+    if (m_fxRetry.active && m_loadRequest == m_fxRetry.loadRequest) {
+        const QString first = std::exchange(m_fxRetry, {}).error;
+        if (hasSoundTrack()) {
+            effectsWouldNotStart(QStringLiteral("the song would not play with them (%1), and did without them")
+                                     .arg(first));
+        } else {
+            qWarning("sound: the song has no sound without the effects either (%s): not theirs",
+                     qUtf8Printable(first));
+        }
+    }
+    if (m_afGiven.isEmpty())
+        return;
+    m_fxLive = m_afGivenParams;
+    startEffectsTick();
+}
+
+void MpvEngine::effectsReconfigured()
+{
+    if (m_afGiven.isEmpty() || !chainRunning())
+        return;
+    sendEffects(m_mpv, SoundChain::commandsFor(m_fxLive));
+}
+
+// In the shipped libmpv, a chain that would not build, set while nothing
+// played, ended a local file with START_FILE, AUDIO_RECONFIG twice and
+// END_FILE "no audio or video data played" (NOTHING_TO_PLAY); a link nothing
+// answered, and a file that was not there, with START_FILE and END_FILE
+// "loading failed" alone. mpv sets up a file's sound (the first
+// AUDIO_RECONFIG) before it builds the chain for it.
+bool MpvEngine::chainCouldFail(int error) const
+{
+    return error == MPV_ERROR_NOTHING_TO_PLAY && m_soundSetUp;
+}
+
+bool MpvEngine::retryWithoutEffects(const QString &why)
+{
+    // The chain answered for this file, or is not in: not the chain's doing.
+    if (m_afGiven.isEmpty() || m_fxVerified || m_fxRetry.active || m_lastLoad.url.isEmpty())
+        return false;
+    const qint64 at = m_audioStarted ? m_lastPositionMs : m_lastLoad.startAt;
+    int paused = 1;
+    mpv_get_property(m_mpv, "pause", MPV_FORMAT_FLAG, &paused);
+    qWarning("sound: the song failed with the effects on (%s); playing it again without them, from %lld ms",
+             qUtf8Printable(why), static_cast<long long>(at));
+    m_fxRetry.active = true;
+    m_fxRetry.error = why;
+    // Out now, while none of the song's sound is heard (its picture may play
+    // on); load() leaves it out (chainSettings).
+    if (setAudioFilters(QString()))
+        m_afGivenParams = SoundChain::neutral();
+    m_fxLive = SoundChain::neutral();
+    const LastLoad again = m_lastLoad;
+    m_fxReloading = true;
+    const bool sent = load(again.url, paused == 0, again.audioUrl, at, again.headers);
+    m_fxReloading = false;
+    if (!sent) {
+        m_fxRetry = {};
+        return true;   // load() has said loadFailed
+    }
+    m_fxRetry.loadRequest = m_loadRequest;
+    return true;
+}
+
+void MpvEngine::effectsWouldNotStart(const QString &why)
+{
+    if (m_fxBroken)
+        return;
+    m_fxBroken = true;
+    m_fxFailingSince.invalidate();
+    qWarning("sound: the effects would not start: %s. They are off until Monolist restarts",
+             qUtf8Printable(why));
+    // Slowed or Nightcore with them; a chain that still runs is turned down
+    // to rest, and goes at the next load or seek.
+    applySpeed();
+    if (chainRunning() && !m_afGiven.isEmpty())
+        startEffectsTick();
+    Q_EMIT effectsFailed(why);
+}
+
+bool MpvEngine::effectsAnswer()
+{
+    if (!m_mpv || m_afGiven.isEmpty())
+        return false;
+    const QByteArray limit = SoundChain::number(m_fxLive.limit, 3).toUtf8();
+    const char *args[] = { "af-command", "fx", "limit", limit.constData(), "alimiter@lim", nullptr };
+    return mpv_command(m_mpv, args) >= 0;
+}
+
+// The values it holds already, so nothing is heard of it; each sent as the
+// ramp sends it (sendEffects, bands past half the rate left out), but waited
+// for.
+QStringList MpvEngine::effectsRefused()
+{
+    QStringList refused;
+    if (!m_mpv || m_afGiven.isEmpty())
+        return refused;
+    for (const SoundChain::Command &command :
+         SoundChain::commandsAt(SoundChain::commandsFor(m_fxLive), sampleRateOf(m_mpv))) {
+        const QByteArray option = command.option.toUtf8();
+        const QByteArray value = command.value.toUtf8();
+        const QByteArray target = command.target.toUtf8();
+        const char *args[] = { "af-command", "fx", option.constData(), value.constData(), target.constData(), nullptr };
+        if (mpv_command(m_mpv, args) < 0 && !refused.contains(command.target))
+            refused.append(command.target);
+    }
+    return refused;
+}
+
+bool MpvEngine::hasSoundTrack() const
+{
+    qint64 id = 0;
+    return m_mpv && mpv_get_property(m_mpv, "current-tracks/audio/id", MPV_FORMAT_INT64, &id) >= 0;
+}
+
+QString MpvEngine::audioFilterProperty() const
+{
+    return m_mpv ? stringProperty(m_mpv, "af") : QString();
+}
+
+double MpvEngine::speedProperty() const
+{
+    double speed = 0.0;
+    if (m_mpv)
+        numberProperty(m_mpv, "speed", &speed);
+    return speed;
+}
+
+bool MpvEngine::pitchCorrection() const
+{
+    int on = 0;
+    if (m_mpv)
+        mpv_get_property(m_mpv, "audio-pitch-correction", MPV_FORMAT_FLAG, &on);
+    return on != 0;
+}
+
+QString MpvEngine::levellingPreamp() const
+{
+    double preamp = 0.0;
+    if (!m_mpv || !numberProperty(m_mpv, "replaygain-preamp", &preamp))
+        return QString();
+    return QString::number(preamp);
 }
 
 // ------------------------------------------------------------------ upgrade
@@ -1059,6 +1635,20 @@ bool MpvEngine::startUpgrade(const QString &url, double offsetMs, int minKbps, c
         mpv_destroy(mpv);
         return false;
     }
+    // And with the same effects: the chain at the values this one's holds
+    // now, by the "af set" command, never as the af option, which takes any
+    // chain. (Its graph is the song's shape, so both have the same delay.)
+    QString chain;
+    const SoundChain::Params chainParams = m_fxLive;
+    if (!m_afGiven.isEmpty()) {
+        chain = chainText(chainParams);
+        const QByteArray value = chain.toUtf8();
+        const char *af[] = { "af", "set", value.constData(), nullptr };
+        if (mpv_command(mpv, af) < 0) {
+            retire(mpv);
+            return false;
+        }
+    }
     observePropertiesOn(mpv);
     mpv_observe_property(mpv, PropUpgradeCacheTime, "demuxer-cache-time", MPV_FORMAT_DOUBLE);
     mpv_observe_property(mpv, PropUpgradeCacheIdle, "demuxer-cache-idle", MPV_FORMAT_FLAG);
@@ -1076,6 +1666,9 @@ bool MpvEngine::startUpgrade(const QString &url, double offsetMs, int minKbps, c
     auto *upgrade = new Upgrade;
     upgrade->mpv = mpv;
     upgrade->url = url;
+    upgrade->headers = headers;
+    upgrade->af = chain;
+    upgrade->afParams = upgrade->fxLive = chainParams;
     upgrade->target = target;
     upgrade->offset = offsetMs;
     upgrade->minKbps = minKbps;
@@ -1159,12 +1752,28 @@ void MpvEngine::drainUpgrade()
             upgrade->restarted = true;
             if (upgrade->openedAt < 0)
                 upgrade->openedAt = upgrade->clock.elapsed();
+            // Its graph built afresh from the chain it was given: brought to
+            // where the song's has been moved since.
+            if (!upgrade->af.isEmpty()) {
+                upgrade->fxLive = upgrade->afParams;
+                mirrorEffects();
+            }
             judgeUpgrade();
             break;
         case MPV_EVENT_END_FILE: {
             const auto *end = static_cast<mpv_event_end_file *>(event->data);
             if (upgrade->entry > 0 && end->playlist_entry_id != upgrade->entry)
                 break;
+            // Before it ever played, with the effects' chain, and nothing to
+            // play (as a chain that will not build ends a file; see
+            // chainCouldFail): perhaps the chain's doing, so nothing is
+            // concluded about the file.
+            if (end->reason == MPV_END_FILE_REASON_ERROR && end->error == MPV_ERROR_NOTHING_TO_PLAY
+                && !upgrade->af.isEmpty() && !upgrade->restarted) {
+                endUpgrade(false, QStringLiteral("the new player would not start with the sound effects: %1")
+                                      .arg(QString::fromUtf8(mpv_error_string(end->error))));
+                return;
+            }
             endUpgrade(false, end->reason == MPV_END_FILE_REASON_ERROR
                                   ? QStringLiteral("the new link stopped: %1")
                                         .arg(QString::fromUtf8(mpv_error_string(end->error)))
@@ -1326,6 +1935,8 @@ void MpvEngine::beginTakeover()
     int no = 0;
     mpv_set_property_async(upgrade->mpv, 0, "pause", MPV_FORMAT_FLAG, &no);
     upgrade->unpausedAt = upgrade->clock.elapsed();
+    // Sounding from here on: the effects as the song has them now.
+    mirrorEffects();
     upgradeAfter(kUpgradeTickMs, &MpvEngine::alignTick);
 }
 
@@ -1446,10 +2057,26 @@ void MpvEngine::promoteUpgrade()
     mpv_set_wakeup_callback(mpv, nullptr, nullptr);
     mpv_unobserve_property(mpv, PropUpgradeCacheTime);
     mpv_unobserve_property(mpv, PropUpgradeCacheIdle);
-    mpv_set_property_string(mpv, "audio-pitch-correction", "yes");
+    // Pitch correction as the speed effect has it: off under Slowed and
+    // Nightcore, whose pitch moves with the speed (put back on, it turned a
+    // slowed song back to its own pitch at once).
+    mpv_set_property_string(mpv, "audio-pitch-correction", m_pitchCorrectionOff ? "no" : "yes");
     m_mpv = mpv;
     retire(previous);
     m_fileFormat = stringProperty(m_mpv, "file-format");
+    // Its chain is the one playing now: as it was given, as far as its values
+    // have been moved since, and its graph built.
+    m_afGiven = upgrade->af;
+    m_afGivenParams = upgrade->afParams;
+    m_fxLive = upgrade->fxLive;
+    m_fxRestarted = true;
+    m_fxVerified = false;
+    m_soundSetUp = true;   // it was sounding as it took over
+    m_fxFailingSince.invalidate();
+    // And its link the one a song would be played again from.
+    m_lastLoad = { upgrade->url, QString(), 0, upgrade->headers };
+    if (!m_afGiven.isEmpty())
+        startEffectsTick();
 
     // Its file is the current one, open, sounding and unpaused.
     m_currentEntry = m_startedEntry = upgrade->entry > 0 ? upgrade->entry : -1;

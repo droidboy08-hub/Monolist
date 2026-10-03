@@ -387,6 +387,8 @@ PlaybackController::PlaybackController(MpvEngine *engine,
         });
 
         connect(m_engine, &MpvEngine::upgradeFinished, this, &PlaybackController::upgradeFinished);
+        // A sound effect's speed (Slowed, Nightcore), for the media controls.
+        connect(m_engine, &MpvEngine::playbackRateChanged, this, &PlaybackController::playbackRateChanged);
         m_align = new AudioAlign(this);
         connect(m_align, &AudioAlign::measured, this, &PlaybackController::saavnAligned);
     }
@@ -778,6 +780,11 @@ void PlaybackController::setLevelLoudness(bool on)
     // The song playing too, at once.
     m_loudnessLogged.clear();
     applyLoudness();
+}
+
+double PlaybackController::playbackRate() const
+{
+    return m_engine ? m_engine->playbackRate() : 1.0;
 }
 
 void PlaybackController::applyLoudness()

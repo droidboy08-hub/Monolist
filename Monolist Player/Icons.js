@@ -104,6 +104,11 @@ var data = {
     // of three dots, each column one path.
     "grip":            [{ d: "M10 5 A1 1 0 1 1 8 5 A1 1 0 1 1 10 5 M10 12 A1 1 0 1 1 8 12 A1 1 0 1 1 10 12 M10 19 A1 1 0 1 1 8 19 A1 1 0 1 1 10 19" },
                         { d: "M16 5 A1 1 0 1 1 14 5 A1 1 0 1 1 16 5 M16 12 A1 1 0 1 1 14 12 A1 1 0 1 1 16 12 M16 19 A1 1 0 1 1 14 19 A1 1 0 1 1 16 19" }],
+    // Lucide's sliders-vertical: the sound effects. Three faders, each column
+    // one path: its rail above and below the handle, and the handle.
+    "sliders-vertical": [{ d: "M4 21 V14 M4 10 V3 M2 14 H6" },
+                         { d: "M12 21 V12 M12 8 V3 M10 8 H14" },
+                         { d: "M20 21 V16 M20 12 V3 M18 16 H22" }],
     // An artist's radio: a point and the waves around it.
     "radio":           [{ d: "M4.9 19.1 C1 15.2 1 8.8 4.9 4.9" },
                         { d: "M7.8 16.2 c-2.3 -2.3 -2.3 -6.1 0 -8.5" },

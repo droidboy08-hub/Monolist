@@ -8,6 +8,10 @@ Rectangle {
 
     property string label: ""
     property bool selected: false
+    // Over something that answers presses of its own (a popup over a page):
+    // the chip takes the press for itself, as PlateButton does, which a
+    // plain tap does not.
+    property bool takesPress: false
     signal picked()
 
     implicitWidth: choiceLabel.implicitWidth + Theme.space4 * 2
@@ -35,5 +39,8 @@ Rectangle {
     }
 
     HoverHandler { id: choiceHover; cursorShape: Qt.PointingHandCursor }
-    TapHandler { onTapped: choice.picked() }
+    TapHandler {
+        gesturePolicy: choice.takesPress ? TapHandler.ReleaseWithinBounds : TapHandler.DragThreshold
+        onTapped: choice.picked()
+    }
 }

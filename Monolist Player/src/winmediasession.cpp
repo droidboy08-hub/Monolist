@@ -462,6 +462,8 @@ bool WinMediaSession::attach(QWindow *window)
     connect(m_player, &PlaybackController::playingChanged, this, &WinMediaSession::publish);
     connect(m_player, &PlaybackController::durationChanged, this, &WinMediaSession::publish);
     connect(m_player, &PlaybackController::positionChanged, this, &WinMediaSession::positionMoved);
+    // Slowed or Nightcore: Windows runs its clock at the song's own rate.
+    connect(m_player, &PlaybackController::playbackRateChanged, this, &WinMediaSession::publish);
     trackChanged();
     return true;
 }
@@ -538,7 +540,11 @@ void WinMediaSession::positionMoved()
 {
     if (!m_native || !m_publishedAt.isValid())
         return;
-    const qint64 expected = m_publishedPosition + (m_publishedPlaying ? m_publishedAt.elapsed() : 0);
+    // Windows' clock runs on at the rate it was told (publishTimeline): the
+    // song's time, which Slowed and Nightcore make slower or faster than the
+    // clock on the wall.
+    const qint64 expected = m_publishedPosition
+                            + (m_publishedPlaying ? qint64(double(m_publishedAt.elapsed()) * m_publishedRate) : 0);
     if (qAbs(m_player->position() - expected) > kDriftMs
         || (m_publishedPlaying && m_publishedAt.elapsed() > kRefreshMs))
         publishTimeline();
@@ -570,9 +576,11 @@ void WinMediaSession::publishTimeline()
         position = qMin(position, duration);
     m_publishedPosition = position;
     m_publishedPlaying = m_player->playing();
+    m_publishedRate = m_player->playbackRate() > 0.0 ? m_player->playbackRate() : 1.0;
     m_publishedAt.start();
     if (!w.controls2 || !w.timeline)
         return;
+    w.controls2->put_PlaybackRate(m_publishedRate);
     const auto ticks = [](qint64 ms) { return TimeSpan { ms * 10000 }; };
     w.timeline->put_StartTime(ticks(0));
     w.timeline->put_EndTime(ticks(duration));

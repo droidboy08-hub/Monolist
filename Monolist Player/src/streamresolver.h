@@ -240,7 +240,9 @@ public:
     // For --recovery-test: `tier` answers this track with `url` at once,
     // asking no one, or fails at once where `url` is empty. Each answer
     // carries a g=<n> of its own, so a stand-in server can tell a fresh link
-    // from an old one, and an expire= that --spoil can spoil.
+    // from an old one, and an expire= that --spoil can spoil. TierJioSaavn's
+    // is resolveTrack's while JioSaavn is on, as a match found before would
+    // be, the link as it is, until refuseSaavn.
     void setTestAnswer(const QString &videoId, int tier, const QString &url)
     {
         m_testAnswers[videoId].insert(tier, url);

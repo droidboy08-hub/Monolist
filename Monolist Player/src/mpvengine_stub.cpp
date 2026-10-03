@@ -98,7 +98,55 @@ void MpvEngine::setVolume(qreal volume)
 
 void MpvEngine::setSpeed(qreal speed)
 {
-    Q_UNUSED(speed)
+    m_userSpeed = qBound(0.25, double(speed), 4.0);
+}
+
+// Nothing plays, so the effects are only kept: effects() answers with what
+// was set, and mpv's side of them is empty.
+void MpvEngine::setEffects(const SoundChain::Settings &settings)
+{
+    m_fx = SoundChain::sanitized(settings);
+}
+
+bool MpvEngine::setAudioFilters(const QString &afValue)
+{
+    Q_UNUSED(afValue)
+    return false;
+}
+
+QString MpvEngine::audioFilterProperty() const
+{
+    return QString();
+}
+
+double MpvEngine::speedProperty() const
+{
+    return 1.0;
+}
+
+bool MpvEngine::pitchCorrection() const
+{
+    return true;
+}
+
+bool MpvEngine::effectsAnswer()
+{
+    return false;
+}
+
+QStringList MpvEngine::effectsRefused()
+{
+    return QStringList();
+}
+
+bool MpvEngine::hasSoundTrack() const
+{
+    return false;
+}
+
+QString MpvEngine::levellingPreamp() const
+{
+    return QString();
 }
 
 void MpvEngine::setReplayGainEnabled(bool enabled)

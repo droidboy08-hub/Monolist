@@ -40,8 +40,29 @@ Rectangle {
     // the codec and the rest follow the source a moment later, once the
     // sound has started). Set like the lyrics' credit, since it is the same
     // kind of note.
-    readonly property string soundSource: hasTrack && !Player.resolving && Player.streamInfo.length > 0
+    readonly property string soundStream: hasTrack && !Player.resolving && Player.streamInfo.length > 0
                                           ? Player.streamInfo.toUpperCase() : ""
+    // The sound effects that are on follow it ("… · SLOWED 0.85× + REVERB ·
+    // HIGH BASS +6 DB"): they are what the song sounds like, so they are
+    // named where its sound is.
+    readonly property string soundEffects: hasTrack && Sound.active && !Sound.failed
+                                           ? Sound.summary.toUpperCase() : ""
+    readonly property string soundSource: [soundStream, soundEffects].filter(part => part.length > 0).join(" · ")
+    // The line as printed `width` wide: one line while both fit on it, else
+    // the effects on a line of their own, so neither is cut short.
+    function soundLine(width) {
+        return soundStream.length > 0 && soundEffects.length > 0 && soundMetrics.advanceWidth > width
+               ? soundStream + "\n" + soundEffects : soundSource
+    }
+
+    TextMetrics {
+        id: soundMetrics
+        font.family: Theme.fontFamily
+        font.pixelSize: 11
+        font.weight: Font.Bold
+        font.letterSpacing: Theme.tracking(11, 0.1)
+        text: root.soundSource
+    }
 
     // The cover's colour as the field, signal red until it is known.
     property color field: Theme.red
@@ -384,7 +405,9 @@ Rectangle {
                 Text {
                     visible: text.length > 0
                     width: parent.width
-                    text: root.soundSource
+                    text: root.soundLine(width)
+                    wrapMode: Text.WordWrap
+                    maximumLineCount: root.soundEffects.length > 0 ? 3 : 1
                     elide: Text.ElideRight
                     font.family: Theme.fontFamily
                     font.pixelSize: 11
@@ -579,7 +602,9 @@ Rectangle {
                 Text {
                     visible: text.length > 0
                     width: parent.width
-                    text: root.soundSource
+                    text: root.soundLine(width)
+                    wrapMode: Text.WordWrap
+                    maximumLineCount: root.soundEffects.length > 0 ? 3 : 1
                     elide: Text.ElideRight
                     font.family: Theme.fontFamily
                     font.pixelSize: 11

@@ -42,6 +42,9 @@ ApplicationWindow {
     onNowPlayingOpenChanged: if (nowPlayingOpen) videoPip = false
     // The part of Settings a link asked for, until Settings has scrolled to it.
     property string settingsSection: ""
+    // Set from the command line (--effects-popup): the player bar's effects
+    // popup open once the window is up, for a look at it.
+    property bool effectsPopupAtStart: false
 
     // — ambient colour —
     // The playing song's colour, measured from its cover (CoverPalette),
@@ -347,6 +350,14 @@ ApplicationWindow {
     // The signed-in account's row and switches.
     function openAccountSettings() {
         window.settingsSection = "ytmusic"
+        window.navigate("settings")
+    }
+
+    // Settings > Playback's EFFECTS block, from the player bar's popup. Now
+    // Playing covers the page, so it goes down first.
+    function openEffectsSettings() {
+        window.nowPlayingOpen = false
+        window.settingsSection = "effects"
         window.navigate("settings")
     }
 
@@ -762,6 +773,15 @@ ApplicationWindow {
                 window.queueOpen = !window.queueOpen
         }
         onNowPlayingToggled: window.nowPlayingOpen = !window.nowPlayingOpen
+        onEffectsSettingsRequested: window.openEffectsSettings()
+    }
+
+    // --effects-popup: once the window has been laid out, so that the popup
+    // stands where the button really is.
+    Timer {
+        interval: 800
+        running: window.effectsPopupAtStart
+        onTriggered: playerBar.showEffects()
     }
 
     // — Now Playing —
@@ -1105,6 +1125,13 @@ ApplicationWindow {
 
     Connections {
         target: About
+        function onNotice(text) { toast.show(text) }
+    }
+
+    // The sound effects' answers: that they would not start, and are off
+    // until the next launch.
+    Connections {
+        target: Sound
         function onNotice(text) { toast.show(text) }
     }
 

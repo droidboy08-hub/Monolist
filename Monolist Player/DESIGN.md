@@ -311,6 +311,28 @@ that gets blamed for the app being slow.
   *Why.* Lyrics are read left-to-right and change constantly; they need the side
   that is not interrupted by the cover's colour field, and they need to start at
   a consistent left edge.
+* **The sound effects are a glyph on the player bar, red while any is on.**
+  Slowed + reverb, Nightcore, 8D audio, High bass and the equaliser are kept
+  from one launch to the next, so the sliders glyph beside the output button
+  turns red whenever the sound is being changed, and opens them all in a popup
+  built like the volume popup's: paper in a 2px ink frame, standing on the bar,
+  no motion. Settings > Playback has the same block (EFFECTS, not SOUND, which
+  is the quality above it), with a line of explanation under each effect, and
+  Now Playing's sound line names the effects that are on. The glyph stays on the
+  bar for as long as the title does, and only below that goes into the volume
+  popup with the output button.
+  *Why.* An effect kept from yesterday — a song slowed the next morning — has
+  to explain itself where the hand already is, and be one click from undone; a
+  window snapped to half the screen still shows the red. The four effects are
+  tiles rather than check boxes because each changes the whole sound at a
+  stroke: off, a tile is paper in an ink frame; on, it is printed in reverse
+  with the red square, as the toast carries it. Their strengths are chips, the
+  equaliser's bands are ink bars standing on a 0 dB tick, never red — a lifted
+  band is a setting, not something that is on — with the curve they make
+  together drawn behind them, since the bands add up and the curve can stand
+  higher than any one of them. The popup keeps one height whatever is on: it
+  grows upwards from the bar, so a row of strengths appearing would lift the
+  tiles away from under the pointer that had just clicked one.
 
 ## 4. Type and rules
 

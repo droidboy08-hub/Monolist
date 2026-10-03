@@ -118,6 +118,13 @@ qt_add_executable(monolist
     # this computer (--recovery-test).
     src/recoveryselftest.h         src/recoveryselftest.cpp
     src/sessionselftest.h          src/sessionselftest.cpp
+    # The sound effects: Slowed + reverb, Nightcore, 8D audio, High bass and
+    # the equaliser. The chain of filters mpv is given and its maths (pure,
+    # built without libmpv too), the settings behind the QML singleton Sound,
+    # and their tests (--sound-test, --sound-live-test).
+    src/soundchain.h               src/soundchain.cpp
+    src/soundeffects.h             src/soundeffects.cpp
+    src/soundselftest.h            src/soundselftest.cpp
 )
 
 # The build's own identity: version, build number, commit, date. Regenerated
@@ -294,6 +301,8 @@ qt_add_qml_module(monolist
         components/MiniVideo.qml
         components/FullscreenVideo.qml
         components/ArtistLine.qml
+        components/EffectsPanel.qml
+        components/BandSlider.qml
         views/HomeView.qml
         views/SearchView.qml
         views/LibraryView.qml

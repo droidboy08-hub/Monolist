@@ -8,6 +8,9 @@ Item {
     property string label: ""
     property string hint: ""
     property bool checked: false
+    // Over something that answers presses of its own (a popup over a page):
+    // the row takes the press for itself, as ChoiceChip can.
+    property bool takesPress: false
     signal toggled()
 
     implicitHeight: Math.max(18, toggleText.implicitHeight)
@@ -59,5 +62,8 @@ Item {
     }
 
     HoverHandler { cursorShape: Qt.PointingHandCursor }
-    TapHandler { onTapped: toggle.toggled() }
+    TapHandler {
+        gesturePolicy: toggle.takesPress ? TapHandler.ReleaseWithinBounds : TapHandler.DragThreshold
+        onTapped: toggle.toggled()
+    }
 }

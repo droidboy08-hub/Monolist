@@ -62,9 +62,13 @@ owner's iPhone app (AryaMusix / "Mediano", Swift, not in this repo).
 - Self-tests are flags on the app (grep `src/main.cpp` for `-test"`): e.g.
   `--saavn-test`, `--listen-test`, `--scrobble-test`, `--lyrics-race-test`,
   `--cookie-test`, `--account-guard-test`, `--ytm-session-test`, `--ytm-library-test`, `--visitor-test`, `--format-test`,
-  `--download-cleanup-test`, `--download-queue-test`, `--download-folder-test`, `--loudness-test`, `--library-edit-test`, `--recovery-test`, `--session-test` … Each
+  `--download-cleanup-test`, `--download-queue-test`, `--download-folder-test`, `--loudness-test`, `--library-edit-test`, `--recovery-test`, `--session-test`,
+  `--sound-test` (the sound effects with no libmpv: chain text, ramps, presets, clipping maths, what is kept;
+  in the release gate), `--sound-live-test` (the effects on the real libmpv with `MONOLIST_MPV_AO=null`, no
+  sound device; timed, so not in the release gate) … Each
   prints `N checks, 0 failed`. All must pass, except `--scrobble-send-test`,
-  which needs its local stand-in (`scripts/lastfm-mock.ps1`).
+  which needs its local stand-in (`scripts/lastfm-mock.ps1`). `MONOLIST_MPV_AO=null` plays any run to no
+  sound device (and `MONOLIST_MPV_VO=null` decodes a picture to nowhere, for an engine with no surface).
 - Screenshots: `--shot <file.png> [seconds] [--shot-scroll <px>] [--quit]` (with `--view`, `--settings-section`) saves the
   window as the app draws it. Capturing the window from outside (PrintWindow) returns the last frame
   shown, which is stale while the window is behind others.
@@ -160,6 +164,12 @@ owner's iPhone app (AryaMusix / "Mediano", Swift, not in this repo).
   Capital is read as a signal handler; `Palette` is QtQuick's type (ours is
   `CoverPalette`); ids shadow same-named properties; `top` is FINAL on Item;
   replacing a ScrollBar's contentItem drops auto-hide (use MonoScrollBar).
+- QML (2026-10-02): a plain TapHandler lets the press go on to whatever is
+  underneath, even through a Popup with a press-eating MouseArea behind it;
+  in a popup over a page, give taps `gesturePolicy:
+  TapHandler.ReleaseWithinBounds` (ChoiceChip/ToggleRow: `takesPress`) or use
+  a MouseArea. A ReleaseWithinBounds TapHandler on a Text never fired there;
+  text links use a MouseArea, as the toast's does.
 - Tooltips need the QtQuick.Controls module deployed (build-windows.ps1 copies
   it); importing QtQuick.Controls or QtQuick.Dialogs in QML makes windeployqt
   ship every style (~20 MB) — avoid.
@@ -212,6 +222,23 @@ Next, in the order the owner last agreed (ask which first):
 3. The rest of the roadmap: library export/import, local files, playlist import
    from links, preferences, in-app log, app icon, a Windows installer,
    automated tests, README/DESIGN.md refresh.
+
+Sound effects (2026-10-02; the owner asked for an equaliser with Slowed +
+reverb, High bass, 8D audio and Nightcore; ROADMAP P07): the engine
+(`SoundChain`, one `@fx` lavfi chain in mpv's af, live changes by af-command
+ramps; Slowed and Nightcore are mpv's speed with pitch correction off), the
+model (`Sound` singleton, `SoundEffects`, sound.* settings) and the QML are
+built and tested (`--sound-test`, `--sound-live-test`, screenshots). The QML:
+`EffectsPanel` (one block, in the player bar's popup and in Settings >
+Playback, `--settings-section effects`), `BandSlider`, the sliders glyph on
+the bar (red while any effect is on; in the volume popup below 760 px),
+`--effects-popup` for screenshots, Now Playing's sound line. The owner has not
+yet listened to the defaults on a real device (reverb strengths, High bass +6
+vs +9). Left for the macOS
+session: `macos/mediasession.mm` should publish
+`MPNowPlayingInfoPropertyPlaybackRate = playing ? Player.playbackRate : 0`
+(Windows' media controls already get it), and `--sound-test` should be run
+on a Mac (Homebrew's FFmpeg) before shipping the effects there.
 
 Waiting on the owner: the Last.fm key (C01); a live test of the YouTube account
 features with a spare account (C02-C04, see the checklist).

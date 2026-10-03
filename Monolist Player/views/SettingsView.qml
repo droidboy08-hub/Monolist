@@ -17,9 +17,9 @@ ScrollPage {
     readonly property bool automatic: Library.region.length === 0
 
     // A part of the page to open on, for a link elsewhere that names one
-    // ("recommendations", "connections", or "ytmusic" for the YouTube Music
-    // account's switches): scrolled to once, then said done, so the same
-    // link works again later.
+    // ("recommendations", "connections", "effects" for the sound effects, or
+    // "ytmusic" for the YouTube Music account's switches): scrolled to once,
+    // then said done, so the same link works again later.
     property string section: ""
     signal sectionRevealed()
     // Sign in on Google's page: asked of the window, which says what it
@@ -58,6 +58,7 @@ ScrollPage {
         var target = section === "recommendations" ? recommendationsHeader
                    : section === "downloads" ? downloadsHeader
                    : section === "connections" ? connectionsHeader
+                   : section === "effects" ? effectsBlock
                    : section === "signin" ? ytmRow
                    : section === "ytmusic" ? (homeToggle.visible ? homeToggle : ytmRow) : null
         if (target)
@@ -445,6 +446,15 @@ ScrollPage {
                   + "it stays on YouTube until it is played again."
             checked: Player.saavnUpgrade
             onToggled: Player.saavnUpgrade = !Player.saavnUpgrade
+        }
+
+        // The sound effects: the same block as the player bar's popup, with
+        // a line of explanation under each effect that is on. Called EFFECTS,
+        // not SOUND, which is the quality above.
+        EffectsPanel {
+            id: effectsBlock
+            width: Math.min(parent.width, 720)
+            detailed: true
         }
 
         Text {

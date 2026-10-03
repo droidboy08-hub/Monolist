@@ -1292,6 +1292,24 @@ void StreamResolver::resolveTrack(const Saavn::Target &track)
     }
 
     const SaavnVerdict verdict = saavnVerdict(track);
+
+    // For the self-tests (setTestAnswer with TierJioSaavn): JioSaavn's link
+    // given as a match found before is, asking no one, until mpv refuses it;
+    // an empty one is a song JioSaavn does not have.
+    const auto test = m_testAnswers.constFind(videoId);
+    if (test != m_testAnswers.constEnd() && test->contains(TierJioSaavn)) {
+        const QString url = test->value(TierJioSaavn);
+        if (url.isEmpty() || verdict.kind == SaavnVerdict::Refused) {
+            resolve(videoId);
+            return;
+        }
+        qInfo("resolver: %s answered by the self-test as JioSaavn", qPrintable(videoId));
+        QMetaObject::invokeMethod(this, [this, videoId, url]() {
+            emitResolved(videoId, url, TierJioSaavn, /*fromCache=*/true);
+        }, Qt::QueuedConnection);
+        prefetch(videoId);
+        return;
+    }
     if (verdict.kind == SaavnVerdict::Match) {
         qInfo("jiosaavn: %s plays from the match found before (%s, %d kbps)", qPrintable(videoId),
               qPrintable(verdict.saavnId), verdict.kbps);

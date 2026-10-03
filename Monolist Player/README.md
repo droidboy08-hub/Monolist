@@ -335,6 +335,38 @@ The Now Playing view prints the cover on a field of its own dominant colour
 (`CoverPalette`, measured from the cached artwork), with ink or paper type,
 whichever contrasts better.
 
+### Sound effects
+
+`Sound` (`soundeffects.*`) holds five effects, each kept from one launch to
+the next (the `sound.*` settings):
+
+* **Slowed + reverb**: every song at 0.80, 0.85 or 0.90 of its speed, the
+  pitch going down with it like a record played slow, in a hall (reverb off,
+  light, medium or heavy).
+* **Nightcore**: 1.20, 1.25 or 1.30 times, the pitch going up. Slowed and
+  Nightcore both set the speed, so turning one on turns the other off.
+* **8D audio**: the song carried round the head once every ten seconds, in a
+  light room of its own; best with headphones.
+* **High bass**: a shelf under 100 Hz, +3, +6, +9 or +12 dB.
+* **Equaliser**: ten bands from 31 Hz to 16 kHz, up to 12 dB up or down each
+  in 0.5 dB steps, with 16 curves to start from.
+
+The speed is mpv's own `speed` with its pitch correction off, so times stay the
+song's (a 3:00 song still shows 3:00, and takes about 3:32 slowed), the seek
+bar and the lyrics follow it as written, and Windows' media controls are told
+the rate. Everything else is one lavfi chain in mpv's `af`, built only from
+fixed templates (`soundchain.*`); a change is ramped into the running chain
+with `af-command` rather than rebuilding it, so nothing clicks. The sound is
+turned down as far as the boosts need, and a limiter at -1 dBFS catches what
+is left. If mpv will not take the chain, the song plays without it and the
+effects stay off until Monolist restarts, which a toast says.
+
+They are on the player bar: the sliders glyph beside the output button is red
+while any effect is on, and opens them all in a popup standing on the bar.
+Settings > Playback has the same block, with a line of explanation under each
+effect (`--settings-section effects`), and Now Playing's sound line names the
+effects that are on.
+
 ## Layout
 
     CMakeLists.txt             build; finds Qt 6 and libmpv
@@ -354,7 +386,8 @@ whichever contrasts better.
     Icons.js                 Lucide glyph outlines as path data
     components/              UI components: the prototype's, and the menus,
                              cards, queue panel, lyrics pane, title bar parts,
-                             ArtistLine (an artist line whose names are links)
+                             ArtistLine (an artist line whose names are links),
+                             EffectsPanel and BandSlider (the sound effects)
     views/                   Home, Search, Library, Downloads, Page (album or
                              YouTube Music playlist), Artist, Shelf (a shelf's
                              "show all"), Playlist, Now Playing
@@ -369,6 +402,10 @@ whichever contrasts better.
       playbackcontroller.*   the facade QML binds to — driven by mpv
       queuemodel.*           the play queue
       mpvengine.*            libmpv wrapper, audio-only
+      soundchain.*           the sound effects' lavfi chain, its ramps and the
+                             equaliser's curves (no mpv)
+      soundeffects.*         the effects as kept and shown to QML (Sound)
+      soundselftest.*        --sound-test and --sound-live-test
       mediaextractor.*       search: InnerTube first, yt-dlp as fallback
       innertube.*            YouTube Music's API: search, suggestions, radio,
                              browse pages, artist pages, lyrics
@@ -403,8 +440,8 @@ whichever contrasts better.
 
 ### QML singletons
 
-`Library`, `Player`, `Extractor`, `Downloads`, `Catalog`, `Artists`, `Lyrics`,
-`CoverPalette` and `Chrome`. The image provider registers as
+`Library`, `Player`, `Sound`, `Extractor`, `Downloads`, `Catalog`, `Artists`,
+`Lyrics`, `CoverPalette` and `Chrome`. The image provider registers as
 `image://artwork/<url>`. In QML, `Nav` carries a link's request to the window,
 and `Menus` a right click's or a "more" button's: the window keeps one
 `TrackMenu`, `CardMenu` and `PlaylistMenu` and opens it with what was clicked.
@@ -710,6 +747,27 @@ first failure`.
                                                     loaded again, a junk download streamed, a junk file
                                                     passed over, the three-in-a-row stop, and each switch
                                                     back (needs MONOLIST_DATA_DIR; about 90 s)
+    monolist --session-test                         a launch opening on the queue, the song and the place the
+                                                    last one left, on the real mpv against a stand-in server
+                                                    on this computer (needs MONOLIST_DATA_DIR)
+    monolist --loudness-test                        loudness levelling on the real mpv against the same
+                                                    stand-in (needs MONOLIST_DATA_DIR)
+    monolist --sound-test                           the sound effects with no libmpv and no sound card: the
+                                                    chain's text against the copies proven inside libmpv,
+                                                    the ramps' steps, the 16 curves, the clipping maths
+                                                    against the filters' measured response, what is kept and
+                                                    read back, Slowed and Nightcore never on together (needs
+                                                    MONOLIST_DATA_DIR; in the release gate)
+    monolist --sound-live-test                      the same effects on the real mpv with no sound device
+                                                    (MONOLIST_MPV_AO=null): switched on and off mid-song, the
+                                                    clock at 0.85x and 1.25x, every curve with the strongest
+                                                    bass and reverb (every filter answering), 8D added
+                                                    mid-song, a chain mpv refuses or will not build (a song
+                                                    from JioSaavn, and a picture with its sound), links that
+                                                    will not open failing as with no effects on, a slow seek
+                                                    through a stand-in server, the JioSaavn move carrying the
+                                                    chain (needs MONOLIST_DATA_DIR; about a minute; timed,
+                                                    so not in the release gate)
     monolist --download <videoId> [seconds]         one download through yt-dlp and FFmpeg, into the scratch
                                                     database and download folder (refuses without
                                                     MONOLIST_DATA_DIR; MONOLIST_DOWNLOAD_DIR may still
@@ -888,6 +946,9 @@ be, for a look at a state:
                                                     playlist:<id>, playlist:liked
     monolist --query "<text>"                       search, with the text typed in
     monolist --open-queue  /  --now-playing         with the queue, or Now Playing, open
+    monolist --effects-popup                        with the player bar's sound effects popup open
+    monolist --settings-section <section>           Settings, scrolled to recommendations, downloads,
+                                                    connections, effects, signin or ytmusic
     monolist --ytm-demo <state>[+file]              the YouTube Music row as active, checking, unreachable,
                                                     rejected (a session that ended), notsignedin (an import
                                                     answered as signed out), unreadable (a stored copy that
