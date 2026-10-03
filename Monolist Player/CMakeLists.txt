@@ -125,6 +125,10 @@ qt_add_executable(monolist
     src/soundchain.h               src/soundchain.cpp
     src/soundeffects.h             src/soundeffects.cpp
     src/soundselftest.h            src/soundselftest.cpp
+    # The app icon Settings > Appearance offers, the window's and the
+    # shortcuts', and its test (--icon-test).
+    src/appicon.h                  src/appicon.cpp
+    src/appiconselftest.h          src/appiconselftest.cpp
 )
 
 # The build's own identity: version, build number, commit, date. Regenerated
@@ -323,6 +327,12 @@ qt_add_qml_module(monolist
         fonts/Archivo-SemiBold.ttf
         fonts/Archivo-ExtraBold.ttf
         fonts/OFL.txt
+        # The app icons Settings > Appearance offers, for the window and the
+        # choice (AppIcon); packaging/make-icon.ps1 makes them.
+        icons/app/note-16.png icons/app/note-24.png icons/app/note-32.png icons/app/note-48.png
+        icons/app/note-64.png icons/app/note-128.png icons/app/note-256.png
+        icons/app/note-red-16.png icons/app/note-red-24.png icons/app/note-red-32.png icons/app/note-red-48.png
+        icons/app/note-red-64.png icons/app/note-red-128.png icons/app/note-red-256.png
 )
 
 target_include_directories(monolist PRIVATE src)
@@ -354,7 +364,8 @@ if(WIN32)
     # WindowChrome: the drop shadow and square corners of the caption-less frame.
     # netapi32: the account's full name, for the sidebar (Library).
     # runtimeobject: the Windows Runtime's activation and strings.
-    target_link_libraries(monolist PRIVATE dwmapi netapi32 runtimeobject)
+    # ole32, shell32, uuid: the app's shortcuts pointed at the chosen icon (AppIcon).
+    target_link_libraries(monolist PRIVATE dwmapi netapi32 runtimeobject ole32 shell32 uuid)
 endif()
 
 # Signing in on Google's own page in a window of the app's own (GoogleSignIn):
@@ -453,6 +464,7 @@ if(WIN32)
     # own, with none of the app's include folders.
     enable_language(RC)
     set(MONOLIST_ICON "${CMAKE_CURRENT_SOURCE_DIR}/packaging/monolist.ico")
+    set(MONOLIST_ICON_RED "${CMAKE_CURRENT_SOURCE_DIR}/packaging/icons/note-red.ico")
     configure_file(src/monolist.rc.in "${CMAKE_CURRENT_BINARY_DIR}/generated/monolist.rc" @ONLY)
     add_library(monolist_resources OBJECT "${CMAKE_CURRENT_BINARY_DIR}/generated/monolist.rc")
     target_sources(monolist PRIVATE $<TARGET_OBJECTS:monolist_resources>)

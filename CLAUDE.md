@@ -65,7 +65,8 @@ owner's iPhone app (AryaMusix / "Mediano", Swift, not in this repo).
   `--download-cleanup-test`, `--download-queue-test`, `--download-folder-test`, `--loudness-test`, `--library-edit-test`, `--recovery-test`, `--session-test`,
   `--sound-test` (the sound effects with no libmpv: chain text, ramps, presets, clipping maths, what is kept;
   in the release gate), `--sound-live-test` (the effects on the real libmpv with `MONOLIST_MPV_AO=null`, no
-  sound device; timed, so not in the release gate) … Each
+  sound device; timed, so not in the release gate), `--icon-test` (the app icon choice; shortcuts made in the
+  scratch folder only, never the real Start menu or desktop) … Each
   prints `N checks, 0 failed`. All must pass, except `--scrobble-send-test`,
   which needs its local stand-in (`scripts/lastfm-mock.ps1`). `MONOLIST_MPV_AO=null` plays any run to no
   sound device (and `MONOLIST_MPV_VO=null` decodes a picture to nowhere, for an engine with no surface).
@@ -155,6 +156,12 @@ owner's iPhone app (AryaMusix / "Mediano", Swift, not in this repo).
   MONOLIST_DATA_DIR scratch folders for every GUI check. The app now refuses a
   second instance per data folder (InstanceGuard), checks the database at
   launch, and keeps a daily backup.
+- 2026-10-02: the owner's installed Monolist was found with no Settings > Apps
+  entry. Release checks had installed each setup on this PC (into a test folder)
+  and uninstalled it again: it shares the AppId, so its uninstall took the
+  owner's entry with it. Never run the setup on the owner's PC to check a
+  release; check the portable zip unpacked in a scratch folder (the same files),
+  and leave installing to the owner.
 
 - mpv list options: never `change-list <opt> set` with a URL (it splits on ':'
   on macOS/Linux — videos lost their sound); clear, then `append`.

@@ -406,6 +406,9 @@ effects that are on.
                              equaliser's curves (no mpv)
       soundeffects.*         the effects as kept and shown to QML (Sound)
       soundselftest.*        --sound-test and --sound-live-test
+      appicon.*              the app icon chosen in Settings: the window's,
+                             and the app's own shortcuts' (AppIcon)
+      appiconselftest.*      --icon-test
       mediaextractor.*       search: InnerTube first, yt-dlp as fallback
       innertube.*            YouTube Music's API: search, suggestions, radio,
                              browse pages, artist pages, lyrics
@@ -631,7 +634,11 @@ run what was built on it. To give it to someone else, sign it with a Developer
 ID and notarise it; without that, macOS will refuse to open a downloaded copy.
 
 The icon is `macos/Monolist.icns`, drawn from the bundled Archivo by
-`macos/make-icon.py` (Pillow); run that again if the palette changes.
+`macos/make-icon.py` (Pillow); run that again if the palette changes. It is
+still the "M." mark: Windows' icon became the owner's note
+(`packaging/icons/note.png`, 2026-10-02), which the Mac's should follow, drawn
+on Apple's grid. Settings' app icon choice changes the window's icon only off
+the Mac (the Dock keeps the bundle's).
 
 ### Last.fm key
 
@@ -757,6 +764,10 @@ first failure`.
                                                     the ramps' steps, the 16 curves, the clipping maths
                                                     against the filters' measured response, what is kept and
                                                     read back, Slowed and Nightcore never on together (needs
+                                                    MONOLIST_DATA_DIR; in the release gate)
+    monolist --icon-test                            the app icon choice: both pictures, the setting, and
+                                                    shortcuts pointed at the executable's icons, on
+                                                    shortcuts made in the scratch folder (needs
                                                     MONOLIST_DATA_DIR; in the release gate)
     monolist --sound-live-test                      the same effects on the real mpv with no sound device
                                                     (MONOLIST_MPV_AO=null): switched on and off mid-song, the

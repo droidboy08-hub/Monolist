@@ -1,8 +1,12 @@
-// The app's icon, for Explorer, the taskbar and the window: Qt's Windows
-// platform takes IDI_ICON1 from the executable as every window's icon.
-// Drawn by packaging/make-icon.ps1; configured into the build folder by
-// CMakeLists.txt, with the icon's full path filled in.
+// The app's icons, for Explorer, the taskbar and the window: Qt's Windows
+// platform takes IDI_ICON1 from the executable as every window's icon, and
+// Explorer numbers them in this order. The first is the default; the others
+// are Settings > Appearance's choices, which the app's own shortcuts are
+// pointed at by number (AppIcon), so the order is AppIcon's. Made by
+// packaging/make-icon.ps1; configured into the build folder by
+// CMakeLists.txt, with the icons' full paths filled in.
 IDI_ICON1 ICON "@MONOLIST_ICON@"
+IDI_ICON2 ICON "@MONOLIST_ICON_RED@"
 
 // What Windows calls the app where it names it: the media flyout beside the
 // volume, Task Manager, a file's Properties. Without it, "monolist.exe".

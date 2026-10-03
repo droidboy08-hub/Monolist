@@ -190,6 +190,7 @@ Priority runs from 1 (first) to 9. Size: S under an hour, M a few hours, L a day
 
 - [ ] **G01** The app has no icon on any platform *(P8, S)*
   Windows done 2026-09-29: packaging/make-icon.ps1 draws "M." (Archivo, paper on ink, the point in red) into monolist.ico, built into monolist.exe (IDI_ICON1, the window's and the taskbar's) and the installer. Left: the .icns for the Mac bundle.
+  2026-10-02, the owner's: the icon is now their note (packaging/icons/note.png), and Settings > Appearance offers it or a red note (make-icon.ps1 makes both; IDI_ICON1/IDI_ICON2; AppIcon points the app's own Start menu, desktop and pinned-taskbar shortcuts at the chosen one; --icon-test). Left: the Mac's .icns redrawn from the note on Apple's grid (macos/make-icon.py).
   Done when: An icon made from the 'MONOLIST.' wordmark ships as .ico on Windows (via an .rc file), .icns in the Mac bundle, and PNG for the window icon.
 - [x] **G02** No Windows build that can be given to someone else *(P8, M)*
   Done 2026-09-29: package-windows.ps1 (-Installer), packaging/monolist.iss, .github/workflows/release-windows.yml. Installed and run with the toolchain out of PATH: self-tests, playback, a download through the bundled yt-dlp and FFmpeg; uninstalled clean.

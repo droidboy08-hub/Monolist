@@ -68,7 +68,7 @@ jobs:
         run: |
           $exe = 'C:\dev\monolist-build\package\Monolist\monolist.exe'
           $failed = @()
-          foreach ($test in '--account-guard-test', '--cookie-test', '--secret-test', '--lastfm-test', '--saavn-test', '--lyrics-query-test', '--format-test', '--sound-test') {
+          foreach ($test in '--account-guard-test', '--cookie-test', '--secret-test', '--lastfm-test', '--saavn-test', '--lyrics-query-test', '--format-test', '--sound-test', '--icon-test') {
             $data = Join-Path $env:RUNNER_TEMP ($test.TrimStart('-'))
             New-Item -ItemType Directory -Force $data | Out-Null
             $env:MONOLIST_DATA_DIR = $data

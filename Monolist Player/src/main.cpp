@@ -55,6 +55,8 @@
 #include "googlesignin.h"
 #include "instanceguard.h"
 #include "appinfo.h"
+#include "appicon.h"
+#include "appiconselftest.h"
 #include "rec/catalog.h"
 #include "rec/suitable.h"
 #include <QTextStream>
@@ -315,6 +317,11 @@ int main(int argc, char *argv[])
         // computer; timed, so not in the release gate.
         if (arguments.contains(QStringLiteral("--sound-live-test")))
             return runSoundLiveSelfTest(&library) == 0 ? 0 : 1;
+        // The app icon choice: the pictures, the setting, and shortcuts
+        // pointed at the executable's icons — made for the test, never the
+        // real ones (appiconselftest.cpp); in MONOLIST_DATA_DIR only.
+        if (arguments.contains(QStringLiteral("--icon-test")))
+            return runAppIconSelfTest(&library) == 0 ? 0 : 1;
     }
 
     // Which page an artist's name opens: learnt from every answer that links
@@ -485,6 +492,10 @@ int main(int argc, char *argv[])
     // so it plays with them from its first second.
     SoundEffects sound(&engine, &library);
     sound.restore();
+    // The app icon chosen in Settings > Appearance, on the window before it
+    // is shown (and on the app's own shortcuts, a little later).
+    AppIcon appIcon(&library);
+    appIcon.restore();
     // Open on the queue as it was left, the song and the place in it, ready
     // and not playing; the first launch, with the library queued instead.
     if (!player.restoreSession())
@@ -603,6 +614,7 @@ int main(int argc, char *argv[])
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "SystemPip", &systemPip);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Player",    &player);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Sound",     &sound);
+    qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "AppIcon",   &appIcon);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Extractor", &extractor);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Downloads", &downloads);
     // Not "Palette": QtQuick has a type of that name, which would win.

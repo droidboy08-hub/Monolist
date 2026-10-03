@@ -362,6 +362,78 @@ ScrollPage {
             }
         }
 
+        // The app's own icon: the window's, and its shortcuts' (AppIcon).
+        Column {
+            width: parent.width
+            spacing: Theme.space3
+
+            SmallCaps { text: "APP ICON" }
+
+            Row {
+                spacing: Theme.space4
+
+                Repeater {
+                    model: AppIcon.choices
+
+                    delegate: Item {
+                        id: iconChoice
+                        required property var modelData
+                        readonly property bool current: AppIcon.current === modelData.id
+                        width: 96
+                        height: plate.height + Theme.space2 + name.implicitHeight
+
+                        Accessible.role: Accessible.RadioButton
+                        Accessible.name: modelData.name
+                        Accessible.checked: current
+
+                        // The chosen one framed in ink; the pointer's in grey.
+                        Rectangle {
+                            id: plate
+                            width: 96
+                            height: 96
+                            color: "transparent"
+                            border.width: Theme.ruleWidth
+                            border.color: iconChoice.current ? Theme.text
+                                        : choiceHover.hovered ? Theme.neutral500 : "transparent"
+
+                            Image {
+                                anchors.centerIn: parent
+                                width: 72
+                                height: 72
+                                source: iconChoice.modelData.preview
+                                sourceSize.width: 144
+                                sourceSize.height: 144
+                                smooth: true
+                                mipmap: true
+                            }
+                        }
+
+                        Text {
+                            id: name
+                            anchors.top: plate.bottom
+                            anchors.topMargin: Theme.space2
+                            width: parent.width
+                            horizontalAlignment: Text.AlignHCenter
+                            text: iconChoice.modelData.name
+                            font.family: Theme.fontFamily
+                            font.pixelSize: 13
+                            font.weight: iconChoice.current ? Font.Bold : Theme.weightRegular
+                            color: Theme.text
+                        }
+
+                        HoverHandler { id: choiceHover; cursorShape: Qt.PointingHandCursor }
+                        TapHandler { onTapped: AppIcon.choose(iconChoice.modelData.id) }
+                    }
+                }
+            }
+
+            Note {
+                width: parent.width
+                text: "The icon on the taskbar, and on Monolist's shortcuts in the Start menu, on the desktop "
+                      + "and pinned to the taskbar."
+            }
+        }
+
         HRule { width: parent.width }
 
         // — playback —
