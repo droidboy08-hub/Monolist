@@ -47,8 +47,9 @@ constexpr double kMaxGainDb = 12.0;
 constexpr double kGainStepDb = 0.5;
 // The limiter's ceiling while any effect is on (-1 dBFS); 1 at neutral.
 constexpr double kLimit = 0.891;
-// The steps the speeds and strengths come in.
-constexpr std::array<double, 3> kSlowedSpeeds = { 0.80, 0.85, 0.90 };
+// The steps the speeds and strengths come in. Slowed's 1 is the owner's
+// (2026-10-08): the song at its own speed and pitch, in the hall alone.
+constexpr std::array<double, 4> kSlowedSpeeds = { 0.80, 0.85, 0.90, 1.00 };
 constexpr std::array<double, 3> kNightcoreSpeeds = { 1.20, 1.25, 1.30 };
 constexpr std::array<int, 4> kHighBassSteps = { 3, 6, 9, 12 };
 // The reverb's weight in the mix for each strength: off, light, medium, heavy.
@@ -62,7 +63,7 @@ constexpr double kEightDRoom = 0.30;
 // What the listener chose. Out-of-range values are put right by sanitized().
 struct Settings {
     bool slowedReverb = false;
-    double slowedSpeed = 0.85;      // 0.80, 0.85 or 0.90
+    double slowedSpeed = 0.85;      // 0.80, 0.85, 0.90 or 1
     int reverbLevel = 2;            // 0 off, 1 light, 2 medium, 3 heavy
     bool nightcore = false;         // never together with slowedReverb
     double nightcoreSpeed = 1.25;   // 1.20, 1.25 or 1.30
@@ -128,8 +129,8 @@ bool needsChain(const Settings &settings);
 bool isNeutral(const Params &params);
 // mpv's speed for these settings, against 1: Slowed's or Nightcore's.
 double speedFactor(const Settings &settings);
-// Slowed or Nightcore is on: mpv's pitch correction goes off, so the pitch
-// moves with the speed.
+// Slowed or Nightcore moves the speed: mpv's pitch correction goes off, so
+// the pitch moves with it. Slowed at 1 moves nothing, and leaves it on.
 bool ownsSpeed(const Settings &settings);
 
 // The chain as libavfilter reads it, and as mpv's af takes it:

@@ -26,7 +26,8 @@ class SoundEffects : public QObject
 {
     Q_OBJECT
     // Slowed + reverb: every song slower and lower (speed 0.80, 0.85 or 0.90,
-    // pitch with it) in a hall (reverb 0 off, 1 light, 2 medium, 3 heavy).
+    // pitch with it, or 1 for the hall alone) in a hall (reverb 0 off,
+    // 1 light, 2 medium, 3 heavy).
     Q_PROPERTY(bool slowedReverb READ slowedReverb WRITE setSlowedReverb NOTIFY effectsChanged)
     Q_PROPERTY(double slowedSpeed READ slowedSpeed WRITE setSlowedSpeed NOTIFY effectsChanged)
     Q_PROPERTY(int reverbLevel READ reverbLevel WRITE setReverbLevel NOTIFY effectsChanged)

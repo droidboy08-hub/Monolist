@@ -221,6 +221,10 @@ void testChain(Checks &t)
             QStringLiteral("Slowed and Nightcore never together: Slowed wins a damaged setting"));
     t.check(ownsSpeed(reverb) && ownsSpeed(nightcore) && ownsSpeed(slowedDry) && !ownsSpeed(bass) && !ownsSpeed(eightD),
             QStringLiteral("pitch correction off for Slowed and Nightcore alone"));
+    Settings hallOnly = reverb;
+    hallOnly.slowedSpeed = 1.0;
+    t.check(speedFactor(hallOnly) == 1.0 && !ownsSpeed(hallOnly) && near(paramsFor(hallOnly).wet, 0.70, 1e-9),
+            QStringLiteral("Slowed at 1x: speed 1, pitch correction on, the reverb still in"));
 
     const QList<Command> on = commands(neutral(), paramsFor(bass));
     const QList<Command> expected = { { QStringLiteral("volume"), QStringLiteral("-3dB"), QStringLiteral("volume@pre") },
@@ -400,7 +404,7 @@ void testPresets(Checks &t)
     const Settings fixed = sanitized(odd);
     t.check(fixed.gains[0] == 12.0 && fixed.gains[1] == -12.0 && fixed.gains[2] == 3.5 && fixed.gains[3] == 0.0
                 && fixed.gains[4] == 0.0 && fixed.reverbLevel == 3 && fixed.highBassDb == 6
-                && near(fixed.slowedSpeed, 0.90, 1e-9) && fixed.preset == QLatin1String("custom"),
+                && near(fixed.slowedSpeed, 1.00, 1e-9) && fixed.preset == QLatin1String("custom"),
             QStringLiteral("values put right: gains to +-12 in 0.5 steps, steps to the nearest, an unknown preset by its curve"));
 }
 
@@ -663,6 +667,13 @@ void testModel(Checks &t, Library *library)
     shown.setBandGain(3, -1.0);
     t.check(shown.summary() == QStringLiteral("Slowed 0.80× · 8D · High bass +6 dB · EQ Custom"),
             QStringLiteral("  Slowed with no reverb, a custom curve"), shown.summary());
+    shown.setSlowedSpeed(1.0);
+    shown.setReverbLevel(2);
+    t.check(shown.summary().startsWith(QStringLiteral("Reverb · 8D"))
+                && setting(library, "sound.slowed_speed") == QLatin1String("1.00"),
+            QStringLiteral("  at 1x it is the reverb alone, and 1.00 is kept"), shown.summary());
+    shown.setSlowedSpeed(0.8);
+    shown.setReverbLevel(0);
     shown.setNightcore(true);
     shown.setEightD(false);
     shown.setHighBass(false);
@@ -674,9 +685,9 @@ void testModel(Checks &t, Library *library)
             num(shown.headroomDb(), 1));
     t.check(shown.responseCurve(120).size() == 120 && shown.responseCurve(120).first().toDouble() > 5.0,
             QStringLiteral("the curve for the sliders carries the shelf"));
-    t.check(shown.presets().size() == 16 && shown.bandLabels().size() == 10 && shown.slowedSpeeds().size() == 3
+    t.check(shown.presets().size() == 16 && shown.bandLabels().size() == 10 && shown.slowedSpeeds().size() == 4
                 && shown.nightcoreSpeeds().size() == 3 && shown.highBassSteps().size() == 4 && shown.reverbLevels().size() == 4,
-            QStringLiteral("the chips: 16 presets, 10 bands, 3 speeds each, 4 bass steps, 4 reverbs"));
+            QStringLiteral("the chips: 16 presets, 10 bands, 4 slowed and 3 nightcore speeds, 4 bass steps, 4 reverbs"));
     shown.setEightD(true);
     shown.setEqualiser(true);
     shown.turnAllOff();
@@ -1021,6 +1032,15 @@ int runSoundLiveSelfTest(Library *library)
     t.check(r >= 0.80 && r <= 0.90, QStringLiteral("  the clock runs at 0.85x"), num(r, 3));
     t.check(near(double(engine.duration()), 40000.0, 50.0), QStringLiteral("  the song's length unchanged"),
             QString::number(engine.duration()));
+    s.slowedSpeed = 1.0;
+    engine.setEffects(s);
+    t.check(near(engine.speedProperty(), 1.0, 1e-6) && engine.pitchCorrection() && near(engine.playbackRate(), 1.0, 1e-9)
+                && !engine.audioFilterProperty().isEmpty(),
+            QStringLiteral("  at 1x: speed 1, pitch correction on, the reverb's chain still in"), num(engine.speedProperty()));
+    s.slowedSpeed = 0.85;
+    engine.setEffects(s);
+    t.check(near(engine.speedProperty(), 0.85, 1e-6) && !engine.pitchCorrection(),
+            QStringLiteral("  and back to 0.85"), num(engine.speedProperty()));
 
     t.note(QStringLiteral("- Nightcore"));
     s.slowedReverb = false;

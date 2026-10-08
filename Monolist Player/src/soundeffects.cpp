@@ -385,8 +385,12 @@ QString SoundEffects::summary() const
 {
     QStringList parts;
     if (m_settings.slowedReverb) {
-        parts << QStringLiteral("Slowed %1×").arg(speedText(m_settings.slowedSpeed))
-                     + (m_settings.reverbLevel > 0 ? QStringLiteral(" + reverb") : QString());
+        // At 1× nothing is slowed: what is heard is the hall.
+        if (m_settings.slowedSpeed >= 0.995 && m_settings.reverbLevel > 0)
+            parts << QStringLiteral("Reverb");
+        else
+            parts << QStringLiteral("Slowed %1×").arg(speedText(m_settings.slowedSpeed))
+                         + (m_settings.reverbLevel > 0 ? QStringLiteral(" + reverb") : QString());
     }
     if (m_settings.nightcore)
         parts << QStringLiteral("Nightcore %1×").arg(speedText(m_settings.nightcoreSpeed));

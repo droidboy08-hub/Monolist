@@ -273,7 +273,7 @@ double SoundChain::speedFactor(const Settings &settings)
 
 bool SoundChain::ownsSpeed(const Settings &settings)
 {
-    return settings.slowedReverb || settings.nightcore;
+    return !same(speedFactor(settings), 1.0);
 }
 
 QString SoundChain::graph(const Params &p)

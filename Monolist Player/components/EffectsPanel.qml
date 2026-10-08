@@ -353,9 +353,11 @@ Column {
             }
             Note {
                 visible: root.detailed
-                text: "Every song slower and lower, like a record played slow, in a large hall. Times and lyrics "
-                      + "follow the song: a 3:00 song still shows 3:00 and takes about "
-                      + root.lengthAt(Sound.slowedSpeed) + "."
+                text: Sound.slowedSpeed >= 0.995
+                      ? "At 1× every song keeps its own speed and pitch: only the large hall is added."
+                      : "Every song slower and lower, like a record played slow, in a large hall. Times and lyrics "
+                        + "follow the song: a 3:00 song still shows 3:00 and takes about "
+                        + root.lengthAt(Sound.slowedSpeed) + "."
             }
         }
 
