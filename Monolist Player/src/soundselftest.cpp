@@ -1210,7 +1210,14 @@ int runSoundLiveSelfTest(Library *library)
     s = SoundChain::Settings();
     s.highBass = true;
     engine.setEffects(s);
-    took = settle(s);
+    // The output reopens about half a second in (the chain's stereo meets a
+    // mono song), and the graph takes no commands while it does: the ramp
+    // waits it out, for as long as that takes on the machine and the build
+    // (the release build's ramp was seen caught by it, a step short at
+    // 600 ms). So more time than a stereo song needs.
+    took = settle(s, 2500);
+    t.check(took >= 0, QStringLiteral("High bass on, the output reopened under it: its values reached"),
+            took >= 0 ? QStringLiteral("%1 ms").arg(took) : describe(engine.effectParams()));
     bool held = took >= 0;
     QString dropped;
     QElapsedTimer watch;
