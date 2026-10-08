@@ -66,7 +66,8 @@ owner's iPhone app (AryaMusix / "Mediano", Swift, not in this repo).
   `--sound-test` (the sound effects with no libmpv: chain text, ramps, presets, clipping maths, what is kept;
   in the release gate), `--sound-live-test` (the effects on the real libmpv with `MONOLIST_MPV_AO=null`, no
   sound device; timed, so not in the release gate), `--icon-test` (the app icon choice; shortcuts made in the
-  scratch folder only, never the real Start menu or desktop) … Each
+  scratch folder only, never the real Start menu or desktop), `--search-test` (a search's pages after the
+  first, on a stand-in YouTube Music) … Each
   prints `N checks, 0 failed`. All must pass, except `--scrobble-send-test`,
   which needs its local stand-in (`scripts/lastfm-mock.ps1`). `MONOLIST_MPV_AO=null` plays any run to no
   sound device (and `MONOLIST_MPV_VO=null` decodes a picture to nowhere, for an engine with no surface).

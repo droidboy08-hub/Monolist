@@ -129,6 +129,8 @@ qt_add_executable(monolist
     # shortcuts', and its test (--icon-test).
     src/appicon.h                  src/appicon.cpp
     src/appiconselftest.h          src/appiconselftest.cpp
+    # A search's pages after the first, on a stand-in (--search-test).
+    src/searchselftest.h           src/searchselftest.cpp
 )
 
 # The build's own identity: version, build number, commit, date. Regenerated

@@ -57,6 +57,7 @@
 #include "appinfo.h"
 #include "appicon.h"
 #include "appiconselftest.h"
+#include "searchselftest.h"
 #include "rec/catalog.h"
 #include "rec/suitable.h"
 #include <QTextStream>
@@ -322,6 +323,10 @@ int main(int argc, char *argv[])
         // real ones (appiconselftest.cpp); in MONOLIST_DATA_DIR only.
         if (arguments.contains(QStringLiteral("--icon-test")))
             return runAppIconSelfTest(&library) == 0 ? 0 : 1;
+        // Search with no cap: its next pages, on a stand-in YouTube Music on
+        // this computer (searchselftest.cpp).
+        if (arguments.contains(QStringLiteral("--search-test")))
+            return runSearchSelfTest() == 0 ? 0 : 1;
     }
 
     // Which page an artist's name opens: learnt from every answer that links
@@ -2629,6 +2634,41 @@ int main(int argc, char *argv[])
                              }
                              QTimer::singleShot(400, qApp, []() { QCoreApplication::quit(); });
                          });
+        // --pages N: N more pages after the first, as the page asks for them
+        // while it is scrolled, each counted as it lands.
+        const int pagesFlag = args.indexOf(QStringLiteral("--pages"));
+        if (pagesFlag >= 0 && pagesFlag + 1 < args.size()) {
+            auto pages = std::make_shared<int>(args.at(pagesFlag + 1).toInt());
+            QObject::disconnect(&extractor, &MediaExtractor::searchFinished, &app, nullptr);
+            QObject::disconnect(&extractor, &MediaExtractor::cardSearchFinished, &app, nullptr);
+            // One step for the signals a page lands with.
+            auto settle = new QTimer(&app);
+            settle->setSingleShot(true);
+            settle->setInterval(50);
+            const auto next = [settle]() { settle->start(); };
+            QObject::connect(settle, &QTimer::timeout, &app, [&extractor, clock, pages]() {
+                if (extractor.busy() || extractor.loadingMore())
+                    return;
+                int cards = 0;
+                for (const QVariant &value : extractor.cardSections())
+                    cards += int(value.toMap().value(QStringLiteral("items")).toList().size());
+                qWarning("selftest: %d songs, more: %s, after %lld ms", extractor.results()->rowCount(),
+                         extractor.hasMore() ? "yes" : "no", (long long)clock->elapsed());
+                if (*pages > 0 && extractor.hasMore()) {
+                    --*pages;
+                    extractor.loadMore();
+                } else {
+                    QTimer::singleShot(400, qApp, []() { QCoreApplication::quit(); });
+                }
+            });
+            QObject::connect(&extractor, &MediaExtractor::searchFinished, &app, next);
+            QObject::connect(&extractor, &MediaExtractor::cardSearchFinished, &app, next);
+            QObject::connect(&extractor, &MediaExtractor::cardsAppended, &app,
+                             [](int section, const QVariantList &cards) {
+                                 qWarning("selftest: section %d: %lld more cards", section, (long long)cards.size());
+                             });
+            QObject::connect(&extractor, &MediaExtractor::moreChanged, &app, next);
+        }
         QObject::connect(&extractor, &MediaExtractor::failed, &app, [](const QString &reason) {
             qWarning("selftest: search failed: %s", qPrintable(reason));
             QCoreApplication::exit(1);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QByteArray>
+#include <QJsonArray>
 #include <QJsonObject>
 #include <QList>
 #include <QNetworkCookie>
@@ -436,10 +437,25 @@ public:
     void searchArtists(const QString &query,
                        std::function<void(const QList<ArtistHit> &hits, const QString &error)> done);
     // Albums, artists or playlists matching a query, as cards, best first
-    // (Filter::Albums, Artists, FeaturedPlaylists or CommunityPlaylists).
-    // Not cancellable either: the caller drops an answer it no longer wants.
+    // (Filter::Albums, Artists, FeaturedPlaylists or CommunityPlaylists),
+    // and the token for the page after (searchMore), empty when there is
+    // none. Not cancellable either: the caller drops an answer it no longer
+    // wants.
     void searchCards(const QString &query, Filter filter,
-                     std::function<void(const QList<Card> &cards, const QString &error)> done);
+                     std::function<void(const QList<Card> &cards, const QString &next, const QString &error)> done);
+    // A search's next page, from the token its last page ended with. A page
+    // of songs or videos fills `tracks`, one of albums, artists or playlists
+    // `cards`; `next` is the page after, empty at the end. YouTube Music
+    // answers twenty at a time, as its own client asks for them.
+    struct SearchPage {
+        QList<Track> tracks;
+        QList<Card> cards;
+        QString next;
+    };
+    void searchMore(const QString &token, std::function<void(const SearchPage &page, const QString &error)> done);
+    static SearchPage parseSearchMore(const QJsonObject &root);
+    // The token a search's first page ends with: its results' shelf's.
+    static QString parseSearchNext(const QJsonObject &root);
     // Songs or videos matching a query, as search() finds them, answered to
     // `done` rather than by signal. Not cancellable, so several can be in
     // flight at once: the recommender looks a suggestion up for a press, for
@@ -568,7 +584,8 @@ public:
     static bool isPlaybackReportUrl(const QUrl &url);
 
 Q_SIGNALS:
-    void searchFinished(const QString &query, const QList<InnerTube::Track> &tracks);
+    // `next`: the token for the page after (searchMore), empty when none.
+    void searchFinished(const QString &query, const QList<InnerTube::Track> &tracks, const QString &next);
     void searchFailed(const QString &query, const QString &reason);
     void youtubeSearchFinished(const QString &query, const QList<InnerTube::Track> &tracks);
     void youtubeSearchFailed(const QString &query, const QString &reason);
@@ -616,6 +633,10 @@ private:
                                          const QString &endpoint);
 
     static QList<Track> parseSearch(const QJsonObject &root);
+    // A search page's rows, as parseSearch and parseCardSearch read them:
+    // the first page's and every page after it the same way.
+    static QList<Track> parseSearchTracks(const QJsonArray &rows);
+    static QList<Card> parseSearchCards(const QJsonArray &rows);
     static QList<Track> parseYouTubeSearch(const QJsonObject &root);
     static QStringList parseSuggestions(const QJsonObject &root);
     static QList<Track> parseRadio(const QJsonObject &root);

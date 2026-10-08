@@ -409,6 +409,7 @@ effects that are on.
       appicon.*              the app icon chosen in Settings: the window's,
                              and the app's own shortcuts' (AppIcon)
       appiconselftest.*      --icon-test
+      searchselftest.*       --search-test
       mediaextractor.*       search: InnerTube first, yt-dlp as fallback
       innertube.*            YouTube Music's API: search, suggestions, radio,
                              browse pages, artist pages, lyrics
@@ -769,6 +770,10 @@ first failure`.
                                                     shortcuts pointed at the executable's icons, on
                                                     shortcuts made in the scratch folder (needs
                                                     MONOLIST_DATA_DIR; in the release gate)
+    monolist --search-test                          a search with no cap: its next pages on a stand-in
+                                                    YouTube Music on this computer (songs with the ones
+                                                    shown dropped, the end, a failed page, card sections)
+    monolist --search "q" [--filter f] --pages N    a real search and N more pages, counted as they land
     monolist --sound-live-test                      the same effects on the real mpv with no sound device
                                                     (MONOLIST_MPV_AO=null): switched on and off mid-song, the
                                                     clock at 0.85x and 1.25x, every curve with the strongest

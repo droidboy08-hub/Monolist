@@ -53,6 +53,26 @@ ScrollPage {
 
     contentHeight: column.height
 
+    // No cap: YouTube Music answers twenty at a time, and the next twenty
+    // are asked for while the reader is still a screen away from the end, so
+    // the list keeps ahead of the scrolling (as a long playlist does,
+    // PageView). A page landing with the end still in sight asks for the one
+    // after. For cards, this is the last section's; one above it has its own
+    // "show more".
+    function loadMoreIfNear() {
+        if (visible && root.term.length > 0 && Extractor.hasMore && !Extractor.loadingMore && !Extractor.busy
+                && contentY + height * 2 >= contentHeight)
+            Extractor.loadMore(-1)
+    }
+    onContentYChanged: loadMoreIfNear()
+    onContentHeightChanged: loadMoreIfNear()
+    onVisibleChanged: loadMoreIfNear()
+
+    Connections {
+        target: Extractor
+        function onMoreChanged() { root.loadMoreIfNear() }
+    }
+
     Column {
         id: column
         x: Theme.space8
@@ -405,9 +425,19 @@ ScrollPage {
                 id: cardSection
 
                 required property var modelData
+                required property int index
 
                 width: column.width
                 spacing: Theme.space4
+
+                // This section's next page, added to the cards it has.
+                Connections {
+                    target: Extractor
+                    function onCardsAppended(section, cards) {
+                        if (section === cardSection.index)
+                            grid.append(cards)
+                    }
+                }
 
                 Text {
                     visible: text.length > 0
@@ -420,12 +450,42 @@ ScrollPage {
                 }
 
                 CardGrid {
+                    id: grid
                     width: parent.width
                     items: cardSection.modelData.items
                     origin: "search"
                     onCardActivated: function(card) { root.openCard(card) }
                 }
+
+                // A section with another below it: its next page on asking,
+                // since the page's own end belongs to the last one.
+                Text {
+                    visible: cardSection.index < Extractor.cardSections.length - 1
+                             && Extractor.cardMore[cardSection.index] === true
+                    text: Extractor.loadingMore ? "LOADING…" : "SHOW MORE"
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 12
+                    font.weight: Font.Bold
+                    font.letterSpacing: Theme.tracking(12, 0.12)
+                    color: moreHover.hovered && !Extractor.loadingMore ? Theme.accent700 : Theme.neutral700
+
+                    HoverHandler { id: moreHover; cursorShape: Extractor.loadingMore ? Qt.ArrowCursor : Qt.PointingHandCursor }
+                    TapHandler {
+                        enabled: !Extractor.loadingMore
+                        onTapped: Extractor.loadMore(cardSection.index)
+                    }
+                }
             }
+        }
+
+        Text {
+            visible: root.term.length > 0 && Extractor.loadingMore
+            width: parent.width
+            text: "Loading more…"
+            font.family: Theme.fontFamily
+            font.pixelSize: 13
+            font.letterSpacing: Theme.tracking(13, 0.02)
+            color: Theme.neutral700
         }
     }
 }

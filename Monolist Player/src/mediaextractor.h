@@ -3,6 +3,7 @@
 #include <QAbstractListModel>
 #include <QObject>
 #include <QPointer>
+#include <QSet>
 #include <QStringList>
 #include <QVariantMap>
 
@@ -59,6 +60,9 @@ public:
     // rather than making every row again. False when nothing moved.
     bool move(int from, int to);
     void clear();
+    // Whether a song is among the rows: a search's next page brings now
+    // and then one already shown.
+    bool contains(const QString &sourceId) const;
 
     Q_INVOKABLE QVariantMap get(int row) const;
 
@@ -97,6 +101,17 @@ class MediaExtractor : public QObject
     // Where the current results came from: "YouTube Music" or "yt-dlp".
     Q_PROPERTY(QString source READ source NOTIFY resultsSourceChanged)
     Q_PROPERTY(QStringList suggestions READ suggestions NOTIFY suggestionsChanged)
+    // No cap on a search (the owner's, 2026-10-08): YouTube Music answers
+    // twenty at a time, and the next twenty are asked for (loadMore) as the
+    // page nears the end of those shown, until it has no more.
+    // For songs and videos, and for the last of the card sections: the page
+    // asks by itself. A section above another has its own "show more"
+    // (cardMore: one bool per section, in cardSections' order), and its
+    // cards come by cardsAppended rather than a new cardSections, so the
+    // grids keep the cards they have.
+    Q_PROPERTY(bool hasMore READ hasMore NOTIFY moreChanged)
+    Q_PROPERTY(bool loadingMore READ loadingMore NOTIFY moreChanged)
+    Q_PROPERTY(QVariantList cardMore READ cardMore NOTIFY moreChanged)
 public:
     explicit MediaExtractor(QObject *parent = nullptr);
 
@@ -109,9 +124,15 @@ public:
     QString source() const { return m_source; }
     QStringList suggestions() const { return m_suggestions; }
     QVariantList cardSections() const { return m_cardSections; }
+    bool hasMore() const;
+    bool loadingMore() const { return m_loadingMore; }
+    QVariantList cardMore() const;
 
 public Q_SLOTS:
     void search(const QString &query);
+    // The search's next page, added below what is shown; one at a time.
+    // `section`: which card section, -1 for the songs or the last section.
+    void loadMore(int section = -1);
     void suggest(const QString &input);
     void clearSuggestions();
     void resolve(const QString &videoIdOrUrl);
@@ -125,6 +146,9 @@ Q_SIGNALS:
     void resultsSourceChanged();
     void suggestionsChanged();
     void cardSectionsChanged();
+    void moreChanged();
+    // A card section's next page: cards to add to its grid.
+    void cardsAppended(int section, const QVariantList &cards);
     void searchFinished(const QVariantList &results);
     // A search for albums, artists or playlists answered: cardSections.
     void cardSearchFinished();
@@ -135,6 +159,7 @@ private:
     void searchWithYtDlp(const QString &query);
     void searchCards(const QString &query);
     void setCardSections(const QVariantList &sections);
+    void setLoadingMore(bool loading);
     void finishSearch(const QList<SearchResultModel::Item> &items, const QString &source);
     void setBusy(bool busy);
     void setLastError(const QString &error);
@@ -155,4 +180,18 @@ private:
     // by this instead.
     quint64 m_cardGeneration = 0;
     bool m_busy = false;
+
+    // Where the search goes on: the token for the songs' or videos' next
+    // page, and each card section's own (a playlist search has two), with
+    // the cards it shows, to tell a card it has already from a new one.
+    QString m_next;
+    struct CardPart {
+        QSet<QString> shown;
+        QString next;
+    };
+    QList<CardPart> m_cardParts;     // in cardSections' order
+    // Moves on with every search: a next page asked for an older one is
+    // dropped by this.
+    quint64 m_moreGeneration = 0;
+    bool m_loadingMore = false;
 };

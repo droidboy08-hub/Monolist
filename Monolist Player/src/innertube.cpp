@@ -2220,10 +2220,68 @@ void InnerTube::search(const QString &query, Filter filter)
     send(Client::Music, QStringLiteral("search"), body, kSearchTimeoutMs, &m_search,
          [this, query](const QJsonObject &root, const QString &error) {
              if (error.isEmpty())
-                 Q_EMIT searchFinished(query, parseSearch(root));
+                 Q_EMIT searchFinished(query, parseSearch(root), parseSearchNext(root));
              else
                  Q_EMIT searchFailed(query, error);
          });
+}
+
+// The token goes in the body, as for a list's next part (continueBrowse):
+// /search answers it with the shelf's continuation, twenty rows and the
+// token after (checked against music.youtube.com, 2026-10-08). Anonymous,
+// as the search itself was.
+void InnerTube::searchMore(const QString &token, std::function<void(const SearchPage &, const QString &)> done)
+{
+    send(Client::Music, QStringLiteral("search"), { { QStringLiteral("continuation"), token } }, kSearchTimeoutMs,
+         /*slot=*/nullptr, [done](const QJsonObject &root, const QString &error) {
+             if (!error.isEmpty())
+                 done({}, error);
+             else
+                 done(parseSearchMore(root), QString());
+         });
+}
+
+namespace {
+
+// The first page's sections: a shelf of results, now and then a card
+// above it ("Top result") that is not one of them.
+QJsonArray searchSections(const QJsonObject &root)
+{
+    return dig(root, { "contents", "tabbedSearchResultsRenderer", "tabs", "#0", "tabRenderer", "content",
+                       "sectionListRenderer", "contents" }).toArray();
+}
+
+} // namespace
+
+QString InnerTube::parseSearchNext(const QJsonObject &root)
+{
+    for (const QJsonValue &section : searchSections(root)) {
+        const QJsonValue shelf = dig(section, { "musicShelfRenderer" });
+        if (shelf.isUndefined())
+            continue;
+        const QString next = continuationOf(shelf, dig(shelf, { "contents" }).toArray());
+        if (!next.isEmpty())
+            return next;
+    }
+    return {};
+}
+
+InnerTube::SearchPage InnerTube::parseSearchMore(const QJsonObject &root)
+{
+    SearchPage page;
+    QJsonValue shelf = dig(root, { "continuationContents", "musicShelfContinuation" });
+    QJsonArray rows = dig(shelf, { "contents" }).toArray();
+    // The newer shape, should search take it up as browse has: the rows
+    // appended, the token on a last row of its own.
+    if (shelf.isUndefined()) {
+        rows = dig(root, { "onResponseReceivedActions", "#0", "appendContinuationItemsAction",
+                           "continuationItems" }).toArray();
+        shelf = QJsonValue();
+    }
+    page.tracks = parseSearchTracks(rows);
+    page.cards = parseSearchCards(rows);
+    page.next = continuationOf(shelf, rows);
+    return page;
 }
 
 void InnerTube::searchYouTube(const QString &query)
@@ -2303,14 +2361,19 @@ QList<InnerTube::Track> InnerTube::parseSearch(const QJsonObject &root)
     const QJsonArray sections = dig(root, { "contents", "tabbedSearchResultsRenderer", "tabs", "#0",
                                             "tabRenderer", "content", "sectionListRenderer",
                                             "contents" }).toArray();
-    for (const QJsonValue &section : sections) {
-        const QJsonArray items = dig(section, { "musicShelfRenderer", "contents" }).toArray();
-        for (const QJsonValue &entry : items) {
-            const Track track = parseListItem(dig(entry, { "musicResponsiveListItemRenderer" }));
-            // No video id: an album, artist or playlist, nothing to play directly.
-            if (!track.videoId.isEmpty() && !track.title.isEmpty())
-                tracks.append(track);
-        }
+    for (const QJsonValue &section : sections)
+        tracks += parseSearchTracks(dig(section, { "musicShelfRenderer", "contents" }).toArray());
+    return tracks;
+}
+
+QList<InnerTube::Track> InnerTube::parseSearchTracks(const QJsonArray &rows)
+{
+    QList<Track> tracks;
+    for (const QJsonValue &entry : rows) {
+        const Track track = parseListItem(dig(entry, { "musicResponsiveListItemRenderer" }));
+        // No video id: an album, artist or playlist, nothing to play directly.
+        if (!track.videoId.isEmpty() && !track.title.isEmpty())
+            tracks.append(track);
     }
     return tracks;
 }
@@ -2895,44 +2958,50 @@ QList<InnerTube::Card> InnerTube::parseCardSearch(const QJsonObject &root)
     const QJsonArray sections = dig(root, { "contents", "tabbedSearchResultsRenderer", "tabs", "#0",
                                             "tabRenderer", "content", "sectionListRenderer",
                                             "contents" }).toArray();
-    for (const QJsonValue &section : sections) {
-        for (const QJsonValue &entry : dig(section, { "musicShelfRenderer", "contents" }).toArray()) {
-            const QJsonValue row = dig(entry, { "musicResponsiveListItemRenderer" });
-            const QJsonValue endpoint = dig(row, { "navigationEndpoint" });
-            Card card;
-            card.browseId = dig(endpoint, { "browseEndpoint", "browseId" }).toString();
-            card.type = pageTypeOf(endpoint);
-            // A podcast or a profile: a page this app does not have.
-            if (card.browseId.isEmpty() || card.type.isEmpty())
-                continue;
-            const QJsonArray columns = row.toObject().value(QLatin1String("flexColumns")).toArray();
-            card.title = joinRuns(dig(columns.at(0), { "musicResponsiveListItemFlexColumnRenderer",
-                                                       "text", "runs" }).toArray()).trimmed();
-            const QJsonArray subtitle = dig(columns.at(1), { "musicResponsiveListItemFlexColumnRenderer",
-                                                             "text", "runs" }).toArray();
-            card.subtitle = joinRuns(subtitle).trimmed();
-            const QJsonArray thumbnails = dig(row, { "thumbnail", "musicThumbnailRenderer", "thumbnail",
-                                                     "thumbnails" }).toArray();
-            if (!thumbnails.isEmpty())
-                card.artwork = largerArtwork(thumbnails.last().toObject().value(QLatin1String("url")).toString());
-            if (card.title.isEmpty())
-                continue;
-            if (card.type == QLatin1String("artist")) {
-                bool artistPage = false;
-                artistLinkOf(row, &artistPage);
-                noteArtist(card.title, card.browseId, artistPage);
-            } else {
-                Track credits;
-                parseSubtitle(subtitle, credits);   // tells ArtistLinks the names it links
-            }
-            cards.append(card);
+    for (const QJsonValue &section : sections)
+        cards += parseSearchCards(dig(section, { "musicShelfRenderer", "contents" }).toArray());
+    return cards;
+}
+
+QList<InnerTube::Card> InnerTube::parseSearchCards(const QJsonArray &rows)
+{
+    QList<Card> cards;
+    for (const QJsonValue &entry : rows) {
+        const QJsonValue row = dig(entry, { "musicResponsiveListItemRenderer" });
+        const QJsonValue endpoint = dig(row, { "navigationEndpoint" });
+        Card card;
+        card.browseId = dig(endpoint, { "browseEndpoint", "browseId" }).toString();
+        card.type = pageTypeOf(endpoint);
+        // A podcast or a profile: a page this app does not have.
+        if (card.browseId.isEmpty() || card.type.isEmpty())
+            continue;
+        const QJsonArray columns = row.toObject().value(QLatin1String("flexColumns")).toArray();
+        card.title = joinRuns(dig(columns.at(0), { "musicResponsiveListItemFlexColumnRenderer",
+                                                   "text", "runs" }).toArray()).trimmed();
+        const QJsonArray subtitle = dig(columns.at(1), { "musicResponsiveListItemFlexColumnRenderer",
+                                                         "text", "runs" }).toArray();
+        card.subtitle = joinRuns(subtitle).trimmed();
+        const QJsonArray thumbnails = dig(row, { "thumbnail", "musicThumbnailRenderer", "thumbnail",
+                                                 "thumbnails" }).toArray();
+        if (!thumbnails.isEmpty())
+            card.artwork = largerArtwork(thumbnails.last().toObject().value(QLatin1String("url")).toString());
+        if (card.title.isEmpty())
+            continue;
+        if (card.type == QLatin1String("artist")) {
+            bool artistPage = false;
+            artistLinkOf(row, &artistPage);
+            noteArtist(card.title, card.browseId, artistPage);
+        } else {
+            Track credits;
+            parseSubtitle(subtitle, credits);   // tells ArtistLinks the names it links
         }
+        cards.append(card);
     }
     return cards;
 }
 
 void InnerTube::searchCards(const QString &query, Filter filter,
-                            std::function<void(const QList<Card> &, const QString &)> done)
+                            std::function<void(const QList<Card> &, const QString &, const QString &)> done)
 {
     const QJsonObject body{
         { QStringLiteral("query"), query },
@@ -2941,9 +3010,9 @@ void InnerTube::searchCards(const QString &query, Filter filter,
     send(Client::Music, QStringLiteral("search"), body, kSearchTimeoutMs, /*slot=*/nullptr,
          [done](const QJsonObject &root, const QString &error) {
              if (!error.isEmpty())
-                 done({}, error);
+                 done({}, QString(), error);
              else
-                 done(parseCardSearch(root), QString());
+                 done(parseCardSearch(root), parseSearchNext(root), QString());
          });
 }
 

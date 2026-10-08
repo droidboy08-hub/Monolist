@@ -95,6 +95,15 @@ void SearchResultModel::append(const QList<Item> &items)
     Q_EMIT countChanged();
 }
 
+bool SearchResultModel::contains(const QString &sourceId) const
+{
+    for (const Item &item : m_items) {
+        if (item.sourceId == sourceId)
+            return true;
+    }
+    return false;
+}
+
 bool SearchResultModel::move(int from, int to)
 {
     const int count = int(m_items.size());
@@ -142,7 +151,7 @@ MediaExtractor::MediaExtractor(QObject *parent)
     : QObject(parent)
 {
     connect(&m_innerTube, &InnerTube::searchFinished, this,
-            [this](const QString &query, const QList<InnerTube::Track> &tracks) {
+            [this](const QString &query, const QList<InnerTube::Track> &tracks, const QString &next) {
                 if (query != m_query)
                     return;   // superseded by a newer search
                 if (tracks.isEmpty()) {
@@ -156,7 +165,9 @@ MediaExtractor::MediaExtractor(QObject *parent)
                 items.reserve(tracks.size());
                 for (const InnerTube::Track &track : tracks)
                     items.append(SearchResultModel::fromTrack(track));
+                m_next = next;
                 finishSearch(items, QStringLiteral("YouTube Music"));
+                Q_EMIT moreChanged();
             });
 
     connect(&m_innerTube, &InnerTube::searchFailed, this,
@@ -305,18 +316,19 @@ void MediaExtractor::searchCards(const QString &query)
         QString title;
         QList<InnerTube::Card> cards;
         QString error;
+        QString next;
     };
     auto parts = std::make_shared<QList<Part>>();
     if (m_filter == QLatin1String("albums")) {
-        parts->append({ InnerTube::Filter::Albums, QString(), {}, {} });
+        parts->append({ InnerTube::Filter::Albums, QString(), {}, {}, {} });
     } else if (m_filter == QLatin1String("artists")) {
-        parts->append({ InnerTube::Filter::Artists, QString(), {}, {} });
+        parts->append({ InnerTube::Filter::Artists, QString(), {}, {}, {} });
     } else {
         // Named for whose playlists they are, not where they came from: the
         // line beside the chips already says "From YouTube Music" about the
         // search itself, a few lines above the first of these.
-        parts->append({ InnerTube::Filter::FeaturedPlaylists, QStringLiteral("YouTube Music's playlists"), {}, {} });
-        parts->append({ InnerTube::Filter::CommunityPlaylists, QStringLiteral("Listeners' playlists"), {}, {} });
+        parts->append({ InnerTube::Filter::FeaturedPlaylists, QStringLiteral("YouTube Music's playlists"), {}, {}, {} });
+        parts->append({ InnerTube::Filter::CommunityPlaylists, QStringLiteral("Listeners' playlists"), {}, {}, {} });
     }
 
     const quint64 generation = ++m_cardGeneration;
@@ -324,28 +336,35 @@ void MediaExtractor::searchCards(const QString &query)
     for (int i = 0; i < parts->size(); ++i) {
         m_innerTube.searchCards(query, parts->at(i).filter,
                                 [this, generation, parts, waiting, i](const QList<InnerTube::Card> &cards,
-                                                                      const QString &error) {
+                                                                      const QString &next, const QString &error) {
             if (generation != m_cardGeneration)
                 return;   // a newer search, or none
             (*parts)[i].cards = cards;
             (*parts)[i].error = error;
+            (*parts)[i].next = next;
             if (--*waiting > 0)
                 return;
 
             QVariantList sections;
             QString failure;
+            m_cardParts.clear();
             for (const Part &part : std::as_const(*parts)) {
                 if (!part.error.isEmpty())
                     failure = part.error;
                 if (part.cards.isEmpty())
                     continue;
                 QVariantList items;
-                for (const InnerTube::Card &card : part.cards)
+                CardPart shown{ {}, part.next };
+                for (const InnerTube::Card &card : part.cards) {
                     items.append(InnerTube::cardToVariant(card));
+                    shown.shown.insert(card.browseId);
+                }
                 sections.append(QVariantMap{ { QStringLiteral("title"), part.title },
                                              { QStringLiteral("items"), items } });
+                m_cardParts.append(shown);
             }
             setCardSections(sections);
+            Q_EMIT moreChanged();
             setSource(QStringLiteral("YouTube Music"));
             setBusy(false);
             // Half an answer is still worth showing; nothing at all because
@@ -392,7 +411,9 @@ void MediaExtractor::searchWithYtDlp(const QString &query)
         return;
     }
 
-    YtDlpRequest *request = YtDlp::search(query, 25, this);
+    // As many as yt-dlp's search is asked for (YtDlp::search's most): it has
+    // no next page to ask for later.
+    YtDlpRequest *request = YtDlp::search(query, 50, this);
     m_request = request;
 
     connect(request, &YtDlpRequest::succeededJson, this, [this, query](const QJsonDocument &document) {
@@ -491,10 +512,109 @@ void MediaExtractor::resolve(const QString &videoIdOrUrl)
     });
 }
 
+bool MediaExtractor::hasMore() const
+{
+    if (!m_cardParts.isEmpty())
+        return !m_cardParts.constLast().next.isEmpty();
+    return !m_next.isEmpty();
+}
+
+QVariantList MediaExtractor::cardMore() const
+{
+    QVariantList more;
+    for (const CardPart &part : m_cardParts)
+        more.append(!part.next.isEmpty());
+    return more;
+}
+
+void MediaExtractor::setLoadingMore(bool loading)
+{
+    if (loading == m_loadingMore)
+        return;
+    m_loadingMore = loading;
+    Q_EMIT moreChanged();
+}
+
+// One page at a time, and only when the page asks: as the reader nears the
+// end of what is shown, or presses a section's "show more". Anonymous, as
+// the search was. A page that fails is not asked for again by itself (the
+// page would ask on every scroll); a new search starts afresh. A page that
+// brings nothing new ends it too, so a token that went round in circles
+// cannot keep the page asking.
+void MediaExtractor::loadMore(int section)
+{
+    if (m_loadingMore || m_busy)
+        return;
+    const quint64 generation = m_moreGeneration;
+
+    if (m_cardParts.isEmpty()) {
+        if (m_next.isEmpty())
+            return;
+        setLoadingMore(true);
+        m_innerTube.searchMore(m_next, [this, generation](const InnerTube::SearchPage &page, const QString &error) {
+            if (generation != m_moreGeneration)
+                return;   // a newer search, or none
+            if (!error.isEmpty()) {
+                qWarning("Monolist: the search's next page failed (%s); the results end here.", qPrintable(error));
+                m_next.clear();
+                setLoadingMore(false);
+                return;
+            }
+            QList<SearchResultModel::Item> items;
+            QSet<QString> added;
+            for (const InnerTube::Track &track : page.tracks) {
+                if (m_results.contains(track.videoId) || added.contains(track.videoId))
+                    continue;
+                added.insert(track.videoId);
+                items.append(SearchResultModel::fromTrack(track));
+            }
+            m_results.append(items);
+            m_next = items.isEmpty() ? QString() : page.next;
+            setLoadingMore(false);
+        });
+        return;
+    }
+
+    if (section < 0)
+        section = int(m_cardParts.size()) - 1;
+    if (section >= m_cardParts.size() || m_cardParts.at(section).next.isEmpty())
+        return;
+    setLoadingMore(true);
+    m_innerTube.searchMore(m_cardParts.at(section).next,
+                           [this, generation, section](const InnerTube::SearchPage &page, const QString &error) {
+        if (generation != m_moreGeneration)
+            return;
+        CardPart &part = m_cardParts[section];
+        if (!error.isEmpty()) {
+            qWarning("Monolist: the search's next page failed (%s); the results end here.", qPrintable(error));
+            part.next.clear();
+            setLoadingMore(false);
+            return;
+        }
+        QVariantList cards;
+        for (const InnerTube::Card &card : page.cards) {
+            if (part.shown.contains(card.browseId))
+                continue;
+            part.shown.insert(card.browseId);
+            cards.append(InnerTube::cardToVariant(card));
+        }
+        part.next = cards.isEmpty() ? QString() : page.next;
+        if (!cards.isEmpty())
+            Q_EMIT cardsAppended(section, cards);
+        setLoadingMore(false);
+    });
+}
+
 void MediaExtractor::cancel()
 {
     m_innerTube.cancelSearch();
     ++m_cardGeneration;
+    // The pages after go with the search they belonged to.
+    ++m_moreGeneration;
+    m_next.clear();
+    m_cardParts.clear();
+    setLoadingMore(false);
+    Q_EMIT moreChanged();
     if (m_request && m_request->isRunning())
         m_request->cancel();
     m_request.clear();
