@@ -340,9 +340,12 @@ that gets blamed for the app being slow.
   like, previous, the red play square, next and the effects glyph. Three ink
   plates on the cover keep it over other windows (the pin, red while it does),
   go back to the full window, and close it. It opens in place of the window,
-  from the bar, the tray, Ctrl+Shift+M or at sign-in; its close does what the
-  window's does (the tray, or quit). The effects open over the cover, printed
-  in reverse: paper on ink.
+  from the bar, the tray, Ctrl+Shift+M or at sign-in, and Ctrl+Shift+M takes
+  it back; any close, its X or Windows', does what the window's does (the
+  tray, or quit). It has its own taskbar button, and the app's answers (a song
+  that will not play) come in a toast of its own over the foot of the cover.
+  The effects open over the cover, printed in reverse: paper on ink, the
+  plates put away beneath them.
   *Why.* Two windows showing the same song would ask which one is the app. A
   window that goes small keeps one answer, and the cover can be the whole top
   of it because, at that size, nothing else competes with it.

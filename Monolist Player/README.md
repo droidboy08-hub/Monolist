@@ -411,7 +411,7 @@ effects that are on.
                              and the app's own shortcuts' (AppIcon)
       appiconselftest.*      --icon-test
       searchselftest.*       --search-test
-      startup.*              opening at sign-in, off / open / minimised (Startup)
+      startup.*              opening at sign-in, off / open / minimised / mini player (Startup)
       startupselftest.*      --startup-test
       tray.*                 the window closed to the system tray, the music on (Tray)
       trayselftest.*         --tray-test
@@ -780,7 +780,9 @@ first failure`.
                                                     shown dropped, the end, a failed page, card sections)
     monolist --search "q" [--filter f] --pages N    a real search and N more pages, counted as they land
     monolist --startup-test                         opening at sign-in: the Run value written, read back and
-                                                    taken away, on a scratch key; Windows' own switch read
+                                                    taken away, on a scratch key; Windows' own switch read;
+                                                    a value naming a Monolist gone repaired; a sign-in start
+                                                    leaving an open Monolist's window alone
                                                     (needs MONOLIST_DATA_DIR; in the release gate)
     monolist --tray-test                            closing to the system tray: the switch kept, the menu
                                                     and what it does (needs MONOLIST_DATA_DIR)

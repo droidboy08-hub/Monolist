@@ -19,8 +19,9 @@ ApplicationWindow {
     color: Theme.bg
 
     // Closing the window to the system tray, the music playing on (Tray),
-    // unless Settings turned that off or Windows is signing out. Full screen
-    // is left first, so the window comes back as a window.
+    // unless Settings turned that off or Monolist is ending (Quit, or Windows
+    // signing out). Full screen is left first, so the window comes back as a
+    // window.
     onClosing: function(close) {
         if (!Tray.available || !Tray.closeToTray || Tray.ending)
             return
@@ -136,7 +137,7 @@ ApplicationWindow {
         function onRestoreRequested() { window.nowPlayingOpen = true }
         function onFailed(reason) {
             window.systemPipFailed = true
-            toast.show(reason + " — using the app's own")
+            window.say(reason + " — using the app's own")
         }
     }
 
@@ -821,8 +822,9 @@ ApplicationWindow {
         window.bringBack(false)
     }
 
-    // The mini player's own close: as the window's (onClosing), the tray
-    // while that is on, else Monolist quits.
+    // The mini player's close, its X or Windows' (Alt+F4, the taskbar): as
+    // this window's (onClosing), the tray while that is on, else Monolist
+    // quits.
     function closeMini() {
         if (Tray.available && Tray.closeToTray) {
             miniPlayer.hide()
@@ -850,6 +852,7 @@ ApplicationWindow {
         target.requestActivate()
     }
 
+    // The mini player; its own Shortcut of the same keys comes back.
     Shortcut {
         sequence: "Ctrl+Shift+M"
         onActivated: window.enterMini()
@@ -1029,15 +1032,24 @@ ApplicationWindow {
         z: 950
     }
 
+    // The app's answers, on whichever window is in use: the mini player has
+    // a toast of its own, as this window and its toast are hidden behind it.
+    function say(message, actionLabel, onAction, sticky) {
+        if (window.miniMode)
+            miniPlayer.notice(message, actionLabel, onAction, sticky)
+        else
+            toast.show(message, actionLabel, onAction, sticky)
+    }
+
     Connections {
         target: Library
-        function onNotice(text) { toast.show(text) }
+        function onNotice(text) { window.say(text) }
     }
 
     Connections {
         target: About
         function onRecovered(text, folder) {
-            toast.show(text, folder.length > 0 ? "OPEN FOLDER" : "OK",
+            window.say(text, folder.length > 0 ? "OPEN FOLDER" : "OK",
                        function() { if (folder.length > 0) Qt.openUrlExternally("file:///" + folder.replace(/\\/g, "/")) },
                        true)
         }
@@ -1045,7 +1057,7 @@ ApplicationWindow {
 
     Connections {
         target: SignIn
-        function onNotice(text) { toast.show(text) }
+        function onNotice(text) { window.say(text) }
         function onFallbackRequested() { window.openSignInImport() }
     }
 
@@ -1152,7 +1164,7 @@ ApplicationWindow {
 
     Connections {
         target: Catalog
-        function onNotice(text) { toast.show(text) }
+        function onNotice(text) { window.say(text) }
         // A card's play button: its album or playlist, fetched, played from
         // the top.
         function onCollectionReady(origin, tracks) {
@@ -1176,10 +1188,10 @@ ApplicationWindow {
 
     Connections {
         target: Recs
-        function onNotice(text) { toast.show(text) }
+        function onNotice(text) { window.say(text) }
         // "Not interested" and "Don't suggest", which can be taken back.
         function onUndoable(text) {
-            toast.show(text, "UNDO", function() { Recs.undoNotInterested() })
+            window.say(text, "UNDO", function() { Recs.undoNotInterested() })
         }
         // A suggestion's menu entry, once the name has been found as a song:
         // "<action>|<argument>", as TrackMenu asked (RecShelf).
@@ -1193,34 +1205,34 @@ ApplicationWindow {
     // The YouTube Music sign-in's answers: a file deleted or kept.
     Connections {
         target: Account
-        function onNotice(text) { toast.show(text) }
+        function onNotice(text) { window.say(text) }
     }
 
     // The account's library: a sync asked for, and how it went.
     Connections {
         target: AccountLibrary
-        function onNotice(text) { toast.show(text) }
+        function onNotice(text) { window.say(text) }
     }
 
     Connections {
         target: About
-        function onNotice(text) { toast.show(text) }
+        function onNotice(text) { window.say(text) }
     }
 
     // The sound effects' answers: that they would not start, and are off
     // until the next launch.
     Connections {
         target: Sound
-        function onNotice(text) { toast.show(text) }
+        function onNotice(text) { window.say(text) }
     }
 
     Connections {
         target: Player
-        function onNotice(text) { toast.show(text) }
+        function onNotice(text) { window.say(text) }
         // A track that will not play used to fail in complete silence: the
         // status line is only shown while a track is resolving, and failing is
         // the moment that stops. Say it out loud.
-        function onPlaybackError(reason) { toast.show(reason) }
+        function onPlaybackError(reason) { window.say(reason) }
         // The picture gone — the switch turned off, the next song begun, a
         // video that would not play — takes full screen with it.
         function onVideoChanged() {

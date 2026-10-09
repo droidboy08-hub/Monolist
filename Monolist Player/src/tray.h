@@ -20,8 +20,10 @@ class QSystemTrayIcon;
 // where it went, once ("window.tray_told").
 //
 // Windows signing out or shutting down is never kept waiting by a window
-// that will not close: `ending` is set as soon as the session asks, and the
-// window then closes as before.
+// that will not close: `ending` is set as the session ends (and on Quit),
+// and a window then closes as before. Only the end itself sets it, never the
+// question before it, so a sign-out that another app cancels leaves the
+// close button going to the tray.
 //
 // Not on the Mac, whose apps go on with their windows closed anyway: there
 // `available` is false and Settings shows nothing.

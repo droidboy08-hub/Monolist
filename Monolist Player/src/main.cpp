@@ -182,10 +182,16 @@ int main(int argc, char *argv[])
         return runSaavnSelfTest() == 0 ? 0 : 1;
 
     // One Monolist a library (InstanceGuard): a second start on the same
-    // data folder brings the first one's window forward, and ends.
-    InstanceGuard instance(QFileInfo(AppDatabase::databaseFilePath()).absolutePath());
+    // data folder brings the first one's window forward, and ends. A start
+    // at sign-in (--login, Startup) that finds it open leaves it as it is:
+    // the user opened it first, and it stays wherever they put it.
+    const bool atSignIn = app.arguments().contains(QStringLiteral("--login"));
+    InstanceGuard instance(QFileInfo(AppDatabase::databaseFilePath()).absolutePath(), !atSignIn);
     if (!instance.first() && instance.answered()) {
-        qWarning("Monolist: already open on this library; its window was brought forward");
+        if (atSignIn)
+            qWarning("Monolist: already open on this library; a start at sign-in leaves it as it is");
+        else
+            qWarning("Monolist: already open on this library; its window was brought forward");
         return 0;
     }
     if (!instance.first())
@@ -636,6 +642,10 @@ int main(int argc, char *argv[])
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Sound",     &sound);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "AppIcon",   &appIcon);
     Startup startup;
+    // A sign-in start naming a Monolist that has gone (moved, or an older
+    // download's folder deleted): this one's now, the same choice. Never
+    // from a scratch library.
+    startup.repair();
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Startup",   &startup);
     // The window closed to the system tray, the music playing on.
     Tray tray(&library, &player);

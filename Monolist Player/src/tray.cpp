@@ -6,7 +6,6 @@
 #include <QAction>
 #include <QApplication>
 #include <QMenu>
-#include <QSessionManager>
 #include <QSystemTrayIcon>
 
 namespace {
@@ -26,12 +25,13 @@ Tray::Tray(Library *library, PlaybackController *player, QObject *parent)
         m_closeToTray = m_library->settingValue(QString::fromLatin1(kCloseToTrayKey), QStringLiteral("1"))
                         != QLatin1String("0");
 
-    // Signing out, shutting down, or Quit: from here on a window closing
-    // closes, so nothing keeps Windows waiting.
-    connect(qApp, &QGuiApplication::commitDataRequest, this, [this](QSessionManager &) {
-        m_ending = true;
-        Q_EMIT changed();
-    });
+    // Quit, or Windows signing out or shutting down: from here on a window
+    // closing closes. Windows' ending is heard as it happens (Qt's
+    // aboutToQuit, from WM_ENDSESSION), not as it is asked about: a sign-out
+    // another app cancels (commitDataRequest, WM_QUERYENDSESSION, and no end
+    // after it) leaves the close button going to the tray, as before. Nothing
+    // here keeps Windows waiting: it closes no windows of its own to end a
+    // session, and a hidden one holds nothing up.
     connect(qApp, &QCoreApplication::aboutToQuit, this, [this]() {
         m_ending = true;
         Q_EMIT changed();

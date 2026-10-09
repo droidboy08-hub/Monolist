@@ -14,6 +14,10 @@ Rectangle {
     property string actionText: ""
     property var action: null
     property bool sticky: false
+    // The widest it may be, in a narrow window (the mini player's): a longer
+    // answer wraps onto more lines rather than running off the edge. None
+    // by default.
+    property real maximumWidth: 0
 
     // `sticky`: stays until its action is pressed, for what must be read.
     function show(message, actionLabel, onAction, sticky) {
@@ -42,7 +46,7 @@ Rectangle {
 
     color: Theme.text
     implicitWidth: row.implicitWidth + Theme.space4 * 2
-    implicitHeight: 40
+    implicitHeight: Math.max(40, row.implicitHeight + Theme.space2 * 2)
     opacity: 0
     visible: opacity > 0
     // It appears where it is, nudged up as it arrives: enough to notice at
@@ -73,39 +77,56 @@ Rectangle {
             color: Theme.accent
         }
 
-        Text {
-            id: label
+        // The answer and its link: side by side, or in a narrow toast the
+        // link under the answer, which keeps the whole width.
+        Grid {
             anchors.verticalCenter: parent.verticalCenter
-            font.family: Theme.fontFamily
-            font.pixelSize: 13
-            font.weight: Font.Bold
-            color: Theme.bg
-        }
+            columns: root.maximumWidth > 0 ? 1 : 2
+            columnSpacing: Theme.space3
+            rowSpacing: Theme.space2
+            verticalItemAlignment: Grid.AlignVCenter
 
-        // A tracked link, as in a shelf's header; red because on ink it is
-        // the one thing to press.
-        Text {
-            visible: root.actionText.length > 0
-            anchors.verticalCenter: parent.verticalCenter
-            leftPadding: Theme.space2
-            text: root.actionText
-            font.family: Theme.fontFamily
-            font.pixelSize: 12
-            font.weight: Font.Bold
-            font.letterSpacing: Theme.tracking(12, 0.12)
-            // Red on the plate, which is ink in light and paper in dark:
-            // the brighter red on ink, the deeper on paper.
-            color: Theme.dark ? (actionArea.containsMouse ? Theme.accent600 : "#ae1800")
-                              : (actionArea.containsMouse ? Theme.accent600 : Theme.accent)
+            Text {
+                id: label
+                // Its own length, unless that would take the toast past its
+                // widest: then that, less the square beside it.
+                width: root.maximumWidth > 0
+                       ? Math.min(implicitWidth, root.maximumWidth - Theme.space4 * 2 - 8 - row.spacing)
+                       : undefined
+                wrapMode: Text.Wrap
+                maximumLineCount: 6
+                elide: Text.ElideRight
+                font.family: Theme.fontFamily
+                font.pixelSize: 13
+                font.weight: Font.Bold
+                color: Theme.bg
+            }
 
-            MouseArea {
-                id: actionArea
-                // A little beyond the word, so it is not a small target.
-                anchors.fill: parent
-                anchors.margins: -Theme.space2
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: root.act()
+            // A tracked link, as in a shelf's header; red because on ink it is
+            // the one thing to press.
+            Text {
+                id: actionLink
+                visible: root.actionText.length > 0
+                leftPadding: root.maximumWidth > 0 ? 0 : Theme.space2
+                text: root.actionText
+                font.family: Theme.fontFamily
+                font.pixelSize: 12
+                font.weight: Font.Bold
+                font.letterSpacing: Theme.tracking(12, 0.12)
+                // Red on the plate, which is ink in light and paper in dark:
+                // the brighter red on ink, the deeper on paper.
+                color: Theme.dark ? (actionArea.containsMouse ? Theme.accent600 : "#ae1800")
+                                  : (actionArea.containsMouse ? Theme.accent600 : Theme.accent)
+
+                MouseArea {
+                    id: actionArea
+                    // A little beyond the word, so it is not a small target.
+                    anchors.fill: parent
+                    anchors.margins: -Theme.space2
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.act()
+                }
             }
         }
     }

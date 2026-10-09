@@ -314,7 +314,10 @@ ScrollPage {
 
             SmallCaps { text: "WHEN YOU SIGN IN TO WINDOWS" }
 
-            Row {
+            // Four, wider together than a narrow window: they wrap, and
+            // neighbours and rows share their rules.
+            Flow {
+                width: parent.width
                 spacing: -Theme.ruleWidth
 
                 ChoiceChip {
@@ -339,19 +342,25 @@ ScrollPage {
                 }
             }
 
+            // The value starting another copy that is still there (an older
+            // download kept beside this one) is said first after Windows'
+            // own switch: choosing the shown option again makes it this one.
             Note {
                 width: parent.width
                 text: Startup.mode !== "off" && Startup.systemOff
                       ? "Windows has Monolist turned off in its startup apps, so it will not open. Turn it on "
                         + "in Windows' Settings > Apps > Startup."
-                      : Startup.mode === "mini"
-                        ? "The mini player opens when you sign in, ready and not playing; the full window stays "
-                          + "closed until you ask for it."
-                        : Startup.mode === "minimised"
-                          ? "Monolist opens on the taskbar when you sign in, ready and not playing."
-                          : Startup.mode === "open"
-                            ? "Monolist opens when you sign in, ready and not playing."
-                            : "Monolist opens only when you open it."
+                      : Startup.otherCopy.length > 0
+                        ? "When you sign in, Windows opens the copy of Monolist in " + Startup.otherCopy
+                          + ", not this one. Choose again to have it open this one."
+                        : Startup.mode === "mini"
+                          ? "The mini player opens when you sign in, ready and not playing; the full window "
+                            + "stays closed until you ask for it."
+                          : Startup.mode === "minimised"
+                            ? "Monolist opens on the taskbar when you sign in, ready and not playing."
+                            : Startup.mode === "open"
+                              ? "Monolist opens when you sign in, ready and not playing."
+                              : "Monolist opens only when you open it."
             }
         }
 

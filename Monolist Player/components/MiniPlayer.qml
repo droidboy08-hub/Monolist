@@ -9,7 +9,8 @@ import Monolist.Backend
 // and its controls under it. It stands over other windows unless its pin is
 // turned off, and moves by its cover. Main.qml opens it in place of the full
 // window (enterMini) — from the player bar, the tray, Ctrl+Shift+M, or at
-// sign-in (Startup's "mini") — and its corner button goes back.
+// sign-in (Startup's "mini") — and its corner button, or Ctrl+Shift+M again,
+// goes back.
 //
 // Everything on it is the player's own state (Player, Sound): it is another
 // view of the same song, never a second player.
@@ -27,6 +28,12 @@ Window {
     property bool onTop: Library.settingValue("mini.on_top", "1") !== "0"
     property bool effectsOpen: false
 
+    // A window of its own, not one the full window owns (as one declared in
+    // it would be): Windows gives an owned window no taskbar button and no
+    // place in Alt+Tab, and its owner is hidden while this one is in use, so
+    // once covered it could only be found again from the tray.
+    transientParent: null
+
     width: 320
     height: 448
     minimumWidth: width
@@ -35,20 +42,39 @@ Window {
     maximumHeight: height
     title: "Monolist"
     color: Theme.bg
-    flags: Qt.Window | Qt.FramelessWindowHint | (onTop ? Qt.WindowStaysOnTopHint : 0)
+    // Minimised from its taskbar button, as any window is.
+    flags: Qt.Window | Qt.FramelessWindowHint | Qt.WindowMinimizeButtonHint
+           | (onTop ? Qt.WindowStaysOnTopHint : 0)
+
+    // Closed by Windows rather than by its own X — Alt+F4, the taskbar's or
+    // Alt+Tab's close — it does what the X does (Main.qml closeMini: the
+    // tray, or quit), never only hiding with Monolist running on unseen.
+    // Ending (Quit, or Windows signing out), it closes.
+    onClosing: function(close) {
+        if (Tray.ending)
+            return
+        close.accepted = false
+        mini.closeRequested()
+    }
 
     function setOnTop(on) {
         onTop = on
         Library.setSetting("mini.on_top", on ? "1" : "0")
     }
 
-    // Where it was left, if that is still on the desktop; else the corner of
-    // its screen, clear of the taskbar.
+    // The app's answers while it is the window in use (Main.qml say): a
+    // song that will not play, above all. The full window's own toast is
+    // hidden with that window.
+    function notice(message, actionLabel, onAction, sticky) {
+        miniToast.show(message, actionLabel, onAction, sticky)
+    }
+
+    // Where it was left, if that is still on one of the screens; else the
+    // corner of its screen, clear of the taskbar.
     function place() {
         const sx = parseInt(Library.settingValue("mini.x", ""))
         const sy = parseInt(Library.settingValue("mini.y", ""))
-        if (!isNaN(sx) && !isNaN(sy) && sx > -mini.width / 2 && sy >= 0
-                && sx < Screen.desktopAvailableWidth - 80 && sy < Screen.desktopAvailableHeight - 80) {
+        if (!isNaN(sx) && !isNaN(sy) && mini.onAScreen(sx, sy)) {
             mini.x = sx
             mini.y = sy
             return
@@ -57,6 +83,22 @@ Window {
         // above where a taskbar stands.
         mini.x = Screen.virtualX + Screen.width - mini.width - Theme.space6
         mini.y = Screen.virtualY + Screen.height - mini.height - Theme.space6 - 48
+    }
+
+    // A place for it with half of it across, and the top of its cover (what
+    // moves it) on, some one screen. Each screen by itself: those left of or
+    // above the main one stand at negative places, and the desktop's sizes
+    // are the span of them all, not where any one ends — a place on a screen
+    // since unplugged is on none.
+    function onAScreen(px, py) {
+        const screens = Application.screens
+        for (let i = 0; i < screens.length; ++i) {
+            const s = screens[i]
+            if (px > s.virtualX - mini.width / 2 && px < s.virtualX + s.width - 80
+                    && py >= s.virtualY && py < s.virtualY + s.height - 80)
+                return true
+        }
+        return false
     }
 
     // Kept once it has stopped moving, not at every step of a drag.
@@ -107,12 +149,18 @@ Window {
             color: Theme.neutral600
         }
 
+        // Not while the effects are over it: a press there is the panel's,
+        // and one that strays must not carry the window off with it.
         DragHandler {
             target: null
+            enabled: !mini.effectsOpen
             onActiveChanged: if (active) mini.startSystemMove()
         }
 
+        // Put away while the effects are over them, so that none answers the
+        // pointer through the panel.
         Row {
+            visible: !mini.effectsOpen
             anchors.top: parent.top
             anchors.right: parent.right
             anchors.margins: Theme.space2
@@ -126,7 +174,7 @@ Window {
             }
             CoverButton {
                 iconName: "maximize-2"
-                tip: "Open Monolist"
+                tip: "Open Monolist (Ctrl+Shift+M)"
                 onClicked: mini.fullRequested()
             }
             CoverButton {
@@ -142,8 +190,11 @@ Window {
             anchors.fill: parent
             color: Qt.rgba(Theme.ink.r, Theme.ink.g, Theme.ink.b, 0.94)
 
-            // The cover beneath keeps its drag and its taps to itself.
+            // The cover beneath answers nothing while it is open: its plates
+            // are put away and its drag is off, and the panel keeps taps and
+            // the pointer's hover to itself.
             TapHandler { gesturePolicy: TapHandler.ReleaseWithinBounds }
+            HoverHandler { blocking: true }
 
             Column {
                 x: Theme.space4
@@ -193,6 +244,19 @@ Window {
                     name: "EQUALISER"
                     checked: Sound.equaliser
                     onToggled: Sound.equaliser = !Sound.equaliser
+                }
+
+                // mpv would not take the chain this session, as the effects
+                // panel says it: the tiles still keep what is chosen, for then.
+                Text {
+                    visible: Sound.failed
+                    width: parent.width
+                    text: "Effects would not start; they are off until Monolist restarts."
+                    wrapMode: Text.WordWrap
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 12
+                    lineHeight: 1.2
+                    color: Theme.paper
                 }
 
                 Text {
@@ -339,7 +403,8 @@ Window {
             }
         }
 
-        // Red while any effect is on, as on the player bar.
+        // Red while any effect is on, and its tip as on the player bar:
+        // what is on, or that they would not start.
         IconButton {
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
@@ -350,12 +415,28 @@ Window {
             onClicked: mini.effectsOpen = !mini.effectsOpen
             ToolTip.visible: hovered
             ToolTip.delay: 600
-            ToolTip.text: mini.effectsOpen ? "Hide the effects" : "Effects"
+            ToolTip.text: mini.effectsOpen ? "Hide the effects"
+                          : Sound.failed ? "Effects would not start; off until Monolist restarts"
+                          : Sound.active ? "Effects: " + Sound.summary : "Effects"
         }
+    }
+
+    // — the app's answers, over the foot of the cover (notice) —
+    Toast {
+        id: miniToast
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: cover.bottom
+        anchors.bottomMargin: Theme.space3
+        maximumWidth: mini.width - Theme.space4 * 2
+        // Over the cover and the effects, under the window's frame.
+        z: 9
     }
 
     Shortcut { sequence: "Space"; onActivated: Player.togglePlay() }
     Shortcut { sequence: "Escape"; enabled: mini.effectsOpen; onActivated: mini.effectsOpen = false }
+    // The keys that made the window small make it whole again (Main.qml's
+    // own Shortcut goes the other way).
+    Shortcut { sequence: "Ctrl+Shift+M"; onActivated: mini.fullRequested() }
 
     // A button on the cover: a glyph on a plate of ink, so it reads on any
     // picture.
