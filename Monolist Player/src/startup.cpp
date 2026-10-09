@@ -14,9 +14,10 @@ const char kRunKey[] = "Software\\Microsoft\\Windows\\CurrentVersion\\Run";
 const char kApprovedKey[] = "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\StartupApproved\\Run";
 
 // What a start at sign-in is told: --login, and --minimised for a window
-// that waits on the taskbar (main.cpp).
+// that waits on the taskbar, or --mini for the mini player alone (main.cpp).
 const char kLoginFlag[] = "--login";
 const char kMinimisedFlag[] = "--minimised";
+const char kMiniFlag[] = "--mini";
 
 #ifdef Q_OS_WIN
 std::wstring wide(const QString &text)
@@ -104,6 +105,8 @@ QString Startup::commandFor(const QString &executable, const QString &mode)
                       + QLatin1String(kLoginFlag);
     if (mode == QLatin1String("minimised"))
         command += QLatin1Char(' ') + QLatin1String(kMinimisedFlag);
+    else if (mode == QLatin1String("mini"))
+        command += QLatin1Char(' ') + QLatin1String(kMiniFlag);
     return command;
 }
 
@@ -113,7 +116,11 @@ QString Startup::mode() const
     const QString command = readString(m_runKey, valueName());
     if (command.isEmpty())
         return QStringLiteral("off");
-    return command.contains(QLatin1String(kMinimisedFlag)) ? QStringLiteral("minimised") : QStringLiteral("open");
+    // Word by word: "--mini" is where "--minimised" begins.
+    const QStringList words = command.split(QLatin1Char(' '), Qt::SkipEmptyParts);
+    if (words.contains(QLatin1String(kMiniFlag)))
+        return QStringLiteral("mini");
+    return words.contains(QLatin1String(kMinimisedFlag)) ? QStringLiteral("minimised") : QStringLiteral("open");
 #else
     return QStringLiteral("off");
 #endif
@@ -135,7 +142,8 @@ bool Startup::systemOff() const
 void Startup::setMode(const QString &mode)
 {
 #ifdef Q_OS_WIN
-    if (mode != QLatin1String("off") && mode != QLatin1String("open") && mode != QLatin1String("minimised"))
+    if (mode != QLatin1String("off") && mode != QLatin1String("open") && mode != QLatin1String("minimised")
+        && mode != QLatin1String("mini"))
         return;
     if (mode == this->mode())
         return;

@@ -787,6 +787,72 @@ ApplicationWindow {
         }
         onNowPlayingToggled: window.nowPlayingOpen = !window.nowPlayingOpen
         onEffectsSettingsRequested: window.openEffectsSettings()
+        onMiniPlayerRequested: window.enterMini()
+    }
+
+    // — the mini player: in place of this window, never beside it —
+    property bool miniMode: false
+
+    MiniPlayer {
+        id: miniPlayer
+        onFullRequested: window.leaveMini()
+        onCloseRequested: window.closeMini()
+        onSoundSettingsRequested: {
+            window.leaveMini()
+            window.openEffectsSettings()
+        }
+    }
+
+    function enterMini() {
+        if (window.videoFullscreen)
+            window.leaveVideoFullscreen()
+        if (!window.miniMode)
+            miniPlayer.place()
+        window.miniMode = true
+        miniPlayer.show()
+        miniPlayer.raise()
+        miniPlayer.requestActivate()
+        window.hide()
+    }
+
+    function leaveMini() {
+        window.miniMode = false
+        miniPlayer.hide()
+        window.bringBack(false)
+    }
+
+    // The mini player's own close: as the window's (onClosing), the tray
+    // while that is on, else Monolist quits.
+    function closeMini() {
+        if (Tray.available && Tray.closeToTray) {
+            miniPlayer.hide()
+            Tray.hidden()
+        } else {
+            Qt.quit()
+        }
+    }
+
+    // Whichever is in use, shown and in front: the tray's icon, a second
+    // start of Monolist (C++). `full`: the full window whatever was in use
+    // (the tray's Open Monolist). A window hidden while maximised comes back
+    // maximised; only a minimised one is restored.
+    function bringBack(full) {
+        if (full && window.miniMode) {
+            window.leaveMini()
+            return
+        }
+        const target = window.miniMode ? miniPlayer : window
+        if (target.visibility === Window.Minimized)
+            target.showNormal()
+        else if (!target.visible)
+            target.show()
+        target.raise()
+        target.requestActivate()
+    }
+
+    Shortcut {
+        sequence: "Ctrl+Shift+M"
+        onActivated: window.enterMini()
     }
 
     // --effects-popup: once the window has been laid out, so that the popup

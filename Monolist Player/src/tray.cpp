@@ -49,6 +49,7 @@ Tray::Tray(Library *library, PlaybackController *player, QObject *parent)
     QAction *previous = m_menu->addAction(QStringLiteral("Previous"));
     m_menu->addSeparator();
     QAction *open = m_menu->addAction(QStringLiteral("Open Monolist"));
+    QAction *mini = m_menu->addAction(QStringLiteral("Mini player"));
     m_menu->addSeparator();
     QAction *quit = m_menu->addAction(QStringLiteral("Quit Monolist"));
     if (m_player) {
@@ -58,7 +59,8 @@ Tray::Tray(Library *library, PlaybackController *player, QObject *parent)
         connect(m_player, &PlaybackController::playingChanged, this, &Tray::refresh);
         connect(m_player, &PlaybackController::currentTrackChanged, this, &Tray::refresh);
     }
-    connect(open, &QAction::triggered, this, &Tray::showRequested);
+    connect(open, &QAction::triggered, this, &Tray::openRequested);
+    connect(mini, &QAction::triggered, this, &Tray::miniRequested);
     connect(quit, &QAction::triggered, this, []() {
         QCoreApplication::quit();
     });

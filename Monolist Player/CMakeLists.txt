@@ -315,6 +315,7 @@ qt_add_qml_module(monolist
         components/ArtistLine.qml
         components/EffectsPanel.qml
         components/BandSlider.qml
+        components/MiniPlayer.qml
         views/HomeView.qml
         views/SearchView.qml
         views/LibraryView.qml

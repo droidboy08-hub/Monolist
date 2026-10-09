@@ -332,6 +332,11 @@ ScrollPage {
                     selected: Startup.mode === "minimised"
                     onPicked: Startup.setMode("minimised")
                 }
+                ChoiceChip {
+                    label: "OPEN MINI PLAYER"
+                    selected: Startup.mode === "mini"
+                    onPicked: Startup.setMode("mini")
+                }
             }
 
             Note {
@@ -339,11 +344,14 @@ ScrollPage {
                 text: Startup.mode !== "off" && Startup.systemOff
                       ? "Windows has Monolist turned off in its startup apps, so it will not open. Turn it on "
                         + "in Windows' Settings > Apps > Startup."
-                      : Startup.mode === "minimised"
-                        ? "Monolist opens on the taskbar when you sign in, ready and not playing."
-                        : Startup.mode === "open"
-                          ? "Monolist opens when you sign in, ready and not playing."
-                          : "Monolist opens only when you open it."
+                      : Startup.mode === "mini"
+                        ? "The mini player opens when you sign in, ready and not playing; the full window stays "
+                          + "closed until you ask for it."
+                        : Startup.mode === "minimised"
+                          ? "Monolist opens on the taskbar when you sign in, ready and not playing."
+                          : Startup.mode === "open"
+                            ? "Monolist opens when you sign in, ready and not playing."
+                            : "Monolist opens only when you open it."
             }
         }
 

@@ -12,9 +12,9 @@ class QSystemTrayIcon;
 // Closing the window to the system tray, the music playing on (the owner's,
 // 2026-10-08), as Spotify does it: an icon by the clock while Monolist runs,
 // a click on it bringing the window back, a right-click for the song, play,
-// next, previous, the window and Quit. Settings has the switch ("Keep
-// playing in the system tray", kept as "window.close_to_tray", on unless
-// turned off); with it off, closing the window quits as before.
+// next, previous, the window, the mini player and Quit. Settings has the
+// switch ("Keep playing in the system tray", kept as "window.close_to_tray",
+// on unless turned off); with it off, closing the window quits as before.
 //
 // The first time the window goes to the tray, a note from the icon says
 // where it went, once ("window.tray_told").
@@ -57,8 +57,13 @@ public Q_SLOTS:
 
 Q_SIGNALS:
     void changed();
-    // A click on the icon, or Open Monolist: the window, back.
+    // A click on the icon: whichever window is in use (the full one or the
+    // mini player), back.
     void showRequested();
+    // The menu's Open Monolist: the full window, whichever was in use.
+    void openRequested();
+    // The menu's Mini player.
+    void miniRequested();
 
 private:
     void showIcon(bool shown);

@@ -333,6 +333,23 @@ that gets blamed for the app being slow.
   higher than any one of them. The popup keeps one height whatever is on: it
   grows upwards from the bar, so a row of strengths appearing would lift the
   tiles away from under the pointer that had just clicked one.
+* **The mini player is the window made small, never a second one beside it.**
+  The owner's choice of three (2026-10-08, "B · Card"): 320 by 448, the cover
+  in colour across the top — it is the subject, as an album page's cover is —
+  then a 4px progress line, the title, the artist and the times, and under them
+  like, previous, the red play square, next and the effects glyph. Three ink
+  plates on the cover keep it over other windows (the pin, red while it does),
+  go back to the full window, and close it. It opens in place of the window,
+  from the bar, the tray, Ctrl+Shift+M or at sign-in; its close does what the
+  window's does (the tray, or quit). The effects open over the cover, printed
+  in reverse: paper on ink.
+  *Why.* Two windows showing the same song would ask which one is the app. A
+  window that goes small keeps one answer, and the cover can be the whole top
+  of it because, at that size, nothing else competes with it.
+* **Closing keeps the music: the window goes to the tray.** As Spotify does it,
+  unless Settings turns it off; the icon by the clock brings it back, and its
+  menu has the song, play, next, previous, the window, the mini player and
+  Quit. The first time, a note says where it went.
 
 ## 4. Type and rules
 

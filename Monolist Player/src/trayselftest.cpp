@@ -67,18 +67,23 @@ int runTraySelfTest(Library *library)
             const QStringList menu = texts(tray.menu());
             t.check(menu == QStringList({ QStringLiteral("Nothing playing"), QStringLiteral("-"), QStringLiteral("Play"),
                                           QStringLiteral("Next"), QStringLiteral("Previous"), QStringLiteral("-"),
-                                          QStringLiteral("Open Monolist"), QStringLiteral("-"),
+                                          QStringLiteral("Open Monolist"), QStringLiteral("Mini player"),
+                                          QStringLiteral("-"),
                                           QStringLiteral("Quit Monolist") }),
-                    QStringLiteral("the menu: the song, play, next, previous, the window, quit"),
+                    QStringLiteral("the menu: the song, play, next, previous, the window, the mini player, quit"),
                     menu.join(QStringLiteral(" | ")));
             t.check(!tray.menu()->actions().at(0)->isEnabled() && !tray.menu()->actions().at(2)->isEnabled(),
                     QStringLiteral("  with nothing playing, the song line and Play are greyed"));
             t.check(tray.toolTip() == QLatin1String("Monolist"), QStringLiteral("  and the tooltip is the name alone"));
 
-            int shown = 0;
-            QObject::connect(&tray, &Tray::showRequested, [&shown]() { ++shown; });
+            int opened = 0;
+            int minis = 0;
+            QObject::connect(&tray, &Tray::openRequested, [&opened]() { ++opened; });
+            QObject::connect(&tray, &Tray::miniRequested, [&minis]() { ++minis; });
             tray.menu()->actions().at(6)->trigger();
-            t.check(shown == 1, QStringLiteral("Open Monolist asks for the window"));
+            t.check(opened == 1 && minis == 0, QStringLiteral("Open Monolist asks for the full window"));
+            tray.menu()->actions().at(7)->trigger();
+            t.check(minis == 1, QStringLiteral("Mini player asks for the mini player"));
         }
 
         tray.setCloseToTray(false);

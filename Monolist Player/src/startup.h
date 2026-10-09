@@ -4,8 +4,9 @@
 #include <QString>
 
 // Opening Monolist when the user signs in to Windows, as Spotify offers it
-// (the owner's, 2026-10-08): off, open, or open minimised. Settings >
-// Settings chooses; the choice is the app's own value under the user's Run
+// (the owner's, 2026-10-08): off, open, open minimised, or the mini player.
+// Settings > Settings chooses; the choice is the app's own value under the
+// user's Run
 // key (no administrator: HKEY_CURRENT_USER), which is also where Windows
 // lists it in Settings > Apps > Startup. That value is the only record, so
 // one Windows' own tools removed reads as off here too.
@@ -22,7 +23,7 @@ class Startup : public QObject
 {
     Q_OBJECT
     Q_PROPERTY(bool supported READ supported CONSTANT)
-    // "off", "open" or "minimised".
+    // "off", "open", "minimised" or "mini" (the mini player alone).
     Q_PROPERTY(QString mode READ mode NOTIFY changed)
     // Windows' Startup apps has Monolist turned off: whatever is chosen
     // here, it will not open until that is turned on again.

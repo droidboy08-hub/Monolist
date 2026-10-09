@@ -74,6 +74,8 @@ Rectangle {
                                        : Sound.active ? "Effects: " + Sound.summary : "Effects"
     // The popup's link to Settings > Playback's EFFECTS block.
     signal effectsSettingsRequested()
+    // The mini player, in place of the window (Main.qml).
+    signal miniPlayerRequested()
 
     // From the glyph on the bar, or, once that has gone into the volume
     // popup, from the volume button, as the output menu is.
@@ -550,6 +552,19 @@ Rectangle {
             ToolTip.delay: 600
             ToolTip.text: root.nowPlayingOpen ? (root.queueOpen ? "Show lyrics" : "Up next")
                                               : (root.queueOpen ? "Hide queue" : "Queue")
+        }
+        // The mini player: the song in a small window of its own, in place
+        // of this one. On the bar while the title is.
+        IconButton {
+            visible: root.showMeta
+            iconName: "mini-player"
+            iconColor: Theme.neutral700
+            iconSize: 15
+            anchors.verticalCenter: parent.verticalCenter
+            onClicked: root.miniPlayerRequested()
+            ToolTip.visible: hovered
+            ToolTip.delay: 600
+            ToolTip.text: "Mini player (Ctrl+Shift+M)"
         }
         // The sound effects, red while any is on. On the bar for as long as
         // the title is, so the colour shows in a window snapped to half the

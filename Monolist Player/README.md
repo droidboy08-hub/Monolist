@@ -387,7 +387,8 @@ effects that are on.
     components/              UI components: the prototype's, and the menus,
                              cards, queue panel, lyrics pane, title bar parts,
                              ArtistLine (an artist line whose names are links),
-                             EffectsPanel and BandSlider (the sound effects)
+                             EffectsPanel and BandSlider (the sound effects),
+                             MiniPlayer (the mini player's own window)
     views/                   Home, Search, Library, Downloads, Page (album or
                              YouTube Music playlist), Artist, Shelf (a shelf's
                              "show all"), Playlist, Now Playing

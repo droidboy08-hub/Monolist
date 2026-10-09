@@ -47,6 +47,10 @@ var data = {
     "fullscreen":      [{ d: "M8 3 H3 V8" }, { d: "M16 3 H21 V8" }, { d: "M3 16 V21 H8" }, { d: "M21 16 V21 H16" }],
     // Lucide's picture-in-picture, square: the picture into the small panel.
     "pip":             [{ d: "M21 10 V4 H3 V19 H10" }, { d: "M14 13 H22 V20 H14 Z" }],
+    // The mini player: the window, and the small one in its corner, filled.
+    "mini-player":     [{ d: "M3 4 H21 V20 H3 Z" }, { d: "M12 12 H19 V18 H12 Z", fill: true }],
+    // Lucide's pin, square: the mini player kept over other windows.
+    "pin":             [{ d: "M12 17 V22" }, { d: "M9 3 H15 V10 L18 14 H6 L9 10 Z" }],
     "fullscreen-exit": [{ d: "M8 3 V8 H3" }, { d: "M16 3 V8 H21" }, { d: "M3 16 H8 V21" }, { d: "M21 16 H16 V21" }],
     "image":           [{ d: "M3 4 H21 V20 H3 Z" },
                         { d: "M11 10 A1.6 1.6 0 1 1 7.8 10 A1.6 1.6 0 1 1 11 10" },

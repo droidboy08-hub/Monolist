@@ -96,6 +96,11 @@ int runStartupSelfTest()
             QStringLiteral("minimised: the same, with --minimised"), scratchRunCommand());
     startup.setMode(QStringLiteral("minimised"));
     t.check(changes == 2, QStringLiteral("  the same choice again changes nothing"));
+    startup.setMode(QStringLiteral("mini"));
+    t.check(scratchRunCommand().endsWith(QLatin1String(" --login --mini")) && startup.mode() == QLatin1String("mini"),
+            QStringLiteral("the mini player: --mini, read back as itself and not as minimised"), scratchRunCommand());
+    startup.setMode(QStringLiteral("minimised"));
+    t.check(startup.mode() == QLatin1String("minimised"), QStringLiteral("  and back to minimised"));
     startup.setMode(QStringLiteral("sometimes"));
     t.check(startup.mode() == QLatin1String("minimised"), QStringLiteral("  an unknown choice changes nothing"));
 

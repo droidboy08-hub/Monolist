@@ -763,27 +763,28 @@ int main(int argc, char *argv[])
     // before it is ever drawn with one.
     if (auto *window = qobject_cast<QWindow *>(qmlEngine.rootObjects().value(0))) {
         chrome.attach(window);
-        // Opened by Windows at sign-in, minimised (Startup): on the taskbar,
-        // waiting, rather than over whatever the user opens first.
-        if (app.arguments().contains(QStringLiteral("--minimised")))
+        // Opened by Windows at sign-in (Startup): minimised, on the taskbar
+        // and waiting rather than over whatever the user opens first; or as
+        // the mini player, the full window not shown at all.
+        if (app.arguments().contains(QStringLiteral("--mini")))
+            QMetaObject::invokeMethod(window, "enterMini");
+        else if (app.arguments().contains(QStringLiteral("--minimised")))
             window->showMinimized();
         else
             window->show();
         googleSignIn.setOwner(window);
-        // The tray's icon or its Open Monolist: the window back, as a
-        // second start brings it.
-        QObject::connect(&tray, &Tray::showRequested, window, [window]() {
-            if (window->visibility() == QWindow::Minimized || !window->isVisible())
-                window->showNormal();
-            window->raise();
-            window->requestActivate();
+        // Whichever window is in use, back and in front (Main.qml's
+        // bringBack): from the tray's icon, or a second start of Monolist.
+        // The tray's Open Monolist is the full window whatever was in use.
+        const auto bringBack = [window](bool full) {
+            QMetaObject::invokeMethod(window, "bringBack", Q_ARG(QVariant, full));
+        };
+        QObject::connect(&tray, &Tray::showRequested, window, [bringBack]() { bringBack(false); });
+        QObject::connect(&tray, &Tray::openRequested, window, [bringBack]() { bringBack(true); });
+        QObject::connect(&tray, &Tray::miniRequested, window, [window]() {
+            QMetaObject::invokeMethod(window, "enterMini");
         });
-        QObject::connect(&instance, &InstanceGuard::wakeRequested, window, [window]() {
-            if (window->visibility() == QWindow::Minimized || !window->isVisible())
-                window->showNormal();
-            window->raise();
-            window->requestActivate();
-        });
+        QObject::connect(&instance, &InstanceGuard::wakeRequested, window, [bringBack]() { bringBack(false); });
         // A damaged library put back from its backup, or begun afresh: said
         // once the window is up.
         if (!AppDatabase::recoveryNote().isEmpty()) {
@@ -830,8 +831,18 @@ int main(int argc, char *argv[])
             const qreal scrollTo = scrollFlag >= 0 && scrollFlag + 1 < app.arguments().size()
                                        ? app.arguments().at(scrollFlag + 1).toDouble() : -1.0;
             auto *quick = qobject_cast<QQuickWindow *>(window);
-            const auto grab = [quick, path, quit]() {
-                const bool saved = quick && quick->grabWindow().save(path);
+            // --shot-mini: the mini player's window rather than the main one.
+            const bool miniShot = app.arguments().contains(QStringLiteral("--shot-mini"));
+            const auto grab = [quick, path, quit, miniShot]() {
+                QQuickWindow *target = quick;
+                if (miniShot) {
+                    for (QWindow *top : QGuiApplication::topLevelWindows()) {
+                        auto *other = qobject_cast<QQuickWindow *>(top);
+                        if (other && other != quick && other->isVisible())
+                            target = other;
+                    }
+                }
+                const bool saved = target && target->grabWindow().save(path);
                 qInfo("shot: %s %s", saved ? "saved" : "could not save", qUtf8Printable(QDir::toNativeSeparators(path)));
                 if (quit)
                     QCoreApplication::quit();
