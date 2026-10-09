@@ -76,6 +76,13 @@ Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs 
 Name: "{autoprograms}\Monolist"; Filename: "{app}\monolist.exe"; Comment: "Monolist music player"
 Name: "{autodesktop}\Monolist"; Filename: "{app}\monolist.exe"; Tasks: desktopicon
 
+[Registry]
+; Opening at sign-in is the app's own choice (Settings, Startup), never made
+; here; uninstalling takes it away with the program, and Windows' note of
+; whether it is allowed to start beside it.
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: none; ValueName: "Monolist"; Flags: uninsdeletevalue dontcreatekey
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run"; ValueType: none; ValueName: "Monolist"; Flags: uninsdeletevalue dontcreatekey
+
 [Run]
 Filename: "{app}\monolist.exe"; Description: "{cm:LaunchProgram,Monolist}"; Flags: nowait postinstall skipifsilent
 

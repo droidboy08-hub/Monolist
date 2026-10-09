@@ -58,6 +58,8 @@
 #include "appicon.h"
 #include "appiconselftest.h"
 #include "searchselftest.h"
+#include "startup.h"
+#include "startupselftest.h"
 #include "rec/catalog.h"
 #include "rec/suitable.h"
 #include <QTextStream>
@@ -327,6 +329,10 @@ int main(int argc, char *argv[])
         // this computer (searchselftest.cpp).
         if (arguments.contains(QStringLiteral("--search-test")))
             return runSearchSelfTest() == 0 ? 0 : 1;
+        // Opening at sign-in, on a scratch registry key (startupselftest.cpp);
+        // in MONOLIST_DATA_DIR only.
+        if (arguments.contains(QStringLiteral("--startup-test")))
+            return runStartupSelfTest() == 0 ? 0 : 1;
     }
 
     // Which page an artist's name opens: learnt from every answer that links
@@ -620,6 +626,8 @@ int main(int argc, char *argv[])
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Player",    &player);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Sound",     &sound);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "AppIcon",   &appIcon);
+    Startup startup;
+    qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Startup",   &startup);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Extractor", &extractor);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Downloads", &downloads);
     // Not "Palette": QtQuick has a type of that name, which would win.
@@ -742,7 +750,12 @@ int main(int argc, char *argv[])
     // before it is ever drawn with one.
     if (auto *window = qobject_cast<QWindow *>(qmlEngine.rootObjects().value(0))) {
         chrome.attach(window);
-        window->show();
+        // Opened by Windows at sign-in, minimised (Startup): on the taskbar,
+        // waiting, rather than over whatever the user opens first.
+        if (app.arguments().contains(QStringLiteral("--minimised")))
+            window->showMinimized();
+        else
+            window->show();
         googleSignIn.setOwner(window);
         QObject::connect(&instance, &InstanceGuard::wakeRequested, window, [window]() {
             if (window->visibility() == QWindow::Minimized || !window->isVisible())

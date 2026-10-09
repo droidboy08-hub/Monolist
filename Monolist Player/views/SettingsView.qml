@@ -10,6 +10,10 @@ import "../components"
 ScrollPage {
     id: root
 
+    // Windows' Settings may have changed the sign-in start while the app
+    // was open: read again as the page is shown.
+    onVisibleChanged: if (visible) Startup.refresh()
+
     // Every country, fetched once; the picker filters this list.
     property var allCountries: []
     property string filter: ""
@@ -299,6 +303,47 @@ ScrollPage {
                     HoverHandler { id: countryHover; cursorShape: Qt.PointingHandCursor }
                     TapHandler { onTapped: Library.region = entry.modelData.code }
                 }
+            }
+        }
+
+        // — opening at sign-in, as Spotify offers it (Startup) —
+        Column {
+            visible: Startup.supported
+            width: parent.width
+            spacing: Theme.space3
+
+            SmallCaps { text: "WHEN YOU SIGN IN TO WINDOWS" }
+
+            Row {
+                spacing: -Theme.ruleWidth
+
+                ChoiceChip {
+                    label: "DON'T OPEN"
+                    selected: Startup.mode === "off"
+                    onPicked: Startup.setMode("off")
+                }
+                ChoiceChip {
+                    label: "OPEN MONOLIST"
+                    selected: Startup.mode === "open"
+                    onPicked: Startup.setMode("open")
+                }
+                ChoiceChip {
+                    label: "OPEN MINIMISED"
+                    selected: Startup.mode === "minimised"
+                    onPicked: Startup.setMode("minimised")
+                }
+            }
+
+            Note {
+                width: parent.width
+                text: Startup.mode !== "off" && Startup.systemOff
+                      ? "Windows has Monolist turned off in its startup apps, so it will not open. Turn it on "
+                        + "in Windows' Settings > Apps > Startup."
+                      : Startup.mode === "minimised"
+                        ? "Monolist opens on the taskbar when you sign in, ready and not playing."
+                        : Startup.mode === "open"
+                          ? "Monolist opens when you sign in, ready and not playing."
+                          : "Monolist opens only when you open it."
             }
         }
 

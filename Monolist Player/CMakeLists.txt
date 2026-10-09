@@ -131,6 +131,9 @@ qt_add_executable(monolist
     src/appiconselftest.h          src/appiconselftest.cpp
     # A search's pages after the first, on a stand-in (--search-test).
     src/searchselftest.h           src/searchselftest.cpp
+    # Opening at sign-in (the Startup singleton) and its test (--startup-test).
+    src/startup.h                  src/startup.cpp
+    src/startupselftest.h          src/startupselftest.cpp
 )
 
 # The build's own identity: version, build number, commit, date. Regenerated
@@ -367,7 +370,8 @@ if(WIN32)
     # netapi32: the account's full name, for the sidebar (Library).
     # runtimeobject: the Windows Runtime's activation and strings.
     # ole32, shell32, uuid: the app's shortcuts pointed at the chosen icon (AppIcon).
-    target_link_libraries(monolist PRIVATE dwmapi netapi32 runtimeobject ole32 shell32 uuid)
+    # advapi32: the user's Run key, for opening at sign-in (Startup).
+    target_link_libraries(monolist PRIVATE dwmapi netapi32 runtimeobject ole32 shell32 uuid advapi32)
 endif()
 
 # Signing in on Google's own page in a window of the app's own (GoogleSignIn):
