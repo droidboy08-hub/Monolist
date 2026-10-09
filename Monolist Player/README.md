@@ -412,6 +412,8 @@ effects that are on.
       searchselftest.*       --search-test
       startup.*              opening at sign-in, off / open / minimised (Startup)
       startupselftest.*      --startup-test
+      tray.*                 the window closed to the system tray, the music on (Tray)
+      trayselftest.*         --tray-test
       mediaextractor.*       search: InnerTube first, yt-dlp as fallback
       innertube.*            YouTube Music's API: search, suggestions, radio,
                              browse pages, artist pages, lyrics
@@ -779,6 +781,8 @@ first failure`.
     monolist --startup-test                         opening at sign-in: the Run value written, read back and
                                                     taken away, on a scratch key; Windows' own switch read
                                                     (needs MONOLIST_DATA_DIR; in the release gate)
+    monolist --tray-test                            closing to the system tray: the switch kept, the menu
+                                                    and what it does (needs MONOLIST_DATA_DIR)
     monolist --sound-live-test                      the same effects on the real mpv with no sound device
                                                     (MONOLIST_MPV_AO=null): switched on and off mid-song, the
                                                     clock at 0.85x and 1.25x, every curve with the strongest

@@ -18,6 +18,19 @@ ApplicationWindow {
     title: "Monolist"
     color: Theme.bg
 
+    // Closing the window to the system tray, the music playing on (Tray),
+    // unless Settings turned that off or Windows is signing out. Full screen
+    // is left first, so the window comes back as a window.
+    onClosing: function(close) {
+        if (!Tray.available || !Tray.closeToTray || Tray.ending)
+            return
+        close.accepted = false
+        if (window.videoFullscreen)
+            window.leaveVideoFullscreen()
+        window.hide()
+        Tray.hidden()
+    }
+
     property string currentView: "home"
     // Replaced, never changed in place, so what reads their length (the top
     // bar's arrows) hears of every step.

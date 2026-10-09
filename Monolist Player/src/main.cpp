@@ -1,5 +1,6 @@
 #include <QElapsedTimer>
 #include <QFontDatabase>
+#include <QApplication>
 #include <QGuiApplication>
 #include <QJsonArray>
 #include <QJsonObject>
@@ -60,6 +61,8 @@
 #include "searchselftest.h"
 #include "startup.h"
 #include "startupselftest.h"
+#include "tray.h"
+#include "trayselftest.h"
 #include "rec/catalog.h"
 #include "rec/suitable.h"
 #include <QTextStream>
@@ -100,7 +103,9 @@ int main(int argc, char *argv[])
         }
     }
 
-    QGuiApplication app(argc, argv);
+    // A QApplication, not a QGuiApplication, for the system tray's icon and
+    // menu (Tray), which are Qt Widgets'; the interface is all QML still.
+    QApplication app(argc, argv);
     // Qt sets the process locale from the environment on macOS and Linux, and
     // libmpv refuses to start under any numeric locale but "C" — mpv_create()
     // returns nothing, and the app runs without sound. A Mac set to German, or
@@ -333,6 +338,10 @@ int main(int argc, char *argv[])
         // in MONOLIST_DATA_DIR only.
         if (arguments.contains(QStringLiteral("--startup-test")))
             return runStartupSelfTest() == 0 ? 0 : 1;
+        // Closing to the system tray: the switch, the menu (trayselftest.cpp);
+        // in MONOLIST_DATA_DIR only.
+        if (arguments.contains(QStringLiteral("--tray-test")))
+            return runTraySelfTest(&library) == 0 ? 0 : 1;
     }
 
     // Which page an artist's name opens: learnt from every answer that links
@@ -628,6 +637,10 @@ int main(int argc, char *argv[])
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "AppIcon",   &appIcon);
     Startup startup;
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Startup",   &startup);
+    // The window closed to the system tray, the music playing on.
+    Tray tray(&library, &player);
+    QObject::connect(&appIcon, &AppIcon::currentChanged, &tray, &Tray::refresh);
+    qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Tray",      &tray);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Extractor", &extractor);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Downloads", &downloads);
     // Not "Palette": QtQuick has a type of that name, which would win.
@@ -757,6 +770,14 @@ int main(int argc, char *argv[])
         else
             window->show();
         googleSignIn.setOwner(window);
+        // The tray's icon or its Open Monolist: the window back, as a
+        // second start brings it.
+        QObject::connect(&tray, &Tray::showRequested, window, [window]() {
+            if (window->visibility() == QWindow::Minimized || !window->isVisible())
+                window->showNormal();
+            window->raise();
+            window->requestActivate();
+        });
         QObject::connect(&instance, &InstanceGuard::wakeRequested, window, [window]() {
             if (window->visibility() == QWindow::Minimized || !window->isVisible())
                 window->showNormal();

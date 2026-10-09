@@ -347,6 +347,17 @@ ScrollPage {
             }
         }
 
+        // — the window's close button: the tray, the music on (Tray) —
+        ToggleRow {
+            visible: Tray.available
+            width: parent.width
+            label: "Keep playing in the system tray"
+            hint: "Closing the window leaves Monolist playing, with its icon by the clock. Click the icon to "
+                  + "bring the window back; right-click it to quit."
+            checked: Tray.closeToTray
+            onToggled: Tray.closeToTray = !Tray.closeToTray
+        }
+
         HRule { width: parent.width }
 
         // — appearance —

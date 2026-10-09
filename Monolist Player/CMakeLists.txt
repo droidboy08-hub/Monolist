@@ -29,7 +29,7 @@ option(MONOLIST_NO_MPV "Build without libmpv; audio playback is disabled." OFF)
 
 # 6.6 is the floor because Icon.qml uses Shape.CurveRenderer, which is what
 # keeps the glyph outlines sharp at fractional scales.
-find_package(Qt6 6.6 REQUIRED COMPONENTS Core Gui Quick QuickControls2 Sql Svg Network)
+find_package(Qt6 6.6 REQUIRED COMPONENTS Core Gui Widgets Quick QuickControls2 Sql Svg Network)
 
 if(MONOLIST_NO_MPV)
     set(MONOLIST_MPV_SOURCES src/mpvengine.h src/mpvengine_stub.cpp)
@@ -131,6 +131,9 @@ qt_add_executable(monolist
     src/appiconselftest.h          src/appiconselftest.cpp
     # A search's pages after the first, on a stand-in (--search-test).
     src/searchselftest.h           src/searchselftest.cpp
+    # The window closed to the system tray (the Tray singleton).
+    src/tray.h                     src/tray.cpp
+    src/trayselftest.h             src/trayselftest.cpp
     # Opening at sign-in (the Startup singleton) and its test (--startup-test).
     src/startup.h                  src/startup.cpp
     src/startupselftest.h          src/startupselftest.cpp
@@ -345,6 +348,8 @@ target_include_directories(monolist PRIVATE src)
 target_link_libraries(monolist PRIVATE
     Qt6::Core
     Qt6::Gui
+    # The system tray's icon and menu (Tray); the interface itself is QML.
+    Qt6::Widgets
     Qt6::Quick
     Qt6::QuickControls2
     Qt6::Sql
