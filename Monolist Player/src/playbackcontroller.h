@@ -58,6 +58,9 @@ class PlaybackController : public QObject
     Q_PROPERTY(qreal volume READ volume WRITE setVolume NOTIFY volumeChanged)
     Q_PROPERTY(bool shuffle READ shuffle WRITE setShuffle NOTIFY shuffleChanged)
     Q_PROPERTY(int repeatMode READ repeatMode NOTIFY repeatModeChanged)
+    // The song playing heard to its end, then the next one made ready, not
+    // played (the sleep timer's "end of this song"); off again once it has.
+    Q_PROPERTY(bool stopAfterCurrent READ stopAfterCurrent WRITE setStopAfterCurrent NOTIFY stopAfterCurrentChanged)
     Q_PROPERTY(bool favourite READ favourite NOTIFY favouriteChanged)
     Q_PROPERTY(bool buffering READ buffering NOTIFY bufferingChanged)
     Q_PROPERTY(bool resolving READ resolving NOTIFY statusChanged)
@@ -168,6 +171,8 @@ public:
     QString positionText() const;
     QString durationText() const;
     qreal volume() const { return m_volume; }
+    bool stopAfterCurrent() const { return m_stopAfterCurrent; }
+    void setStopAfterCurrent(bool on);
     bool shuffle() const { return m_shuffle; }
     int repeatMode() const { return m_repeatMode; }
     bool favourite() const { return m_favourite; }
@@ -271,6 +276,9 @@ Q_SIGNALS:
     void positionChanged();
     void durationChanged();
     void volumeChanged();
+    void stopAfterCurrentChanged();
+    // The song asked for by stopAfterCurrent has ended, and nothing plays.
+    void stoppedAfterCurrent();
     void shuffleChanged();
     void repeatModeChanged();
     void favouriteChanged();
@@ -523,6 +531,7 @@ private:
     QString m_placeSaved;
     bool m_shuffle = false;
     int m_repeatMode = RepeatOff;
+    bool m_stopAfterCurrent = false;
     bool m_favourite = false;
     bool m_videoWanted = false;
     bool m_videoPlaying = false;

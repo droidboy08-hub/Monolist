@@ -415,6 +415,8 @@ effects that are on.
       startupselftest.*      --startup-test
       tray.*                 the window closed to the system tray, the music on (Tray)
       trayselftest.*         --tray-test
+      sleeptimer.*           the sleep timer: minutes or the end of the song, a fade, a pause
+      sleepselftest.*        --sleep-test
       mediaextractor.*       search: InnerTube first, yt-dlp as fallback
       innertube.*            YouTube Music's API: search, suggestions, radio,
                              browse pages, artist pages, lyrics
@@ -784,6 +786,10 @@ first failure`.
                                                     a value naming a Monolist gone repaired; a sign-in start
                                                     leaving an open Monolist's window alone
                                                     (needs MONOLIST_DATA_DIR; in the release gate)
+    monolist --sleep-test                           the sleep timer on a stand-in player: the countdown,
+                                                    the fade and the volume put back, +10 minutes, the end
+                                                    of the song (and the real player's stop after a song,
+                                                    in --sound-live-test)
     monolist --tray-test                            closing to the system tray: the switch kept, the menu
                                                     and what it does (needs MONOLIST_DATA_DIR)
     monolist --sound-live-test                      the same effects on the real mpv with no sound device

@@ -49,6 +49,8 @@ var data = {
     "pip":             [{ d: "M21 10 V4 H3 V19 H10" }, { d: "M14 13 H22 V20 H14 Z" }],
     // The mini player: the window, and the small one in its corner, filled.
     "mini-player":     [{ d: "M3 4 H21 V20 H3 Z" }, { d: "M12 12 H19 V18 H12 Z", fill: true }],
+    // Lucide's moon: the sleep timer.
+    "moon":            [{ d: "M12 3 A6 6 0 0 0 21 12 A9 9 0 1 1 12 3 Z" }],
     // Lucide's pin, square: the mini player kept over other windows.
     "pin":             [{ d: "M12 17 V22" }, { d: "M9 3 H15 V10 L18 14 H6 L9 10 Z" }],
     "fullscreen-exit": [{ d: "M8 3 V8 H3" }, { d: "M16 3 V8 H21" }, { d: "M3 16 H8 V21" }, { d: "M21 16 H16 V21" }],

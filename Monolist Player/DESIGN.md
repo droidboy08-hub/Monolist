@@ -349,6 +349,11 @@ that gets blamed for the app being slow.
   *Why.* Two windows showing the same song would ask which one is the app. A
   window that goes small keeps one answer, and the cover can be the whole top
   of it because, at that size, nothing else competes with it.
+* **The sleep timer is a moon on the bar, red while it runs.** Its popup is
+  a plain list (15, 30, 45 minutes, 1 hour, the end of this song) with the
+  time left beside its heading, and +10 minutes and Turn off once it runs; the
+  tray has the same list, for a night with the window closed. When the time is
+  up the music fades over ten seconds and pauses, and the volume is put back.
 * **Closing keeps the music: the window goes to the tray.** As Spotify does it,
   unless Settings turns it off; the icon by the clock brings it back, and its
   menu has the song, play, next, previous, the window, the mini player and

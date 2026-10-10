@@ -63,6 +63,8 @@
 #include "startupselftest.h"
 #include "tray.h"
 #include "trayselftest.h"
+#include "sleeptimer.h"
+#include "sleepselftest.h"
 #include "rec/catalog.h"
 #include "rec/suitable.h"
 #include <QTextStream>
@@ -348,6 +350,9 @@ int main(int argc, char *argv[])
         // in MONOLIST_DATA_DIR only.
         if (arguments.contains(QStringLiteral("--tray-test")))
             return runTraySelfTest(&library) == 0 ? 0 : 1;
+        // The sleep timer on a stand-in player, no mpv (sleepselftest.cpp).
+        if (arguments.contains(QStringLiteral("--sleep-test")))
+            return runSleepSelfTest() == 0 ? 0 : 1;
     }
 
     // Which page an artist's name opens: learnt from every answer that links
@@ -651,6 +656,10 @@ int main(int argc, char *argv[])
     Tray tray(&library, &player);
     QObject::connect(&appIcon, &AppIcon::currentChanged, &tray, &Tray::refresh);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Tray",      &tray);
+    // 15 to 60 minutes, or the end of the song, then a fade and a pause.
+    SleepTimer sleepTimer(&player);
+    tray.setSleepTimer(&sleepTimer);
+    qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "SleepTimer", &sleepTimer);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Extractor", &extractor);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Downloads", &downloads);
     // Not "Palette": QtQuick has a type of that name, which would win.

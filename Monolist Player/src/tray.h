@@ -8,6 +8,7 @@ class PlaybackController;
 class QAction;
 class QMenu;
 class QSystemTrayIcon;
+class SleepTimer;
 
 // Closing the window to the system tray, the music playing on (the owner's,
 // 2026-10-08), as Spotify does it: an icon by the clock while Monolist runs,
@@ -48,6 +49,10 @@ public:
     // The window went to the tray: the first time, a note says so.
     Q_INVOKABLE void hidden();
 
+    // The sleep timer, for a submenu of its own above Open Monolist: set
+    // at night from the tray, with the window closed.
+    void setSleepTimer(SleepTimer *timer);
+
     // For the self-test: the menu as built, and its text as it stands.
     QMenu *menu() const { return m_menu; }
     QString toolTip() const;
@@ -79,4 +84,7 @@ private:
     QMenu *m_menu = nullptr;
     QAction *m_song = nullptr;
     QAction *m_play = nullptr;
+    QAction *m_open = nullptr;
+    QMenu *m_sleepMenu = nullptr;
+    QPointer<SleepTimer> m_sleep;
 };

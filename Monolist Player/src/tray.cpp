@@ -2,6 +2,7 @@
 
 #include "library.h"
 #include "playbackcontroller.h"
+#include "sleeptimer.h"
 
 #include <QAction>
 #include <QApplication>
@@ -49,6 +50,7 @@ Tray::Tray(Library *library, PlaybackController *player, QObject *parent)
     QAction *previous = m_menu->addAction(QStringLiteral("Previous"));
     m_menu->addSeparator();
     QAction *open = m_menu->addAction(QStringLiteral("Open Monolist"));
+    m_open = open;
     QAction *mini = m_menu->addAction(QStringLiteral("Mini player"));
     m_menu->addSeparator();
     QAction *quit = m_menu->addAction(QStringLiteral("Quit Monolist"));
@@ -81,6 +83,39 @@ Tray::Tray(Library *library, PlaybackController *player, QObject *parent)
 Tray::~Tray()
 {
     delete m_menu;
+}
+
+void Tray::setSleepTimer(SleepTimer *timer)
+{
+    if (!m_menu || !timer || m_sleep)
+        return;
+    m_sleep = timer;
+    m_sleepMenu = new QMenu(QStringLiteral("Sleep timer"), m_menu);
+    m_menu->insertMenu(m_open, m_sleepMenu);
+    const struct {
+        const char *label;
+        int minutes;
+    } choices[] = { { "15 minutes", 15 }, { "30 minutes", 30 }, { "45 minutes", 45 }, { "1 hour", 60 } };
+    for (const auto &choice : choices) {
+        const int minutes = choice.minutes;
+        connect(m_sleepMenu->addAction(QString::fromLatin1(choice.label)), &QAction::triggered, timer,
+                [timer, minutes]() { timer->start(minutes); });
+    }
+    connect(m_sleepMenu->addAction(QStringLiteral("End of this song")), &QAction::triggered, timer,
+            &SleepTimer::startEndOfSong);
+    m_sleepMenu->addSeparator();
+    QAction *off = m_sleepMenu->addAction(QStringLiteral("Turn off"));
+    connect(off, &QAction::triggered, timer, &SleepTimer::cancel);
+    // The submenu names what it is doing, once it is doing something.
+    const auto label = [this, timer, off]() {
+        off->setEnabled(timer->active());
+        m_sleepMenu->setTitle(!timer->active() ? QStringLiteral("Sleep timer")
+                              : timer->endOfSong() ? QStringLiteral("Sleep timer: end of this song")
+                              : QStringLiteral("Sleep timer: %1 left").arg(timer->remainingText()));
+    };
+    connect(timer, &SleepTimer::changed, this, label);
+    connect(timer, &SleepTimer::tick, this, label);
+    label();
 }
 
 void Tray::setCloseToTray(bool on)

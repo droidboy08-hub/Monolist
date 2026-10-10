@@ -68,7 +68,7 @@ owner's iPhone app (AryaMusix / "Mediano", Swift, not in this repo).
   sound device; timed, so not in the release gate), `--icon-test` (the app icon choice; shortcuts made in the
   scratch folder only, never the real Start menu or desktop), `--search-test` (a search's pages after the
   first, on a stand-in YouTube Music), `--startup-test` (opening at sign-in, on a scratch registry key; a
-  scratch library never writes the real Run key), `--tray-test` (closing to the system tray: the switch, the menu) … Each
+  scratch library never writes the real Run key), `--tray-test` (closing to the system tray: the switch, the menu), `--sleep-test` (the sleep timer on a stand-in player) … Each
   prints `N checks, 0 failed`. All must pass, except `--scrobble-send-test`,
   which needs its local stand-in (`scripts/lastfm-mock.ps1`). `MONOLIST_MPV_AO=null` plays any run to no
   sound device (and `MONOLIST_MPV_VO=null` decodes a picture to nowhere, for an engine with no surface).

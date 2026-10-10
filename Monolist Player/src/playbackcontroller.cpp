@@ -2182,6 +2182,21 @@ void PlaybackController::handleEndOfFile()
     if (resumeEarlyEnd())
         return;
 
+    // Asked to stop after this song (the sleep timer): the next one made
+    // ready and left waiting — the same one again under Repeat one, nothing
+    // at the end of the queue (no radio fetched for nobody).
+    if (m_stopAfterCurrent) {
+        setStopAfterCurrent(false);
+        if (m_repeatMode == RepeatOne)
+            beginCurrent(/*autoPlay=*/false);
+        else if (m_queue.currentIndex() + 1 < m_queue.rowCount() || m_repeatMode == RepeatAll)
+            advance(/*keepPlaying=*/false);
+        else
+            pause();
+        Q_EMIT stoppedAfterCurrent();
+        return;
+    }
+
     // The clock is left at the end for beginTrack to close the listen with, as
     // for any song that ends: set back to 0 first, every repeat was written
     // down as a skip. beginTrack puts it back to 0 itself.
@@ -2238,6 +2253,14 @@ void PlaybackController::togglePlay()
 // A track still resolving counts as playing only if someone is waiting for its
 // sound: one reached with Next while paused is resolving too, and a second
 // Next on it must load the one after paused as well, not start it.
+void PlaybackController::setStopAfterCurrent(bool on)
+{
+    if (on == m_stopAfterCurrent)
+        return;
+    m_stopAfterCurrent = on;
+    Q_EMIT stopAfterCurrentChanged();
+}
+
 void PlaybackController::next()
 {
     advance(m_playing || (m_resolving && m_autoPlayAfterResolve));

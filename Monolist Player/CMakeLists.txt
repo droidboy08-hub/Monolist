@@ -134,6 +134,9 @@ qt_add_executable(monolist
     # The window closed to the system tray (the Tray singleton).
     src/tray.h                     src/tray.cpp
     src/trayselftest.h             src/trayselftest.cpp
+    # The sleep timer (the SleepTimer singleton) and its test (--sleep-test).
+    src/sleeptimer.h               src/sleeptimer.cpp
+    src/sleepselftest.h            src/sleepselftest.cpp
     # Opening at sign-in (the Startup singleton) and its test (--startup-test).
     src/startup.h                  src/startup.cpp
     src/startupselftest.h          src/startupselftest.cpp

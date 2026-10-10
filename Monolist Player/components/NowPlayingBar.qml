@@ -553,6 +553,120 @@ Rectangle {
             ToolTip.text: root.nowPlayingOpen ? (root.queueOpen ? "Show lyrics" : "Up next")
                                               : (root.queueOpen ? "Hide queue" : "Queue")
         }
+        // The sleep timer: a moon, red while it runs, its choices and its
+        // countdown in a popup built like the volume one's.
+        IconButton {
+            id: sleepButton
+            visible: root.showMeta
+            iconName: "moon"
+            iconColor: SleepTimer.active ? Theme.accent : Theme.neutral700
+            iconSize: 15
+            anchors.verticalCenter: parent.verticalCenter
+            onClicked: sleepPopup.visible ? sleepPopup.close() : sleepPopup.open()
+            onVisibleChanged: if (!visible) sleepPopup.close()
+            ToolTip.visible: hovered && !sleepPopup.visible
+            ToolTip.delay: 600
+            ToolTip.text: !SleepTimer.active ? "Sleep timer"
+                          : SleepTimer.endOfSong ? "Sleep timer: at the end of this song"
+                          : "Sleep timer: " + SleepTimer.remainingText + " left"
+
+            Popup {
+                id: sleepPopup
+                // Its own width: the lines take theirs from it.
+                width: 232
+                x: sleepButton.width - width
+                padding: 0
+                closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutsideParent
+                focus: true
+                // Standing on the bar's top rule, and kept there as lines come
+                // and go (+10 minutes and Turn off, once it runs).
+                function stand() { y = -sleepButton.mapToItem(root, 0, 0).y - height + Theme.ruleWidth }
+                onAboutToShow: stand()
+                onHeightChanged: if (visible) stand()
+
+                background: Rectangle {
+                    color: Theme.bg
+                    border.width: Theme.ruleWidth
+                    border.color: Theme.text
+                }
+
+                contentItem: Column {
+                    topPadding: Theme.space3
+                    bottomPadding: Theme.space2
+
+                    // The heading, and the time left beside it while it runs.
+                    Item {
+                        width: parent.width
+                        height: sleepHeading.implicitHeight + Theme.space2
+
+                        Text {
+                            id: sleepHeading
+                            x: Theme.space4
+                            text: "SLEEP TIMER"
+                            font.family: Theme.fontFamily
+                            font.pixelSize: 11
+                            font.weight: Font.Bold
+                            font.letterSpacing: Theme.tracking(11, 0.14)
+                            color: Theme.neutral700
+                        }
+                        Text {
+                            anchors.right: parent.right
+                            anchors.rightMargin: Theme.space4
+                            anchors.baseline: sleepHeading.baseline
+                            visible: SleepTimer.active
+                            text: SleepTimer.fading ? "FADING OUT" : SleepTimer.remainingText.toUpperCase()
+                            font.family: Theme.fontFamily
+                            font.pixelSize: 11
+                            font.weight: Font.Bold
+                            font.letterSpacing: Theme.tracking(11, 0.08)
+                            color: Theme.accent700
+                        }
+                    }
+
+                    Repeater {
+                        model: [
+                            { label: "15 minutes", minutes: 15 },
+                            { label: "30 minutes", minutes: 30 },
+                            { label: "45 minutes", minutes: 45 },
+                            { label: "1 hour", minutes: 60 },
+                            { label: "End of this song", minutes: 0 }
+                        ]
+                        delegate: SleepChoice {
+                            required property var modelData
+                            label: modelData.label
+                            onChosen: {
+                                if (modelData.minutes > 0)
+                                    SleepTimer.start(modelData.minutes)
+                                else
+                                    SleepTimer.startEndOfSong()
+                                sleepPopup.close()
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        visible: SleepTimer.active
+                        x: Theme.space4
+                        width: parent.width - Theme.space4 * 2
+                        height: 1
+                        color: Theme.hairline
+                    }
+                    SleepChoice {
+                        visible: SleepTimer.active
+                        label: "+10 minutes"
+                        onChosen: SleepTimer.extend(10)
+                    }
+                    SleepChoice {
+                        visible: SleepTimer.active
+                        label: "Turn off"
+                        onChosen: {
+                            SleepTimer.cancel()
+                            sleepPopup.close()
+                        }
+                    }
+                }
+            }
+        }
         // The mini player: the song in a small window of its own, in place
         // of this one. On the bar while the title is.
         IconButton {
@@ -721,6 +835,35 @@ Rectangle {
                     }
                 }
             }
+        }
+    }
+
+    // A line of the sleep timer's popup: a choice, taken at a click.
+    component SleepChoice: Rectangle {
+        id: choice
+
+        property string label: ""
+        signal chosen()
+
+        width: parent ? parent.width : 0
+        height: 36
+        color: choiceHover.hovered ? Theme.rowHover : "transparent"
+
+        Accessible.role: Accessible.MenuItem
+        Accessible.name: label
+
+        Text {
+            x: Theme.space4
+            anchors.verticalCenter: parent.verticalCenter
+            text: choice.label
+            font.family: Theme.fontFamily
+            font.pixelSize: 13
+            color: Theme.text
+        }
+        HoverHandler { id: choiceHover; cursorShape: Qt.PointingHandCursor }
+        TapHandler {
+            gesturePolicy: TapHandler.ReleaseWithinBounds
+            onTapped: choice.chosen()
         }
     }
 }

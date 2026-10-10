@@ -1324,6 +1324,23 @@ int runSoundLiveSelfTest(Library *library)
                 QStringLiteral("%1, %2").arg(atStart.isEmpty() ? QStringLiteral("no chain") : QStringLiteral("chain"))
                     .arg(speedAtStart));
         t.check(near(player.playbackRate(), 0.85, 1e-9), QStringLiteral("  and the player says 0.85 to the media controls"));
+
+        // The sleep timer's "end of this song", on the real player: the song
+        // heard to its end, the next one made ready and left waiting.
+        resolver.setTestAnswer(QStringLiteral("fxCtl2"), StreamResolver::TierInnerTube, server.url(QStringLiteral("/fxCtl")));
+        player.playTracks({ row(QStringLiteral("fxCtl"), QStringLiteral("Slowed song"), 40000),
+                            row(QStringLiteral("fxCtl2"), QStringLiteral("Next song"), 40000) },
+                          0, QStringLiteral("selftest"));
+        waitUntil([&]() { return engine.hasAudioStarted() && player.playing(); }, 8000);
+        int stopped = 0;
+        QObject::connect(&player, &PlaybackController::stoppedAfterCurrent, &player, [&stopped]() { ++stopped; });
+        player.setStopAfterCurrent(true);
+        player.seekFraction(0.96);
+        waitUntil([&]() { return stopped > 0; }, 12000);
+        pause(800);
+        t.check(stopped == 1 && !player.playing() && player.currentIndex() == 1 && !player.stopAfterCurrent(),
+                QStringLiteral("stop after this song: it ended, the next is ready and not playing, the switch off"),
+                QStringLiteral("stopped %1, playing %2, at %3").arg(stopped).arg(player.playing()).arg(player.currentIndex()));
         player.pause();
         pause(200);
         engine.stop();
