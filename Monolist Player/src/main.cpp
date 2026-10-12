@@ -107,6 +107,19 @@ int main(int argc, char *argv[])
         }
     }
 
+#ifdef Q_OS_WIN
+    // Direct3D's copy swap chain, not Qt's default flip one. A flip swap chain
+    // lets Windows hand a window the screen directly (independent flip), the
+    // way a game's is, and NVIDIA's overlay then takes Monolist for a game:
+    // its Alt+Z notice pops up and its capture hooks every frame. The always-
+    // on-top mini player got that every time it showed. Measured on an RTX
+    // 5070 at 179 Hz: same frame rate, same CPU, no "game". Before the
+    // application, which is when Qt reads it; QT_D3D_NO_FLIP=0 brings the
+    // flip one back.
+    if (!qEnvironmentVariableIsSet("QT_D3D_NO_FLIP"))
+        qputenv("QT_D3D_NO_FLIP", "1");
+#endif
+
     // A QApplication, not a QGuiApplication, for the system tray's icon and
     // menu (Tray), which are Qt Widgets'; the interface is all QML still.
     QApplication app(argc, argv);

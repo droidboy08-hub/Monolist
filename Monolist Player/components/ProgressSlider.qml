@@ -18,8 +18,12 @@ Item {
         anchors.fill: parent
         color: Theme.neutral300
 
+        // On a whole pixel: the song's place arrives many times a second,
+        // and a fill that has not reached the next pixel draws nothing
+        // (DESIGN 2.7), so a playing song redraws the window about as often
+        // as its time changes, not at every report.
         Rectangle {
-            width: Math.max(0, Math.min(1, root.value)) * parent.width
+            width: Math.round(Math.max(0, Math.min(1, root.value)) * parent.width)
             height: parent.height
             color: root.fillColor
         }

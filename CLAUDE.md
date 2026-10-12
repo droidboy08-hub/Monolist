@@ -184,6 +184,14 @@ owner's iPhone app (AryaMusix / "Mediano", Swift, not in this repo).
   it); importing QtQuick.Controls or QtQuick.Dialogs in QML makes windeployqt
   ship every style (~20 MB) — avoid.
 - Qt binds a null QString as SQL NULL: wrap text bindings in `AppDatabase::text()`.
+- 2026-10-12: NVIDIA's overlay took Monolist for a game (Alt+Z notice, frames
+  hooked; `game[1]` in NVIDIA's ShadowPlay CaptureCore.log under ProgramData)
+  because Qt's flip swap chain gets independent flip; the always-on-top mini
+  player always did. main.cpp sets QT_D3D_NO_FLIP=1 before the application:
+  keep it. Anything that moves for as long as a song plays must step, not
+  animate (DESIGN 2.7): the playing bars' animation drew the whole window at
+  the screen's 180 Hz, 36% of a core. Measure frames/s with
+  `QT_LOGGING_RULES=qt.scenegraph.time.renderloop=true` ("frame rendered").
 
 ## Where things stand (2026-09-29)
 

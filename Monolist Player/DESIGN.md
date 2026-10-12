@@ -203,6 +203,14 @@ every child, every frame. On a modest machine — or a virtual one — that is t
 difference between 60fps and a slideshow, and it will always be the animation
 that gets blamed for the app being slow.
 
+**What moves for as long as a song plays steps; it does not animate.** The
+playing bars step fifteen times a second on whole pixels, and the progress
+fill grows a whole pixel at a time. *Why.* An animation draws the whole window
+again at every refresh of the screen (180 times a second on a fast one) for as
+long as it runs; a song plays for minutes, and the mini player stays on screen
+over everything else. A step that lands where the thing already is draws
+nothing at all.
+
 ## 3. Where things are, and why
 
 * **The title bar is the top strip**, shared by the logo block and the top bar:
