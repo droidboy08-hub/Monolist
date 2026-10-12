@@ -825,10 +825,22 @@ void Recommender::dropCover(const QVariantMap &row)
         m_coverQueue.removeOne(key);
 }
 
+void Recommender::setCoversPaused(bool paused)
+{
+    if (paused == m_coversPaused)
+        return;
+    m_coversPaused = paused;
+    qInfo("recs: cover lookups %s", paused ? "paused while a playlist import searches" : "going on");
+    if (paused)
+        m_coverTimer.stop();
+    else
+        scheduleCover();
+}
+
 // The next search, no sooner than the gap after the last one answered.
 void Recommender::scheduleCover()
 {
-    if (m_coverBusy || m_coverTimer.isActive() || m_coverQueue.isEmpty())
+    if (m_coversPaused || m_coverBusy || m_coverTimer.isActive() || m_coverQueue.isEmpty())
         return;
     qint64 wait = 400;
     if (m_coverLastMs >= 0)
@@ -841,7 +853,7 @@ void Recommender::scheduleCover()
 // (the top of the page) first.
 void Recommender::nextCover()
 {
-    if (m_coverBusy || m_coverQueue.isEmpty())
+    if (m_coversPaused || m_coverBusy || m_coverQueue.isEmpty())
         return;
     const qint64 now = m_coverClock.elapsed();
     if (m_coverRestUntilMs >= 0 && now < m_coverRestUntilMs) {

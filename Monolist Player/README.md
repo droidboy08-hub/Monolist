@@ -281,6 +281,11 @@ Kept in the local database and exposed as `Library`:
   out again. Liked songs lists them, the latest first.
 * **Saved albums and playlists** from YouTube Music, with Save on their pages.
 * **History**: every song played, the latest first, clearable.
+* **Imported playlists**: Import a playlist (Library) takes a YouTube, YouTube
+  Music, Spotify, JioSaavn, Deezer or Apple Music link, a pasted list or a CSV,
+  makes the playlist at once and fills it as each song is found on YouTube
+  Music, signed out and a few seconds apart. Songs it was unsure of, could not
+  find, or never looked for wait on the playlist's page.
 
 The sidebar shows Liked songs and the playlists, and the name the operating
 system knows the user by (the account's full name, else the login name),
@@ -417,6 +422,10 @@ effects that are on.
       trayselftest.*         --tray-test
       sleeptimer.*           the sleep timer: minutes or the end of the song, a fade, a pause
       sleepselftest.*        --sleep-test
+      playlistimport.*       importing a playlist: the jobs, their pacing and review (Importer)
+      importsource.*         reading a link, a pasted list or a CSV into songs
+      importmatcher.*        whether a search result is the song on the list
+      importselftest.*       --import-test
       mediaextractor.*       search: InnerTube first, yt-dlp as fallback
       innertube.*            YouTube Music's API: search, suggestions, radio,
                              browse pages, artist pages, lyrics
@@ -790,6 +799,10 @@ first failure`.
                                                     the fade and the volume put back, +10 minutes, the end
                                                     of the song (and the real player's stop after a song,
                                                     in --sound-live-test)
+    monolist --import-test                          playlist import on stand-in sources: each link kind read,
+                                                    the matching rule, pacing and rests, review, stop and
+                                                    resume; no cookie or account header ever sent
+                                                    (needs MONOLIST_DATA_DIR)
     monolist --tray-test                            closing to the system tray: the switch kept, the menu
                                                     and what it does (needs MONOLIST_DATA_DIR)
     monolist --sound-live-test                      the same effects on the real mpv with no sound device

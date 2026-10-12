@@ -354,6 +354,26 @@ that gets blamed for the app being slow.
   time left beside its heading, and +10 minutes and Turn off once it runs; the
   tray has the same list, for a night with the window closed. When the time is
   up the music fades over ten seconds and pauses, and the volume is put back.
+* **Importing a playlist is a sheet over the window, and the import goes on
+  without it.** It is offered beside the sidebar's plus, on Your Library's
+  shelf of playlists, at the rail's foot, and above Search's results when
+  what was typed is a playlist's link. Paper in a 2px ink frame over a dimmed
+  page, as the sign-in's caution is, it goes from the link (or a list of
+  songs, or a CSV file), to what that holds, shown before anything is made
+  with the source's own caveats in red type as the caution has its own, to
+  the songs being found, live, the one being looked for in red. Closing it
+  stops nothing: the import's name and how far it has got stand under the
+  sidebar's PLAYLISTS heading (a mark on the rail), on a red rule while it
+  asks YouTube Music, and a toast says when it is done, with REVIEW. What it
+  was not sure of, and what it could not find, waits on the playlist's own
+  page, above its songs.
+  *Why.* An import takes minutes, at the pace the owner set so that neither
+  the account nor this computer's address draws YouTube's attention; a page
+  of its own would keep the user on it for nothing, and a sheet that had to
+  stay open would hold the whole window. The playlist's page is where the
+  songs arrive, so it is where the ones that did not are settled. Its pause
+  is the user's alone: while it rests on a refusal, or waits on the hour's
+  searches, it says until when, and offers no way to hurry it.
 * **Closing keeps the music: the window goes to the tray.** As Spotify does it,
   unless Settings turns it off; the icon by the clock brings it back, and its
   menu has the song, play, next, previous, the window, the mini player and

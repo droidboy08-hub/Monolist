@@ -7,6 +7,7 @@ import Monolist
 //
 //   plate "liked"   the signal-red plate with a heart, for Liked songs
 //   plate "new"     an outlined plate with a plus, for making a playlist
+//   plate "import"  an outlined plate with an arrow in, for importing one
 Rectangle {
     id: root
 
@@ -16,11 +17,12 @@ Rectangle {
 
     readonly property int count: artworks ? artworks.length : 0
     readonly property bool photographic: plate.length === 0 && count > 0
+    readonly property bool outlined: plate === "new" || plate === "import"
 
     color: plate === "liked" ? Theme.accent
-         : plate === "new" ? "transparent"
+         : outlined ? "transparent"
          : Theme.neutral300
-    border.width: plate === "new" ? Theme.ruleWidth : 0
+    border.width: outlined ? Theme.ruleWidth : 0
     border.color: Theme.text
     clip: true
 
@@ -56,12 +58,13 @@ Rectangle {
         visible: !root.photographic
         name: root.plate === "liked" ? "heart-filled"
             : root.plate === "new" ? "plus"
+            : root.plate === "import" ? "import"
             : "list-music"
         width: Math.round(root.width * (root.plate === "liked" ? 0.36 : 0.28))
         height: width
-        thickness: root.plate === "new" ? 1.5 : 2
+        thickness: root.outlined ? 1.5 : 2
         color: root.plate === "liked" ? Theme.accentForeground
-             : root.plate === "new" ? Theme.text
+             : root.outlined ? Theme.text
              : Theme.neutral600
     }
 }

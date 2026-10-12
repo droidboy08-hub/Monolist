@@ -554,6 +554,78 @@ void AppDatabase::createSchema()
         " title TEXT NOT NULL DEFAULT '',"
         " subtitle TEXT NOT NULL DEFAULT '',"
         " artwork TEXT NOT NULL DEFAULT '')"));
+
+    // Playlists imported from a link, a pasted list or a CSV file
+    // (PlaylistImport), kept so an import goes on after a restart and its
+    // songs can be reviewed afterwards. The songs found go into an ordinary
+    // playlist of the user's (`playlist_id`); these only say how each was
+    // found, or why not.
+    //
+    // import_jobs: one an import. `kind` names the source ("spotify-playlist",
+    // "list", "csv"…); `total` is what the source says it holds; `state` is
+    // running, resting, waiting, paused, done or cancelled; `cursor` is where
+    // reading the source goes on, and `read_done` 1 once it is all read;
+    // `failures` counts refusals in a row; `note` says in a sentence why it
+    // rests or waits, and `resume_at` until when (UTC milliseconds, 0 for
+    // none); the other times are UTC seconds.
+    q.exec(QStringLiteral(
+        "CREATE TABLE IF NOT EXISTS import_jobs ("
+        " id INTEGER PRIMARY KEY AUTOINCREMENT,"
+        " playlist_id INTEGER NOT NULL DEFAULT 0,"
+        " kind TEXT NOT NULL DEFAULT '',"
+        " url TEXT NOT NULL DEFAULT '',"
+        " name TEXT NOT NULL DEFAULT '',"
+        " total INTEGER NOT NULL DEFAULT 0,"
+        " state TEXT NOT NULL DEFAULT 'running',"
+        " cursor TEXT NOT NULL DEFAULT '',"
+        " read_done INTEGER NOT NULL DEFAULT 0,"
+        " failures INTEGER NOT NULL DEFAULT 0,"
+        " note TEXT NOT NULL DEFAULT '',"
+        " resume_at INTEGER NOT NULL DEFAULT 0,"
+        " created_at INTEGER NOT NULL DEFAULT 0,"
+        " updated_at INTEGER NOT NULL DEFAULT 0,"
+        " finished_at INTEGER NOT NULL DEFAULT 0)"));
+    // import_rows: each song as the source listed it, in its order, and what
+    // became of it: pending, found, likely, check (waits for the user),
+    // notfound or dismissed; the video id taken, why, and the candidate
+    // considered (JSON) for one to check.
+    q.exec(QStringLiteral(
+        "CREATE TABLE IF NOT EXISTS import_rows ("
+        " id INTEGER PRIMARY KEY AUTOINCREMENT,"
+        " job_id INTEGER NOT NULL,"
+        " position INTEGER NOT NULL DEFAULT 0,"
+        " title TEXT NOT NULL DEFAULT '',"
+        " artists TEXT NOT NULL DEFAULT '',"
+        " album TEXT NOT NULL DEFAULT '',"
+        " duration_ms INTEGER NOT NULL DEFAULT 0,"
+        " isrc TEXT NOT NULL DEFAULT '',"
+        " source_id TEXT NOT NULL DEFAULT '',"
+        " either_way INTEGER NOT NULL DEFAULT 0,"
+        " status TEXT NOT NULL DEFAULT 'pending',"
+        " video_id TEXT NOT NULL DEFAULT '',"
+        " reason TEXT NOT NULL DEFAULT '',"
+        " candidate TEXT NOT NULL DEFAULT '',"
+        " searches INTEGER NOT NULL DEFAULT 0,"
+        " UNIQUE (job_id, position))"));
+    q.exec(QStringLiteral("CREATE INDEX IF NOT EXISTS idx_import_rows_job ON import_rows(job_id, status, position)"));
+    // import_matches: songs matched before, so a song is searched for once
+    // whichever playlist brings it again: by the source's own id, by ISRC,
+    // and by title, artist and length (`key`), with the matcher version that
+    // decided (an older one's answers are asked afresh). A "Not this" from
+    // the user is kept here too, as confidence 'rejected'. Times UTC seconds.
+    q.exec(QStringLiteral(
+        "CREATE TABLE IF NOT EXISTS import_matches ("
+        " key TEXT PRIMARY KEY,"
+        " video_id TEXT NOT NULL DEFAULT '',"
+        " title TEXT NOT NULL DEFAULT '',"
+        " artist TEXT NOT NULL DEFAULT '',"
+        " album TEXT NOT NULL DEFAULT '',"
+        " artwork TEXT NOT NULL DEFAULT '',"
+        " duration_ms INTEGER NOT NULL DEFAULT 0,"
+        " is_video INTEGER NOT NULL DEFAULT 0,"
+        " confidence TEXT NOT NULL DEFAULT '',"
+        " matcher INTEGER NOT NULL DEFAULT 0,"
+        " matched_at INTEGER NOT NULL DEFAULT 0)"));
 }
 
 bool AppDatabase::hasColumn(const QString &table, const QString &column)

@@ -213,6 +213,17 @@ ScrollPage {
                 onPlayRequested: root.newPlaylistRequested()
             }
 
+            // One from elsewhere, its songs found on YouTube Music.
+            AlbumCard {
+                width: root.cardWidth
+                plate: "import"
+                title: "Import a playlist"
+                // Short enough for the narrowest card; the sheet names them all.
+                artist: "Spotify, JioSaavn and more"
+                footer: "IMPORT"
+                onPlayRequested: Nav.openImport("")
+            }
+
             Repeater {
                 model: Library.savedPlaylists
 

@@ -131,6 +131,14 @@ qt_add_executable(monolist
     src/appiconselftest.h          src/appiconselftest.cpp
     # A search's pages after the first, on a stand-in (--search-test).
     src/searchselftest.h           src/searchselftest.cpp
+    # Importing a playlist from a link, a pasted list or a CSV file (the
+    # Importer singleton): where its songs come from, how each is found on
+    # YouTube Music, the paced job kept across restarts, and its test
+    # (--import-test) and live checks (--import-preview, --import-match).
+    src/importsource.h             src/importsource.cpp
+    src/importmatcher.h            src/importmatcher.cpp
+    src/playlistimport.h           src/playlistimport.cpp
+    src/importselftest.h           src/importselftest.cpp
     # The window closed to the system tray (the Tray singleton).
     src/tray.h                     src/tray.cpp
     src/trayselftest.h             src/trayselftest.cpp
@@ -319,6 +327,10 @@ qt_add_qml_module(monolist
         components/EffectsPanel.qml
         components/BandSlider.qml
         components/MiniPlayer.qml
+        # Importing a playlist (ROADMAP X03): its window, and what it leaves
+        # on the playlist's page.
+        components/ImportDialog.qml
+        components/ImportReview.qml
         views/HomeView.qml
         views/SearchView.qml
         views/LibraryView.qml
@@ -332,6 +344,8 @@ qt_add_qml_module(monolist
         views/SettingsView.qml
     RESOURCES
         Icons.js
+        # An import's progress, in the same words wherever it shows.
+        ImportText.js
         # Bundled so the design renders identically on Windows, macOS and Linux
         # without asking the user to install anything. Archivo is OFL-1.1;
         # fonts/OFL.txt travels with it as the licence requires.

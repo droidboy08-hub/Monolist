@@ -78,6 +78,10 @@ var data = {
     "download":        [{ d: "M21 15 v4 a2 2 0 0 1 -2 2 H5 a2 2 0 0 1 -2 -2 v-4" },
                         { d: "M7 10 L12 15 L17 10" },
                         { d: "M12 15 V3" }],
+    // Lucide's import, square: a playlist brought in from somewhere else.
+    "import":          [{ d: "M12 3 V15" },
+                        { d: "M8 11 L12 15 L16 11" },
+                        { d: "M8 5 H3 V19 H21 V5 H16" }],
     "menu":            [{ d: "M4 6 H20" }, { d: "M4 12 H20" }, { d: "M4 18 H20" }],
     "x":               [{ d: "M18 6 L6 18" }, { d: "M6 6 L18 18" }],
     // Lucide's user and log-in: the account, and the way into it.

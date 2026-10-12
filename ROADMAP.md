@@ -149,8 +149,9 @@ Priority runs from 1 (first) to 9. Size: S under an hour, M a few hours, L a day
   Done when: Settings exports playlists and likes in the iPhone's format and imports such a file, with a Merge or Replace choice and a result toast.
 - [ ] **X02** No local music files *(P7, L)*
   Done when: 'Add files…' and 'Add folder…' open native dialogs, read tags and cover art with ffprobe, add the songs to the library, and show a playable 'Local files' collection.
-- [ ] **X03** No way to import a playlist from a YouTube, YouTube Music or Spotify link *(P7, L)*
+- [x] **X03** No way to import a playlist from a YouTube, YouTube Music or Spotify link *(P7, L)*
   Done when: An Import playlist dialog takes a YouTube Music playlist link (loading every page) or a Spotify playlist or album link, matches each song by title, artist and length, creates a playlist, and lists the songs it couldn't find.
+  Built (2026-10-12): Import a playlist (Library card, the sidebar's import mark, a link pasted into Search) reads YouTube and YouTube Music playlists and albums, Spotify (the embed page: the first 100), JioSaavn, Deezer, Apple Music (the public page: the first 300), a pasted list and a CSV (Exportify's included). Every request is signed out and cookieless, searches a few seconds apart within 600 an hour and 2,000 a day, a refusal rests 15 minutes and a second pauses the import. The playlist is made at once and fills as songs are found; To check, Not found and Not looked for wait on its page. --import-test (120 checks, stand-ins only).
 - [ ] **X04** Playlists have no description and no 'Add songs' panel *(P7, M)*
   Done when: An editable description appears under the playlist title, and an Add songs panel on the playlist page searches the library and YouTube and adds or removes songs in place.
 

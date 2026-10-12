@@ -14,6 +14,15 @@ QtObject {
     signal listingRequested(string browseId, string params, string title)
     // A suggestion shelf's SHOW ALL, by its index in Recs.shelves.
     signal suggestionsRequested(int shelf)
+    // Importing a playlist (Importer), from wherever it is offered: its
+    // window, on a link to read at once (Search's offer) or empty; or on an
+    // import already started, by its id (the sidebar's progress, a page's).
+    signal importRequested(string text)
+    signal importJobRequested(int jobId)
+    // A song an import could not place, looked for in Search, whose results
+    // can then go into the playlist in its place. `row` is the review's
+    // (Importer.review).
+    signal importSongPickRequested(var row, int playlistId)
 
     // How much of the bottom of every page something stands over — the mini
     // video panel, while it is up — so each page (ScrollPage) leaves that
@@ -32,6 +41,20 @@ QtObject {
     function openSuggestions(shelf) {
         if (shelf >= 0)
             suggestionsRequested(shelf)
+    }
+
+    function openImport(text) {
+        importRequested(text ? text : "")
+    }
+
+    function openImportJob(jobId) {
+        if (jobId > 0)
+            importJobRequested(jobId)
+    }
+
+    function pickImportSong(row, playlistId) {
+        if (row && row.rowId > 0)
+            importSongPickRequested(row, playlistId)
     }
 
     function openArtist(name, browseId) {

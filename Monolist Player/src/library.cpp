@@ -68,7 +68,8 @@ QList<SearchResultModel::Item> readSongs(QSqlQuery &query, bool withEntryId)
     return items;
 }
 
-bool insertEntry(int playlistId, const QString &videoId, const QVariantMap &track)
+// The new entry's id, or 0 when it could not be added.
+int insertEntry(int playlistId, const QString &videoId, const QVariantMap &track)
 {
     QSqlQuery q(AppDatabase::connection());
     q.prepare(QStringLiteral(
@@ -87,9 +88,9 @@ bool insertEntry(int playlistId, const QString &videoId, const QVariantMap &trac
     q.addBindValue(track.value(QStringLiteral("isVideo")).toBool() ? 1 : 0);
     if (!q.exec()) {
         qWarning("Monolist: could not add to a playlist: %s", qPrintable(q.lastError().text()));
-        return false;
+        return 0;
     }
-    return true;
+    return qMax(1, q.lastInsertId().toInt());
 }
 
 void markUpdated(int playlistId)
@@ -712,6 +713,49 @@ int Library::addAllToPlaylist(int playlistId, const QVariantList &tracks)
                 : added == 1 ? QStringLiteral("Added to %1").arg(name)
                              : QStringLiteral("Added %1 songs to %2").arg(added).arg(name));
     return added;
+}
+
+QList<int> Library::addImported(int playlistId, const QVariantList &tracks)
+{
+    QList<int> entries;
+    if (playlistName(playlistId).isNull())
+        return entries;
+
+    QSet<QString> present;
+    QSqlQuery existing(AppDatabase::connection());
+    existing.prepare(QStringLiteral("SELECT video_id FROM playlist_tracks WHERE playlist_id = ?"));
+    existing.addBindValue(playlistId);
+    if (existing.exec()) {
+        while (existing.next())
+            present.insert(existing.value(0).toString());
+    }
+
+    QSqlDatabase db = AppDatabase::connection();
+    db.transaction();
+    int added = 0;
+    for (const QVariant &value : tracks) {
+        const QVariantMap track = value.toMap();
+        const QString videoId = trackVideoId(track);
+        int entry = 0;
+        if (!videoId.isEmpty() && !present.contains(videoId)) {
+            entry = insertEntry(playlistId, videoId, track);
+            if (entry > 0) {
+                present.insert(videoId);
+                ++added;
+            }
+        }
+        entries.append(entry);
+    }
+    db.commit();
+
+    if (added > 0) {
+        markUpdated(playlistId);
+        m_playlists.reload();
+        if (playlistId == m_openPlaylistId)
+            reloadOpenPlaylist();
+        reloadPlaylistSongs();
+    }
+    return entries;
 }
 
 void Library::removeFromPlaylist(int playlistId, int entryId)

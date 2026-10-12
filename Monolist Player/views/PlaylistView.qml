@@ -343,8 +343,10 @@ ScrollPage {
 
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
+                    // An import going on into it stops with it (PlaylistImport).
                     text: "Delete “" + (root.ready ? root.info.name : "") + "”? "
                           + (root.songCount > 0 ? "Its " + root.songsLabel(root.songCount) + " stay wherever else they are." : "")
+                          + (importReview.going ? (root.songCount > 0 ? " " : "") + "Its import stops." : "")
                     font.family: Theme.fontFamily
                     font.pixelSize: 14
                     color: Theme.text
@@ -365,8 +367,16 @@ ScrollPage {
             }
         }
 
+        // An imported playlist's import: how far it has got, then what it
+        // left to check and could not find.
+        ImportReview {
+            id: importReview
+            width: parent.width
+            playlistId: root.own && root.ready && !root.missing ? root.playlistId : 0
+        }
+
         Text {
-            visible: !root.missing && root.ready && root.songCount === 0
+            visible: !root.missing && root.ready && root.songCount === 0 && !importReview.going
             width: Math.min(parent.width, 640)
             text: root.liked
                   ? "Songs you like show up here. Press the heart on any song, or in the player bar."

@@ -103,6 +103,13 @@ bool rowFromDetails(const QJsonObject &root, const QString &id, Row *row);
 
 QStringList splitArtists(const QString &artistLine);
 Title parseTitle(const QString &title, const QStringList &artistNames = {});
+// Whether one of parseTitle's version markers is a language ("hindi"): a
+// song sung again in another language is another recording, and an album's
+// name can say which as well as a title can.
+bool isLanguage(const QString &marker);
+// Whether a word beside a version marker names nobody in particular ("DJ"
+// in "DJ Snake Remix"), and so says nothing about whose remix it is.
+bool namesNobody(const QString &word);
 // "<title> <lead artist>", cleaned: one search per song.
 QString searchQuery(const Target &target);
 

@@ -94,6 +94,11 @@ public:
     // album, artwork, durationMs). False when the song is there already.
     Q_INVOKABLE bool addToPlaylist(int playlistId, const QVariantMap &track);
     Q_INVOKABLE int addAllToPlaylist(int playlistId, const QVariantList &tracks);
+    // The playlist import's (playlistimport.h): songs added in the order
+    // given, with no toast for each (the import says in one of its own how
+    // it went), and one already there left where it is. Each song's new
+    // entry id, in order, 0 for one not added.
+    QList<int> addImported(int playlistId, const QVariantList &tracks);
     Q_INVOKABLE void removeFromPlaylist(int playlistId, int entryId);
     // One song of a playlist to `toIndex` in its order (0 first), dragged or
     // moved from its menu; kept in playlist_tracks.position.

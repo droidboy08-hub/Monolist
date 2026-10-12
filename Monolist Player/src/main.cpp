@@ -59,6 +59,8 @@
 #include "appicon.h"
 #include "appiconselftest.h"
 #include "searchselftest.h"
+#include "importselftest.h"
+#include "playlistimport.h"
 #include "startup.h"
 #include "startupselftest.h"
 #include "tray.h"
@@ -353,6 +355,12 @@ int main(int argc, char *argv[])
         // The sleep timer on a stand-in player, no mpv (sleepselftest.cpp).
         if (arguments.contains(QStringLiteral("--sleep-test")))
             return runSleepSelfTest() == 0 ? 0 : 1;
+        // Importing a playlist: links, every source's page, the matcher, and
+        // the paced job across a restart, on stand-ins on this computer, with
+        // a session imported that must never be carried (importselftest.cpp);
+        // in MONOLIST_DATA_DIR only.
+        if (arguments.contains(QStringLiteral("--import-test")))
+            return runImportSelfTest(&library) == 0 ? 0 : 1;
     }
 
     // Which page an artist's name opens: learnt from every answer that links
@@ -392,6 +400,27 @@ int main(int argc, char *argv[])
         }
     }
 
+    // --import-demo <stage>: the import's screens, walked to one stage
+    // (paste, refused, list, preview, long, finding, closed, done, toast,
+    // review, pick, resting, held: Main.qml's runImportDemo) against stand-ins on
+    // this computer for YouTube Music and Spotify (importselftest.cpp), for a
+    // look or a screenshot. Made before anything asks YouTube Music, since
+    // from here on everything goes to them; in MONOLIST_DATA_DIR only, as it
+    // makes playlists.
+    QString importDemo;
+    std::unique_ptr<QObject> importStandIn;
+    if (const int demoFlag = int(app.arguments().indexOf(QStringLiteral("--import-demo")));
+            demoFlag >= 0 && demoFlag + 1 < app.arguments().size()) {
+        if (qEnvironmentVariableIsEmpty("MONOLIST_DATA_DIR")) {
+            qWarning("Monolist: --import-demo makes playlists, so it runs in MONOLIST_DATA_DIR only");
+            return 1;
+        }
+        importDemo = app.arguments().at(demoFlag + 1);
+        importStandIn.reset(startImportDemo(importDemo));
+        if (!importStandIn)
+            return 1;
+    }
+
     // The country to browse, before anything asks YouTube Music. One it does
     // not serve is dropped as soon as it answers 400, rather than leaving
     // every request failing.
@@ -411,6 +440,23 @@ int main(int argc, char *argv[])
     // A cancelled yt-dlp lookup no longer waits for its processes to end
     // (ytdlp.cpp); ytdlp.cancel=wait is the switch back.
     YtDlp::setCancelWaits(library.settingValue(QStringLiteral("ytdlp.cancel")) == QLatin1String("wait"));
+
+    // --import-preview <link>: one real source read as an import reads it,
+    // its first page and the one after (two requests, 2-3 s apart), printed;
+    // --import-match "<title>" "<artist>" <seconds> ["<album>"] ["<ISRC>"]:
+    // one song looked for as an import looks for it, on the real YouTube
+    // Music, signed out. To check a parser against today's pages; nothing
+    // is kept (importselftest.cpp).
+    {
+        const QStringList arguments = app.arguments();
+        if (const int flag = arguments.indexOf(QStringLiteral("--import-preview")); flag >= 0 && flag + 1 < arguments.size())
+            return runImportPreview(arguments.at(flag + 1));
+        if (const int flag = arguments.indexOf(QStringLiteral("--import-match")); flag >= 0 && flag + 3 < arguments.size()) {
+            return runImportMatch(arguments.at(flag + 1), arguments.at(flag + 2), arguments.at(flag + 3).toInt(),
+                                  arguments.value(flag + 4).startsWith(QLatin1String("--")) ? QString() : arguments.value(flag + 4),
+                                  arguments.value(flag + 5).startsWith(QLatin1String("--")) ? QString() : arguments.value(flag + 5));
+        }
+    }
 
     // The YouTube Music account, if one was imported: restored from the
     // secret store and checked a few seconds in. Made here, before anything
@@ -692,6 +738,36 @@ int main(int argc, char *argv[])
     RecData recData;
     recData.setRecommender(&recommender);
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "RecData",   &recData);
+    // Importing a playlist from a link (YouTube, YouTube Music, Spotify,
+    // JioSaavn, Deezer, Apple Music), a pasted list or a CSV file: made into
+    // a playlist of the user's, its songs found on YouTube Music one at a
+    // time, always signed out, and kept going across restarts. The
+    // recommender's covers, its own searches in the background, wait while
+    // an import runs, so YouTube Music is not asked by both at once.
+    PlaylistImport importer(&library);
+    // The demo's stand-ins answer at once, so its songs are looked for a
+    // little under a second apart: a playlist imports while it is watched.
+    // At "held" the first rest is a few seconds, so the pause after a
+    // second refusal comes while it is watched too.
+    if (!importDemo.isEmpty()) {
+        PlaylistImport::Timing timing;
+        timing.searchGapMs = 700;
+        timing.searchJitterMs = 200;
+        timing.pageGapMs = 300;
+        timing.pageJitterMs = 100;
+        if (importDemo == QLatin1String("held"))
+            timing.restMs = 3000;
+        importer.setTiming(timing);
+    }
+    QObject::connect(&importer, &PlaylistImport::busyChanged, &recommender, [&importer, &recommender]() {
+        recommender.setCoversPaused(importer.busy());
+    });
+    importer.load();
+    recommender.setCoversPaused(importer.busy());
+    qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Importer",  &importer);
+    qmlRegisterUncreatableType<ImportRowModel>(
+        "Monolist.Backend", 1, 0, "ImportRowModel",
+        QStringLiteral("Obtained from Importer.rows"));
     // Whether this build can connect to Last.fm at all: a key built in, and
     // somewhere safe to keep a session.
     LastFmApi lastFm;
@@ -772,6 +848,8 @@ int main(int argc, char *argv[])
         // The player bar's effects popup open, for a screenshot of it.
         if (arguments.contains(QStringLiteral("--effects-popup")))
             initial.insert(QStringLiteral("effectsPopupAtStart"), true);
+        if (!importDemo.isEmpty())
+            initial.insert(QStringLiteral("importDemo"), importDemo);
         if (!initial.isEmpty())
             qmlEngine.setInitialProperties(initial);
     }

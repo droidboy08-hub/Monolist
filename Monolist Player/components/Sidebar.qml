@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls.Basic
 import Monolist
 import Monolist.Backend
+import "../ImportText.js" as ImportText
 
 Rectangle {
     id: root
@@ -203,6 +204,7 @@ Rectangle {
         }
 
         IconButton {
+            id: newButton
             anchors.right: parent.right
             anchors.rightMargin: Theme.space6 - Theme.space1
             anchors.verticalCenter: parent.verticalCenter
@@ -214,12 +216,145 @@ Rectangle {
             ToolTip.delay: 600
             ToolTip.text: "New playlist"
         }
+
+        // Beside the plus, a playlist from elsewhere: grey at rest, as a
+        // glyph that is there if wanted; the plus keeps the red.
+        IconButton {
+            anchors.right: newButton.left
+            anchors.verticalCenter: parent.verticalCenter
+            iconName: "import"
+            iconColor: Theme.neutral700
+            side: 28
+            iconSize: 16
+            onClicked: Nav.openImport("")
+            ToolTip.visible: hovered
+            ToolTip.delay: 600
+            ToolTip.text: "Import a playlist"
+        }
+    }
+
+    // — an import under way —
+    // Its name, what it is doing and how far it has got, on a red line while
+    // it asks YouTube Music; a click opens its window again. The one going
+    // on, whichever was started last, and how many more wait after it.
+    Item {
+        id: importStrip
+        readonly property var job: Importer.activeJob
+        readonly property int others: shown && job.others > 0 ? job.others : 0
+        readonly property bool shown: ImportText.active(job)
+        anchors.top: playlistHeader.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.rightMargin: Theme.ruleWidth
+        height: shown ? 52 : 0
+        visible: shown
+
+        Rectangle {
+            anchors.fill: parent
+            color: importHover.hovered ? Theme.surface : "transparent"
+
+            Behavior on color {
+                enabled: !importHover.hovered
+                ColorAnimation { duration: Theme.quick }
+            }
+        }
+
+        Icon {
+            id: importMark
+            anchors.left: parent.left
+            anchors.leftMargin: Theme.space6
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.verticalCenterOffset: -1
+            width: 15
+            height: 15
+            name: "import"
+            color: ImportText.running(importStrip.job) ? Theme.accent : Theme.neutral700
+        }
+
+        // In line with the playlists' names below.
+        Column {
+            anchors.left: parent.left
+            anchors.leftMargin: Theme.space6 + 20 + Theme.space3
+            anchors.right: parent.right
+            anchors.rightMargin: Theme.space6
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.verticalCenterOffset: -1
+            spacing: 1
+
+            Item {
+                width: parent.width
+                height: stripName.implicitHeight
+
+                Text {
+                    id: stripName
+                    width: parent.width - (stripOthers.visible ? stripOthers.width + Theme.space2 : 0)
+                    text: importStrip.shown ? importStrip.job.name : ""
+                    textFormat: Text.PlainText
+                    elide: Text.ElideRight
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 13
+                    font.weight: Font.Bold
+                    color: Theme.text
+                }
+                // More imports after this one.
+                Text {
+                    id: stripOthers
+                    visible: importStrip.others > 0
+                    anchors.right: parent.right
+                    anchors.baseline: stripName.baseline
+                    text: "+" + importStrip.others
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 10
+                    font.weight: Font.Bold
+                    font.letterSpacing: Theme.tracking(10, 0.08)
+                    color: Theme.neutral600
+                }
+            }
+            Text {
+                width: parent.width
+                text: importStrip.shown ? ImportText.stateLine(importStrip.job) : ""
+                elide: Text.ElideRight
+                font.family: Theme.fontFamily
+                font.pixelSize: 10
+                font.weight: Font.Bold
+                font.letterSpacing: Theme.tracking(10, 0.08)
+                color: ImportText.running(importStrip.job) ? Theme.accent700 : Theme.neutral600
+            }
+        }
+
+        // How far, along the strip's foot.
+        Rectangle {
+            anchors.bottom: parent.bottom
+            anchors.left: parent.left
+            anchors.leftMargin: Theme.space6
+            anchors.right: parent.right
+            anchors.rightMargin: Theme.space6
+            height: Theme.ruleWidth
+            color: Theme.neutral300
+
+            Rectangle {
+                width: parent.width * (importStrip.shown ? ImportText.progress(importStrip.job) : 0)
+                height: parent.height
+                color: ImportText.running(importStrip.job) ? Theme.accent : Theme.text
+            }
+        }
+
+        HoverHandler { id: importHover; cursorShape: Qt.PointingHandCursor }
+        TapHandler { onTapped: Nav.openImportJob(importStrip.job.id) }
+        ToolTip.visible: importHover.hovered
+        ToolTip.delay: 600
+        ToolTip.text: importStrip.shown
+                      ? ImportText.noteLine(importStrip.job)
+                        + (importStrip.others > 0 ? (importStrip.others === 1 ? " One more import waits after it."
+                                                                               : " " + importStrip.others + " more imports wait after it.")
+                                                  : "")
+                      : ""
     }
 
     // — playlists: Liked songs first, then the user's own —
     ListView {
         id: playlistList
-        anchors.top: playlistHeader.bottom
+        anchors.top: importStrip.bottom
         anchors.bottom: userStrip.top
         anchors.left: parent.left
         anchors.right: parent.right

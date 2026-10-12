@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls.Basic
 import Monolist
 import Monolist.Backend
+import "../ImportText.js" as ImportText
 
 // The sidebar folded to a rail: the owner's choice (2026-10-01), from the
 // Spotify-like design. The brand's first letter, which opens the sidebar
@@ -165,6 +166,45 @@ Rectangle {
         color: Theme.divider
     }
 
+    // — an import under way —
+    // Its mark, red while it asks YouTube Music, over how far it has got;
+    // named under the pointer, and a click opens its window again.
+    RailButton {
+        id: importMark
+        readonly property var job: Importer.activeJob
+        readonly property bool shown: ImportText.active(job)
+        anchors.top: navRule.bottom
+        anchors.topMargin: shown ? Theme.space3 : 0
+        height: shown ? 44 : 0
+        visible: shown
+        label: shown ? "Importing ‘" + job.name + "’ — " + ImportText.stateLine(job).toLowerCase()
+                       + (job.others > 0 ? " (" + job.others + " more after it)" : "") : ""
+        onClicked: Nav.openImportJob(job.id)
+
+        Icon {
+            anchors.centerIn: parent
+            anchors.verticalCenterOffset: -3
+            width: 18
+            height: 18
+            name: "import"
+            color: ImportText.running(importMark.job) ? Theme.accent : Theme.text
+        }
+        Rectangle {
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: 6
+            width: 28
+            height: Theme.ruleWidth
+            color: Theme.neutral300
+
+            Rectangle {
+                width: parent.width * (importMark.shown ? ImportText.progress(importMark.job) : 0)
+                height: parent.height
+                color: ImportText.running(importMark.job) ? Theme.accent : Theme.text
+            }
+        }
+    }
+
     // — the playlists, as covers —
     // A cover in an ink frame is the one open.
     component CoverButton: RailButton {
@@ -194,7 +234,7 @@ Rectangle {
 
     ListView {
         id: covers
-        anchors.top: navRule.bottom
+        anchors.top: importMark.bottom
         anchors.bottom: account.top
         anchors.left: parent.left
         width: root.railWidth
@@ -235,10 +275,22 @@ Rectangle {
             onMenuRequested: Menus.openPlaylist(model.playlistId)
         }
 
-        footer: CoverButton {
-            label: "New playlist"
-            plate: "new"
-            onClicked: root.newPlaylistRequested()
+        // Making one, and bringing one in from elsewhere.
+        footer: Column {
+            width: covers.width
+            spacing: Theme.space1
+            topPadding: Theme.space1
+
+            CoverButton {
+                label: "New playlist"
+                plate: "new"
+                onClicked: root.newPlaylistRequested()
+            }
+            CoverButton {
+                label: "Import a playlist"
+                plate: "import"
+                onClicked: Nav.openImport("")
+            }
         }
 
         SmoothWheel { flickable: covers }

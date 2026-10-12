@@ -14,10 +14,18 @@ Rectangle {
     property string actionText: ""
     property var action: null
     property bool sticky: false
-    // The widest it may be, in a narrow window (the mini player's): a longer
-    // answer wraps onto more lines rather than running off the edge. None
-    // by default.
+    // The widest it may be: a longer answer wraps onto more lines rather
+    // than running off the edges. None by default.
     property real maximumWidth: 0
+    // With a widest set, the link goes under the answer: always (the mini
+    // player's narrow toast), or, unstacked, only when the two side by side
+    // would be wider than that (the window's).
+    property bool stacked: true
+    // The answer and its link on one line.
+    readonly property bool beside: maximumWidth <= 0
+                                   || (!stacked && label.implicitWidth + 8 + row.spacing + Theme.space4 * 2
+                                       + (actionText.length > 0 ? Theme.space3 + actionLink.contentWidth + Theme.space2 : 0)
+                                       <= maximumWidth)
 
     // `sticky`: stays until its action is pressed, for what must be read.
     function show(message, actionLabel, onAction, sticky) {
@@ -81,7 +89,7 @@ Rectangle {
         // link under the answer, which keeps the whole width.
         Grid {
             anchors.verticalCenter: parent.verticalCenter
-            columns: root.maximumWidth > 0 ? 1 : 2
+            columns: root.beside ? 2 : 1
             columnSpacing: Theme.space3
             rowSpacing: Theme.space2
             verticalItemAlignment: Grid.AlignVCenter
@@ -90,9 +98,9 @@ Rectangle {
                 id: label
                 // Its own length, unless that would take the toast past its
                 // widest: then that, less the square beside it.
-                width: root.maximumWidth > 0
-                       ? Math.min(implicitWidth, root.maximumWidth - Theme.space4 * 2 - 8 - row.spacing)
-                       : undefined
+                width: root.beside
+                       ? undefined
+                       : Math.min(implicitWidth, root.maximumWidth - Theme.space4 * 2 - 8 - row.spacing)
                 wrapMode: Text.Wrap
                 maximumLineCount: 6
                 elide: Text.ElideRight
@@ -107,7 +115,7 @@ Rectangle {
             Text {
                 id: actionLink
                 visible: root.actionText.length > 0
-                leftPadding: root.maximumWidth > 0 ? 0 : Theme.space2
+                leftPadding: root.beside ? Theme.space2 : 0
                 text: root.actionText
                 font.family: Theme.fontFamily
                 font.pixelSize: 12

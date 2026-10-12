@@ -762,6 +762,8 @@ InnerTube::Track parseListItem(const QJsonValue &item)
     if (track.videoId.isEmpty())
         track.videoId = dig(play, { "videoId" }).toString();
     track.isVideo = isRealVideo(play);
+    track.videoType = dig(play, { "watchEndpointMusicSupportedConfigs", "watchEndpointMusicConfig",
+                                  "musicVideoType" }).toString();
 
     const QJsonArray columns = item.toObject().value(QLatin1String("flexColumns")).toArray();
     track.title = joinRuns(dig(columns.at(0), { "musicResponsiveListItemFlexColumnRenderer",
@@ -1462,13 +1464,19 @@ QNetworkReply *InnerTube::post(Client client, const QString &endpoint, QJsonObje
     else if (!listVisitor.isEmpty())
         request.setRawHeader("X-Goog-Visitor-Id", listVisitor.toUtf8());
     request.setTransferTimeout(timeoutMs);
+    // A cookieless object (setCookieless): the jar is neither read nor
+    // written, and the account below is never carried either.
+    if (m_cookieless) {
+        request.setAttribute(QNetworkRequest::CookieLoadControlAttribute, QNetworkRequest::Manual);
+        request.setAttribute(QNetworkRequest::CookieSaveControlAttribute, QNetworkRequest::Manual);
+    }
 
     // The account, on the few calls that ask for it and only while there is
     // one. Everything above is what an anonymous call sends, and an
     // anonymous call sends nothing more.
     quint64 account = 0;
     quint64 ticket = 0;
-    if (auth != Auth::Anonymous && client == Client::Music && g_account.headers) {
+    if (auth != Auth::Anonymous && client == Client::Music && g_account.headers && !m_cookieless) {
         AccountRequest asked;
         asked.auth = auth;
         asked.host = accountHost(client);
@@ -1554,7 +1562,7 @@ void InnerTube::send(Client client, const QString &endpoint, const QJsonObject &
     // The account's turn (AccountGuard): one call with it at a time, spaced,
     // counted, and none at all while YouTube has asked for a rest. Asked
     // here rather than in post(), because waiting takes the event loop.
-    if (auth != Auth::Anonymous && client == Client::Music && g_account.admit) {
+    if (auth != Auth::Anonymous && client == Client::Music && g_account.admit && !m_cookieless) {
         AccountRequest asked;
         asked.auth = auth;
         asked.host = accountHost(client);
@@ -2421,13 +2429,13 @@ void InnerTube::browse(const QString &browseId,
 }
 
 void InnerTube::browse(const QString &browseId, const QString &params,
-                       std::function<void(const QJsonObject &, const QString &)> done, Auth auth)
+                       std::function<void(const QJsonObject &, const QString &)> done, Auth auth, int retries)
 {
     QJsonObject body{ { QStringLiteral("browseId"), browseId } };
     if (!params.isEmpty())
         body.insert(QStringLiteral("params"), params);
     send(Client::Music, QStringLiteral("browse"), body, kBrowseTimeoutMs, nullptr, std::move(done),
-         /*retries=*/1, auth);
+         retries, auth);
 }
 
 void InnerTube::charts(const QString &country, std::function<void(const QJsonObject &, const QString &)> done)
@@ -2508,13 +2516,13 @@ QList<InnerTube::MoodGroup> InnerTube::parseMoods(const QJsonObject &root)
 // token means nothing to anybody else.
 void InnerTube::continueBrowse(const QString &token,
                                std::function<void(const QJsonObject &, const QString &)> done, Auth auth,
-                               const QString &visitor)
+                               const QString &visitor, int retries)
 {
     QJsonObject body{ { QStringLiteral("continuation"), token } };
     if (!visitor.isEmpty())
         body.insert(QLatin1String(kListVisitorField), visitor);
     send(Client::Music, QStringLiteral("browse"), body, kBrowseTimeoutMs, nullptr, std::move(done),
-         /*retries=*/1, auth);
+         retries, auth);
 }
 
 void InnerTube::accountMenu(Auth auth, std::function<void(const QJsonObject &, const QString &)> done)
@@ -3031,6 +3039,17 @@ void InnerTube::searchTracks(const QString &query, Filter filter,
              else
                  done(parseSearch(root), QString());
          },
+         retries);
+}
+
+void InnerTube::searchAnswer(const QString &query, Filter filter,
+                             std::function<void(const QJsonObject &, const QString &)> done, int retries)
+{
+    const QJsonObject body{
+        { QStringLiteral("query"), query },
+        { QStringLiteral("params"), filter == Filter::Videos ? kVideosFilter : kSongsFilter }
+    };
+    send(Client::Music, QStringLiteral("search"), body, kSearchTimeoutMs, /*slot=*/nullptr, std::move(done),
          retries);
 }
 

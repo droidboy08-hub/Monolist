@@ -220,6 +220,11 @@ public:
     // a row going away takes its turn back.
     Q_INVOKABLE void wantCover(const QVariantMap &row);
     Q_INVOKABLE void dropCover(const QVariantMap &row);
+    // No cover looked up while this is on: a playlist import is searching
+    // YouTube Music (playlistimport.h), and two background searchers would
+    // ask it twice as often. The queue is kept, and goes on when it is off.
+    void setCoversPaused(bool paused);
+    bool coversPaused() const { return m_coversPaused; }
 
 Q_SIGNALS:
     // What resolve() found, as a track map with the app's track roles.
@@ -355,6 +360,7 @@ private:
     QHash<QString, QVariantMap> m_coverRows;
     QTimer m_coverTimer;
     bool m_coverBusy = false;
+    bool m_coversPaused = false;
     QString m_coverInFlight;
     int m_coversRevision = 0;
     // The pace, on a clock that only goes forward (milliseconds since the

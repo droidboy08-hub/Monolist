@@ -2,6 +2,7 @@ import QtQuick
 import Monolist
 import Monolist.Backend
 import "../components"
+import "../ImportText.js" as ImportText
 
 // Same vocabulary as Home: a section header, the track table for songs and
 // videos, and cards for albums, artists and playlists. Results come from
@@ -17,6 +18,19 @@ ScrollPage {
     // A recent search picked on the empty page: typed into the field, as if
     // typed there.
     signal searchRequested(string term)
+
+    // A song an import could not place, being looked for here (the review's
+    // SEARCH, ImportReview): its row as the review has it, and the
+    // playlist's id; null otherwise. Its results can then be used for it.
+    property var pick: null
+    signal pickUsed(var track)
+    signal pickCancelled()
+
+    // A link to a playlist or an album that can be imported: offered above
+    // the results, which for a link are rarely what was meant. Read as it is
+    // typed, without asking anything (Importer.parse).
+    readonly property var importLink: term.trim().length > 8 ? Importer.parse(term) : ({})
+    readonly property bool importOffered: importLink.ok === true
 
     // Albums, artists and playlists are cards; songs and videos are rows.
     readonly property bool cardMode: Extractor.filter === "albums" || Extractor.filter === "artists"
@@ -58,15 +72,18 @@ ScrollPage {
     // the list keeps ahead of the scrolling (as a long playlist does,
     // PageView). A page landing with the end still in sight asks for the one
     // after. For cards, this is the last section's; one above it has its own
-    // "show more".
+    // "show more". Never while choosing a song for an import: only the first
+    // few results are shown then, so the page never grows, and every page
+    // landing would ask for the next one, all of them, one after another.
     function loadMoreIfNear() {
-        if (visible && root.term.length > 0 && Extractor.hasMore && !Extractor.loadingMore && !Extractor.busy
-                && contentY + height * 2 >= contentHeight)
+        if (visible && root.pick === null && root.term.length > 0 && Extractor.hasMore && !Extractor.loadingMore
+                && !Extractor.busy && contentY + height * 2 >= contentHeight)
             Extractor.loadMore(-1)
     }
     onContentYChanged: loadMoreIfNear()
     onContentHeightChanged: loadMoreIfNear()
     onVisibleChanged: loadMoreIfNear()
+    onPickChanged: loadMoreIfNear()
 
     Connections {
         target: Extractor
@@ -85,6 +102,48 @@ ScrollPage {
             width: parent.width
             number: "01"
             title: root.term.length > 0 ? "Results for " + root.term : "Search"
+        }
+
+        // — a link that can be imported —
+        Rectangle {
+            visible: root.importOffered && root.pick === null
+            width: parent.width
+            height: offerColumn.implicitHeight + Theme.space4 * 2
+            color: "transparent"
+            border.width: Theme.ruleWidth
+            border.color: Theme.text
+
+            Column {
+                id: offerColumn
+                x: Theme.space4
+                y: Theme.space4
+                width: parent.width - Theme.space4 * 2
+                spacing: Theme.space3
+
+                Text {
+                    text: (root.importLink.label || "").toUpperCase()
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 11
+                    font.weight: Font.Bold
+                    font.letterSpacing: Theme.tracking(11, 0.14)
+                    color: Theme.accent700
+                }
+                Text {
+                    width: parent.width
+                    text: "That's a link to " + (root.importLink.type === "album" ? "an album"
+                                                 : root.importLink.type === "song" ? "a song" : "a playlist")
+                          + ". Import it into a playlist of your own: Monolist finds the songs on YouTube Music."
+                    wrapMode: Text.WordWrap
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 14
+                    color: Theme.text
+                }
+                ActionButton {
+                    iconName: "import"
+                    text: "IMPORT"
+                    onClicked: Nav.openImport(root.term.trim())
+                }
+            }
         }
 
         // Negative spacing lets neighbouring segments share one 2px rule. A
@@ -124,6 +183,172 @@ ScrollPage {
                 font.weight: Font.Bold
                 font.letterSpacing: Theme.tracking(11, 0.08)
                 color: Theme.neutral700
+            }
+        }
+
+        // — a song for an import, chosen here —
+        Rectangle {
+            visible: root.pick !== null
+            width: parent.width
+            height: pickColumn.implicitHeight + Theme.space4 * 2
+            color: "transparent"
+            border.width: Theme.ruleWidth
+            border.color: Theme.text
+
+            Column {
+                id: pickColumn
+                x: Theme.space4
+                y: Theme.space4
+                width: parent.width - Theme.space4 * 2
+                spacing: Theme.space3
+
+                Item {
+                    width: parent.width
+                    height: pickHeading.implicitHeight
+
+                    Text {
+                        id: pickHeading
+                        width: parent.width - pickCancel.width - Theme.space4
+                        text: "CHOOSING A SONG FOR YOUR IMPORT"
+                        elide: Text.ElideRight
+                        font.family: Theme.fontFamily
+                        font.pixelSize: 11
+                        font.weight: Font.Bold
+                        font.letterSpacing: Theme.tracking(11, 0.14)
+                        color: Theme.accent700
+                    }
+                    Text {
+                        id: pickCancel
+                        anchors.right: parent.right
+                        anchors.baseline: pickHeading.baseline
+                        text: "CANCEL"
+                        font.family: Theme.fontFamily
+                        font.pixelSize: 12
+                        font.weight: Font.Bold
+                        font.letterSpacing: Theme.tracking(12, 0.12)
+                        color: pickCancelHover.hovered ? Theme.accent700 : Theme.neutral700
+
+                        HoverHandler { id: pickCancelHover; cursorShape: Qt.PointingHandCursor }
+                        TapHandler { onTapped: root.pickCancelled() }
+                    }
+                }
+                Text {
+                    width: parent.width
+                    text: root.pick === null ? ""
+                          : "Which of these is “" + root.pick.title + "”" + (root.pick.artist ? " by " + root.pick.artist : "")
+                            + (root.pick.durationMs > 0 ? " (" + ImportText.length(root.pick.durationMs) + ")" : "")
+                            + "? Choose it, and it goes into the playlist in that song's place. If it isn't here, "
+                            + "change the search above, or look among the videos."
+                    textFormat: Text.PlainText
+                    wrapMode: Text.WordWrap
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 14
+                    color: Theme.text
+                }
+
+                // The first few songs found, each to choose.
+                Column {
+                    width: parent.width
+
+                    Repeater {
+                        model: root.pick !== null ? Extractor.results : null
+
+                        delegate: Item {
+                            id: pickRow
+                            required property int index
+                            required property string title
+                            required property string artist
+                            required property string album
+                            required property string artwork
+                            required property string sourceId
+                            required property string durationText
+
+                            visible: index < 8
+                            width: pickColumn.width
+                            height: visible ? 56 : 0
+
+                            HoverHandler { id: pickHover }
+                            Rectangle {
+                                anchors.fill: parent
+                                color: pickHover.hovered ? Theme.rowHover : "transparent"
+
+                                Behavior on color {
+                                    enabled: !pickHover.hovered
+                                    ColorAnimation { duration: Theme.quick }
+                                }
+                            }
+                            Rectangle {
+                                width: parent.width
+                                height: 1
+                                color: Theme.hairline
+                            }
+
+                            TrackCover {
+                                id: pickCover
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 40
+                                height: 40
+                                source: pickRow.artwork
+                                sourceId: pickRow.sourceId
+                                hovered: pickHover.hovered
+                                active: pickRow.sourceId === Player.currentSourceId
+                                covered: Nav.pagesCovered
+                                onPlayRequested: Player.playTracks([Extractor.results.get(pickRow.index)], 0, "search")
+                            }
+                            Column {
+                                anchors.left: pickCover.right
+                                anchors.leftMargin: Theme.space3
+                                anchors.right: pickUse.left
+                                anchors.rightMargin: Theme.space4
+                                anchors.verticalCenter: parent.verticalCenter
+                                spacing: 2
+
+                                Text {
+                                    width: parent.width
+                                    text: pickRow.title
+                                    textFormat: Text.PlainText
+                                    elide: Text.ElideRight
+                                    font.family: Theme.fontFamily
+                                    font.pixelSize: 14
+                                    font.weight: Theme.weightMedium
+                                    color: Theme.text
+                                }
+                                Text {
+                                    width: parent.width
+                                    text: pickRow.artist + (pickRow.album ? "  ·  " + pickRow.album : "")
+                                          + (pickRow.durationText ? "  ·  " + pickRow.durationText : "")
+                                    textFormat: Text.PlainText
+                                    elide: Text.ElideRight
+                                    font.family: Theme.fontFamily
+                                    font.pixelSize: 12
+                                    color: Theme.neutral700
+                                }
+                            }
+                            Text {
+                                id: pickUse
+                                anchors.right: parent.right
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: "USE THIS"
+                                font.family: Theme.fontFamily
+                                font.pixelSize: 12
+                                font.weight: Font.Bold
+                                font.letterSpacing: Theme.tracking(12, 0.12)
+                                color: pickUseHover.hovered ? Theme.accent700 : Theme.neutral700
+
+                                HoverHandler { id: pickUseHover; cursorShape: Qt.PointingHandCursor }
+                                TapHandler { onTapped: root.pickUsed(Extractor.results.get(pickRow.index)) }
+                            }
+                        }
+                    }
+                }
+
+                Text {
+                    visible: root.pick !== null && !Extractor.busy && Extractor.results.count === 0
+                    text: root.term.length > 0 ? "Nothing found for that: change the search above." : "Type a search above."
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 13
+                    color: Theme.neutral700
+                }
             }
         }
 
@@ -391,6 +616,7 @@ ScrollPage {
             visible: !Extractor.busy && root.term.length > 0
                      && root.found === 0
                      && Extractor.lastError.length === 0
+                     && root.pick === null && !root.importOffered
             width: parent.width
             text: "No results."
             font.family: Theme.fontFamily
@@ -398,8 +624,9 @@ ScrollPage {
             color: Theme.neutral700
         }
 
+        // Choosing for an import, the results are the choice above instead.
         TrackTable {
-            visible: Extractor.results.count > 0
+            visible: Extractor.results.count > 0 && root.pick === null
             width: parent.width
             model: Extractor.results
             activeIndex: -1

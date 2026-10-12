@@ -1082,6 +1082,16 @@ Title parseTitle(const QString &title, const QStringList &artistNames)
     return result;
 }
 
+bool isLanguage(const QString &marker)
+{
+    return languages().contains(marker);
+}
+
+bool namesNobody(const QString &word)
+{
+    return weakKeys().contains(word);
+}
+
 QString searchQuery(const Target &target)
 {
     const QStringList names = splitArtists(target.artist);

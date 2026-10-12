@@ -59,6 +59,13 @@ ApplicationWindow {
     // Set from the command line (--effects-popup): the player bar's effects
     // popup open once the window is up, for a look at it.
     property bool effectsPopupAtStart: false
+    // Set from the command line (--import-demo <stage>): the import's screens
+    // walked to one stage against stand-ins (runImportDemo), for a look.
+    property string importDemo: ""
+    // A song an import could not place, being looked for in Search, whose
+    // results can be used in its place: { rowId, title, artist, durationMs,
+    // playlistId }, or null.
+    property var importPick: null
 
     // — ambient colour —
     // The playing song's colour, measured from its cover (CoverPalette),
@@ -303,6 +310,9 @@ ApplicationWindow {
 
     onCurrentViewChanged: {
         openCurrentPage()
+        // A song chosen for an import is chosen in Search, or not at all.
+        if (currentView !== "search")
+            importPick = null
         // A like or a new listen since Search was last open changes what it
         // should suggest. This rebuilds only when something did change.
         if (currentView === "search" || currentView === "home")
@@ -379,6 +389,55 @@ ApplicationWindow {
         nowPlayingOpen = false
         navigate("search")
         topBar.focusSearch()
+    }
+
+    // — importing a playlist (Importer) —
+    // Its window, from wherever it is offered (Nav): on a link to read at
+    // once, or as it was left; or on an import already started.
+    function openImport(text) {
+        nowPlayingOpen = false
+        sidebarOverlayOpen = false
+        importDialog.openWith(text, text.length > 0)
+    }
+    function openImportJob(jobId) {
+        nowPlayingOpen = false
+        sidebarOverlayOpen = false
+        importDialog.openJob(jobId)
+    }
+    function openPlaylist(playlistId) {
+        if (playlistId <= 0)
+            return
+        // From the mini player's toast (an import done meanwhile): a page
+        // is the full window's.
+        if (window.miniMode)
+            window.leaveMini()
+        nowPlayingOpen = false
+        navigate("playlist:" + playlistId)
+    }
+
+    // A song an import could not place, looked for in Search: what to
+    // search for typed in, among songs, and its results offered for it.
+    function pickImportSong(row, playlistId) {
+        nowPlayingOpen = false
+        importPick = { rowId: row.rowId, title: row.title, artist: row.artist, durationMs: row.durationMs,
+                       playlistId: playlistId }
+        if (Extractor.filter !== "songs" && Extractor.filter !== "videos")
+            Extractor.filter = "songs"
+        topBar.searchText = Importer.searchTextFor(row.rowId)
+        navigate("search")
+    }
+    // One of them used: into the playlist in that song's place, and back to
+    // the playlist, where it now is.
+    function useImportPick(track) {
+        const pick = importPick
+        if (!pick)
+            return
+        if (!Importer.useSong(pick.rowId, track)) {
+            say("That song could not go into the playlist; its page says what is left to do.")
+            return
+        }
+        importPick = null
+        openPlaylist(pick.playlistId)
     }
 
     function goBack() {
@@ -677,6 +736,9 @@ ApplicationWindow {
                     SearchView {
                         anchors.fill: parent
                         term: topBar.searchText
+                        pick: window.importPick
+                        onPickUsed: function(track) { window.useImportPick(track) }
+                        onPickCancelled: window.importPick = null
                         onSearchRequested: function(term) {
                             topBar.searchText = term
                             Library.rememberSearch(term)
@@ -1030,6 +1092,11 @@ ApplicationWindow {
         anchors.bottomMargin: Theme.space6
         // Over everything: it is the app answering, and it leaves by itself.
         z: 950
+        // A long answer (an import's summary, with a playlist's name of up
+        // to 100 characters) wraps, its link under it, rather than running
+        // off both edges; one that fits stays on one line, its link beside.
+        maximumWidth: window.width - Theme.space4 * 2
+        stacked: false
     }
 
     // The app's answers, on whichever window is in use: the mini player has
@@ -1044,6 +1111,109 @@ ApplicationWindow {
     Connections {
         target: Library
         function onNotice(text) { window.say(text) }
+    }
+
+    // — importing a playlist —
+    // Over the window, and over Now Playing: it is asked for.
+    ImportDialog {
+        id: importDialog
+        onPlaylistRequested: function(playlistId) { window.openPlaylist(playlistId) }
+    }
+
+    Connections {
+        target: Importer
+        function onNotice(text) { window.say(text) }
+        // An import done or stopped, said wherever the user is, with the way
+        // to its playlist: REVIEW where songs wait there. Not over its own
+        // window, which says it already.
+        function onFinished(jobId, summary) {
+            if (importDialog.opened && importDialog.jobId === jobId)
+                return
+            const job = Importer.jobInfo(jobId)
+            // Its playlist deleted: said, with nothing to open.
+            if (!job.playlistId || job.playlistGone) {
+                window.say(summary)
+                return
+            }
+            window.say(summary, job.check > 0 || job.notFound > 0 ? "REVIEW" : "OPEN",
+                       function() { window.openPlaylist(job.playlistId) })
+        }
+    }
+
+    Connections {
+        target: Nav
+        function onImportRequested(text) { window.openImport(text) }
+        function onImportJobRequested(jobId) { window.openImportJob(jobId) }
+        function onImportSongPickRequested(row, playlistId) { window.pickImportSong(row, playlistId) }
+    }
+
+    // --import-demo <stage>: once the window is up, the import's window on
+    // the stand-ins' playlists (main.cpp), walked to the stage asked for:
+    //   paste     a link typed, recognised, not read
+    //   refused   a link that can't be imported, and why
+    //   list      a pasted list, not read; listread: read
+    //   preview   Spotify's 100 of 434, with its warning
+    //   long      the same imported: its 100 being found, counted as 100
+    //   finding   fourteen songs being found, the window open
+    //   closed    the same with the window closed: the sidebar's progress
+    //             and the playlist's page as songs arrive
+    //   done      the window at the end
+    //   toast     the toast at the end, the window closed
+    //   review    the playlist's page at the end
+    //   pick      Search, choosing a song that was not found
+    //   resting   YouTube Music refusing: the import resting, saying until when
+    //   held      refused again after a short rest: paused, saying until when
+    // Any other stage opens nothing: with --query and a link, Search's offer.
+    property bool importDemoStarted: false
+    readonly property var importDemoImports: ["finding", "closed", "done", "toast", "review", "pick", "resting", "held",
+                                              "long"]
+    function runImportDemo() {
+        const eighties = "https://open.spotify.com/playlist/MONOLISTDEMOEIGHTIES01"
+        if (importDemo === "paste")
+            importDialog.openWith(eighties, false)
+        else if (importDemo === "refused")
+            importDialog.openWith("https://soundcloud.com/monolist/sets/eighties", false)
+        else if (importDemo === "list" || importDemo === "listread")
+            importDialog.openList("a-ha - Take On Me\nMichael Jackson - Billie Jean (4:54)\n"
+                                  + "Sweet Dreams (Are Made of This) by Eurythmics\n"
+                                  + "Simple Minds - Don't You (Forget About Me)\nCyndi Lauper - Girls Just Want to Have Fun\n",
+                                  importDemo === "listread")
+        else if (importDemo === "preview" || importDemo === "long")
+            importDialog.openWith("https://open.spotify.com/playlist/MONOLISTDEMOLONGLIST01", true)
+        else if (importDemoImports.indexOf(importDemo) >= 0)
+            importDialog.openWith(eighties, true)
+    }
+    Timer {
+        interval: 900
+        running: window.importDemo.length > 0
+        onTriggered: window.runImportDemo()
+    }
+    Connections {
+        target: Importer
+        enabled: window.importDemo.length > 0
+        // Read: imported at once, and the window put away where the stage
+        // looks elsewhere.
+        function onPreviewedChanged() {
+            if (window.importDemoStarted || Importer.previewed.state !== "ready"
+                    || window.importDemoImports.indexOf(window.importDemo) < 0)
+                return
+            window.importDemoStarted = true
+            importDialog.importNow()
+            if (window.importDemo === "finding" || window.importDemo === "done" || window.importDemo === "resting"
+                    || window.importDemo === "held" || window.importDemo === "long")
+                return
+            importDialog.close()
+            if (window.importDemo === "closed")
+                window.openPlaylist(Importer.job.playlistId)
+        }
+        function onFinished(jobId, summary) {
+            const playlistId = Importer.jobInfo(jobId).playlistId
+            const missing = Importer.review(playlistId).notFound
+            if (window.importDemo === "review")
+                window.openPlaylist(playlistId)
+            else if (window.importDemo === "pick" && missing && missing.length > 0)
+                window.pickImportSong(missing[0], playlistId)
+        }
     }
 
     Connections {

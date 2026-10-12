@@ -73,6 +73,12 @@ public:
         // one video id and two of these, so it is what tells a later page's
         // rows from ones already shown. Empty outside playlists.
         QString setVideoId;
+        // What YouTube Music calls the row's kind, as its play button says:
+        // "MUSIC_VIDEO_TYPE_ATV" (its own audio track), "_OMV" (the
+        // official video), "_OFFICIAL_SOURCE_MUSIC", "_UGC" (anyone's
+        // upload). Empty where the row does not say. The playlist import
+        // ranks a match by it (importmatcher.h).
+        QString videoType;
     };
 
     // An album, playlist, artist or video, as the home feed and charts show them.
@@ -362,6 +368,13 @@ public:
     // without. Every object on the application thread shares one cookie jar.
     explicit InnerTube(QObject *parent = nullptr, bool warmUp = true);
 
+    // No cookies at all on this object's requests: none sent, not even
+    // YouTube's anonymous ones from the shared jar, and none kept from the
+    // answers. For the playlist import (playlistimport.h), whose every call
+    // is anonymous by the owner's rule, so that nothing it sends could ever
+    // be tied to anything. Off by default; set before the first request.
+    void setCookieless(bool on) { m_cookieless = on; }
+
     // For the self-tests only: every request goes to this address
     // ("http://127.0.0.1:<port>") instead of YouTube, and objects made
     // afterwards do not warm up. Empty is YouTube again.
@@ -394,9 +407,11 @@ public:
                 Auth auth = Auth::Anonymous);
     // The same with the parameters a link carries (Link::params), which
     // pick part of a page: an artist's albums, say, rather than the artist.
+    // `retries` as searchTracks has it: 0 for a call that must take a
+    // refusal at once rather than ask again a second later (the import's).
     void browse(const QString &browseId, const QString &params,
                 std::function<void(const QJsonObject &root, const QString &error)> done,
-                Auth auth = Auth::Anonymous);
+                Auth auth = Auth::Anonymous, int retries = 1);
     // The next part of a long list, by the token its last part ended with
     // (Collection::continuation, Listing's, Continuation::next); read the
     // answer with parseContinuation. Asked as whoever asked for the list.
@@ -405,7 +420,7 @@ public:
     // need to go on at all. Home's feed answers an empty page without it.
     void continueBrowse(const QString &token,
                         std::function<void(const QJsonObject &root, const QString &error)> done,
-                        Auth auth = Auth::Anonymous, const QString &visitor = QString());
+                        Auth auth = Auth::Anonymous, const QString &visitor = QString(), int retries = 1);
     static QList<Shelf> parseShelves(const QJsonObject &root);
     // The charts page for `country` (a two-letter code); the context's own
     // country does not choose it, the page's country menu does, which this
@@ -465,6 +480,14 @@ public:
     void searchTracks(const QString &query, Filter filter,
                       std::function<void(const QList<Track> &tracks, const QString &error)> done,
                       int retries = 1);
+    // The same search, answered as it came (read it with parseSearch), for
+    // a caller that must tell an answer with no songs in it from an answer
+    // with nothing at all in it, which is YouTube refusing in its own way.
+    // Anonymous, as every search is.
+    void searchAnswer(const QString &query, Filter filter,
+                      std::function<void(const QJsonObject &root, const QString &error)> done,
+                      int retries = 1);
+    static QList<Track> parseSearch(const QJsonObject &root);
     // The songs behind a Watch — an artist's Shuffle or Mix — as the queue
     // YouTube Music would play, the first song first.
     void watchPlaylist(const Watch &watch,
@@ -632,7 +655,6 @@ private:
     static AccountOutcome accountOutcome(const QNetworkReply *reply, int status, const QByteArray &answer,
                                          const QString &endpoint);
 
-    static QList<Track> parseSearch(const QJsonObject &root);
     // A search page's rows, as parseSearch and parseCardSearch read them:
     // the first page's and every page after it the same way.
     static QList<Track> parseSearchTracks(const QJsonArray &rows);
@@ -672,6 +694,7 @@ private:
     void finishPlayer(std::shared_ptr<PlayerAsk> ask, const QString &url, int itag, const QString &error);
 
     QNetworkAccessManager *m_network;
+    bool m_cookieless = false;
     Slot m_search;
     Slot m_suggest;
     Slot m_radio;
