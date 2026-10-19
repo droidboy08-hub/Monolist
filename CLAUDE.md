@@ -180,6 +180,17 @@ owner's iPhone app (AryaMusix / "Mediano", Swift, not in this repo).
   TapHandler.ReleaseWithinBounds` (ChoiceChip/ToggleRow: `takesPress`) or use
   a MouseArea. A ReleaseWithinBounds TapHandler on a Text never fired there;
   text links use a MouseArea, as the toast's does.
+- QML (2026-10-19), why: a plain (DragThreshold) TapHandler that is topmost
+  under a mouse press keeps the press accepted, so Qt skips every Item below
+  it, press-eating MouseAreas included, and hands the press to the Pointer
+  Handlers further down, none of which sees an exclusive grabber. A click on
+  Now Playing's cover played the hidden song row beneath. Rules: Main.qml
+  disables `shell` while Now Playing, the full-screen picture or the narrow
+  sidebar covers it (and Now Playing under the full-screen picture); anything
+  drawn over interactive content keeps its presses (an accepting MouseArea,
+  or ReleaseWithinBounds taps) and has a `HoverHandler { blocking: true }`.
+  Checked by real clicks (posted to Monolist's own window) on a scratch
+  library; keys posted that way do not reach Qt's Shortcuts.
 - Tooltips need the QtQuick.Controls module deployed (build-windows.ps1 copies
   it); importing QtQuick.Controls or QtQuick.Dialogs in QML makes windeployqt
   ship every style (~20 MB) — avoid.

@@ -211,7 +211,12 @@ Item {
         }
 
         HoverHandler { id: syncHover; cursorShape: Qt.PointingHandCursor }
-        TapHandler { onTapped: root.follow() }
+        // Takes the press: a plain tap also reached the lyric line under the
+        // button, and the song jumped to it.
+        TapHandler {
+            gesturePolicy: TapHandler.ReleaseWithinBounds
+            onTapped: root.follow()
+        }
     }
 
     // — no lines to show —

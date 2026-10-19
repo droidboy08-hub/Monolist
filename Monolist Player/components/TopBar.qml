@@ -339,7 +339,12 @@ Rectangle {
                         }
 
                         HoverHandler { id: rowHover; cursorShape: Qt.PointingHandCursor }
-                        TapHandler { onTapped: root.pickSuggestion(suggestionRow.modelData) }
+                        // Takes the press: a plain tap also reached the result
+                        // under the list, and played it (CLAUDE.md, popups).
+                        TapHandler {
+                            gesturePolicy: TapHandler.ReleaseWithinBounds
+                            onTapped: root.pickSuggestion(suggestionRow.modelData)
+                        }
                     }
                 }
             }

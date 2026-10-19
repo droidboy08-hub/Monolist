@@ -230,6 +230,16 @@ Rectangle {
     color: Theme.bg
     implicitHeight: Theme.playerBarHeight
 
+    // A press on the bar's own paper, between its controls, and the wheel,
+    // stop at the bar. It stands on the full-screen picture, where a
+    // double-click on bare bar left full screen. First, so every control
+    // above it still takes its own press.
+    MouseArea {
+        anchors.fill: parent
+        acceptedButtons: Qt.AllButtons
+        onWheel: function(wheel) { wheel.accepted = true }
+    }
+
     Rectangle {
         width: parent.width
         height: Theme.ruleWidth

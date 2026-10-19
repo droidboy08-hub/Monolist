@@ -62,11 +62,24 @@ Rectangle {
 
     HoverHandler {
         id: hover
+        // The page under the panel is not hovered through it.
+        blocking: true
         cursorShape: Qt.PointingHandCursor
     }
+    // Takes the press (ReleaseWithinBounds), so it is not also a click on the
+    // page under the panel: a plain tap played the hidden row there. The right
+    // button too, so that it does not open the row's menu.
     TapHandler {
-        onSingleTapped: root.openRequested()
-        onDoubleTapped: root.fullscreenRequested()
+        gesturePolicy: TapHandler.ReleaseWithinBounds
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
+        onSingleTapped: function(eventPoint, button) {
+            if (button === Qt.LeftButton)
+                root.openRequested()
+        }
+        onDoubleTapped: function(eventPoint, button) {
+            if (button === Qt.LeftButton)
+                root.fullscreenRequested()
+        }
     }
 
     // Arrive with the pointer, leave a moment after it (DESIGN 2.6).

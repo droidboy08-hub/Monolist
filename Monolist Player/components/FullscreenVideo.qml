@@ -82,6 +82,9 @@ Rectangle {
 
     HoverHandler {
         id: pointer
+        // Nothing under the picture is hovered: no tooltip or hand from Now
+        // Playing or a page beneath.
+        blocking: true
         cursorShape: root.chromeShown ? Qt.ArrowCursor : Qt.BlankCursor
         onPointChanged: {
             const at = pointer.point.scenePosition
@@ -91,9 +94,21 @@ Rectangle {
             root.poke()
         }
     }
-    TapHandler {
-        onTapped: root.poke()
-        onDoubleTapped: root.leaveRequested()
+    // A MouseArea, not a TapHandler: it keeps the press. A TapHandler here
+    // let it go on to Now Playing, open under the picture, so a click seeked
+    // to the hidden lyric line under it or played a hidden queue row, and the
+    // window buttons in its corner closed the window. preventStealing keeps
+    // Now Playing's title-bar drag from taking a drag over.
+    MouseArea {
+        anchors.fill: parent
+        acceptedButtons: Qt.AllButtons
+        preventStealing: true
+        onClicked: root.poke()
+        onDoubleClicked: function(mouse) {
+            if (mouse.button === Qt.LeftButton)
+                root.leaveRequested()
+        }
+        onWheel: function(wheel) { wheel.accepted = true }
     }
 
     // — the strip: which song, and the way out —

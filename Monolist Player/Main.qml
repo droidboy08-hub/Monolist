@@ -521,6 +521,17 @@ ApplicationWindow {
         anchors.right: parent.right
         anchors.top: parent.top
         anchors.bottom: playerBar.top
+        // Out of reach while something covers it whole: Now Playing, the
+        // picture full screen, the narrow window's sidebar. Covering is not
+        // enough on its own: where the topmost thing under the pointer is a
+        // plain TapHandler (DragThreshold), Qt skips every item under it, the
+        // cover's own press-eater included, and hands the press on to the
+        // TapHandlers further down. That is how a click on Now Playing's
+        // cover played the song in the hidden row beneath. A disabled item
+        // gets nothing: no press, no wheel. The keys are the window's
+        // Shortcuts, which this does not touch.
+        enabled: !window.nowPlayingOpen && window.videoPlace !== "fullscreen"
+                 && !window.sidebarOverlayOpen
 
         // Every `ToolTip.text` in the app shows the same single tool tip, which
         // Qt makes in the Basic style: the system's font, on the style's own
@@ -937,6 +948,9 @@ ApplicationWindow {
         height: playerBar.y
         y: window.nowPlayingOpen ? 0 : height
         visible: y < height
+        // Out of reach under the picture full screen, which stands over it
+        // with Now Playing left open beneath (see shell).
+        enabled: window.videoPlace !== "fullscreen"
         z: 800
         // The picture only once Now Playing is all the way up, and not from
         // the moment it starts closing: drawing video frames into a view that
@@ -1038,7 +1052,17 @@ ApplicationWindow {
         // Over the player bar as well: the sidebar is asked for, and covers
         // the window until it is answered.
         z: 870
-        TapHandler { onTapped: window.sidebarOverlayOpen = false }
+        // Not while it fades out: the page is the user's again.
+        enabled: window.sidebarOverlayOpen
+        // Takes the press, any button: a plain tap closed the sidebar and
+        // also pressed the player bar control under the dim (play, a seek,
+        // the mini player). The page under it is turned off (shell).
+        TapHandler {
+            acceptedButtons: Qt.AllButtons
+            gesturePolicy: TapHandler.ReleaseWithinBounds
+            onTapped: window.sidebarOverlayOpen = false
+        }
+        HoverHandler { blocking: true }
 
         Behavior on opacity {
             NumberAnimation { duration: Theme.quick }
@@ -1055,6 +1079,17 @@ ApplicationWindow {
         z: 871
         currentView: window.currentView
         showCloseButton: true
+
+        // A press on the sidebar's bare paper stays in it: it went on to the
+        // dim, which closed the sidebar being used, and to the player bar's
+        // cover under its bottom corner. Under everything of the sidebar's
+        // own, which still takes its presses first.
+        MouseArea {
+            z: -1
+            anchors.fill: parent
+            acceptedButtons: Qt.AllButtons
+            onWheel: function(wheel) { wheel.accepted = true }
+        }
         onCloseRequested: window.sidebarOverlayOpen = false
         onViewRequested: function(view) {
             window.sidebarOverlayOpen = false

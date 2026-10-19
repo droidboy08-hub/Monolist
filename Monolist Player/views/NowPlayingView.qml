@@ -266,8 +266,11 @@ Rectangle {
             id: choiceHover
             cursorShape: choice.available && !choice.selected ? Qt.PointingHandCursor : Qt.ArrowCursor
         }
+        // Takes the press: a plain tap also counted toward a double-click on
+        // the title bar under it, which maximised the window.
         TapHandler {
             enabled: choice.available && !choice.selected
+            gesturePolicy: TapHandler.ReleaseWithinBounds
             onTapped: choice.picked()
         }
 
@@ -276,12 +279,18 @@ Rectangle {
         ToolTip.text: hint
     }
 
-    // Swallows clicks, so nothing underneath takes them.
+    // Swallows clicks, so nothing underneath takes them. Only where nothing
+    // of this view's own is under the pointer: a plain TapHandler over it
+    // (the cover's) passes the press on below this, to the handlers under
+    // the view, so Main also turns off what is under it while it is open.
     MouseArea {
         anchors.fill: parent
         acceptedButtons: Qt.AllButtons
         onWheel: function(wheel) { wheel.accepted = true }
     }
+    // Nothing under the view is hovered through it: no hand, tooltip or row
+    // lit on the hidden page.
+    HoverHandler { blocking: true }
 
     // — the poster —
     Rectangle {
@@ -334,7 +343,10 @@ Rectangle {
                 }
 
                 // A double-click on the moving picture fills the screen with it.
+                // Takes the press: this plain tap was what let a click on the
+                // cover play the song in the hidden row beneath.
                 TapHandler {
+                    gesturePolicy: TapHandler.ReleaseWithinBounds
                     onDoubleTapped: if (root.videoShowing) root.fullscreenRequested()
                 }
 
