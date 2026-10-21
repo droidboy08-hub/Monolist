@@ -1046,7 +1046,10 @@ int runDriveSelfTest(Library *library)
         const qsizetype before = world.drive.requests.size();
         sync.syncNow();
         sync.syncNow();
-        checks.check(idle(sync) && waitUntil([&]() { return world.finds == finds + 3 && !sync.busy(); }, 3000),
+        // Waits for the second sync itself, not for the gap between the two:
+        // on a busy computer the queued one can start seconds later, and a
+        // shorter wait let it run into the next check (a 0.1.151 smoke test).
+        checks.check(waitUntil([&]() { return world.finds == finds + 3 && !sync.busy(); }, 20000),
                      QStringLiteral("SYNC NOW twice runs two syncs"));
         bool apart = true;
         int findsSeen = 0;
