@@ -62,6 +62,18 @@ $mingwBin = Join-Path $qtRoot 'Tools\mingw1310_64\bin'
 $objdump  = Join-Path $mingwBin 'objdump.exe'
 $env:PATH = @($mingwBin, (Join-Path $qtPrefix 'bin'), $env:PATH) -join ';'
 
+# The Last.fm key and the Google sign-in's client, from the Windows user's
+# environment when this shell has none of its own, as build-windows.ps1 does
+# (and for the build it starts, which inherits them). Never printed.
+foreach ($name in 'MONOLIST_LASTFM_API_KEY', 'MONOLIST_LASTFM_SHARED_SECRET',
+                  'MONOLIST_GOOGLE_CLIENT_ID', 'MONOLIST_GOOGLE_CLIENT_SECRET') {
+    if (-not [Environment]::GetEnvironmentVariable($name, 'Process')) {
+        $value = [Environment]::GetEnvironmentVariable($name, 'User')
+        if ($value) { [Environment]::SetEnvironmentVariable($name, $value, 'Process') }
+        $value = $null
+    }
+}
+
 # ---------------------------------------------------------------- build
 
 if (-not $SkipBuild) {

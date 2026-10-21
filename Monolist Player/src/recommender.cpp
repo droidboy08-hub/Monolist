@@ -1,6 +1,7 @@
 #include "recommender.h"
 
 #include "appdatabase.h"
+#include "librarybackup.h"
 #include "mediaextractor.h"
 #include "playbackcontroller.h"
 #include "rec/catalog.h"
@@ -1235,6 +1236,7 @@ void Recommender::notInterested(const QVariantMap &track)
     if (m_player)
         m_player->pruneRadio();
     Q_EMIT undoable(QStringLiteral("Won't suggest “%1” again").arg(title));
+    Q_EMIT turnDownsChanged();
 }
 
 void Recommender::dontSuggestArtist(const QString &artist)
@@ -1261,6 +1263,7 @@ void Recommender::dontSuggestArtist(const QString &artist)
     if (m_player)
         m_player->pruneRadio();
     Q_EMIT undoable(QStringLiteral("Won't suggest %1 again").arg(name));
+    Q_EMIT turnDownsChanged();
 }
 
 void Recommender::undoNotInterested()
@@ -1269,14 +1272,30 @@ void Recommender::undoNotInterested()
     if (dismissal.eventId <= 0)
         return;
     // Deleting the record is the undo: it was written a moment ago, by this,
-    // and only a turn-down row with that id can go.
+    // and only a turn-down row with that id can go. What named it is read
+    // first, for the tombstone a backup's merge goes by: the row is the same
+    // on every device by its kind, song or artist, and time, never its id.
+    QString tombstone;
+    QSqlQuery named(AppDatabase::connection());
+    named.prepare(QStringLiteral(
+        "SELECT kind, video_id, title, artist, started_at FROM play_events WHERE id = ? AND kind IN (?, ?)"));
+    named.addBindValue(dismissal.eventId);
+    named.addBindValue(kNotInterested);
+    named.addBindValue(kNotInterestedArtist);
+    if (named.exec() && named.next()) {
+        tombstone = LibraryBackup::turnDownKey(named.value(0).toString(), named.value(1).toString(),
+                                               named.value(2).toString(), named.value(3).toString(),
+                                               named.value(4).toString());
+    }
     QSqlQuery remove(AppDatabase::connection());
     remove.prepare(QStringLiteral("DELETE FROM play_events WHERE id = ? AND kind IN (?, ?)"));
     remove.addBindValue(dismissal.eventId);
     remove.addBindValue(kNotInterested);
     remove.addBindValue(kNotInterestedArtist);
-    remove.exec();
+    if (remove.exec() && remove.numRowsAffected() > 0 && !tombstone.isEmpty())
+        LibraryBackup::recordRemoval(LibraryBackup::kRemovedTurnDown, tombstone);
     loadTurnedDown();
+    Q_EMIT turnDownsChanged();
 
     // Back where they stood, in the order they were taken, so each index is
     // right when its turn comes. Only into the page and the list they were
@@ -1306,6 +1325,16 @@ void Recommender::undoNotInterested()
         }
         Q_EMIT rowsEdited(shelf);
     }
+}
+
+void Recommender::reloadTurnedDown()
+{
+    loadTurnedDown();
+    // The radio asks unwanted() of every song it adds, so it learns at once;
+    // the page through its fingerprint, which counts the turn-downs.
+    if (m_player)
+        m_player->pruneRadio();
+    refresh();
 }
 
 void Recommender::setState(bool busy, const QString &message)

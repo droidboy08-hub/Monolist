@@ -21,9 +21,10 @@ ScrollPage {
     readonly property bool automatic: Library.region.length === 0
 
     // A part of the page to open on, for a link elsewhere that names one
-    // ("recommendations", "connections", "effects" for the sound effects, or
-    // "ytmusic" for the YouTube Music account's switches): scrolled to once,
-    // then said done, so the same link works again later.
+    // ("recommendations", "connections", "effects" for the sound effects,
+    // "ytmusic" for the YouTube Music account's switches, or "backup" for
+    // Backup and sync): scrolled to once, then said done, so the same link
+    // works again later.
     property string section: ""
     signal sectionRevealed()
     // Sign in on Google's page: asked of the window, which says what it
@@ -64,10 +65,41 @@ ScrollPage {
                    : section === "connections" ? connectionsHeader
                    : section === "effects" ? effectsBlock
                    : section === "signin" ? ytmRow
-                   : section === "ytmusic" ? (homeToggle.visible ? homeToggle : ytmRow) : null
+                   : section === "ytmusic" ? (homeToggle.visible ? homeToggle : ytmRow)
+                   : section === "backup" ? backupHeader : null
+        revealed = target
+        placeRevealed()
         if (target)
-            contentY = Math.max(0, Math.min(target.y - Theme.space4, contentHeight - height))
+            revealHold.restart()
         sectionRevealed()
+    }
+
+    // The part just revealed, held at the top for a moment while the page
+    // settles around it: a page built this moment is laid out again once the
+    // window takes its size, and the text above re-wraps, which left a part
+    // low on the page (Backup and sync) scrolled past at some widths. Let go
+    // as soon as the user moves the page.
+    property Item revealed: null
+
+    function placeRevealed() {
+        if (revealed)
+            contentY = Math.max(0, Math.min(revealed.y - Theme.space4, contentHeight - height))
+    }
+
+    Timer {
+        id: revealHold
+        interval: 2000
+        onTriggered: root.revealed = null
+    }
+
+    onMovementStarted: revealed = null
+    onWidthChanged: placeRevealed()
+    onHeightChanged: placeRevealed()
+    onContentHeightChanged: placeRevealed()
+
+    Connections {
+        target: root.revealed
+        function onYChanged() { root.placeRevealed() }
     }
 
     // The exported YouTube Music session. The system's own dialog, so the
@@ -900,11 +932,16 @@ ScrollPage {
                     said.push("a YouTube Music sign-in is held, waiting to be checked")
                 if (said.length > 0)
                     said[0] = said[0].charAt(0).toUpperCase() + said[0].slice(1)
+                // The library backed up to Google Drive (Backup and sync,
+                // below) is not "on this computer" alone any more.
+                var where = Backup.signedIn ? "on this computer, with a copy in your own Google Drive"
+                                            : "on this computer"
                 if (said.length === 0)
-                    return "Nothing is signed in. Monolist plays without an account, and keeps your library "
-                           + "on this computer. Connecting one would add what only an account can know."
+                    return (Backup.signedIn ? "Neither of these is connected. " : "Nothing is signed in. ")
+                           + "Monolist plays without an account, and keeps your library " + where
+                           + ". Connecting one would add what only an account can know."
                 return said.join("; ") + ". Everything else still works without an account, and your library "
-                       + "stays on this computer."
+                       + "stays " + where + "."
             }
         }
 
@@ -1479,10 +1516,162 @@ ScrollPage {
 
         HRule { width: parent.width }
 
+        // — backup and sync —
+        //
+        // The library otherwise lives on this computer alone. The owner asked
+        // (2026-10-20) for a free way to keep it with the person, with no
+        // server of ours: so the same file, kept in the user's own Google
+        // Drive, in the folder only Monolist can open, and merged on every
+        // computer that signs in; or saved and brought back by hand, which
+        // needs no account at all and works in every build.
+        SectionHeader {
+            id: backupHeader
+            width: parent.width
+            number: "07"
+            title: "Backup and sync"
+        }
+
+        // Signed in in the user's own browser, on Google's page, and asking
+        // for nothing but that folder and the email address: nothing to do
+        // with the YouTube Music sign-in above, which it never touches. While
+        // signed in the row says who and when it last synced, in one line;
+        // what stops a sync is said under it, red only when the user is the
+        // one who can end it.
+        ServiceRow {
+            id: driveRow
+
+            // What stopped the last sync, while it waits; never while one runs,
+            // which may be the one that gets past it.
+            readonly property bool problem: connected && !Backup.busy && Backup.error.length > 0
+
+            width: parent.width
+            name: "Google Drive"
+            detail: "Keeps your playlists, liked songs and listening history in a private folder in your own "
+                    + "Google Drive, so they follow you to another computer. Only Monolist can open that folder, "
+                    + "and nothing is sent to anyone else."
+            built: true
+            // A copy built without Google sign-in that still keeps an earlier
+            // copy's sign-in is not a row with nothing to do: it can still
+            // SIGN OUT, as a sign-out that failed asks to (errorAction).
+            serviceState: Backup.storedSignIn ? "error" : Backup.state
+            // "Signed in as name@gmail.com · Synced 2 minutes ago". Plain
+            // text: the address is Google's, not markup.
+            headline: connected ? "Signed in as " + Backup.email + (problem ? "" : " · " + Backup.status)
+                      : (serviceState === "expired" || Backup.storedSignIn) && Backup.email.length > 0
+                        ? "Last signed in as " + Backup.email
+                      : ""
+            statusLine: connected ? (problem ? Backup.status : "") : Backup.status
+            // Grey for the kept sign-in: a fact about this copy, and keeping
+            // it for a copy that can sync is as right as signing out.
+            alert: (needsAttention && !Backup.storedSignIn) || (problem && Backup.attention)
+            // What SIGN OUT leaves undone while there is a backup for it to
+            // leave, and where the backup's privacy policy is, small, always.
+            credit: (connected || serviceState === "expired" || Backup.storedSignIn
+                     ? "Signing out leaves the backup in your Google Drive. To delete it there: Drive’s Settings → "
+                       + "Manage apps → Monolist → Delete hidden app data. "
+                     : "")
+                    + "<a href=\"https://droidboy08-hub.github.io/Monolist/privacy.html\">Privacy policy</a>"
+            actionText: connected ? "SIGN OUT"
+                        : serviceState === "expired" ? "SIGN IN AGAIN"
+                        : serviceState === "off" ? "SIGN IN WITH GOOGLE"
+                        : serviceState === "error" ? (Backup.signOutFailed || Backup.storedSignIn ? "SIGN OUT"
+                                                                                                  : "TRY AGAIN")
+                        : ""
+            // A sign-in that could not be deleted is asked again as a SIGN
+            // OUT, never as a new sign-in; so is one this copy cannot use.
+            errorAction: Backup.signOutFailed || Backup.storedSignIn ? "disconnect" : "connect"
+            // Instead of signing in again: let go of an ended sign-in, or put
+            // a failed one away.
+            forgetText: serviceState === "expired" ? "SIGN OUT" : "DISMISS"
+            retryText: Backup.busy ? "SYNCING…" : "SYNC NOW"
+            retryEnabled: Backup.canSyncNow
+            // The browser that would not open: Google's page to paste into
+            // one by hand. A link would open by the same means that failed.
+            confirmText: Backup.browserFailed ? "COPY LINK" : ""
+            steps: [
+                "SIGN IN WITH GOOGLE opens Google’s own sign-in page in your browser. You sign in there as on any "
+                + "website; when Google lists what Monolist asks for, tick the box for its folder in your Drive (or "
+                + "Select all), then Continue. Your password goes to Google, never to Monolist.",
+                "Monolist asks for that folder and your email address, nothing more: it cannot see your other files, "
+                + "your mail or your YouTube account. It keeps the sign-in encrypted on this computer, never in the "
+                + "music database or any log.",
+                "Your library and the backup are then merged, and kept the same: a minute after you change "
+                + "something, every half hour with what you have played, and when you press SYNC NOW. Something you "
+                + "delete on one computer is deleted on the others too."
+            ]
+            onConnectRequested: Backup.signIn()
+            onCancelRequested: Backup.cancelSignIn()
+            onConfirmRequested: Backup.copySignInLink()
+            onDisconnectRequested: Backup.signOut()
+            onRetryRequested: Backup.syncNow()
+        }
+
+        // The same file by hand: saved anywhere, and brought back here or on
+        // another computer. Merged in as a sync is, so bringing back an old
+        // file never takes away what was added since.
+        Item {
+            id: backupFileRow
+            width: parent.width
+            height: Math.max(backupFileText.implicitHeight, backupFileButtons.implicitHeight)
+
+            Column {
+                id: backupFileText
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                width: parent.width - backupFileButtons.implicitWidth - Theme.space4
+                spacing: 2
+
+                Text {
+                    text: "A backup file"
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 15
+                    font.weight: Theme.weightBlack
+                    color: Theme.text
+                }
+                Text {
+                    width: parent.width
+                    text: "Save your library to a file, or bring one back. Works without signing in."
+                    wrapMode: Text.WordWrap
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 13
+                    color: Theme.neutral700
+                }
+                Text {
+                    width: parent.width
+                    text: "A file brought back is merged into your library, not put in its place."
+                    wrapMode: Text.WordWrap
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 12
+                    color: Theme.neutral700
+                    topPadding: Theme.space1
+                }
+            }
+
+            // Negative spacing lets the two buttons share one 2px rule, as a
+            // ServiceRow's do.
+            Row {
+                id: backupFileButtons
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: -Theme.ruleWidth
+
+                ActionButton {
+                    text: "EXPORT…"
+                    onClicked: Backup.exportLibrary()
+                }
+                ActionButton {
+                    text: "IMPORT…"
+                    onClicked: Backup.importLibrary()
+                }
+            }
+        }
+
+        HRule { width: parent.width }
+
         // — updates —
         SectionHeader {
             width: parent.width
-            number: "07"
+            number: "08"
             title: "Updates"
         }
 
@@ -1637,7 +1826,7 @@ ScrollPage {
         // — about —
         SectionHeader {
             width: parent.width
-            number: "08"
+            number: "09"
             title: "About"
             action: "COPY FOR A BUG REPORT →"
             onActionTriggered: About.copyReport()
@@ -1656,7 +1845,9 @@ ScrollPage {
             Note {
                 // Once an account is connected, "nothing is signed in" would
                 // no longer be true; nor while a YouTube Music session is
-                // held and being checked, which sends its cookies.
+                // held and being checked, which sends its cookies; nor, for
+                // "nothing leaves this computer", while the library is backed
+                // up to Google Drive.
                 text: "Songs, search, lyrics and artwork come from YouTube Music, LRCLIB, yt-dlp and FFmpeg"
                       + (Player.saavnEnabled ? ", and the sound from JioSaavn where it has the same song. " : ". ")
                       + (Scrobbler.state === "connected" || Account.state === "active"
@@ -1668,7 +1859,12 @@ ScrollPage {
                               + "Music account is used for; what a connected account is told is set out there."
                             : "They are fetched without an account; what a connected account is told is set out "
                               + "under Connections.")
-                         : "Nothing is signed in: no account, and nothing about you leaves this computer.")
+                           + (Backup.signedIn ? " Your library is also kept in your own Google Drive, as Backup "
+                                                + "and sync says." : "")
+                         : Backup.signedIn
+                           ? "They are fetched without an account. Your library is kept in your own Google Drive "
+                             + "too, as Backup and sync says; nothing else about you leaves this computer."
+                           : "Nothing is signed in: no account, and nothing about you leaves this computer.")
             }
             DataCredit {
                 width: parent.width

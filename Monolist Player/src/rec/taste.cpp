@@ -319,9 +319,12 @@ QVector<PlayEvent> readPlayEvents(int limit)
 {
     QVector<PlayEvent> events;
     QSqlQuery query(AppDatabase::connection());
+    // Newest by when it happened, not by row: a library merged from a backup
+    // (LibraryBackup) adds another device's older plays after this one's
+    // newer, and by id they would push out the listening of this week.
     query.prepare(QStringLiteral(
         "SELECT kind, title, artist, source, started_at, listened_ms, track_ms, label,"
-        " repeat_in_session FROM play_events ORDER BY id DESC LIMIT ?"));
+        " repeat_in_session FROM play_events ORDER BY started_at DESC, id DESC LIMIT ?"));
     query.addBindValue(limit);
     if (!query.exec())
         return events;

@@ -60,6 +60,11 @@ public:
     explicit Library(QObject *parent = nullptr);
 
     void load();
+    // Everything read again and every change signal sent, as if each thing
+    // had been changed here: for a library merged from a backup file or
+    // another device (LibraryBackup), which writes the database directly.
+    // Sends no edited(): the merge is not an edit made on this computer.
+    void reloadAll();
 
     PlaylistModel *playlists() { return &m_playlists; }
     AlbumModel *albums() { return &m_albums; }
@@ -138,13 +143,16 @@ public:
     Q_INVOKABLE void setUserName(const QString &name);
 
     // — the playlists' order —
-    // Pinned playlists sit above the rest, each group in its own order.
+    // Pinned playlists sit above the rest, each group in its own order. A
+    // pin is the playlist's own and goes with its backup; the order is this
+    // computer's (movePlaylist).
     Q_INVOKABLE void setPlaylistPinned(int playlistId, bool pinned);
     Q_INVOKABLE bool isPlaylistPinned(int playlistId) const;
     // Where one is in the list as shown (0 the first); -1 when it is not.
     Q_INVOKABLE int playlistRow(int playlistId) const;
     // One of the playlists to row `to` of the list as shown, kept within its
-    // group (the pinned or the rest), and the order kept.
+    // group (the pinned or the rest), and the order kept. Not an edit():
+    // each computer keeps the sidebar in its own order.
     Q_INVOKABLE void movePlaylist(int playlistId, int to);
 
     // — searches —
@@ -188,6 +196,13 @@ Q_SIGNALS:
     void playlistChanged();
     // History cleared, or a song taken out of it.
     void historyChanged();
+    // The user changed something a backup holds: a playlist made, renamed,
+    // pinned, deleted, or its songs added, taken out or moved; a like or a
+    // save made or undone; History cleared or a song taken out of it. What
+    // the Drive backup (DriveSync) waits on to upload. Not a setting, a
+    // search, a place opened or the playlists' order in the sidebar, none of
+    // which a backup carries.
+    void edited();
     void userChanged();
     void regionChanged();
     void videoQualityChanged();

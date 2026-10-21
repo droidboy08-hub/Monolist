@@ -69,6 +69,13 @@ Item {
     // than wait ("CHECK NOW", when it could not be reached). It asks through
     // retryRequested. None when empty.
     property string retryText: ""
+    // Whether that second button can be pressed now: not while what it asks
+    // for is already under way ("SYNCING…").
+    property bool retryEnabled: true
+    // The status line in red: by default while the row needs attention, but a
+    // connected row can have something to act on too (a backup it will not
+    // overwrite until asked).
+    property bool alert: needsAttention
     // Whatever else the open panel needs, after the steps: YouTube Music's
     // file and paste boxes. Children of the row go here.
     default property alias panelContent: extra.data
@@ -157,7 +164,7 @@ Item {
                     font.pixelSize: 13
                     // Red only when there is something to do about it; a fact
                     // about this build is not an alarm.
-                    color: root.needsAttention ? Theme.accent : Theme.neutral700
+                    color: root.alert ? Theme.accent : Theme.neutral700
                     linkColor: Theme.text
                     topPadding: headlineText.visible ? 0 : Theme.space1
                     onLinkActivated: function(link) { root.followLink(link) }
@@ -197,6 +204,7 @@ Item {
                 // is a likelier wish than letting the account go.
                 ActionButton {
                     visible: root.built && root.connected && root.retryText.length > 0
+                    enabled: root.retryEnabled
                     text: root.retryText
                     onClicked: root.retryRequested()
                 }

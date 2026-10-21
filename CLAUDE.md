@@ -69,13 +69,22 @@ owner's iPhone app (AryaMusix / "Mediano", Swift, not in this repo).
   scratch folder only, never the real Start menu or desktop), `--search-test` (a search's pages after the
   first, on a stand-in YouTube Music), `--startup-test` (opening at sign-in, on a scratch registry key; a
   scratch library never writes the real Run key), `--tray-test` (closing to the system tray: the switch, the menu), `--sleep-test` (the sleep timer on a stand-in player), `--import-test` (playlist import on stand-in sources;
-  asserts no cookie or account header is ever sent) … Each
+  asserts no cookie or account header is ever sent), `--backup-test` (the library's backup file and its merge:
+  a round trip, every merge rule both ways, a second merge changing nothing, refusals, nothing device-specific,
+  times later than now left out),
+  `--drive-test` (the Google Drive backup's sign-in, tokens and sync on stand-ins for Google and Drive, never
+  Google; asserts no cookie sent, the token to Drive alone, no redirect elsewhere, no secret in the log) … Each
   prints `N checks, 0 failed`. All must pass, except `--scrobble-send-test`,
   which needs its local stand-in (`scripts/lastfm-mock.ps1`). `MONOLIST_MPV_AO=null` plays any run to no
   sound device (and `MONOLIST_MPV_VO=null` decodes a picture to nowhere, for an engine with no surface).
 - Screenshots: `--shot <file.png> [seconds] [--shot-scroll <px>] [--quit]` (with `--view`, `--settings-section`) saves the
   window as the app draws it. Capturing the window from outside (PrintWindow) returns the last frame
-  shown, which is stale while the window is behind others.
+  shown, which is stale while the window is behind others. Give a size at launch with Qt's own
+  `-qwindowgeometry 1400x900+40+40` rather than resizing the window afterwards, which re-wraps the
+  page after `--settings-section` scrolled to its part. A shot that must show a toast keeps the window
+  in front (topmost): the toast's fade runs on the window's frames, and a window driven by posted
+  clicks from behind others may be given none, so a toast missing from a shot is not proof that none
+  was shown. Rows in a state for a look: `--ytm-demo <state>`, `--backup-demo <state>`.
 - Recommender checks (need the data): `--artist-test <EmbeddingData> <GraphData>`
   (baseline 17 graph / 5 sounds-like / 0 none, 0 leaks), `--graph-test` (22
   countries, 0 leaks), `--content-test <EmbeddingData> <report>` (0 of 19 and
@@ -139,6 +148,13 @@ owner's iPhone app (AryaMusix / "Mediano", Swift, not in this repo).
   the account that bypasses it, never retry one quickly, never write back to
   the account. 401 ends a session; 403 only rests it and has it checked. The
   evidence and the numbers: `docs/research/account-safety.md`.
+- The Google Drive backup's sign-in (`DriveAuth`, `DriveSync`, QML `Backup`) is not the YouTube Music
+  sign-in and never touches it: its own names (never `GoogleSignIn`/`SignIn`/`signin.*`), its own
+  network manager with cookies Manual both ways, secret `backup.google`, settings `backup.*`, log prefix
+  `backup:`; only `openid email drive.appdata`, never a YouTube scope; never AccountGuard (a Drive 429
+  would rest YouTube); the token to www.googleapis.com only; signing out of one leaves the other.
+  Its client id and secret come from `MONOLIST_GOOGLE_CLIENT_ID`/`_SECRET` at build time, never
+  committed; tests use `setTestClient` and loopback stand-ins only (`--drive-test`).
 - Keep everything portable: Windows-only code behind `Q_OS_WIN` with a compiling
   fallback; macOS-only code in `src/macos/`.
 - Ask before downloading or installing anything (say what, where from, size).
@@ -203,6 +219,28 @@ owner's iPhone app (AryaMusix / "Mediano", Swift, not in this repo).
   animate (DESIGN 2.7): the playing bars' animation drew the whole window at
   the screen's 180 Hz, 36% of a core. Measure frames/s with
   `QT_LOGGING_RULES=qt.scenegraph.time.renderloop=true` ("frame rendered").
+- 2026-10-20: two Google sign-ins now live in the app, and the names invite
+  mixing them: `SignIn`/`GoogleSignIn` is YouTube Music's (cookies, WebView2),
+  `Backup`/`DriveAuth` is the Drive backup's (OAuth in the browser, scope
+  `drive.appdata`). Keep them apart (Rules). Why: the YouTube Music session is
+  the one the owner must not risk, and AccountGuard counts every call it sees
+  against the account's hourly share and pauses every use of the account for
+  an hour or more on a 429 or a 403, so Drive going through it would spend
+  that share and let a busy Drive stop the account; and a Drive request sent
+  with YouTube's cookies would show that session to another Google service
+  for nothing. Signing out of either leaves the other signed in.
+- 2026-10-21: the backup merge (`LibraryBackup::merge`) compares times from
+  other computers, so never take one as true because it parses: a clock
+  running hours ahead (a dual-boot PC keeping UTC as local time) wins every
+  comparison until real time catches up, and a Clear history it dated
+  "tomorrow" emptied History on every computer at every merge. Anything later
+  than now + 10 min is left out of a file read or written (dropped, never
+  moved to now: a play's time is its identity), DriveSync stops syncing when
+  Google's Date is more than 5 min from this clock, and History is cleared
+  only by a tombstone the merge has just brought. And never merge a playlist
+  by taking the newer copy whole: a pin on a computer that had not synced yet
+  threw away songs added on another. Songs merge as a set; taking one out
+  writes a `playlistEntry` tombstone (Library::removeFromPlaylist).
 
 ## Where things stand (2026-09-29)
 

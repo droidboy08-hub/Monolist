@@ -66,6 +66,15 @@ public:
     // pointer, as a right click on a system title bar shows it. Windows only.
     Q_INVOKABLE void showSystemMenu();
 
+    // The window in front and active when another program has the
+    // foreground, for a return the user asked for (the browser coming back
+    // from Google's sign-in). Windows lets only the program in front give the
+    // foreground away, and only flashes the taskbar button of one that asks
+    // for it from behind: for the moment it asks, this window's thread shares
+    // the foreground thread's input, which is what Qt's AlwaysActivateWindow
+    // does. Elsewhere the window manager decides, and requestActivate() is all.
+    static void takeForeground(QWindow *window);
+
     // A double click on the title bar. True when the platform decided what it
     // does (macOS: zoom, minimise or nothing, as the user has set it); false
     // leaves it to QML, which maximises or restores.

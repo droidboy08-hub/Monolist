@@ -1424,6 +1424,17 @@ ApplicationWindow {
         function onNotice(text) { window.say(text) }
     }
 
+    // The library's backup: what Export or Import did (or why not), and what
+    // the first sync after signing in, or SYNC NOW, brought in. Background
+    // syncs say nothing. Each is the answer to something the user did, and
+    // can name what was removed as well as added, so it stays long enough to
+    // read (OK only puts it away). The first sync's stays until OK: it can
+    // come while the window is still behind the browser it was signed in in.
+    Connections {
+        target: Backup
+        function onNotice(text, sticky) { window.say(text, "OK", null, sticky === true) }
+    }
+
     // The sound effects' answers: that they would not start, and are off
     // until the next launch.
     Connections {

@@ -34,6 +34,23 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+# ---------------------------------------------------------------- credentials
+
+# The Last.fm key and the Google sign-in's client belong to whoever builds the
+# app, and are never committed (cmake/apicredentials.cmake). Kept once in the
+# Windows user's environment ([Environment]::SetEnvironmentVariable(name,
+# value, 'User')), they reach a build started from any shell, including one
+# opened before they were set. What this process already has wins; nothing
+# is printed but CMake's own line saying whether the build has them.
+foreach ($name in 'MONOLIST_LASTFM_API_KEY', 'MONOLIST_LASTFM_SHARED_SECRET',
+                  'MONOLIST_GOOGLE_CLIENT_ID', 'MONOLIST_GOOGLE_CLIENT_SECRET') {
+    if (-not [Environment]::GetEnvironmentVariable($name, 'Process')) {
+        $value = [Environment]::GetEnvironmentVariable($name, 'User')
+        if ($value) { [Environment]::SetEnvironmentVariable($name, $value, 'Process') }
+        $value = $null
+    }
+}
+
 # --------------------------------------------------------------- source path
 
 $source = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).ProviderPath

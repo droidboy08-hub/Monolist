@@ -300,6 +300,29 @@ void WindowChrome::showSystemMenu()
 #endif
 }
 
+void WindowChrome::takeForeground(QWindow *window)
+{
+    if (!window)
+        return;
+#ifdef Q_OS_WIN
+    const HWND hwnd = handleOf(window);
+    if (!hwnd)
+        return;
+    if (IsIconic(hwnd))
+        ShowWindow(hwnd, SW_RESTORE);
+    const HWND front = GetForegroundWindow();
+    const DWORD frontThread = front ? GetWindowThreadProcessId(front, nullptr) : 0;
+    const DWORD thread = GetCurrentThreadId();
+    const bool joined = frontThread != 0 && frontThread != thread && AttachThreadInput(frontThread, thread, TRUE);
+    SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+    BringWindowToTop(hwnd);
+    SetForegroundWindow(hwnd);
+    if (joined)
+        AttachThreadInput(frontThread, thread, FALSE);
+#endif
+    window->requestActivate();
+}
+
 bool WindowChrome::titleBarDoubleClicked()
 {
 #ifdef Q_OS_MACOS

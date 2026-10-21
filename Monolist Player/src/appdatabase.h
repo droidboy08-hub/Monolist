@@ -37,8 +37,9 @@ private:
     static bool sound(QSqlDatabase &db);
     // A dated copy of a sound library (monolist.backup-yyyyMMdd.db), made at
     // most once a day after the full check, the newest seven kept, for
-    // open() to fall back on.
-    static void keepBackup(QSqlDatabase &db);
+    // open() to fall back on; `again` makes today's afresh (migrate(), when
+    // a change to the schema has just been made).
+    static void keepBackup(QSqlDatabase &db, bool again = false);
     static bool hasColumn(const QString &table, const QString &column);
     // One-time removal of the interface prototype's invented content.
     static void removeSampleData();

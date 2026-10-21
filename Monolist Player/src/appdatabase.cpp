@@ -8,6 +8,7 @@
 #include <QSqlError>
 #include <QSqlQuery>
 #include <QStandardPaths>
+#include <QUuid>
 #include <QVariant>
 
 namespace {
@@ -15,6 +16,8 @@ const char *kConnectionName = "monolist_local";
 const char *kProbeName = "monolist_check";
 QString s_recoveryNote;
 QString s_recoveryFolder;
+// The launch's check passed (open()): what migrate() may back up again.
+bool s_launchSound = false;
 
 // How many daily copies of the library are kept (monolist.backup-yyyyMMdd.db).
 constexpr int kBackupsKept = 7;
@@ -112,10 +115,12 @@ bool AppDatabase::sound(QSqlDatabase &db)
 }
 
 // Once a day, after the full check: a dated copy, the newest seven kept.
-void AppDatabase::keepBackup(QSqlDatabase &db)
+// `again`: whatever was made today, as a change to the schema means the copy
+// made earlier at this launch would restore what is no longer the library.
+void AppDatabase::keepBackup(QSqlDatabase &db, bool again)
 {
     const QFileInfoList kept = dailyBackups();
-    if (!kept.isEmpty() && kept.first().lastModified().secsTo(QDateTime::currentDateTime()) < 20 * 3600)
+    if (!again && !kept.isEmpty() && kept.first().lastModified().secsTo(QDateTime::currentDateTime()) < 20 * 3600)
         return;
     if (checkHealth(db, QStringLiteral("PRAGMA integrity_check")) != Health::Sound) {
         qWarning("Monolist: the library did not pass the full check; no backup taken today");
@@ -217,7 +222,8 @@ bool AppDatabase::open()
     }
     // Backed up only on a launch whose check passed: never a library just
     // put back, begun afresh, or not checked.
-    if (health == Health::Sound)
+    s_launchSound = health == Health::Sound;
+    if (s_launchSound)
         keepBackup(db);
     QSqlQuery pragma(db);
     pragma.exec(QStringLiteral("PRAGMA foreign_keys = ON"));
@@ -277,6 +283,22 @@ void AppDatabase::createSchema()
         "CREATE TABLE IF NOT EXISTS settings ("
         " key TEXT PRIMARY KEY,"
         " value TEXT NOT NULL)"));
+
+    // What was taken out of the library on purpose, and when (UTC, as
+    // datetime('now') writes it): a like or a save undone, a playlist
+    // deleted, a song taken out of History, History cleared, a "Not
+    // interested" taken back. The rows themselves are gone, so without these
+    // a backup made before (LibraryBackup), or another device's copy, would
+    // bring them back at the next merge. `kind` is like, saved, playlist,
+    // history, historyCleared or turnDown; `key` the video id, browse id,
+    // playlist uid, '' for historyCleared, or LibraryBackup::turnDownKey's.
+    // One row a thing, the latest time kept.
+    q.exec(QStringLiteral(
+        "CREATE TABLE IF NOT EXISTS sync_removed ("
+        " kind TEXT NOT NULL,"
+        " key TEXT NOT NULL,"
+        " at TEXT NOT NULL,"
+        " PRIMARY KEY (kind, key))"));
 
     // Every song played, library or not, newest first, for "Recently played".
     // Keyed by video id, so replaying a song moves it up instead of repeating it.
@@ -666,6 +688,50 @@ void AppDatabase::migrate()
         q.exec(QStringLiteral("ALTER TABLE playlists ADD COLUMN created_at TEXT NOT NULL DEFAULT ''"));
     if (!hasColumn(QStringLiteral("playlists"), QStringLiteral("updated_at")))
         q.exec(QStringLiteral("ALTER TABLE playlists ADD COLUMN updated_at TEXT NOT NULL DEFAULT ''"));
+
+    // A playlist's name for good, the same on every device its backup
+    // reaches (LibraryBackup): the row's id is only this database's, and a
+    // name can be shared or changed. createPlaylist gives each new one a
+    // random one. A playlist made before is given one here that comes from
+    // what it was made with, its id and when (both fixed from the start):
+    // the same again whenever this runs on the same rows, which it does
+    // after a damaged library is put back from a daily copy made before the
+    // column existed, and on a library copied to another computer before.
+    // A random one there would make every playlist a new one, and the merge
+    // would bring each in twice, here and on every computer synced.
+    const bool addingUids = !hasColumn(QStringLiteral("playlists"), QStringLiteral("uid"));
+    if (addingUids)
+        q.exec(QStringLiteral("ALTER TABLE playlists ADD COLUMN uid TEXT NOT NULL DEFAULT ''"));
+    {
+        QList<QPair<int, QString>> unnamed;
+        q.exec(QStringLiteral("SELECT id, created_at FROM playlists WHERE uid = ''"));
+        while (q.next())
+            unnamed.append({ q.value(0).toInt(), q.value(1).toString() });
+        // Monolist's own namespace for these, never to change: a uuid made
+        // once for it.
+        static const QUuid kPlaylistNamespace(QStringLiteral("{6d3c1f0e-5b7a-4e2f-9c41-8a0b7f2d6e15}"));
+        QSqlQuery name(connection());
+        name.prepare(QStringLiteral("UPDATE playlists SET uid = ? WHERE id = ?"));
+        for (const auto &[id, createdAt] : std::as_const(unnamed)) {
+            // With no time (none the app ever made), the id alone would
+            // join unrelated playlists of two computers into one: a random
+            // uid then, as the lesser harm.
+            const QUuid uid = createdAt.isEmpty()
+                                  ? QUuid::createUuid()
+                                  : QUuid::createUuidV5(kPlaylistNamespace,
+                                                        QStringLiteral("playlist:%1|%2").arg(id).arg(createdAt));
+            name.addBindValue(uid.toString(QUuid::WithoutBraces));
+            name.addBindValue(id);
+            name.exec();
+        }
+    }
+    // The daily copy was made before this ran (open()), so on the launch
+    // that adds the column the newest copy has no uids: another is made now,
+    // in its place, so the copy put back after damage already has them.
+    if (addingUids && s_launchSound) {
+        QSqlDatabase db = connection();
+        keepBackup(db, /*again=*/true);
+    }
 
     // Saved albums and playlists open their YouTube Music page.
     if (!hasColumn(QStringLiteral("albums"), QStringLiteral("browse_id"))) {

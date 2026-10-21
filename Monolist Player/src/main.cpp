@@ -23,6 +23,7 @@
 #include "artistlinks.h"
 #include "artistselftest.h"
 #include "artworkcache.h"
+#include "backupselftest.h"
 #include "catalog.h"
 #include "connectionselftest.h"
 #include "lastfm.h"
@@ -31,6 +32,8 @@
 #include "secretstore.h"
 #include "downloadmanager.h"
 #include "downloadselftest.h"
+#include "driveselftest.h"
+#include "drivesync.h"
 #include "innertube.h"
 #include "library.h"
 #include "libraryeditselftest.h"
@@ -323,6 +326,19 @@ int main(int argc, char *argv[])
         // invented songs (libraryeditselftest.cpp); in MONOLIST_DATA_DIR only.
         if (arguments.contains(QStringLiteral("--library-edit-test")))
             return runLibraryEditSelfTest(&library) == 0 ? 0 : 1;
+        // The library's backup file and its merge — what the library keeps
+        // for it, a library exported and brought back, every merge rule, a
+        // newer or a foreign file refused, nothing of this computer's in it,
+        // and Export and Import as Settings calls them — on invented songs,
+        // with no network (backupselftest.cpp); in MONOLIST_DATA_DIR only.
+        if (arguments.contains(QStringLiteral("--backup-test")))
+            return runBackupSelfTest(&library) == 0 ? 0 : 1;
+        // The Google Drive backup — the sign-in in the browser, its tokens,
+        // the sync with another computer's file, backoff and signing out —
+        // against stand-ins on this computer for Google and Drive, never
+        // Google itself (driveselftest.cpp); in MONOLIST_DATA_DIR only.
+        if (arguments.contains(QStringLiteral("--drive-test")))
+            return runDriveSelfTest(&library) == 0 ? 0 : 1;
         // How a song that has begun is kept playing — a refused link asked
         // for afresh, a rescue link for one play, a stream cut short picked
         // up where it stopped, a refused file streamed, the three-in-a-row
@@ -778,6 +794,32 @@ int main(int argc, char *argv[])
     importer.load();
     recommender.setCoversPaused(importer.busy());
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Importer",  &importer);
+    // The library's backup: a file saved and brought back from Settings, and
+    // the same file kept in the user's own Google Drive. Told of every change
+    // a backup carries — an edit to the library, a turn-down, a play — which
+    // is what the Drive backup waits on to upload: an edit a minute later, a
+    // play with the next sync that uploads (the half-hourly one at the
+    // latest), since one a song would send the whole file each time.
+    DriveSync driveSync(&library);
+    driveSync.setRecommender(&recommender);
+    QObject::connect(&library, &Library::edited, &driveSync, &DriveSync::noteLibraryEdited);
+    QObject::connect(&player, &PlaybackController::playRecorded, &driveSync, &DriveSync::notePlayed);
+    QObject::connect(&recommender, &Recommender::turnDownsChanged, &driveSync, &DriveSync::noteLibraryEdited);
+    // --backup-demo <state>: the Google Drive row in that state (off,
+    // waiting, nobrowser, finishing, synced, syncing, offline, slowed,
+    // unreadable, newer, clock, expired, denied, noscope, signedout, nostore,
+    // nobuild, nobuildsignedin), with an invented account and nothing
+    // stored, read or sent, for a look or a screenshot (with
+    // --settings-section backup).
+    if (const int demoFlag = int(app.arguments().indexOf(QStringLiteral("--backup-demo")));
+            demoFlag >= 0 && demoFlag + 1 < app.arguments().size()) {
+        if (!driveSync.showDemo(app.arguments().at(demoFlag + 1)))
+            qWarning("Monolist: --backup-demo does not know that state");
+    }
+    // Signed in at the last run: the first sync 15 s in, then every half
+    // hour and after edits.
+    driveSync.start();
+    qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Backup",    &driveSync);
     qmlRegisterUncreatableType<ImportRowModel>(
         "Monolist.Backend", 1, 0, "ImportRowModel",
         QStringLiteral("Obtained from Importer.rows"));
@@ -883,6 +925,7 @@ int main(int argc, char *argv[])
         else
             window->show();
         googleSignIn.setOwner(window);
+        driveSync.setOwner(window);
         // Whichever window is in use, back and in front (Main.qml's
         // bringBack): from the tray's icon, or a second start of Monolist.
         // The tray's Open Monolist is the full window whatever was in use.
@@ -1476,6 +1519,13 @@ int main(int argc, char *argv[])
         qWarning("diag: Last.fm key %s; secret store: %s", lastFm.hasKey() ? "present" : "absent",
                  qPrintable(SecretStore::available() ? SecretStore::backendName()
                                                      : SecretStore::unavailableReason()));
+        // Never a token or the account: whether there is a client and a
+        // sign-in, and how the last sync went.
+        qWarning("diag: Google Drive backup %s, client %s%s", qPrintable(driveSync.state()),
+                 driveSync.hasClient() ? "present" : "absent",
+                 driveSync.lastSyncedAt().isValid()
+                     ? qPrintable(QStringLiteral(", last synced ") + driveSync.lastSyncedAt().toString(Qt::ISODate))
+                     : "");
         // Never the session key: whether there is a sign-in, and what waits.
         qWarning("diag: Last.fm %s%s, scrobbling %s, %d waiting", qPrintable(scrobbler.state()),
                  scrobbler.accountName().isEmpty() ? "" : qPrintable(QStringLiteral(" as ") + scrobbler.accountName()),

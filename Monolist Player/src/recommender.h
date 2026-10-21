@@ -204,8 +204,14 @@ public Q_SLOTS:
     // "Don't suggest <artist>": the same, for everything by them.
     void dontSuggestArtist(const QString &artist);
     // Takes the last of those two back, while the toast still offers it:
-    // the record goes, and the rows come back where they were.
+    // the record goes, and the rows come back where they were. A tombstone
+    // is kept for it (LibraryBackup::turnDownKey), so a backup made in
+    // between does not turn the song down again at its next merge.
     void undoNotInterested();
+    // What was turned down read again from play_events, and the page brought
+    // up to date: for a library merged from a backup (LibraryBackup), whose
+    // turn-downs are written straight into the database.
+    void reloadTurnedDown();
 
 public:
     // A shelf's rows as they are now, after anything turned down.
@@ -245,6 +251,9 @@ Q_SIGNALS:
     void notice(const QString &text);
     // A line for the toast that can be taken back with undoNotInterested().
     void undoable(const QString &text);
+    // A turn-down recorded or taken back: something a backup carries
+    // changed (DriveSync waits on it, with Library::edited).
+    void turnDownsChanged();
     // The worker holds exactly what the settings name, with no other load
     // queued behind: any file read before is closed and unmapped.
     void dataLoaded();

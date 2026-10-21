@@ -4,6 +4,7 @@
 #include <QHash>
 #include "appdatabase.h"
 #include "innertube.h"
+#include "librarybackup.h"
 
 #include <QClipboard>
 #include <QGuiApplication>
@@ -11,6 +12,7 @@
 #include <QRegularExpression>
 #include <QSqlError>
 #include <QSqlQuery>
+#include <QUuid>
 #include <QVariant>
 
 #if defined(Q_OS_WIN)
@@ -68,6 +70,16 @@ QList<SearchResultModel::Item> readSongs(QSqlQuery &query, bool withEntryId)
     return items;
 }
 
+// A playlist's uid (LibraryBackup's name for it on every device); empty when
+// there is no such playlist.
+QString playlistUid(int playlistId)
+{
+    QSqlQuery q(AppDatabase::connection());
+    q.prepare(QStringLiteral("SELECT uid FROM playlists WHERE id = ?"));
+    q.addBindValue(playlistId);
+    return q.exec() && q.next() ? q.value(0).toString() : QString();
+}
+
 // The new entry's id, or 0 when it could not be added.
 int insertEntry(int playlistId, const QString &videoId, const QVariantMap &track)
 {
@@ -90,7 +102,24 @@ int insertEntry(int playlistId, const QString &videoId, const QVariantMap &track
         qWarning("Monolist: could not add to a playlist: %s", qPrintable(q.lastError().text()));
         return 0;
     }
-    return qMax(1, q.lastInsertId().toInt());
+    const int entry = qMax(1, q.lastInsertId().toInt());
+    // Put back in the very second it was taken out, the song would lose to
+    // its tombstone, which an entry has to be strictly later than to stay in
+    // (LibraryBackup): that one goes. An older one stays, and is outlived.
+    const QString uid = playlistUid(playlistId);
+    if (!uid.isEmpty())
+        LibraryBackup::withdrawRemoval(LibraryBackup::kRemovedPlaylistEntry, LibraryBackup::entryKey(uid, videoId));
+    return entry;
+}
+
+// A song taken out of a playlist on purpose, kept with when: a copy of the
+// playlist made before, merged later from a backup or another computer,
+// would otherwise put it back.
+void recordEntryRemoval(int playlistId, const QString &videoId)
+{
+    const QString uid = playlistUid(playlistId);
+    if (!uid.isEmpty() && !videoId.isEmpty())
+        LibraryBackup::recordRemoval(LibraryBackup::kRemovedPlaylistEntry, LibraryBackup::entryKey(uid, videoId));
 }
 
 void markUpdated(int playlistId)
@@ -159,14 +188,20 @@ QVariantList Library::songArtists() const
 
 void Library::setPlaylistPinned(int playlistId, bool pinned)
 {
+    // A pin is part of the playlist, as its name is, so it moves the time a
+    // backup's merge compares (LibraryBackup); only when it really changed.
     QSqlQuery q(AppDatabase::connection());
-    q.prepare(QStringLiteral("UPDATE playlists SET pinned = ? WHERE id = ?"));
+    q.prepare(QStringLiteral(
+        "UPDATE playlists SET pinned = ?, updated_at = datetime('now') WHERE id = ? AND pinned <> ?"));
     q.addBindValue(pinned ? 1 : 0);
     q.addBindValue(playlistId);
-    q.exec();
+    q.addBindValue(pinned ? 1 : 0);
+    const bool changed = q.exec() && q.numRowsAffected() > 0;
     m_playlists.reload();
     touch();
     Q_EMIT notice(pinned ? QStringLiteral("Pinned to the top") : QStringLiteral("Unpinned"));
+    if (changed)
+        Q_EMIT edited();
 }
 
 bool Library::isPlaylistPinned(int playlistId) const
@@ -370,6 +405,18 @@ void Library::load()
     reloadSaved();
     reloadHistory();
     reloadPlaylistSongs();
+}
+
+void Library::reloadAll()
+{
+    load();
+    // The Songs tab's list too, which is otherwise read only as it is
+    // opened: it may be open now.
+    reloadSongs();
+    if (m_openPlaylistId != 0)
+        reloadOpenPlaylist();
+    Q_EMIT likesChanged();
+    Q_EMIT historyChanged();
 }
 
 void Library::touch()
@@ -581,16 +628,19 @@ int Library::createPlaylist(const QString &requested)
 
     QSqlQuery q(AppDatabase::connection());
     q.prepare(QStringLiteral(
-        "INSERT INTO playlists (position, name, track_count, created_at, updated_at)"
+        "INSERT INTO playlists (position, name, track_count, created_at, updated_at, uid)"
         " SELECT (SELECT COALESCE(MAX(position) + 1, 0) FROM playlists), ?, 0,"
-        " datetime('now'), datetime('now')"));
+        " datetime('now'), datetime('now'), ?"));
     q.addBindValue(name);
+    // Its name on every device a backup reaches (appdatabase.cpp, migrate).
+    q.addBindValue(QUuid::createUuid().toString(QUuid::WithoutBraces));
     if (!q.exec()) {
         qWarning("Monolist: could not create a playlist: %s", qPrintable(q.lastError().text()));
         return 0;
     }
     const int id = q.lastInsertId().toInt();
     m_playlists.reload();
+    Q_EMIT edited();
     return id;
 }
 
@@ -609,6 +659,7 @@ void Library::renamePlaylist(int playlistId, const QString &name)
         m_playlist.insert(QStringLiteral("name"), trimmed);
         Q_EMIT playlistChanged();
     }
+    Q_EMIT edited();
 }
 
 void Library::deletePlaylist(int playlistId)
@@ -618,6 +669,13 @@ void Library::deletePlaylist(int playlistId)
         return;
     QSqlDatabase db = AppDatabase::connection();
     db.transaction();
+    // Its uid kept as deleted, in the same transaction as the delete: a
+    // backup made before, merged later, would otherwise bring it back.
+    QSqlQuery uid(db);
+    uid.prepare(QStringLiteral("SELECT uid FROM playlists WHERE id = ?"));
+    uid.addBindValue(playlistId);
+    if (uid.exec() && uid.next() && !uid.value(0).toString().isEmpty())
+        LibraryBackup::recordRemoval(LibraryBackup::kRemovedPlaylist, uid.value(0).toString());
     QSqlQuery songs(db);
     songs.prepare(QStringLiteral("DELETE FROM playlist_tracks WHERE playlist_id = ?"));
     songs.addBindValue(playlistId);
@@ -633,6 +691,7 @@ void Library::deletePlaylist(int playlistId)
         reloadOpenPlaylist();
     reloadPlaylistSongs();
     Q_EMIT notice(QStringLiteral("Deleted “%1”").arg(name));
+    Q_EMIT edited();
 }
 
 QString Library::playlistName(int playlistId) const
@@ -669,6 +728,7 @@ bool Library::addToPlaylist(int playlistId, const QVariantMap &track)
         reloadOpenPlaylist();
     reloadPlaylistSongs();
     Q_EMIT notice(QStringLiteral("Added to %1").arg(name));
+    Q_EMIT edited();
     return true;
 }
 
@@ -708,6 +768,7 @@ int Library::addAllToPlaylist(int playlistId, const QVariantList &tracks)
         if (playlistId == m_openPlaylistId)
             reloadOpenPlaylist();
         reloadPlaylistSongs();
+        Q_EMIT edited();
     }
     Q_EMIT notice(added == 0 ? QStringLiteral("Already in %1").arg(name)
                 : added == 1 ? QStringLiteral("Added to %1").arg(name)
@@ -754,24 +815,34 @@ QList<int> Library::addImported(int playlistId, const QVariantList &tracks)
         if (playlistId == m_openPlaylistId)
             reloadOpenPlaylist();
         reloadPlaylistSongs();
+        Q_EMIT edited();
     }
     return entries;
 }
 
 void Library::removeFromPlaylist(int playlistId, int entryId)
 {
+    // Which song it was, for its tombstone: an entry id is only this
+    // database's, the playlist's uid and the video id are every device's.
+    QSqlQuery which(AppDatabase::connection());
+    which.prepare(QStringLiteral("SELECT video_id FROM playlist_tracks WHERE id = ? AND playlist_id = ?"));
+    which.addBindValue(entryId);
+    which.addBindValue(playlistId);
+    const QString videoId = which.exec() && which.next() ? which.value(0).toString() : QString();
     QSqlQuery q(AppDatabase::connection());
     q.prepare(QStringLiteral("DELETE FROM playlist_tracks WHERE id = ? AND playlist_id = ?"));
     q.addBindValue(entryId);
     q.addBindValue(playlistId);
     if (!q.exec() || q.numRowsAffected() == 0)
         return;
+    recordEntryRemoval(playlistId, videoId);
     markUpdated(playlistId);
     m_playlists.reload();
     if (playlistId == m_openPlaylistId)
         reloadOpenPlaylist();
     reloadPlaylistSongs();
     Q_EMIT notice(QStringLiteral("Removed from %1").arg(playlistName(playlistId)));
+    Q_EMIT edited();
 }
 
 // The playlist ends numbered 0, 1, 2… in its new order, rather than the one
@@ -846,6 +917,7 @@ void Library::movePlaylistEntry(int playlistId, int entryId, int toIndex)
     }
     if (mosaicChanged)
         m_playlists.reload();
+    Q_EMIT edited();
 }
 
 QVariantList Library::playlistTracksFor(int playlistId) const
@@ -1021,6 +1093,16 @@ bool Library::storeLike(const QVariantMap &track, bool liked)
         return false;
     }
 
+    // What a backup's merge goes by (LibraryBackup): an unlike is kept as
+    // a tombstone, whatever is known of the song, so a copy of the library
+    // made before it cannot like the song again. A like in the very second
+    // of one would lose to it, since the newer has to be strictly later, so
+    // such a tombstone goes; an older one stays and is simply outlived.
+    if (liked)
+        LibraryBackup::withdrawRemoval(LibraryBackup::kRemovedLike, videoId);
+    else
+        LibraryBackup::recordRemoval(LibraryBackup::kRemovedLike, videoId);
+
     // What the recommender learns from, recorded here because every heart in
     // the app arrives here — the player's, a track list's, a menu's. It used
     // to be recorded by the player alone, so a like from a list never counted
@@ -1041,6 +1123,7 @@ bool Library::storeLike(const QVariantMap &track, bool liked)
     reloadLiked();
     touch();
     Q_EMIT likesChanged();
+    Q_EMIT edited();
     return true;
 }
 
@@ -1074,14 +1157,17 @@ void Library::removeFromLibrary(const QVariantMap &track)
         drop.addBindValue(videoId);
         if (!drop.exec())
             qWarning("Monolist: could not remove from playlists: %s", qPrintable(drop.lastError().text()));
-        for (const int playlistId : std::as_const(playlistIds))
+        for (const int playlistId : std::as_const(playlistIds)) {
+            recordEntryRemoval(playlistId, videoId);
             markUpdated(playlistId);
+        }
         m_playlists.reload();
         if (playlistIds.contains(m_openPlaylistId))
             reloadOpenPlaylist();
     }
     reloadPlaylistSongs();
     Q_EMIT notice(QStringLiteral("Removed from your library"));
+    Q_EMIT edited();
 }
 
 void Library::copyLink(const QString &url)
@@ -1158,10 +1244,17 @@ void Library::setSaved(const QVariantMap &page, bool saved)
         qWarning("Monolist: could not save to the library: %s", qPrintable(write.lastError().text()));
         return;
     }
+    // As for a like (storeLike): an unsave kept, a save in its second
+    // taking its place.
+    if (saved)
+        LibraryBackup::withdrawRemoval(LibraryBackup::kRemovedSaved, browseId);
+    else
+        LibraryBackup::recordRemoval(LibraryBackup::kRemovedSaved, browseId);
 
     reloadSaved();
     touch();
     Q_EMIT notice(saved ? QStringLiteral("Saved to your library") : QStringLiteral("Removed from your library"));
+    Q_EMIT edited();
 }
 
 // ------------------------------------------------------------------ history
@@ -1186,9 +1279,14 @@ void Library::clearHistory()
     // JioSaavn's remembered answers name every song played or queued next:
     // a cache, but one that would outlive the history it mirrors.
     q.exec(QStringLiteral("DELETE FROM saavn_matches"));
+    // And on every device the backup reaches: what a merge derives History
+    // from is the plays (play_events, kept here too), so the clearing is
+    // kept with its time and the plays before it stay out of History there.
+    LibraryBackup::recordRemoval(LibraryBackup::kRemovedHistoryCleared, QString());
     reloadHistory();
     Q_EMIT historyChanged();
     Q_EMIT notice(QStringLiteral("History cleared"));
+    Q_EMIT edited();
 }
 
 // As Clear history does for everything, for one song: its row in Recently
@@ -1208,7 +1306,10 @@ void Library::removeFromHistory(const QString &videoId)
         "DELETE FROM history WHERE track_id IN (SELECT id FROM tracks WHERE source_id = ?)"));
     plays.addBindValue(videoId);
     plays.exec();
+    // The same for one song, as Clear history is kept.
+    LibraryBackup::recordRemoval(LibraryBackup::kRemovedHistory, videoId);
     reloadHistory();
     Q_EMIT historyChanged();
     Q_EMIT notice(QStringLiteral("Removed from your history"));
+    Q_EMIT edited();
 }

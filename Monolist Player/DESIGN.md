@@ -382,6 +382,33 @@ nothing at all.
   songs arrive, so it is where the ones that did not are settled. Its pause
   is the user's alone: while it rests on a refusal, or waits on the hour's
   searches, it says until when, and offers no way to hurry it.
+* **Backup and sync is a section of Settings of its own, after Connections.**
+  Two rows: Google Drive, a service row like Last.fm's and YouTube Music's
+  (SIGN IN WITH GOOGLE; CANCEL, with the steps open, while the browser has
+  it; SYNC NOW and SIGN OUT while signed in; SIGN IN AGAIN when the sign-in
+  has ended), and A backup file, with EXPORT… and IMPORT… side by side on one
+  shared rule. Signed in, one bold line says who and when: "Signed in as
+  name@gmail.com · Synced 2 minutes ago". What stopped a sync goes under it,
+  grey while waiting will get past it (no network, a busy Drive: with the time
+  it tries again), red only when the user is the one who can end it (a backup
+  it will not overwrite, and then what would end it; a full Drive; this
+  computer's clock hours off). A build with no Google client, or a computer
+  with nowhere safe to keep the sign-in, says so on the row and opens the
+  steps instead (no dead button), and the file still works; one that still
+  keeps an earlier copy's sign-in offers SIGN OUT, in grey. A browser that
+  would not open gets COPY LINK beside the steps, never a link that opens the
+  same way. The answers to Export, Import and SYNC NOW are toasts that stay
+  six seconds, with OK, since they name what was removed (History's rows
+  among it) as well as what was added, and call a playlist that only changed
+  changed, not new; the first sync's after signing in stays until OK, since
+  it can come while the window is still behind the browser. A sync in the
+  background says nothing. The privacy policy is a small link in the row's
+  fine print, after how to delete the backup from Drive while there is one.
+  *Why.* It is the user's own library, not an account the app uses, so it is
+  not among the Connections; and it is useful with no account at all, so the
+  file stands beside the Drive row, not under it. A sync is a promise kept in
+  the background: at rest the row shows its last success, and it stays quiet
+  until something needs a person.
 * **Closing keeps the music: the window goes to the tray.** As Spotify does it,
   unless Settings turns it off; the icon by the clock brings it back, and its
   menu has the song, play, next, previous, the window, the mini player and

@@ -48,6 +48,17 @@ qt_add_executable(monolist
     src/library.h                  src/library.cpp
     # What the song and queue menus change, and its test (--library-edit-test).
     src/libraryeditselftest.h      src/libraryeditselftest.cpp
+    # The library as one file, merged on every device (LibraryBackup): what
+    # Settings' Export and Import and the Google Drive backup (DriveSync, the
+    # Backup singleton) write and read, and its test (--backup-test).
+    src/librarybackup.h            src/librarybackup.cpp
+    src/drivesync.h                src/drivesync.cpp
+    src/backupselftest.h           src/backupselftest.cpp
+    # The Google Drive backup's own sign-in (loopback PKCE, nothing of the
+    # YouTube Music sign-in's), and the sync's test on stand-ins for Google
+    # (--drive-test).
+    src/driveauth.h                src/driveauth.cpp
+    src/driveselftest.h            src/driveselftest.cpp
     src/playlistmodel.h            src/playlistmodel.cpp
     src/albummodel.h               src/albummodel.cpp
     src/trackmodel.h               src/trackmodel.cpp
@@ -196,30 +207,43 @@ if(WIN32)
     target_link_libraries(monolist PRIVATE crypt32)
 endif()
 
-# The Last.fm API account belongs to whoever builds the app and is never
-# committed. Set MONOLIST_LASTFM_API_KEY and MONOLIST_LASTFM_SHARED_SECRET in
-# the environment (or pass both with -D) and they are written to
+# The Last.fm API account and the Google sign-in's OAuth client belong to
+# whoever builds the app and are never committed. Set
+# MONOLIST_LASTFM_API_KEY and MONOLIST_LASTFM_SHARED_SECRET, and
+# MONOLIST_GOOGLE_CLIENT_ID and MONOLIST_GOOGLE_CLIENT_SECRET, in the
+# environment (or pass a pair with -D) and they are written to
 # generated/apicredentials.h in the build tree; without them the app builds all
-# the same and says it has no Last.fm key. Neither value is ever printed.
+# the same and says it has no Last.fm key, or no Google sign-in. No value is
+# ever printed. build-windows.ps1 also finds them in the Windows user's
+# environment when the shell it runs in has none.
 set(MONOLIST_APICREDENTIALS "${CMAKE_CURRENT_BINARY_DIR}/generated/apicredentials.h")
 set(MONOLIST_APICREDENTIALS_SCRIPT
     -DTEMPLATE=${CMAKE_CURRENT_SOURCE_DIR}/src/apicredentials.h.in
     -DOUTPUT=${MONOLIST_APICREDENTIALS}
     -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/apicredentials.cmake)
-if(DEFINED MONOLIST_LASTFM_API_KEY OR DEFINED MONOLIST_LASTFM_SHARED_SECRET)
+if(DEFINED MONOLIST_LASTFM_API_KEY OR DEFINED MONOLIST_LASTFM_SHARED_SECRET
+   OR DEFINED MONOLIST_GOOGLE_CLIENT_ID OR DEFINED MONOLIST_GOOGLE_CLIENT_SECRET)
     # Given with -D: fixed at configure time, like any other cache value. The
-    # script still reads them from the environment, set here for it alone.
-    set(ENV{MONOLIST_LASTFM_API_KEY} "${MONOLIST_LASTFM_API_KEY}")
-    set(ENV{MONOLIST_LASTFM_SHARED_SECRET} "${MONOLIST_LASTFM_SHARED_SECRET}")
+    # script still reads them from the environment, set here for it alone. A
+    # pair given this way is taken whole; the other pair comes from the
+    # environment as it is now.
+    if(DEFINED MONOLIST_LASTFM_API_KEY OR DEFINED MONOLIST_LASTFM_SHARED_SECRET)
+        set(ENV{MONOLIST_LASTFM_API_KEY} "${MONOLIST_LASTFM_API_KEY}")
+        set(ENV{MONOLIST_LASTFM_SHARED_SECRET} "${MONOLIST_LASTFM_SHARED_SECRET}")
+    endif()
+    if(DEFINED MONOLIST_GOOGLE_CLIENT_ID OR DEFINED MONOLIST_GOOGLE_CLIENT_SECRET)
+        set(ENV{MONOLIST_GOOGLE_CLIENT_ID} "${MONOLIST_GOOGLE_CLIENT_ID}")
+        set(ENV{MONOLIST_GOOGLE_CLIENT_SECRET} "${MONOLIST_GOOGLE_CLIENT_SECRET}")
+    endif()
     execute_process(COMMAND ${CMAKE_COMMAND} ${MONOLIST_APICREDENTIALS_SCRIPT})
 else()
-    # From the environment: written now, because lastfm.cpp needs the header
-    # before anything builds, and read again at every build.
+    # From the environment: written now, because lastfm.cpp and driveauth.cpp
+    # need the header before anything builds, and read again at every build.
     execute_process(COMMAND ${CMAKE_COMMAND} ${MONOLIST_APICREDENTIALS_SCRIPT})
     add_custom_target(monolist_apicredentials
         BYPRODUCTS "${MONOLIST_APICREDENTIALS}"
         COMMAND ${CMAKE_COMMAND} ${MONOLIST_APICREDENTIALS_SCRIPT}
-        COMMENT "Looking for a Last.fm API key"
+        COMMENT "Looking for a Last.fm API key and a Google sign-in client"
         VERBATIM)
     add_dependencies(monolist monolist_apicredentials)
 endif()

@@ -286,6 +286,31 @@ Kept in the local database and exposed as `Library`:
   makes the playlist at once and fills it as each song is found on YouTube
   Music, signed out and a few seconds apart. Songs it was unsure of, could not
   find, or never looked for wait on the playlist's page.
+* **Backup and sync** (Settings > Backup and sync, QML `Backup`): playlists,
+  likes, saved albums and playlists, plays and turn-downs as one file,
+  `monolist-library.json`. EXPORT… saves it anywhere and IMPORT… merges one
+  back, with no sign-in, in any build. SIGN IN WITH GOOGLE keeps the same file
+  in the user's own Google Drive, in the hidden folder only Monolist can open
+  (scopes `drive.appdata`, `openid` and `email`, nothing else), and merges it
+  on every computer that signs in: right after signing in, 15 s after a
+  launch, a minute after an edit, when the window comes to the front a few
+  minutes after the last sync, every half hour (which is when plays go up),
+  and on SYNC NOW. A merge only adds, except what was deleted on another
+  computer later than it was last added or changed here (each deletion is
+  kept, with its time, in `sync_removed`), so bringing back an old file never
+  takes away what was added since. A playlist's songs merge as a set (a song
+  taken out of one is a deletion of its own), so songs added to the same
+  playlist on two computers are both kept; its name, pin and order are the
+  newer copy's. Nothing dated later than now is read or written (a clock
+  that ran ahead would win every comparison), and a computer whose clock is
+  more than five minutes from Google's does not sync until it is set right.
+  The file names no computer. The
+  sign-in is Google's page in the user's own browser, answered on 127.0.0.1
+  (PKCE), and has nothing to do with the YouTube Music sign-in: its own
+  client, network manager and secret (`backup.google`), no cookies, never
+  AccountGuard. No server of Monolist's is involved; signing out leaves the
+  file in Drive (Drive's Settings → Manage apps → Monolist → Delete hidden app
+  data removes it).
 
 The sidebar shows Liked songs and the playlists, and the name the operating
 system knows the user by (the account's full name, else the login name),
@@ -403,6 +428,15 @@ effects that are on.
       appdatabase.*          SQLite schema, migrations
       library.*              the user's playlists, likes, saved albums, history
       libraryeditselftest.*  --library-edit-test
+      librarybackup.*        the library as one file, and its merge: Export,
+                             Import and the Google Drive backup
+      drivesync.*            the backup as QML sees it (Backup): Export, Import,
+                             and the Google Drive sync (find, read, merge,
+                             upload; when, backoff, a file held unread)
+      driveauth.*            the Drive backup's own Google sign-in: loopback
+                             PKCE in the browser, tokens, revoke
+      backupselftest.*       --backup-test
+      driveselftest.*        --drive-test
       playlistmodel.*  albummodel.*  trackmodel.*
 
       playbackcontroller.*   the facade QML binds to — driven by mpv
@@ -667,6 +701,29 @@ build tree, read again at every build. Without them the app builds all the same,
 and Settings says the build has no Last.fm key. CMake reports only whether there
 is a key, never its value; `monolist --lastfm-test` and `--diag` say the same.
 
+### Google sign-in client
+
+The Google Drive backup signs in with an OAuth client of type "Desktop app" from
+the builder's own Google Cloud project (with the Drive API enabled and the
+`drive.appdata` scope on its consent screen). Set the consent screen's
+publishing status to **In production** (Google Auth Platform → Audience →
+Publish app): `openid`, `email` and `drive.appdata` are all non-sensitive
+scopes, so publishing needs no verification review. Left in **Testing**, only
+the people listed as test users can sign in at all (anyone else is told
+"Access blocked"), they see Google's "hasn't verified this app" warning, and
+their sign-in ends after 7 days, because `drive.appdata` is not one of the
+basic sign-in scopes: the row then says the sign-in has ended, every week.
+Like the Last.fm key the client is never
+committed: set `MONOLIST_GOOGLE_CLIENT_ID` (`<number>-<letters>.apps.googleusercontent.com`)
+and `MONOLIST_GOOGLE_CLIENT_SECRET` before building, both or neither, and they
+go into the same generated header, seen only by `driveauth.cpp`. Without them
+Settings says this copy was built without Google sign-in and offers the backup
+file only. `build-windows.ps1` and `package-windows.ps1` take all four values
+from the Windows user's environment when the shell has none of its own, so
+`[Environment]::SetEnvironmentVariable('MONOLIST_GOOGLE_CLIENT_ID', '…', 'User')`
+once is enough; nothing prints them, and `--diag` says only whether there is a
+client.
+
 ### Typeface
 
 **Archivo (400/600/800) is bundled** in `fonts/` and registered from Qt
@@ -854,6 +911,37 @@ first failure`.
                                                     playlist (read back from the database), Remove from
                                                     library, Remove from history, Copy link (the clipboard
                                                     put back after); needs MONOLIST_DATA_DIR
+    monolist --backup-test                          the library's backup file and its merge, with no network:
+                                                    playlists' uids (the same again for the same rows, and in
+                                                    the daily copy), tombstones and edits kept; a library
+                                                    exported, emptied and brought back exactly; likes, saves,
+                                                    playlists (songs as a set: added on two computers, taken
+                                                    out on one), plays, turn-downs and History merged by every
+                                                    rule, both ways round; the same file twice changing
+                                                    nothing, History cleared once; times later than now left
+                                                    out, never winning; a newer or a foreign file refused; no
+                                                    download, path, setting, YouTube Music mirror or computer
+                                                    name in the file; what the toast says; Export and Import
+                                                    as Settings calls them (needs MONOLIST_DATA_DIR)
+    monolist --drive-test                           the Google Drive backup against stand-ins on this computer
+                                                    for Google and Drive, never Google itself: the sign-in's
+                                                    page (client, loopback redirect, PKCE S256, state, three
+                                                    scopes), the browser's return (wrong state ignored,
+                                                    access_denied, the Drive box unticked refused), COPY LINK
+                                                    for a browser that would not open, the code exchanged
+                                                    with its verifier, tokens renewed on time and once on a
+                                                    401, invalid_grant, a cancelled SIGN IN AGAIN; the first
+                                                    file made in appDataFolder, another computer's merged
+                                                    both ways and uploaded once, nothing uploaded twice,
+                                                    plays waiting for the half-hourly sync, a clock five
+                                                    hours off stopping the sync, a read cut off retried, a
+                                                    damaged or newer file never overwritten, two copies made
+                                                    one, backoff on 429/5xx/rate limit, the first sync's
+                                                    toast kept through a failed upload; signing out deleting
+                                                    only the backup's secret and settings, even in a copy
+                                                    built without the client; no cookie sent, the token to
+                                                    Drive alone, no redirect elsewhere followed, no secret
+                                                    in the log (needs MONOLIST_DATA_DIR)
     monolist --lyrics "<query>"                     lyrics for the first three results, then one from the store
     monolist --lyrics-query-test                    the lyrics query and match rules with no network: the
                                                     18 fixed cases (C40), lines without credits never cut on
@@ -995,13 +1083,20 @@ be, for a look at a state:
     monolist --open-queue  /  --now-playing         with the queue, or Now Playing, open
     monolist --effects-popup                        with the player bar's sound effects popup open
     monolist --settings-section <section>           Settings, scrolled to recommendations, downloads,
-                                                    connections, effects, signin or ytmusic
+                                                    connections, effects, signin, ytmusic or backup
     monolist --ytm-demo <state>[+file]              the YouTube Music row as active, checking, unreachable,
                                                     rejected (a session that ended), notsignedin (an import
                                                     answered as signed out), unreadable (a stored copy that
                                                     would not open) or signedout (just signed out), with an
                                                     invented account and no cookies; +file adds the offer
                                                     to delete an imported file
+    monolist --backup-demo <state>                  the Google Drive row as off, waiting, nobrowser,
+                                                    finishing, synced, syncing, offline, slowed,
+                                                    unreadable, newer, clock (a clock hours fast), expired,
+                                                    denied, noscope, signedout, nostore, nobuild or
+                                                    nobuildsignedin (a copy without the client that still
+                                                    keeps an earlier copy's sign-in), with an invented
+                                                    account and nothing stored, read or sent
     monolist --set <key> <value>                    write a setting first (lrclib_url, piped_instances,
                                                     invidious_instances; youtube.visitor launch|home
                                                     keeps the visitor id for one launch, as before;
@@ -1038,6 +1133,7 @@ only ever go to ws.audioscrobbler.com.
     secrets           <AppData>/secrets  (sign-in keys, encrypted with DPAPI for the Windows user)
     yt-dlp cookies    <LocalAppData>/yt-dlp-cookies  (one lookup's copy of the session, deleted after it)
     artwork           <Cache>/artwork  (256 MB cap)
+    Drive backup      monolist-library.json in the Google account's hidden appDataFolder (signed in only)
 
 On a Mac, `<Music>` is `~/Music`, `<AppData>` is
 `~/Library/Application Support/Monolist/Monolist` and `<Cache>` is
