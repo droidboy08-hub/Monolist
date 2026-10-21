@@ -10,7 +10,7 @@
 <main>
   <p class="mark"><a href="./">MONOLIST<span>.</span></a></p>
   <h1>Privacy policy</h1>
-  <p class="meta">Last updated 20 October 2026</p>
+  <p class="meta">Last updated 21 October 2026</p>
 
   <p>Monolist is a free, open-source music player for Windows and macOS. It has no servers and no accounts of its own.
   We, the people who make Monolist, never receive your library, your listening or anything about you.</p>
@@ -20,16 +20,22 @@
   Monolist keeps it in its own data folder and nowhere else, unless you turn on one of the options below.</p>
 
   <h2>Back up and sync with Google Drive (optional)</h2>
-  <p>If you choose <b>Sign in with Google</b> in Settings, Monolist asks Google for two things only:</p>
+  <p>If you choose <b>Sign in with Google</b> in Settings (on Windows; it is not yet available on macOS), Monolist asks
+  Google for two things only:</p>
   <ul>
     <li><b>Its own hidden folder in your Google Drive</b> (the <code>drive.appdata</code> permission). Monolist keeps one
-    backup file there with your playlists, liked songs and listening history, so they follow you to another computer.
-    It cannot see, open or change any of your other files in Drive.</li>
+    backup file there, so your library follows you to another computer. It cannot see, open or change any of your other
+    files in Drive.</li>
     <li><b>Your email address</b>, to show you which Google account the backup is in.</li>
   </ul>
+  <p>The backup file holds your playlists and their songs, the songs you like, the albums and playlists you saved, what
+  you have played and the songs you turned down, and what you removed from these (so that it is removed on your other
+  computers too), each with when. It holds no downloads or file paths, no settings, no other account's sign-in, and
+  nothing that names your computer. <b>Export</b> in Settings saves the same file wherever you choose.</p>
   <p>The backup file stays in your Google account. It goes straight between your computer and Google; it is never sent
-  to us or to anyone else. Monolist keeps its sign-in in your computer's own secure store (Windows Credential Manager or
-  the macOS Keychain).</p>
+  to us or to anyone else. Monolist keeps its sign-in to Google encrypted for your Windows account (with Windows' data
+  protection, DPAPI) in a file in Monolist's own data folder on your computer, never in its music database or any log;
+  <b>Sign out</b> deletes it.</p>
   <p>To delete the backup: in Google Drive, open Settings &gt; Manage apps &gt; Monolist &gt; Options &gt; Delete hidden app
   data. To take away Monolist's access: <a href="https://myaccount.google.com/permissions">myaccount.google.com/permissions</a>,
   or <b>Sign out</b> in Monolist's Settings.</p>
@@ -43,8 +49,8 @@
   browser would:</p>
   <ul>
     <li><b>YouTube Music and YouTube</b>, to search and to play. If you import a YouTube Music sign-in, it is used to read
-    your own library and, if you switch it on, to add what you play to your YouTube history; it is kept in your
-    computer's secure store.</li>
+    your own library and, if you switch it on, to add what you play to your YouTube history; on Windows it is kept
+    encrypted in Monolist's data folder, as the Google Drive sign-in is.</li>
     <li><b>JioSaavn</b>, to search and to play songs from it.</li>
     <li><b>LRCLIB</b>, for lyrics.</li>
     <li><b>Spotify, Apple Music, Deezer, JioSaavn and YouTube pages</b>, only when you import a playlist from a link you
