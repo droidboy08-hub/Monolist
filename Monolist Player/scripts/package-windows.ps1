@@ -110,6 +110,10 @@ $stage = Join-Path $OutDir 'Monolist'
 if (Test-Path -LiteralPath $stage) { Remove-Item -LiteralPath $stage -Recurse -Force }
 New-Item -ItemType Directory -Force -Path $stage | Out-Null
 Copy-Item -LiteralPath $exe -Destination $stage
+# The Release build keeps its symbol table, about 47 MB of its 65, which
+# nothing on a listener's PC reads: the copy that ships goes without it.
+& (Join-Path $mingwBin 'strip.exe') --strip-all (Join-Path $stage 'monolist.exe')
+if ($LASTEXITCODE -ne 0) { throw 'strip failed.' }
 
 # Qt, its plugins and QML modules, and MinGW's runtime, into a folder that
 # holds nothing else, so nothing of the build tree comes along.
