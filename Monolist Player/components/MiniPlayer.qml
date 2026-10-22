@@ -228,15 +228,28 @@ Window {
                     }
                 }
 
-                Grid {
+                // Laid out as the effects panel lays them: two rows of two,
+                // then Studio clarity across the width, sharing their rules.
+                Column {
                     width: parent.width
-                    columns: 2
                     spacing: -Theme.ruleWidth
 
-                    EffectSwitch { name: "SLOWED + REVERB"; checked: Sound.slowedReverb; onToggled: Sound.slowedReverb = !Sound.slowedReverb }
-                    EffectSwitch { name: "NIGHTCORE"; checked: Sound.nightcore; onToggled: Sound.nightcore = !Sound.nightcore }
-                    EffectSwitch { name: "8D AUDIO"; checked: Sound.eightD; onToggled: Sound.eightD = !Sound.eightD }
-                    EffectSwitch { name: "HIGH BASS"; checked: Sound.highBass; onToggled: Sound.highBass = !Sound.highBass }
+                    Grid {
+                        width: parent.width
+                        columns: 2
+                        spacing: -Theme.ruleWidth
+
+                        EffectSwitch { name: "SLOWED + REVERB"; checked: Sound.slowedReverb; onToggled: Sound.slowedReverb = !Sound.slowedReverb }
+                        EffectSwitch { name: "NIGHTCORE"; checked: Sound.nightcore; onToggled: Sound.nightcore = !Sound.nightcore }
+                        EffectSwitch { name: "8D AUDIO"; checked: Sound.eightD; onToggled: Sound.eightD = !Sound.eightD }
+                        EffectSwitch { name: "HIGH BASS"; checked: Sound.highBass; onToggled: Sound.highBass = !Sound.highBass }
+                    }
+                    EffectSwitch {
+                        width: parent.width
+                        name: "STUDIO CLARITY"
+                        checked: Sound.studioClarity
+                        onToggled: Sound.studioClarity = !Sound.studioClarity
+                    }
                 }
 
                 EffectSwitch {

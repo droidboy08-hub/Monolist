@@ -860,6 +860,17 @@ ApplicationWindow {
                 window.queueOpen = !window.queueOpen
         }
         onNowPlayingToggled: window.nowPlayingOpen = !window.nowPlayingOpen
+        // The lyrics are Now Playing's: the button opens it on them, and
+        // puts it away again when that is what it shows.
+        lyricsOpen: window.nowPlayingOpen && nowPlaying.pane === "lyrics"
+        onLyricsToggled: {
+            if (lyricsOpen) {
+                window.nowPlayingOpen = false
+            } else {
+                nowPlaying.pane = "lyrics"
+                window.nowPlayingOpen = true
+            }
+        }
         onEffectsSettingsRequested: window.openEffectsSettings()
         onMiniPlayerRequested: window.enterMini()
     }

@@ -330,6 +330,10 @@ qt_add_qml_module(monolist
         components/MonoMenuItem.qml
         components/MonoMenuRule.qml
         components/PlaylistSubmenu.qml
+        # The player bar's output devices and sleep timer as menus: on the
+        # bar, and as submenus of its "…" (TrackMenu).
+        components/OutputMenu.qml
+        components/SleepMenu.qml
         components/ConfirmMenuItem.qml
         components/CardMenu.qml
         components/PlaylistMenu.qml

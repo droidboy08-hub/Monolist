@@ -85,6 +85,9 @@ owner's iPhone app (AryaMusix / "Mediano", Swift, not in this repo).
   in front (topmost): the toast's fade runs on the window's frames, and a window driven by posted
   clicks from behind others may be given none, so a toast missing from a shot is not proof that none
   was shown. Rows in a state for a look: `--ytm-demo <state>`, `--backup-demo <state>`.
+  A window launched behind others (2026-10-21) never fired QML Timers either, so
+  `--effects-popup` (opened by an 800 ms Timer) shot with no popup; with
+  `QSG_RENDER_LOOP=basic` in the environment it opened every time.
 - Recommender checks (need the data): `--artist-test <EmbeddingData> <GraphData>`
   (baseline 17 graph / 5 sounds-like / 0 none, 0 leaks), `--graph-test` (22
   countries, 0 leaks), `--content-test <EmbeddingData> <report>` (0 of 19 and
@@ -241,6 +244,19 @@ owner's iPhone app (AryaMusix / "Mediano", Swift, not in this repo).
   by taking the newer copy whole: a pin on a computer that had not synced yet
   threw away songs added on another. Songs merge as a set; taking one out
   writes a `playlistEntry` tombstone (Library::removeFromPlaylist).
+- 2026-10-21, the effects' chain: a biquad exactly at half the sound's rate
+  (16 kHz in a 32 kHz file, 8 kHz in 16, 4 kHz in 8) is two poles on z = -1,
+  and in the chain's floating point (afir makes the whole graph float) it
+  rings at half the rate even at 0 dB. Studio clarity's 4, 8 and 16 kHz bands
+  are written 1 Hz above for that (FFmpeg then passes them over, so commandsAt
+  never sends them anything there). The equaliser's own 4, 8 and 16 kHz bands
+  still sit exactly there: at 32 kHz the chain at rest, before Studio clarity
+  too, put a 16 kHz tone at -22 dBFS beside a 63 Hz tone at -20 dBFS (-33 dBFS
+  at 16 kHz, -37 at 8; not fixed yet, and no source Monolist plays today is
+  32, 16 or 8 kHz; 1 Hz above fixed it in a scratch chain). And never FFmpeg's
+  octave width (t=o) in
+  the chain: it divides by sin(w0), and at 32 kHz a 16 kHz band, at any gain,
+  turned all the sound to nothing.
 
 ## Where things stand (2026-09-29)
 
@@ -298,10 +314,16 @@ model (`Sound` singleton, `SoundEffects`, sound.* settings) and the QML are
 built and tested (`--sound-test`, `--sound-live-test`, screenshots). The QML:
 `EffectsPanel` (one block, in the player bar's popup and in Settings >
 Playback, `--settings-section effects`), `BandSlider`, the sliders glyph on
-the bar (red while any effect is on; in the volume popup below 760 px),
-`--effects-popup` for screenshots, Now Playing's sound line. The owner has not
-yet listened to the defaults on a real device (reverb strengths, High bass +6
-vs +9). Left for the macOS
+the bar (red while any effect is on; since the 2026-10-21 bar it never folds),
+`--effects-popup` for screenshots, Now Playing's sound line. Studio clarity
+(2026-10-21, the owner's, after LastWave's "Studio Master Clarity"; its numbers
+only, LastWave has no licence): ten octave-wide bands of its own after the
+equaliser's (`equalizer@c0..9`, `SoundChain::kClarityDb`), not added into
+them; written as Qs for 48 kHz, with the song's own rate's widths sent by the
+engine once the graph answers (`widthsAt`, `sendWidths`); measured in the
+shipped libmpv within 0.02 dB of the octave bands at 48, 44.1 and 22.05 kHz.
+The owner has not yet listened to the defaults on a real device (reverb
+strengths, High bass +6 vs +9, Studio clarity). Left for the macOS
 session: `macos/mediasession.mm` should publish
 `MPNowPlayingInfoPropertyPlaybackRate = playing ? Player.playbackRate : 0`
 (Windows' media controls already get it), and `--sound-test` should be run

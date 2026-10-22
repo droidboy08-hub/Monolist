@@ -4,7 +4,7 @@ import Monolist
 import Monolist.Backend
 
 // The sound effects as one block, the same in the player bar's popup and in
-// Settings > Playback: four effects to switch on, the strengths of the ones
+// Settings > Playback: five effects to switch on, the strengths of the ones
 // that are on, and the equaliser.
 //
 // Every control writes to Sound at once and Sound hands it to the engine,
@@ -270,52 +270,68 @@ Column {
     }
 
     // — the effects —
-    // Neighbouring tiles share their rules, as chips do.
-    Grid {
+    // Neighbouring tiles share their rules, as chips do. Two rows of two,
+    // then Studio clarity across the whole width, so that the fifth does not
+    // stand alone in half a row as if one were missing beside it.
+    Column {
         id: tiles
         width: root.width
-        columns: 2
         spacing: -Theme.ruleWidth
 
         readonly property real tileWidth: (width + Theme.ruleWidth) / 2
         readonly property real tileHeight: Math.max(slowedTile.implicitHeight, nightcoreTile.implicitHeight,
-                                                    eightDTile.implicitHeight, bassTile.implicitHeight)
+                                                    eightDTile.implicitHeight, bassTile.implicitHeight,
+                                                    clarityTile.implicitHeight)
 
-        EffectTile {
-            id: slowedTile
-            width: tiles.tileWidth
-            height: tiles.tileHeight
-            name: "SLOWED + REVERB"
-            hint: "Slower and lower, in a large hall"
-            checked: Sound.slowedReverb
-            onToggled: Sound.slowedReverb = !Sound.slowedReverb
+        Grid {
+            columns: 2
+            spacing: -Theme.ruleWidth
+
+            EffectTile {
+                id: slowedTile
+                width: tiles.tileWidth
+                height: tiles.tileHeight
+                name: "SLOWED + REVERB"
+                hint: "Slower and lower, in a large hall"
+                checked: Sound.slowedReverb
+                onToggled: Sound.slowedReverb = !Sound.slowedReverb
+            }
+            EffectTile {
+                id: nightcoreTile
+                width: tiles.tileWidth
+                height: tiles.tileHeight
+                name: "NIGHTCORE"
+                hint: "Faster and higher, like a record played fast"
+                checked: Sound.nightcore
+                onToggled: Sound.nightcore = !Sound.nightcore
+            }
+            EffectTile {
+                id: eightDTile
+                width: tiles.tileWidth
+                height: tiles.tileHeight
+                name: "8D AUDIO"
+                hint: "Carried round your head. Best with headphones"
+                checked: Sound.eightD
+                onToggled: Sound.eightD = !Sound.eightD
+            }
+            EffectTile {
+                id: bassTile
+                width: tiles.tileWidth
+                height: tiles.tileHeight
+                name: "HIGH BASS"
+                hint: "Lifts the kick and the bass, not the voices"
+                checked: Sound.highBass
+                onToggled: Sound.highBass = !Sound.highBass
+            }
         }
         EffectTile {
-            id: nightcoreTile
-            width: tiles.tileWidth
+            id: clarityTile
+            width: tiles.width
             height: tiles.tileHeight
-            name: "NIGHTCORE"
-            hint: "Faster and higher, like a record played fast"
-            checked: Sound.nightcore
-            onToggled: Sound.nightcore = !Sound.nightcore
-        }
-        EffectTile {
-            id: eightDTile
-            width: tiles.tileWidth
-            height: tiles.tileHeight
-            name: "8D AUDIO"
-            hint: "Carried round your head. Best with headphones"
-            checked: Sound.eightD
-            onToggled: Sound.eightD = !Sound.eightD
-        }
-        EffectTile {
-            id: bassTile
-            width: tiles.tileWidth
-            height: tiles.tileHeight
-            name: "HIGH BASS"
-            hint: "Lifts the kick and the bass, not the voices"
-            checked: Sound.highBass
-            onToggled: Sound.highBass = !Sound.highBass
+            name: "STUDIO CLARITY"
+            hint: "Crisper highs, less mud, like a studio master"
+            checked: Sound.studioClarity
+            onToggled: Sound.studioClarity = !Sound.studioClarity
         }
     }
 
@@ -457,8 +473,8 @@ Column {
     }
 
     // The ten bands, and behind them the curve they make together, with
-    // High bass's shelf while it is on: the bands add up, so the curve can
-    // stand higher than any one slider.
+    // High bass's shelf and Studio clarity's curve while they are on: the
+    // bands add up, so the curve can stand higher than any one slider.
     Item {
         id: bands
         width: root.width
@@ -503,7 +519,7 @@ Column {
     // in the popup while nothing is (`steady`).
     Note {
         readonly property bool shown: Sound.active && !Sound.failed && Sound.headroomDb >= 0.05
-        readonly property bool boost: Sound.highBass
+        readonly property bool boost: Sound.highBass || Sound.studioClarity
                                       || (Sound.equaliser && Math.max.apply(null, Sound.bandGains) > 0)
         visible: shown || root.steady
         text: shown ? "Turned down " + Sound.headroomDb.toFixed(1) + " dB so the "

@@ -228,6 +228,50 @@ nothing at all.
 * **The player bar spans the full width, below everything.**
   *Why.* It belongs to the app, not to a page: it keeps playing while views come
   and go, and its position is the one thing that must never move.
+* **The player bar is quiet: the song, the transport, and a row of glyphs.**
+  The owner's choice of three (2026-10-21, "A · Quiet"), after calling the old
+  bar "cluttered, with uneven looking icons" beside LastWave's "lean and
+  clean" one. At the left the cover (56px), the title (15px, extrabold) over
+  the artist (13px, grey), and the heart at the end of the side; a click on the
+  cover or the title opens Now Playing, a right click the song's menu. In the
+  middle shuffle, previous, the red play square (40px), next and repeat, and
+  under them a 3px progress line, red as far as the song has got, with the
+  times either side in 11px equal-width figures. At the right a badge with the
+  codec and bitrate mpv reports ("OPUS 160", "AAC 320" from JioSaavn; the whole
+  stream line under the pointer; nothing until both are known), then lyrics
+  (Now Playing on them), queue, sound, output, the volume glyph and an 88px
+  slider, Now Playing, and "…". Every glyph is 20px in a 36px square at one
+  stroke (1.75 on Lucide's grid of 24), grey at rest, ink under the pointer,
+  red when on (2.6a). "…" is the song's menu headed by what left the bar: the
+  mini player (Ctrl+Shift+M), the sleep timer's choices, the video for a song
+  that has one, then the song's own entries, its download among them. What is
+  on comes back out beside "…" for as long as it is: a red moon while the sleep
+  timer runs, which opens its countdown, +10 minutes and Turn off; the red video
+  glyph while the picture is on, which turns it off; and a download running
+  draws its 2px rule along the foot of "…".
+  *Why.* A bar is looked at all day and used for a few things: play, skip, the
+  volume, the queue, the lyrics. The old one also held, all the time, what is
+  wanted now and then, at four glyph sizes and two weights, so the eye sorted it
+  again at every glance. One size and one weight make the right side a single
+  row of marks, and red stays the play square and whatever is on. Hiding the
+  rest costs nothing that matters: whatever is running shows itself on the bar,
+  and nothing that was one click away is more than two. Two departures from the
+  mockup, both for this document's rules: previous and next are grey at rest,
+  not ink, since ink means the pointer (2.6a); and the sound keeps its vertical
+  sliders, since the mockup's horizontal ones beside the queue's three lines
+  read as the same glyph twice (and the mini player has the vertical ones).
+  *Folding.* As the window narrows the bar gives things up in one order: the
+  volume slider folds into its glyph, with a popup; the lyrics and the output
+  go into "…"; the badge goes; the title and the artist go, the cover and,
+  while there is room, the heart staying; the transport closes up and Now
+  Playing's button goes (the cover opens it); last, the moon and the video go
+  back into "…". Between the steps the title takes the slack, and the transport
+  keeps the bar's middle for as long as the two sides can be equal (down to
+  760px). The badge's room is held before it arrives, so a song starting moves
+  nothing. The sound glyph never folds, so its red shows at any width. At 1400px
+  everything is there; at 1120 the slider has folded; at 900 and 880 the
+  lyrics, the output and the badge have gone and the title is shorter; at 760
+  the cover and the heart are left.
 * **Now Playing keeps the player bar visible, and slides out from behind it.**
   *Why.* Opening the big view should not take away the controls the user already
   knows; it adds the cover, the lyrics and the queue, and changes nothing else.
@@ -285,8 +329,9 @@ nothing at all.
   small panel above the player bar.** Closing Now Playing moves it to the
   panel, at the right, framed by a 2px ink rule; a click on the panel opens Now
   Playing, and its close button turns the picture off while the song plays on
-  as sound. The player bar has the same switch, so the picture can be asked for
-  from anywhere. In a narrow window the switch ends the song's line and the
+  as sound. The player bar has the same switch, Video in its "…" (and, while
+  the picture is on, a red video glyph beside "…" that turns it off), so the
+  picture can be asked for, and put away, from anywhere. In a narrow window the switch ends the song's line and the
   picture plays under it, full width and no taller than half the page.
   *Why.* A picture nobody can see should not be decoded, and one that vanished
   whenever Now Playing closed would make the switch mean "only in Now
@@ -320,24 +365,27 @@ nothing at all.
   that is not interrupted by the cover's colour field, and they need to start at
   a consistent left edge.
 * **The sound effects are a glyph on the player bar, red while any is on.**
-  Slowed + reverb, Nightcore, 8D audio, High bass and the equaliser are kept
-  from one launch to the next, so the sliders glyph beside the output button
-  turns red whenever the sound is being changed, and opens them all in a popup
-  built like the volume popup's: paper in a 2px ink frame, standing on the bar,
-  no motion. Settings > Playback has the same block (EFFECTS, not SOUND, which
-  is the quality above it), with a line of explanation under each effect, and
-  Now Playing's sound line names the effects that are on. The glyph stays on the
-  bar for as long as the title does, and only below that goes into the volume
-  popup with the output button.
+  Slowed + reverb, Nightcore, 8D audio, High bass, Studio clarity and the
+  equaliser are kept from one launch to the next, so the sliders glyph beside
+  the output button turns red whenever the sound is being changed, and opens
+  them all in a popup built like the volume popup's: paper in a 2px ink frame,
+  standing on the bar, no motion. Settings > Playback has the same block
+  (EFFECTS, not SOUND, which is the quality above it), with a line of
+  explanation under each effect that needs one, and Now Playing's sound line
+  names the effects that are on. The glyph stays on the bar at any width; it
+  is the one of the right side's glyphs that never folds.
   *Why.* An effect kept from yesterday — a song slowed the next morning — has
   to explain itself where the hand already is, and be one click from undone; a
-  window snapped to half the screen still shows the red. The four effects are
+  window snapped to half the screen still shows the red. The five effects are
   tiles rather than check boxes because each changes the whole sound at a
   stroke: off, a tile is paper in an ink frame; on, it is printed in reverse
-  with the red square, as the toast carries it. Their strengths are chips, the
+  with the red square, as the toast carries it. Two rows of two, and Studio
+  clarity across the width under them, so that the fifth does not stand alone
+  in half a row as if one beside it were missing. Their strengths are chips, the
   equaliser's bands are ink bars standing on a 0 dB tick, never red — a lifted
   band is a setting, not something that is on — with the curve they make
-  together drawn behind them, since the bands add up and the curve can stand
+  together drawn behind them (High bass's shelf and Studio clarity's curve in
+  it while they are on), since the bands add up and the curve can stand
   higher than any one of them. The popup keeps one height whatever is on: it
   grows upwards from the bar, so a row of strengths appearing would lift the
   tiles away from under the pointer that had just clicked one.
@@ -348,7 +396,7 @@ nothing at all.
   like, previous, the red play square, next and the effects glyph. Three ink
   plates on the cover keep it over other windows (the pin, red while it does),
   go back to the full window, and close it. It opens in place of the window,
-  from the bar, the tray, Ctrl+Shift+M or at sign-in, and Ctrl+Shift+M takes
+  from the bar's "…", the tray, Ctrl+Shift+M or at sign-in, and Ctrl+Shift+M takes
   it back; any close, its X or Windows', does what the window's does (the
   tray, or quit). It has its own taskbar button, and the app's answers (a song
   that will not play) come in a toast of its own over the foot of the cover.
@@ -357,11 +405,16 @@ nothing at all.
   *Why.* Two windows showing the same song would ask which one is the app. A
   window that goes small keeps one answer, and the cover can be the whole top
   of it because, at that size, nothing else competes with it.
-* **The sleep timer is a moon on the bar, red while it runs.** Its popup is
-  a plain list (15, 30, 45 minutes, 1 hour, the end of this song) with the
-  time left beside its heading, and +10 minutes and Turn off once it runs; the
-  tray has the same list, for a night with the window closed. When the time is
-  up the music fades over ten seconds and pauses, and the volume is put back.
+* **The sleep timer is started from the bar's "…", and is a red moon beside
+  it while it runs.** "…"'s Sleep timer is a plain list (15, 30, 45 minutes,
+  1 hour, the end of this song), its row saying the time left once it runs,
+  with +10 minutes and Turn off; the moon opens the same list in a popup with
+  the time left beside its heading. The tray has the same list, for a night
+  with the window closed. When the time is up the music fades over ten seconds
+  and pauses, and the volume is put back.
+  *Why.* It is set once a night, so it waits in "…"; but a timer running is a
+  promise the music will stop, which has to be seen and undone where it was
+  made, so for as long as it runs it is on the bar.
 * **Importing a playlist is a sheet over the window, and the import goes on
   without it.** It is offered beside the sidebar's plus, on Your Library's
   shelf of playlists, at the rail's foot, and above Search's results when

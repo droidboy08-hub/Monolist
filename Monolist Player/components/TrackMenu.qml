@@ -25,7 +25,15 @@ MonoMenu {
     //   playing              the song playing, from the player bar
     //   anchor               an item to open under, for a menu asked for
     //                        from the keyboard
+    //   bar                  the player bar, whose "…" asked: its own
+    //                        entries head the menu (what left the bar for
+    //                        it), and the menu stands on the bar over the
+    //                        anchor rather than under it
     property var context: ({})
+
+    // The player bar's "…": the bar itself, for its entries at the head.
+    readonly property var bar: context.bar ? context.bar : null
+    readonly property bool atBar: bar !== null
 
     readonly property string sourceId: track && track.sourceId ? track.sourceId : ""
     readonly property string downloadState: Downloads.revision >= 0 ? Downloads.stateFor(sourceId) : ""
@@ -49,6 +57,12 @@ MonoMenu {
     readonly property bool unresolved: sourceId.length === 0 && typeof context.resolve === "function"
     // Whether the entries that need the song itself can be offered.
     readonly property bool songKnown: sourceId.length > 0 || unresolved
+    // Whether the song's own entries are in the menu at all. Everywhere but
+    // on the bar there is a song (its entries dimmed while it cannot be
+    // acted on); the bar's "…" also opens with nothing loaded, for the mini
+    // player and the sleep timer, and then a column of dimmed entries for a
+    // song that is not there would only be in the way.
+    readonly property bool songShown: !atBar || songKnown
 
     // Up and down: in the queue among what is still to come, in a playlist
     // anywhere in it.
@@ -61,7 +75,7 @@ MonoMenu {
     readonly property bool canLeaveQueue: inQueue && queueIndex !== Player.queue.currentIndex
 
     // The groups the rules sit between; see the rules below.
-    readonly property bool playGroup: !inQueue
+    readonly property bool playGroup: !inQueue && songShown
     readonly property bool orderGroup: canMoveUp || canMoveDown || canLeaveQueue
 
     // "Not interested" is offered where a song was put in front of the
@@ -94,11 +108,29 @@ MonoMenu {
         track = newTrack ? newTrack : ({})
         context = newContext ? newContext : ({})
         const anchor = context.anchor
-        if (anchor)
+        if (anchor && atBar) {
+            popup(anchor, 0, 0)
+            standOnBar()
+        } else if (anchor) {
             popup(anchor, 0, anchor.height)
-        else
+        } else {
             popup()
+        }
     }
+
+    // From the bar's "…": standing on the bar's top rule with its right edge
+    // under the button, as the bar's popups stand (the effects, the volume).
+    // Placed again as its rows settle, since how tall it is depends on what
+    // the song offers, and that is only laid out once it is open.
+    function standOnBar() {
+        const anchor = context.anchor
+        if (!anchor || !atBar)
+            return
+        x = anchor.width - width
+        y = anchor.mapFromItem(bar, 0, 0).y - height + Theme.ruleWidth
+    }
+    onHeightChanged: if (opened || visible) standOnBar()
+    onWidthChanged: if (opened || visible) standOnBar()
 
     // One artist: "Go to artist". A joint credit: one entry per name, so each
     // can be reached, up to three.
@@ -154,6 +186,48 @@ MonoMenu {
     // over disabled entries but not hidden ones, so an entry that was only
     // hidden took the highlight out of sight, and Enter ran it.
 
+    // — the player bar's own —
+    // What the bar keeps behind its "…" (DESIGN 3, the player bar), ahead of
+    // the song's own entries and only when the bar asked: the mini player,
+    // the sleep timer, the video, and in a narrow window the lyrics and the
+    // output, whose buttons it has given up.
+    MonoMenuItem {
+        visible: menu.atBar
+        enabled: menu.atBar
+        text: "Mini player"
+        hint: "Ctrl+Shift+M"
+        onTriggered: menu.bar.miniPlayerRequested()
+    }
+    SleepMenu {
+        shown: menu.atBar
+        enabled: menu.atBar
+    }
+    // Only for a song that has a picture, checked while it is on; three
+    // dots would say it is loading, here it says so in words.
+    MonoMenuItem {
+        readonly property bool offered: menu.atBar && (Player.videoAvailable || Player.videoWanted)
+        visible: offered
+        enabled: offered
+        text: "Video"
+        hint: Player.videoWanted && !Player.videoPlaying ? "Loading" : ""
+        current: Player.videoWanted
+        onTriggered: menu.bar.toggleVideo()
+    }
+    MonoMenuItem {
+        readonly property bool offered: menu.atBar && menu.bar.lyricsFolded
+        visible: offered
+        enabled: offered
+        text: "Lyrics"
+        current: offered && menu.bar.lyricsOpen
+        onTriggered: menu.bar.lyricsToggled()
+    }
+    OutputMenu {
+        shown: menu.atBar && menu.bar.outputFolded
+        enabled: menu.atBar && menu.bar.outputFolded
+    }
+
+    MonoMenuRule { visible: menu.atBar && menu.songShown }
+
     // — playing it —
     MonoMenuItem {
         visible: menu.playGroup
@@ -194,12 +268,14 @@ MonoMenu {
 
     // — keeping it —
     MonoMenuItem {
+        visible: menu.songShown
         text: menu.liked ? "Remove from Liked songs" : "Add to Liked songs"
         enabled: menu.songKnown
         onTriggered: menu.act(menu.liked ? "unlike" : "like")
     }
 
     PlaylistSubmenu {
+        shown: menu.songShown
         enabled: menu.songKnown
         onPicked: function(playlistId) { menu.act("playlist", playlistId) }
     }
@@ -269,14 +345,14 @@ MonoMenu {
         onTriggered: menu.act("open")
     }
 
-    MonoMenuRule {}
+    MonoMenuRule { visible: menu.songShown }
 
     // — the offline copy —
     // What can be done depends on where the download has got to: fetch it,
     // call it off, try it again, or, once the file is here, find it or
     // delete it.
     MonoMenuItem {
-        visible: menu.downloadState.length === 0
+        visible: menu.downloadState.length === 0 && menu.songShown
         text: "Download"
         enabled: Downloads.available && menu.songKnown && menu.downloadState.length === 0
         onTriggered: menu.act("download")
@@ -290,6 +366,11 @@ MonoMenu {
         visible: underWay
         enabled: underWay
         text: "Cancel download"
+        // How far it has got, which the player bar's download button used
+        // to show and the bar's "…" now carries: read here while it runs.
+        hint: menu.downloadState === "downloading" && Downloads.progressRevision >= 0
+              ? Math.round(Downloads.progressFor(menu.sourceId) * 100) + "%"
+              : menu.downloadState === "queued" ? "Queued" : "Finishing"
         onTriggered: Downloads.cancel(menu.sourceId)
     }
     MonoMenuItem {

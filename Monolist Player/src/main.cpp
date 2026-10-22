@@ -1216,6 +1216,8 @@ int main(int argc, char *argv[])
                      player.videoPlaying() ? "on" : "off");
             // What Now Playing's note says of the sound by now.
             qWarning("selftest: sound \"%s\"", qUtf8Printable(player.streamInfo()));
+            // And what the player bar's badge says of it.
+            qWarning("selftest: badge \"%s\"", qUtf8Printable(player.streamQuality()));
             QueueModel *queue = player.queue();
             QStringList upcoming;
             int fromRadio = 0;

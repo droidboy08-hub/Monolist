@@ -79,6 +79,11 @@ class PlaybackController : public QObject
     // (MpvEngine::StreamInfo) and appears once the sound has started. Empty
     // while nothing is loaded.
     Q_PROPERTY(QString streamInfo READ streamInfo NOTIFY streamInfoChanged)
+    // The same sound in two words, for the player bar's badge: the codec and
+    // the bitrate mpv reports, "OPUS 139" or "AAC 320". Empty until both are
+    // known, and whenever streamInfo is, so the badge appears once and whole
+    // rather than growing as mpv fills the line in.
+    Q_PROPERTY(QString streamQuality READ streamQuality NOTIFY streamInfoChanged)
     Q_PROPERTY(bool engineAvailable READ engineAvailable CONSTANT)
     // The picture. `videoAvailable` is whether this track has one at all
     // (YouTube Music's own songs are a still image, so they do not);
@@ -182,6 +187,7 @@ public:
     bool statusError() const { return m_statusError; }
     QString sourceLabel() const { return m_sourceLabel; }
     QString streamInfo() const;
+    QString streamQuality() const;
     bool engineAvailable() const;
     bool videoAvailable() const;
     bool videoWanted() const { return m_videoWanted; }

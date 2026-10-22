@@ -12,12 +12,13 @@ class Library;
 class MpvEngine;
 
 // The sound effects as the listener sets them: Slowed + reverb, Nightcore,
-// 8D audio, High bass and the equaliser. Kept in the settings table (the
-// sound.* keys), handed to the engine (MpvEngine::setEffects) the moment they
-// change, and shown to QML as the singleton Sound.
+// 8D audio, High bass, Studio clarity and the equaliser. Kept in the settings
+// table (the sound.* keys), handed to the engine (MpvEngine::setEffects) the
+// moment they change, and shown to QML as the singleton Sound.
 //
 // Slowed + reverb and Nightcore both set the speed, so turning one on turns
-// the other off. Every switch is written at once; a band of the equaliser,
+// the other off; every other effect goes with anything. Every switch is
+// written at once; a band of the equaliser,
 // dragged, is written 400 ms after it settles, and at once as Monolist
 // closes. What is read back is checked: a value out of range is the default
 // again, and the equaliser's gains are the preset's unless it is "custom"
@@ -40,6 +41,10 @@ class SoundEffects : public QObject
     // High bass: a shelf under 100 Hz, +3, +6, +9 or +12 dB.
     Q_PROPERTY(bool highBass READ highBass WRITE setHighBass NOTIFY effectsChanged)
     Q_PROPERTY(int highBassDb READ highBassDb WRITE setHighBassDb NOTIFY effectsChanged)
+    // Studio clarity: LastWave's "Studio Master Clarity" curve on ten bands of
+    // its own (SoundChain::kClarityDb), the lows and the top lifted, 250 Hz
+    // down. It has no strength to choose.
+    Q_PROPERTY(bool studioClarity READ studioClarity WRITE setStudioClarity NOTIFY effectsChanged)
     // The equaliser: ten bands, 31 Hz to 16 kHz, +-12 dB in 0.5 dB steps.
     Q_PROPERTY(bool equaliser READ equaliser WRITE setEqualiser NOTIFY effectsChanged)
     // The preset whose curve the bands hold (an id from `presets`), or
@@ -56,10 +61,10 @@ class SoundEffects : public QObject
     Q_PROPERTY(QStringList reverbLevels READ reverbLevels CONSTANT)        // "Off" ... "Heavy", by level
     Q_PROPERTY(QVariantList nightcoreSpeeds READ nightcoreSpeeds CONSTANT) // 1.2, 1.25, 1.3
     Q_PROPERTY(QVariantList highBassSteps READ highBassSteps CONSTANT)     // 3, 6, 9, 12
-    // Any of the five switched on: the player bar's glyph is red.
+    // Any of the six switched on: the player bar's glyph is red.
     Q_PROPERTY(bool active READ active NOTIFY effectsChanged)
     // What is on, in a line: "Slowed 0.85× + reverb · 8D · High bass +6 dB ·
-    // EQ Bass boost"; empty with nothing on.
+    // Studio clarity · EQ Bass boost"; empty with nothing on.
     Q_PROPERTY(QString summary READ summary NOTIFY effectsChanged)
     // How far the sound is turned down so the boosts do not clip, in dB
     // (0 or more): "Turned down 3.6 dB so the boost does not clip".
@@ -96,6 +101,8 @@ public:
     void setHighBass(bool on);
     int highBassDb() const { return m_settings.highBassDb; }
     void setHighBassDb(int db);
+    bool studioClarity() const { return m_settings.clarity; }
+    void setStudioClarity(bool on);
     bool equaliser() const { return m_settings.eq; }
     void setEqualiser(bool on);
     QString preset() const { return m_settings.preset; }
@@ -121,10 +128,11 @@ public:
     Q_INVOKABLE void applyPreset(const QString &id);
     // Every band to 0: the Flat preset.
     Q_INVOKABLE void resetBands();
-    // The curve the bands and High bass make together, in dB, at `points`
-    // frequencies from 31 Hz to 16 kHz, evenly spaced on a log scale (the
-    // sliders' row): the bands as they stand, whether the equaliser is on or
-    // not, and the shelf while High bass is on.
+    // The curve the bands, High bass and Studio clarity make together, in
+    // dB, at `points` frequencies from 31 Hz to 16 kHz, evenly spaced on a
+    // log scale (the sliders' row): the bands as they stand, whether the
+    // equaliser is on or not, the shelf while High bass is on, and Studio
+    // clarity's curve while it is on.
     Q_INVOKABLE QVariantList responseCurve(int points) const;
     // Every effect off; strengths and the curve are kept for next time.
     Q_INVOKABLE void turnAllOff();

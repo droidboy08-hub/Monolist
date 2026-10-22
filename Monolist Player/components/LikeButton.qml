@@ -23,6 +23,9 @@ Button {
     // heart says "on" in red rather than in weight.
     property color restColor: Theme.neutral700
     property int iconSize: 16
+    // The outline's stroke, on the glyph's 24-unit grid, so the heart can be
+    // drawn at the weight of the glyphs beside it (the player bar's).
+    property real iconThickness: 2
     property int side: 32
 
     readonly property color live: control.hovered || control.down ? Theme.accentGlyphHover : Theme.accent
@@ -51,6 +54,7 @@ Button {
             name: "heart"
             width: control.iconSize
             height: control.iconSize
+            thickness: control.iconThickness
             color: control.liked || control.hovered || control.down
                    ? control.live : control.restColor
 

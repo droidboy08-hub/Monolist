@@ -1161,8 +1161,10 @@ void MpvEngine::setAudioDevice(const QString &name)
     // The sound is rebuilt for the new device: the effects' chain is written
     // as it should be first, and what it holds sent again in case it is not.
     syncFilterString();
-    if (chainRunning())
+    if (chainRunning()) {
         sendEffects(m_mpv, SoundChain::commandsFor(m_fxLive));
+        sendWidths(m_mpv);
+    }
     mpv_set_property_async(m_mpv, 0, "audio-device", MPV_FORMAT_STRING, &value);
     // The player waiting to take over sounds where the song does.
     if (m_upgrade)
@@ -1253,6 +1255,11 @@ bool MpvEngine::writeChain(const SoundChain::Params &params)
         return false;
     }
     m_afGivenParams = params;
+    // Built afresh from the text, with Studio clarity's widths for 48 kHz.
+    // (The player waiting to take over gets its own at its PLAYBACK_RESTART,
+    // and again as it takes over; one rebuilt here in between keeps the
+    // text's until then, unheard.)
+    m_fxWidthsDue = true;
     if (m_upgrade && m_upgrade->mpv)
         m_upgrade->afParams = m_upgrade->fxLive = params;
     return true;
@@ -1390,6 +1397,11 @@ void MpvEngine::effectsTick()
     }
     m_fxFailingSince.invalidate();
     m_fxVerified = true;
+    // A graph built since the last of these holds the text's widths for
+    // Studio clarity: this sound's rate's, now that it answers, ahead of the
+    // step below.
+    if (std::exchange(m_fxWidthsDue, false))
+        sendWidths(m_mpv);
     const SoundChain::Params goal = rampGoal();
     if (m_fxLive == goal) {
         m_fxTick->stop();
@@ -1431,6 +1443,15 @@ void MpvEngine::sendEffects(mpv_handle *mpv, const QList<SoundChain::Command> &c
     }
 }
 
+void MpvEngine::sendWidths(mpv_handle *mpv)
+{
+    if (!mpv)
+        return;
+    const QList<SoundChain::Command> widths = SoundChain::widthsAt(sampleRateOf(mpv));
+    sendEffects(mpv, widths);
+    m_fxWidthsSent += int(widths.size());
+}
+
 void MpvEngine::effectsRestarted()
 {
     m_fxRestarted = true;
@@ -1453,6 +1474,7 @@ void MpvEngine::effectsRestarted()
     if (m_afGiven.isEmpty())
         return;
     m_fxLive = m_afGivenParams;
+    m_fxWidthsDue = true;
     startEffectsTick();
 }
 
@@ -1461,6 +1483,7 @@ void MpvEngine::effectsReconfigured()
     if (m_afGiven.isEmpty() || !chainRunning())
         return;
     sendEffects(m_mpv, SoundChain::commandsFor(m_fxLive));
+    sendWidths(m_mpv);
 }
 
 // In the shipped libmpv, a chain that would not build, set while nothing
@@ -1530,14 +1553,15 @@ bool MpvEngine::effectsAnswer()
 
 // The values it holds already, so nothing is heard of it; each sent as the
 // ramp sends it (sendEffects, bands past half the rate left out), but waited
-// for.
+// for. Studio clarity's widths with them, as sendWidths sends them.
 QStringList MpvEngine::effectsRefused()
 {
     QStringList refused;
     if (!m_mpv || m_afGiven.isEmpty())
         return refused;
+    const int rate = sampleRateOf(m_mpv);
     for (const SoundChain::Command &command :
-         SoundChain::commandsAt(SoundChain::commandsFor(m_fxLive), sampleRateOf(m_mpv))) {
+         SoundChain::commandsAt(SoundChain::commandsFor(m_fxLive) + SoundChain::widthsAt(rate), rate)) {
         const QByteArray option = command.option.toUtf8();
         const QByteArray value = command.value.toUtf8();
         const QByteArray target = command.target.toUtf8();
@@ -1757,6 +1781,9 @@ void MpvEngine::drainUpgrade()
             if (!upgrade->af.isEmpty()) {
                 upgrade->fxLive = upgrade->afParams;
                 mirrorEffects();
+                // Its sound's rate may not be this one's (a JioSaavn song
+                // taking over from YouTube's 48 kHz is 44.1 kHz).
+                sendWidths(upgrade->mpv);
             }
             judgeUpgrade();
             break;
@@ -2075,6 +2102,10 @@ void MpvEngine::promoteUpgrade()
     m_fxFailingSince.invalidate();
     // And its link the one a song would be played again from.
     m_lastLoad = { upgrade->url, QString(), 0, upgrade->headers };
+    // Studio clarity's widths again, now that it is the one heard: sent at
+    // its PLAYBACK_RESTART too, but a graph that was not answering yet then
+    // took none of them.
+    m_fxWidthsDue = true;
     if (!m_afGiven.isEmpty())
         startEffectsTick();
 

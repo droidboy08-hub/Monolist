@@ -21,6 +21,7 @@ const char kNightcoreSpeedKey[] = "sound.nightcore_speed";
 const char kEightDKey[] = "sound.8d";
 const char kHighBassKey[] = "sound.high_bass";
 const char kHighBassDbKey[] = "sound.high_bass_db";
+const char kClarityKey[] = "sound.clarity";
 const char kEqKey[] = "sound.eq";
 const char kPresetKey[] = "sound.eq_preset";
 const char kGainsKey[] = "sound.eq_gains";
@@ -107,6 +108,7 @@ void SoundEffects::restore()
     s.eightD = value(kEightDKey) == QLatin1String("1");
     s.highBass = value(kHighBassKey) == QLatin1String("1");
     s.highBassDb = stepOf(value(kHighBassDbKey), SoundChain::kHighBassSteps, 6);
+    s.clarity = value(kClarityKey) == QLatin1String("1");
     s.eq = value(kEqKey) == QLatin1String("1");
 
     // The preset's own curve, unless it is a custom one, which is the only
@@ -266,6 +268,17 @@ void SoundEffects::setHighBassDb(int db)
     apply();
 }
 
+// It goes with every other effect: it changes the colour of the sound, not
+// its speed, so it stays on beside Slowed or Nightcore as the equaliser does.
+void SoundEffects::setStudioClarity(bool on)
+{
+    if (on == m_settings.clarity)
+        return;
+    m_settings.clarity = on;
+    save(QString::fromLatin1(kClarityKey), flag(on));
+    apply();
+}
+
 void SoundEffects::setEqualiser(bool on)
 {
     if (on == m_settings.eq)
@@ -319,8 +332,9 @@ void SoundEffects::turnAllOff()
     m_settings.nightcore = false;
     m_settings.eightD = false;
     m_settings.highBass = false;
+    m_settings.clarity = false;
     m_settings.eq = false;
-    for (const char *key : { kSlowedKey, kNightcoreKey, kEightDKey, kHighBassKey, kEqKey })
+    for (const char *key : { kSlowedKey, kNightcoreKey, kEightDKey, kHighBassKey, kClarityKey, kEqKey })
         save(QString::fromLatin1(key), flag(false));
     apply();
 }
@@ -378,7 +392,7 @@ QVariantList SoundEffects::highBassSteps() const
 bool SoundEffects::active() const
 {
     return m_settings.slowedReverb || m_settings.nightcore || m_settings.eightD || m_settings.highBass
-           || m_settings.eq;
+           || m_settings.clarity || m_settings.eq;
 }
 
 QString SoundEffects::summary() const
@@ -398,6 +412,8 @@ QString SoundEffects::summary() const
         parts << QStringLiteral("8D");
     if (m_settings.highBass)
         parts << QStringLiteral("High bass +%1 dB").arg(m_settings.highBassDb);
+    if (m_settings.clarity)
+        parts << QStringLiteral("Studio clarity");
     if (m_settings.eq) {
         const SoundChain::Preset *known = SoundChain::preset(m_settings.preset);
         parts << QStringLiteral("EQ ") + (known ? known->name : QStringLiteral("Custom"));
@@ -420,13 +436,15 @@ QVariantList SoundEffects::responseCurve(int points) const
 {
     QVariantList curve;
     const double shelf = m_settings.highBass ? double(m_settings.highBassDb) : 0.0;
-    for (double db : SoundChain::responseCurve(m_settings.gains, shelf, qBound(2, points, 2000)))
+    const std::array<double, SoundChain::kBands> clarity =
+        m_settings.clarity ? SoundChain::kClarityDb : std::array<double, SoundChain::kBands>{};
+    for (double db : SoundChain::responseCurve(m_settings.gains, clarity, shelf, qBound(2, points, 2000)))
         curve.append(db);
     return curve;
 }
 
-// For the log: "slowed 0.85 + reverb medium, 8d, high bass +6 dB, eq
-// bass_boost (pre -5.0 dB, limiter -1 dBFS)".
+// For the log: "slowed 0.85 + reverb medium, 8d, high bass +6 dB, studio
+// clarity, eq bass_boost (pre -5.0 dB, limiter -1 dBFS)".
 QString SoundEffects::describe() const
 {
     static const char *const kReverbNames[] = { "no reverb", "reverb light", "reverb medium", "reverb heavy" };
@@ -442,6 +460,8 @@ QString SoundEffects::describe() const
         parts << QStringLiteral("8d");
     if (m_settings.highBass)
         parts << QStringLiteral("high bass +%1 dB").arg(m_settings.highBassDb);
+    if (m_settings.clarity)
+        parts << QStringLiteral("studio clarity");
     if (m_settings.eq) {
         QString eq = QStringLiteral("eq ") + m_settings.preset;
         if (m_settings.preset == QLatin1String(kCustom)) {

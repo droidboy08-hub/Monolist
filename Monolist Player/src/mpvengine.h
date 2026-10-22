@@ -138,9 +138,9 @@ public:
     bool effectsAnswer();
     // For --sound-live-test: every value the running chain holds sent to it
     // again, as the ramp sends it (never to a band past half the sound's
-    // rate, see SoundChain::commandsAt), each answer waited for; the filters
-    // that refused theirs ("amix@pan"). Empty where every one took it, or no
-    // chain is in.
+    // rate, see SoundChain::commandsAt), and Studio clarity's widths for the
+    // sound's rate, each answer waited for; the filters that refused theirs
+    // ("amix@pan"). Empty where every one took it, or no chain is in.
     QStringList effectsRefused();
     // Whether the file playing has a sound track: mpv drops it when the
     // chain will not build, and a file with a picture then plays on without
@@ -149,6 +149,9 @@ public:
     // For --sound-live-test: every chain written from now on carries a
     // filter no FFmpeg has, as a Mac's FFmpeg without one of ours would.
     void breakEffectsForTest(bool broken) { m_fxBreakForTest = broken; }
+    // For the same: how many of Studio clarity's widths have been sent, to
+    // either player, since this engine was made.
+    int clarityWidthsSent() const { return m_fxWidthsSent; }
 
     // The sound devices mpv can play through, as it lists them: maps with a
     // `name`, which setAudioDevice takes, and a `description`, which is what
@@ -380,6 +383,10 @@ private:
     void effectsWouldNotStart(const QString &why);
     // Sends `commands` to one player without waiting for its answer.
     static void sendEffects(mpv_handle *mpv, const QList<SoundChain::Command> &commands);
+    // Studio clarity's bands made one octave wide at the rate of the sound
+    // one player's graph reads (SoundChain::widthsAt): a graph built from the
+    // text has them for 48 kHz. Nothing to send at 48 kHz.
+    void sendWidths(mpv_handle *mpv);
 
     mpv_handle *m_mpv = nullptr;
     // Which file is the current one. Each load is numbered, and mpv's answer to
@@ -437,6 +444,10 @@ private:
     bool m_fxRestarted = false;
     // Its limiter has answered since then.
     bool m_fxVerified = false;
+    // A graph has been built from the text since Studio clarity's widths were
+    // last sent (sendWidths): sent at the next tick it answers.
+    bool m_fxWidthsDue = false;
+    int m_fxWidthsSent = 0;              // clarityWidthsSent()
     // mpv has set up the latest load's sound (an AUDIO_RECONFIG came for it):
     // only from then on can the chain be what fails the file.
     bool m_soundSetUp = false;

@@ -33,6 +33,9 @@ Button {
                                || Qt.colorEqual(control.iconColor, Theme.accent700)
                                ? Theme.accentGlyphHover : Theme.text
     property int iconSize: 16
+    // The stroke, on the glyph's 24-unit grid. The player bar draws every
+    // glyph of its own at one size and one weight (DESIGN 3, the player bar).
+    property real iconThickness: 2
     property int side: 32
 
     implicitWidth: side
@@ -53,6 +56,7 @@ Button {
 
     contentItem: Icon {
         name: control.iconName
+        thickness: control.iconThickness
         color: control.hovered || control.down ? control.hoverColor : control.iconColor
         implicitWidth: control.iconSize
         implicitHeight: control.iconSize

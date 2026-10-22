@@ -112,7 +112,31 @@ bool anyEffect(const SoundChain::Params &p)
 {
     if (!same(p.shelfDb, 0.0) || p.panWet > 0.0 || p.wet > 0.0)
         return true;
-    return std::any_of(p.gains.cbegin(), p.gains.cend(), [](double g) { return !same(g, 0.0); });
+    const auto lifted = [](double g) { return !same(g, 0.0); };
+    return std::any_of(p.gains.cbegin(), p.gains.cend(), lifted)
+           || std::any_of(p.clarity.cbegin(), p.clarity.cend(), lifted);
+}
+
+bool sameBands(const std::array<double, SoundChain::kBands> &a, const std::array<double, SoundChain::kBands> &b)
+{
+    for (int i = 0; i < SoundChain::kBands; ++i) {
+        if (!same(a[size_t(i)], b[size_t(i)]))
+            return false;
+    }
+    return true;
+}
+
+// Studio clarity's band `band` as the text writes its width, for 48 kHz;
+// worked out once, since the model reads it at every point of a curve.
+const QString &clarityTextWidth(int band)
+{
+    static const std::array<QString, SoundChain::kBands> widths = [] {
+        std::array<QString, SoundChain::kBands> list;
+        for (int i = 0; i < SoundChain::kBands; ++i)
+            list[size_t(i)] = SoundChain::number(SoundChain::clarityWidth(i, SoundChain::kClarityRate), 4);
+        return list;
+    }();
+    return widths[size_t(band)];
 }
 
 // The two weights amix@pan is given: the dry chain's, and the 8D branch's.
@@ -137,6 +161,9 @@ QList<Lane> lanesOf(SoundChain::Params &from, const SoundChain::Params &to)
     lanes.append({ &from.preDb, to.preDb, kPreStepLimit, 1 });
     for (int i = 0; i < SoundChain::kBands; ++i)
         lanes.append({ &from.gains[size_t(i)], to.gains[size_t(i)], kGainStepLimit, 1 });
+    // Studio clarity's bands are bands like the equaliser's, and step as they do.
+    for (int i = 0; i < SoundChain::kBands; ++i)
+        lanes.append({ &from.clarity[size_t(i)], to.clarity[size_t(i)], kGainStepLimit, 1 });
     lanes.append({ &from.shelfDb, to.shelfDb, kGainStepLimit, 1 });
     // Only a graph with the 8D branch has its weights to move.
     if (from.has8D)
@@ -152,13 +179,10 @@ bool SoundChain::Settings::operator==(const Settings &o) const
 {
     if (slowedReverb != o.slowedReverb || !same(slowedSpeed, o.slowedSpeed) || reverbLevel != o.reverbLevel
         || nightcore != o.nightcore || !same(nightcoreSpeed, o.nightcoreSpeed) || eightD != o.eightD
-        || highBass != o.highBass || highBassDb != o.highBassDb || eq != o.eq || preset != o.preset)
+        || highBass != o.highBass || highBassDb != o.highBassDb || clarity != o.clarity || eq != o.eq
+        || preset != o.preset)
         return false;
-    for (int i = 0; i < kBands; ++i) {
-        if (!same(gains[size_t(i)], o.gains[size_t(i)]))
-            return false;
-    }
-    return true;
+    return sameBands(gains, o.gains);
 }
 
 bool SoundChain::Params::operator==(const Params &o) const
@@ -166,11 +190,7 @@ bool SoundChain::Params::operator==(const Params &o) const
     if (!same(preDb, o.preDb) || !same(shelfDb, o.shelfDb) || !same(panWet, o.panWet) || !same(wet, o.wet)
         || !same(limit, o.limit) || has8D != o.has8D)
         return false;
-    for (int i = 0; i < kBands; ++i) {
-        if (!same(gains[size_t(i)], o.gains[size_t(i)]))
-            return false;
-    }
-    return true;
+    return sameBands(gains, o.gains) && sameBands(clarity, o.clarity);
 }
 
 QString SoundChain::number(double value, int decimals)
@@ -235,6 +255,12 @@ SoundChain::Params SoundChain::paramsFor(const Settings &settings)
     }
     if (s.highBass)
         p.shelfDb = s.highBassDb;
+    // Its own bands at its own gains, whatever the equaliser holds: nothing
+    // to add up or clamp (see kClarityHz).
+    if (s.clarity) {
+        for (int i = 0; i < kBands; ++i)
+            p.clarity[size_t(i)] = roundTo(kClarityDb[size_t(i)], 1);
+    }
     double wet = s.slowedReverb ? reverbWet(s.reverbLevel) : 0.0;
     // 8D brings a light room with it; Slowed's own reverb wins if it is more.
     if (s.eightD) {
@@ -245,7 +271,8 @@ SoundChain::Params SoundChain::paramsFor(const Settings &settings)
     p.wet = roundTo(wet, 2);
     // Down to the 0.1 dB it is written with, never up: rounded to the
     // nearest, 0.05 dB more than the +6 dB could reach the limiter.
-    const double pre = std::floor(preGainDb(peakResponseDb(p.gains, p.shelfDb), p.wet) * 10.0 + 1e-6) / 10.0;
+    const double pre =
+        std::floor(preGainDb(peakResponseDb(p.gains, p.clarity, p.shelfDb), p.wet) * 10.0 + 1e-6) / 10.0;
     p.preDb = pre == 0.0 ? 0.0 : pre;
     p.limit = anyEffect(p) ? kLimit : 1.0;
     return p;
@@ -284,6 +311,12 @@ QString SoundChain::graph(const Params &p)
                     .arg(i)
                     .arg(kBandHz[size_t(i)])
                     .arg(number(p.gains[size_t(i)], 1));
+    }
+    for (int i = 0; i < kBands; ++i) {
+        text += QStringLiteral(",equalizer@c%1=f=%2:t=q:w=%3:g=%4")
+                    .arg(i)
+                    .arg(kClarityHz[size_t(i)])
+                    .arg(clarityTextWidth(i), number(p.clarity[size_t(i)], 1));
     }
     text += QStringLiteral(",lowshelf@hb=f=100:t=q:w=0.707:g=%1").arg(number(p.shelfDb, 1));
     if (p.has8D) {
@@ -324,6 +357,10 @@ QList<SoundChain::Command> SoundChain::commands(const Params &from, const Params
         add(QStringLiteral("g"), number(from.gains[size_t(i)], 1), number(to.gains[size_t(i)], 1),
             QStringLiteral("equalizer@b%1").arg(i));
     }
+    for (int i = 0; i < kBands; ++i) {
+        add(QStringLiteral("g"), number(from.clarity[size_t(i)], 1), number(to.clarity[size_t(i)], 1),
+            QStringLiteral("equalizer@c%1").arg(i));
+    }
     add(QStringLiteral("g"), number(from.shelfDb, 1), number(to.shelfDb, 1), QStringLiteral("lowshelf@hb"));
     if (from.has8D)
         add(QStringLiteral("weights"), panWeights(from.panWet), panWeights(to.panWet), QStringLiteral("amix@pan"));
@@ -339,6 +376,8 @@ QList<SoundChain::Command> SoundChain::commandsFor(const Params &p)
     list.append({ QStringLiteral("volume"), number(p.preDb, 1) + QStringLiteral("dB"), QStringLiteral("volume@pre") });
     for (int i = 0; i < kBands; ++i)
         list.append({ QStringLiteral("g"), number(p.gains[size_t(i)], 1), QStringLiteral("equalizer@b%1").arg(i) });
+    for (int i = 0; i < kBands; ++i)
+        list.append({ QStringLiteral("g"), number(p.clarity[size_t(i)], 1), QStringLiteral("equalizer@c%1").arg(i) });
     list.append({ QStringLiteral("g"), number(p.shelfDb, 1), QStringLiteral("lowshelf@hb") });
     if (p.has8D)
         list.append({ QStringLiteral("weights"), panWeights(p.panWet), QStringLiteral("amix@pan") });
@@ -353,16 +392,46 @@ QList<SoundChain::Command> SoundChain::commandsFor(const Params &p)
 QList<SoundChain::Command> SoundChain::commandsAt(const QList<Command> &commands, int sampleRate)
 {
     static const QString band = QStringLiteral("equalizer@b");
+    static const QString clarityBand = QStringLiteral("equalizer@c");
     QList<Command> list;
     for (const Command &command : commands) {
-        if (command.target.startsWith(band)) {
+        const bool ours = command.target.startsWith(band);
+        const bool clarity = command.target.startsWith(clarityBand);
+        if (ours || clarity) {
             bool ok = false;
             const int index = QStringView(command.target).mid(band.size()).toInt(&ok);
-            if (!ok || index < 0 || index >= kBands || sampleRate <= 0
-                || 2 * qint64(kBandHz[size_t(index)]) > sampleRate)
+            if (!ok || index < 0 || index >= kBands || sampleRate <= 0)
+                continue;
+            const int hz = ours ? kBandHz[size_t(index)] : kClarityHz[size_t(index)];
+            if (2 * qint64(hz) > sampleRate)
                 continue;
         }
         list.append(command);
+    }
+    return list;
+}
+
+double SoundChain::clarityWidth(int band, int sampleRate)
+{
+    if (band < 0 || band >= kBands || sampleRate <= 0)
+        return 0.0;
+    const double hz = kClarityHz[size_t(band)];
+    if (hz >= 0.4 * sampleRate)
+        return 0.0;
+    const double w0 = 2.0 * kPi * hz / sampleRate;
+    return 1.0 / (2.0 * std::sinh(std::log(2.0) / 2.0 * w0 / std::sin(w0)));
+}
+
+QList<SoundChain::Command> SoundChain::widthsAt(int sampleRate)
+{
+    QList<Command> list;
+    for (int i = 0; i < kBands; ++i) {
+        const double q = clarityWidth(i, sampleRate);
+        if (q <= 0.0)
+            continue;
+        const QString width = number(q, 4);
+        if (width != clarityTextWidth(i))
+            list.append({ QStringLiteral("w"), width, QStringLiteral("equalizer@c%1").arg(i) });
     }
     return list;
 }
@@ -396,27 +465,44 @@ SoundChain::Params SoundChain::stepToward(const Params &from, const Params &to)
     return next;
 }
 
-double SoundChain::responseDb(const std::array<double, kBands> &gains, double shelfDb, double hz)
+double SoundChain::responseDb(const std::array<double, kBands> &gains, const std::array<double, kBands> &clarity,
+                              double shelfDb, double hz)
 {
     std::complex<double> h(1.0, 0.0);
     for (int i = 0; i < kBands; ++i) {
         if (!same(gains[size_t(i)], 0.0))
             h *= peaking(kBandHz[size_t(i)], gains[size_t(i)], kBandQ).at(hz);
     }
+    // At the widths the text writes, which are an octave at the model's 48 kHz.
+    for (int i = 0; i < kBands; ++i) {
+        if (!same(clarity[size_t(i)], 0.0))
+            h *= peaking(kClarityHz[size_t(i)], clarity[size_t(i)], clarityTextWidth(i).toDouble()).at(hz);
+    }
     if (!same(shelfDb, 0.0))
         h *= lowShelf(kShelfHz, shelfDb, kShelfQ).at(hz);
     return 20.0 * std::log10(std::max(std::abs(h), 1e-12));
 }
 
-double SoundChain::peakResponseDb(const std::array<double, kBands> &gains, double shelfDb)
+double SoundChain::responseDb(const std::array<double, kBands> &gains, double shelfDb, double hz)
+{
+    return responseDb(gains, {}, shelfDb, hz);
+}
+
+double SoundChain::peakResponseDb(const std::array<double, kBands> &gains, const std::array<double, kBands> &clarity,
+                                  double shelfDb)
 {
     constexpr int kPoints = 240;
     double peak = -1e9;
     for (int k = 0; k < kPoints; ++k) {
         const double hz = 20.0 * std::pow(1000.0, double(k) / double(kPoints - 1));
-        peak = std::max(peak, responseDb(gains, shelfDb, hz));
+        peak = std::max(peak, responseDb(gains, clarity, shelfDb, hz));
     }
     return peak;
+}
+
+double SoundChain::peakResponseDb(const std::array<double, kBands> &gains, double shelfDb)
+{
+    return peakResponseDb(gains, {}, shelfDb);
 }
 
 double SoundChain::preGainDb(double peakDb, double wet)
@@ -426,7 +512,8 @@ double SoundChain::preGainDb(double peakDb, double wet)
     return db == 0.0 ? 0.0 : db;
 }
 
-QList<double> SoundChain::responseCurve(const std::array<double, kBands> &gains, double shelfDb, int points)
+QList<double> SoundChain::responseCurve(const std::array<double, kBands> &gains,
+                                       const std::array<double, kBands> &clarity, double shelfDb, int points)
 {
     QList<double> curve;
     if (points < 2)
@@ -436,9 +523,14 @@ QList<double> SoundChain::responseCurve(const std::array<double, kBands> &gains,
     curve.reserve(points);
     for (int k = 0; k < points; ++k) {
         const double hz = first * std::pow(last / first, double(k) / double(points - 1));
-        curve.append(responseDb(gains, shelfDb, hz));
+        curve.append(responseDb(gains, clarity, shelfDb, hz));
     }
     return curve;
+}
+
+QList<double> SoundChain::responseCurve(const std::array<double, kBands> &gains, double shelfDb, int points)
+{
+    return responseCurve(gains, {}, shelfDb, points);
 }
 
 const QList<SoundChain::Preset> &SoundChain::presets()

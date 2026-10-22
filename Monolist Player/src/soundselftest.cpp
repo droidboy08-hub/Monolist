@@ -100,14 +100,22 @@ QString num(double value, int decimals = 2)
 // The chain at rest, without and with the 8D branch, and with everything up
 // (Bass boost, High bass +12, heavy reverb, 8D): the very texts the research
 // harness (eqresearch/build/fullgraph.py, graph()) played inside the shipped
-// libmpv, from every kind of source, answering every command. Kept apart from
-// SoundChain on purpose: a change to the templates has to change these too.
+// libmpv, from every kind of source, answering every command, with Studio
+// clarity's ten bands (2026-10-21) since put in after the equaliser's, at 0.
+// Kept apart from SoundChain on purpose: a change to the templates has to
+// change these too.
 const char kGoldenNeutral[] =
-    R"(aformat=channel_layouts=stereo,volume@pre=volume=0dB,equalizer@b0=f=31:t=q:w=1.41:g=0,equalizer@b1=f=62:t=q:w=1.41:g=0,equalizer@b2=f=125:t=q:w=1.41:g=0,equalizer@b3=f=250:t=q:w=1.41:g=0,equalizer@b4=f=500:t=q:w=1.41:g=0,equalizer@b5=f=1000:t=q:w=1.41:g=0,equalizer@b6=f=2000:t=q:w=1.41:g=0,equalizer@b7=f=4000:t=q:w=1.41:g=0,equalizer@b8=f=8000:t=q:w=1.41:g=0,equalizer@b9=f=16000:t=q:w=1.41:g=0,lowshelf@hb=f=100:t=q:w=0.707:g=0,asplit=2[d][w];anoisesrc=d=2.5:c=white:r=48000:a=1:seed=11[nl];anoisesrc=d=2.5:c=white:r=48000:a=1:seed=22[nr];[nl][nr]join=inputs=2:channel_layout=stereo:map=0.0-FL|1.0-FR,afade=t=out:st=0:d=3.67:curve=exp,afade=t=in:st=0:d=0.004,adelay=delays=20:all=1,atrim=end=2.5,highpass=f=150,lowpass=f=6000,afade=t=out:st=2.3:d=0.2[ir];[w][ir]afir@rev=irnorm=2:minp=1024[r];[d][r]amix@mix=inputs=2:weights=1 0:normalize=0,alimiter@lim=limit=1:attack=5:release=100:level=0:latency=1)";
+    R"(aformat=channel_layouts=stereo,volume@pre=volume=0dB,equalizer@b0=f=31:t=q:w=1.41:g=0,equalizer@b1=f=62:t=q:w=1.41:g=0,equalizer@b2=f=125:t=q:w=1.41:g=0,equalizer@b3=f=250:t=q:w=1.41:g=0,equalizer@b4=f=500:t=q:w=1.41:g=0,equalizer@b5=f=1000:t=q:w=1.41:g=0,equalizer@b6=f=2000:t=q:w=1.41:g=0,equalizer@b7=f=4000:t=q:w=1.41:g=0,equalizer@b8=f=8000:t=q:w=1.41:g=0,equalizer@b9=f=16000:t=q:w=1.41:g=0,equalizer@c0=f=31:t=q:w=1.4142:g=0,equalizer@c1=f=63:t=q:w=1.4142:g=0,equalizer@c2=f=125:t=q:w=1.4141:g=0,equalizer@c3=f=250:t=q:w=1.414:g=0,equalizer@c4=f=500:t=q:w=1.4132:g=0,equalizer@c5=f=1000:t=q:w=1.41:g=0,equalizer@c6=f=2000:t=q:w=1.3975:g=0,equalizer@c7=f=4001:t=q:w=1.3479:g=0,equalizer@c8=f=8001:t=q:w=1.1588:g=0,equalizer@c9=f=16001:t=q:w=0.5319:g=0,lowshelf@hb=f=100:t=q:w=0.707:g=0,asplit=2[d][w];anoisesrc=d=2.5:c=white:r=48000:a=1:seed=11[nl];anoisesrc=d=2.5:c=white:r=48000:a=1:seed=22[nr];[nl][nr]join=inputs=2:channel_layout=stereo:map=0.0-FL|1.0-FR,afade=t=out:st=0:d=3.67:curve=exp,afade=t=in:st=0:d=0.004,adelay=delays=20:all=1,atrim=end=2.5,highpass=f=150,lowpass=f=6000,afade=t=out:st=2.3:d=0.2[ir];[w][ir]afir@rev=irnorm=2:minp=1024[r];[d][r]amix@mix=inputs=2:weights=1 0:normalize=0,alimiter@lim=limit=1:attack=5:release=100:level=0:latency=1)";
 const char kGoldenNeutral8D[] =
-    R"(aformat=channel_layouts=stereo,volume@pre=volume=0dB,equalizer@b0=f=31:t=q:w=1.41:g=0,equalizer@b1=f=62:t=q:w=1.41:g=0,equalizer@b2=f=125:t=q:w=1.41:g=0,equalizer@b3=f=250:t=q:w=1.41:g=0,equalizer@b4=f=500:t=q:w=1.41:g=0,equalizer@b5=f=1000:t=q:w=1.41:g=0,equalizer@b6=f=2000:t=q:w=1.41:g=0,equalizer@b7=f=4000:t=q:w=1.41:g=0,equalizer@b8=f=8000:t=q:w=1.41:g=0,equalizer@b9=f=16000:t=q:w=1.41:g=0,lowshelf@hb=f=100:t=q:w=0.707:g=0,asplit=2[p0][p1];[p1]aeval=exprs='st(3,2*PI*t/10);st(4,0.8*sin(ld(3)));st(5,max(0,-cos(ld(3))));st(6,(val(0)+val(1))/2);st(0,ld(0)+(1-exp(-2*PI*2000/s))*(ld(6)-ld(0)));st(7,ld(6)+min(1,0.875*max(0,ld(4))+0.5*ld(5))*(ld(0)-ld(6)));st(8,0.5+0.00075*s*max(0,ld(4)));st(8,(1-ld(8))/(1+ld(8)));st(9,ld(8)*ld(7)+ld(1)-ld(8)*ld(2));st(1,ld(7));st(2,ld(9));ld(9)*cos(PI/4*(1+ld(4)))|st(3,2*PI*t/10);st(4,0.8*sin(ld(3)));st(5,max(0,-cos(ld(3))));st(6,(val(0)+val(1))/2);st(0,ld(0)+(1-exp(-2*PI*2000/s))*(ld(6)-ld(0)));st(7,ld(6)+min(1,0.875*max(0,-ld(4))+0.5*ld(5))*(ld(0)-ld(6)));st(8,0.5+0.00075*s*max(0,-ld(4)));st(8,(1-ld(8))/(1+ld(8)));st(9,ld(8)*ld(7)+ld(1)-ld(8)*ld(2));st(1,ld(7));st(2,ld(9));ld(9)*sin(PI/4*(1+ld(4)))':c=stereo[p8];[p0][p8]amix@pan=inputs=2:weights=1 0:normalize=0,asplit=2[d][w];anoisesrc=d=2.5:c=white:r=48000:a=1:seed=11[nl];anoisesrc=d=2.5:c=white:r=48000:a=1:seed=22[nr];[nl][nr]join=inputs=2:channel_layout=stereo:map=0.0-FL|1.0-FR,afade=t=out:st=0:d=3.67:curve=exp,afade=t=in:st=0:d=0.004,adelay=delays=20:all=1,atrim=end=2.5,highpass=f=150,lowpass=f=6000,afade=t=out:st=2.3:d=0.2[ir];[w][ir]afir@rev=irnorm=2:minp=1024[r];[d][r]amix@mix=inputs=2:weights=1 0:normalize=0,alimiter@lim=limit=1:attack=5:release=100:level=0:latency=1)";
+    R"(aformat=channel_layouts=stereo,volume@pre=volume=0dB,equalizer@b0=f=31:t=q:w=1.41:g=0,equalizer@b1=f=62:t=q:w=1.41:g=0,equalizer@b2=f=125:t=q:w=1.41:g=0,equalizer@b3=f=250:t=q:w=1.41:g=0,equalizer@b4=f=500:t=q:w=1.41:g=0,equalizer@b5=f=1000:t=q:w=1.41:g=0,equalizer@b6=f=2000:t=q:w=1.41:g=0,equalizer@b7=f=4000:t=q:w=1.41:g=0,equalizer@b8=f=8000:t=q:w=1.41:g=0,equalizer@b9=f=16000:t=q:w=1.41:g=0,equalizer@c0=f=31:t=q:w=1.4142:g=0,equalizer@c1=f=63:t=q:w=1.4142:g=0,equalizer@c2=f=125:t=q:w=1.4141:g=0,equalizer@c3=f=250:t=q:w=1.414:g=0,equalizer@c4=f=500:t=q:w=1.4132:g=0,equalizer@c5=f=1000:t=q:w=1.41:g=0,equalizer@c6=f=2000:t=q:w=1.3975:g=0,equalizer@c7=f=4001:t=q:w=1.3479:g=0,equalizer@c8=f=8001:t=q:w=1.1588:g=0,equalizer@c9=f=16001:t=q:w=0.5319:g=0,lowshelf@hb=f=100:t=q:w=0.707:g=0,asplit=2[p0][p1];[p1]aeval=exprs='st(3,2*PI*t/10);st(4,0.8*sin(ld(3)));st(5,max(0,-cos(ld(3))));st(6,(val(0)+val(1))/2);st(0,ld(0)+(1-exp(-2*PI*2000/s))*(ld(6)-ld(0)));st(7,ld(6)+min(1,0.875*max(0,ld(4))+0.5*ld(5))*(ld(0)-ld(6)));st(8,0.5+0.00075*s*max(0,ld(4)));st(8,(1-ld(8))/(1+ld(8)));st(9,ld(8)*ld(7)+ld(1)-ld(8)*ld(2));st(1,ld(7));st(2,ld(9));ld(9)*cos(PI/4*(1+ld(4)))|st(3,2*PI*t/10);st(4,0.8*sin(ld(3)));st(5,max(0,-cos(ld(3))));st(6,(val(0)+val(1))/2);st(0,ld(0)+(1-exp(-2*PI*2000/s))*(ld(6)-ld(0)));st(7,ld(6)+min(1,0.875*max(0,-ld(4))+0.5*ld(5))*(ld(0)-ld(6)));st(8,0.5+0.00075*s*max(0,-ld(4)));st(8,(1-ld(8))/(1+ld(8)));st(9,ld(8)*ld(7)+ld(1)-ld(8)*ld(2));st(1,ld(7));st(2,ld(9));ld(9)*sin(PI/4*(1+ld(4)))':c=stereo[p8];[p0][p8]amix@pan=inputs=2:weights=1 0:normalize=0,asplit=2[d][w];anoisesrc=d=2.5:c=white:r=48000:a=1:seed=11[nl];anoisesrc=d=2.5:c=white:r=48000:a=1:seed=22[nr];[nl][nr]join=inputs=2:channel_layout=stereo:map=0.0-FL|1.0-FR,afade=t=out:st=0:d=3.67:curve=exp,afade=t=in:st=0:d=0.004,adelay=delays=20:all=1,atrim=end=2.5,highpass=f=150,lowpass=f=6000,afade=t=out:st=2.3:d=0.2[ir];[w][ir]afir@rev=irnorm=2:minp=1024[r];[d][r]amix@mix=inputs=2:weights=1 0:normalize=0,alimiter@lim=limit=1:attack=5:release=100:level=0:latency=1)";
 const char kGoldenFull8D[] =
-    R"(aformat=channel_layouts=stereo,volume@pre=volume=-15dB,equalizer@b0=f=31:t=q:w=1.41:g=6,equalizer@b1=f=62:t=q:w=1.41:g=5,equalizer@b2=f=125:t=q:w=1.41:g=4,equalizer@b3=f=250:t=q:w=1.41:g=2,equalizer@b4=f=500:t=q:w=1.41:g=0,equalizer@b5=f=1000:t=q:w=1.41:g=0,equalizer@b6=f=2000:t=q:w=1.41:g=0,equalizer@b7=f=4000:t=q:w=1.41:g=0,equalizer@b8=f=8000:t=q:w=1.41:g=0,equalizer@b9=f=16000:t=q:w=1.41:g=0,lowshelf@hb=f=100:t=q:w=0.707:g=12,asplit=2[p0][p1];[p1]aeval=exprs='st(3,2*PI*t/10);st(4,0.8*sin(ld(3)));st(5,max(0,-cos(ld(3))));st(6,(val(0)+val(1))/2);st(0,ld(0)+(1-exp(-2*PI*2000/s))*(ld(6)-ld(0)));st(7,ld(6)+min(1,0.875*max(0,ld(4))+0.5*ld(5))*(ld(0)-ld(6)));st(8,0.5+0.00075*s*max(0,ld(4)));st(8,(1-ld(8))/(1+ld(8)));st(9,ld(8)*ld(7)+ld(1)-ld(8)*ld(2));st(1,ld(7));st(2,ld(9));ld(9)*cos(PI/4*(1+ld(4)))|st(3,2*PI*t/10);st(4,0.8*sin(ld(3)));st(5,max(0,-cos(ld(3))));st(6,(val(0)+val(1))/2);st(0,ld(0)+(1-exp(-2*PI*2000/s))*(ld(6)-ld(0)));st(7,ld(6)+min(1,0.875*max(0,-ld(4))+0.5*ld(5))*(ld(0)-ld(6)));st(8,0.5+0.00075*s*max(0,-ld(4)));st(8,(1-ld(8))/(1+ld(8)));st(9,ld(8)*ld(7)+ld(1)-ld(8)*ld(2));st(1,ld(7));st(2,ld(9));ld(9)*sin(PI/4*(1+ld(4)))':c=stereo[p8];[p0][p8]amix@pan=inputs=2:weights=0 1.41:normalize=0,asplit=2[d][w];anoisesrc=d=2.5:c=white:r=48000:a=1:seed=11[nl];anoisesrc=d=2.5:c=white:r=48000:a=1:seed=22[nr];[nl][nr]join=inputs=2:channel_layout=stereo:map=0.0-FL|1.0-FR,afade=t=out:st=0:d=3.67:curve=exp,afade=t=in:st=0:d=0.004,adelay=delays=20:all=1,atrim=end=2.5,highpass=f=150,lowpass=f=6000,afade=t=out:st=2.3:d=0.2[ir];[w][ir]afir@rev=irnorm=2:minp=1024[r];[d][r]amix@mix=inputs=2:weights=1 1:normalize=0,alimiter@lim=limit=0.891:attack=5:release=100:level=0:latency=1)";
+    R"(aformat=channel_layouts=stereo,volume@pre=volume=-15dB,equalizer@b0=f=31:t=q:w=1.41:g=6,equalizer@b1=f=62:t=q:w=1.41:g=5,equalizer@b2=f=125:t=q:w=1.41:g=4,equalizer@b3=f=250:t=q:w=1.41:g=2,equalizer@b4=f=500:t=q:w=1.41:g=0,equalizer@b5=f=1000:t=q:w=1.41:g=0,equalizer@b6=f=2000:t=q:w=1.41:g=0,equalizer@b7=f=4000:t=q:w=1.41:g=0,equalizer@b8=f=8000:t=q:w=1.41:g=0,equalizer@b9=f=16000:t=q:w=1.41:g=0,equalizer@c0=f=31:t=q:w=1.4142:g=0,equalizer@c1=f=63:t=q:w=1.4142:g=0,equalizer@c2=f=125:t=q:w=1.4141:g=0,equalizer@c3=f=250:t=q:w=1.414:g=0,equalizer@c4=f=500:t=q:w=1.4132:g=0,equalizer@c5=f=1000:t=q:w=1.41:g=0,equalizer@c6=f=2000:t=q:w=1.3975:g=0,equalizer@c7=f=4001:t=q:w=1.3479:g=0,equalizer@c8=f=8001:t=q:w=1.1588:g=0,equalizer@c9=f=16001:t=q:w=0.5319:g=0,lowshelf@hb=f=100:t=q:w=0.707:g=12,asplit=2[p0][p1];[p1]aeval=exprs='st(3,2*PI*t/10);st(4,0.8*sin(ld(3)));st(5,max(0,-cos(ld(3))));st(6,(val(0)+val(1))/2);st(0,ld(0)+(1-exp(-2*PI*2000/s))*(ld(6)-ld(0)));st(7,ld(6)+min(1,0.875*max(0,ld(4))+0.5*ld(5))*(ld(0)-ld(6)));st(8,0.5+0.00075*s*max(0,ld(4)));st(8,(1-ld(8))/(1+ld(8)));st(9,ld(8)*ld(7)+ld(1)-ld(8)*ld(2));st(1,ld(7));st(2,ld(9));ld(9)*cos(PI/4*(1+ld(4)))|st(3,2*PI*t/10);st(4,0.8*sin(ld(3)));st(5,max(0,-cos(ld(3))));st(6,(val(0)+val(1))/2);st(0,ld(0)+(1-exp(-2*PI*2000/s))*(ld(6)-ld(0)));st(7,ld(6)+min(1,0.875*max(0,-ld(4))+0.5*ld(5))*(ld(0)-ld(6)));st(8,0.5+0.00075*s*max(0,-ld(4)));st(8,(1-ld(8))/(1+ld(8)));st(9,ld(8)*ld(7)+ld(1)-ld(8)*ld(2));st(1,ld(7));st(2,ld(9));ld(9)*sin(PI/4*(1+ld(4)))':c=stereo[p8];[p0][p8]amix@pan=inputs=2:weights=0 1.41:normalize=0,asplit=2[d][w];anoisesrc=d=2.5:c=white:r=48000:a=1:seed=11[nl];anoisesrc=d=2.5:c=white:r=48000:a=1:seed=22[nr];[nl][nr]join=inputs=2:channel_layout=stereo:map=0.0-FL|1.0-FR,afade=t=out:st=0:d=3.67:curve=exp,afade=t=in:st=0:d=0.004,adelay=delays=20:all=1,atrim=end=2.5,highpass=f=150,lowpass=f=6000,afade=t=out:st=2.3:d=0.2[ir];[w][ir]afir@rev=irnorm=2:minp=1024[r];[d][r]amix@mix=inputs=2:weights=1 1:normalize=0,alimiter@lim=limit=0.891:attack=5:release=100:level=0:latency=1)";
+
+// Studio clarity alone: its ten bands at its curve, turned down 3.4 dB, the
+// limiter on. Played inside the shipped libmpv by the measuring harness, and
+// by --sound-live-test.
+const char kGoldenClarity[] =
+    R"(aformat=channel_layouts=stereo,volume@pre=volume=-3.4dB,equalizer@b0=f=31:t=q:w=1.41:g=0,equalizer@b1=f=62:t=q:w=1.41:g=0,equalizer@b2=f=125:t=q:w=1.41:g=0,equalizer@b3=f=250:t=q:w=1.41:g=0,equalizer@b4=f=500:t=q:w=1.41:g=0,equalizer@b5=f=1000:t=q:w=1.41:g=0,equalizer@b6=f=2000:t=q:w=1.41:g=0,equalizer@b7=f=4000:t=q:w=1.41:g=0,equalizer@b8=f=8000:t=q:w=1.41:g=0,equalizer@b9=f=16000:t=q:w=1.41:g=0,equalizer@c0=f=31:t=q:w=1.4142:g=2.7,equalizer@c1=f=63:t=q:w=1.4142:g=2.2,equalizer@c2=f=125:t=q:w=1.4141:g=0.6,equalizer@c3=f=250:t=q:w=1.414:g=-2.6,equalizer@c4=f=500:t=q:w=1.4132:g=-0.6,equalizer@c5=f=1000:t=q:w=1.41:g=1.2,equalizer@c6=f=2000:t=q:w=1.3975:g=3,equalizer@c7=f=4001:t=q:w=1.3479:g=4,equalizer@c8=f=8001:t=q:w=1.1588:g=4.3,equalizer@c9=f=16001:t=q:w=0.5319:g=4.8,lowshelf@hb=f=100:t=q:w=0.707:g=0,asplit=2[d][w];anoisesrc=d=2.5:c=white:r=48000:a=1:seed=11[nl];anoisesrc=d=2.5:c=white:r=48000:a=1:seed=22[nr];[nl][nr]join=inputs=2:channel_layout=stereo:map=0.0-FL|1.0-FR,afade=t=out:st=0:d=3.67:curve=exp,afade=t=in:st=0:d=0.004,adelay=delays=20:all=1,atrim=end=2.5,highpass=f=150,lowpass=f=6000,afade=t=out:st=2.3:d=0.2[ir];[w][ir]afir@rev=irnorm=2:minp=1024[r];[d][r]amix@mix=inputs=2:weights=1 0:normalize=0,alimiter@lim=limit=0.891:attack=5:release=100:level=0:latency=1)";
 
 // Everything up: Bass boost on the bands, High bass +12, Slowed with heavy
 // reverb, 8D.
@@ -138,10 +146,30 @@ QString describe(const SoundChain::Params &p)
     QStringList gains;
     for (double g : p.gains)
         gains << SoundChain::number(g, 1);
-    return QStringLiteral("pre %1, gains [%2], shelf %3, pan %4, wet %5, limit %6%7")
-        .arg(SoundChain::number(p.preDb, 1), gains.join(QLatin1Char(' ')), SoundChain::number(p.shelfDb, 1),
-             SoundChain::number(p.panWet, 2), SoundChain::number(p.wet, 2), SoundChain::number(p.limit, 3),
-             p.has8D ? QStringLiteral(", 8D branch") : QString());
+    QStringList clarity;
+    for (double g : p.clarity)
+        clarity << SoundChain::number(g, 1);
+    return QStringLiteral("pre %1, gains [%2], clarity [%3], shelf %4, pan %5, wet %6, limit %7%8")
+        .arg(SoundChain::number(p.preDb, 1), gains.join(QLatin1Char(' ')), clarity.join(QLatin1Char(' ')),
+             SoundChain::number(p.shelfDb, 1), SoundChain::number(p.panWet, 2), SoundChain::number(p.wet, 2),
+             SoundChain::number(p.limit, 3), p.has8D ? QStringLiteral(", 8D branch") : QString());
+}
+
+// Studio clarity alone.
+SoundChain::Settings clarityAlone()
+{
+    SoundChain::Settings s;
+    s.clarity = true;
+    return s;
+}
+
+bool isClarityCurve(const std::array<double, SoundChain::kBands> &bands)
+{
+    for (int i = 0; i < SoundChain::kBands; ++i) {
+        if (std::fabs(bands[size_t(i)] - SoundChain::kClarityDb[size_t(i)]) > 1e-9)
+            return false;
+    }
+    return true;
 }
 
 // --------------------------------------------------------------- the chain
@@ -163,9 +191,9 @@ void testChain(Checks &t)
                 && !graph(neutral()).contains(QLatin1String("bass@")),
             QStringLiteral("High bass is FFmpeg's lowshelf, the shape the maths models, not its 'bass'"));
     const QString af = afValue(neutral());
-    t.check(af == QStringLiteral("@fx:lavfi=graph=%903%") + QLatin1String(kGoldenNeutral),
+    t.check(af == QStringLiteral("@fx:lavfi=graph=%1264%") + QLatin1String(kGoldenNeutral),
             QStringLiteral("mpv's af is @fx:lavfi=graph=%<bytes>%<graph>"), af.left(40));
-    t.check(afValue(rest8).startsWith(QLatin1String("@fx:lavfi=graph=%1685%")), QStringLiteral("  its bytes counted"),
+    t.check(afValue(rest8).startsWith(QLatin1String("@fx:lavfi=graph=%2046%")), QStringLiteral("  its bytes counted"),
             afValue(rest8).left(30));
 
     Settings none;
@@ -247,29 +275,35 @@ void testChain(Checks &t)
     for (const Command &c : commands(neutral(), paramsFor(eightD)))
         noPan = noPan && c.target != QLatin1String("amix@pan");
     t.check(noPan, QStringLiteral("  and none to a graph without the branch, which commands cannot add"));
-    t.check(commandsFor(neutral()).size() == 14 && commandsFor(rest8).size() == 15,
-            QStringLiteral("every value as commands: 14, and 15 with the 8D branch"));
+    t.check(commandsFor(neutral()).size() == 24 && commandsFor(rest8).size() == 25,
+            QStringLiteral("every value as commands: 24, and 25 with the 8D branch"));
 
     // A band past half the sound's rate is never sent a command: one crashed
-    // the shipped libmpv (16 kHz in a 22.05 kHz file).
+    // the shipped libmpv (16 kHz in a 22.05 kHz file). Studio clarity's 4, 8
+    // and 16 kHz are written 1 Hz above, so at exactly half the rate they are
+    // past it, and passed over.
     const auto bandsAt = [&rest8](int rate) {
         QStringList bands;
         for (const Command &c : commandsAt(commandsFor(rest8), rate)) {
             if (c.target.startsWith(QLatin1String("equalizer@")))
-                bands << c.target.mid(10);   // "b3"
+                bands << c.target.mid(10);   // "b3", "c3"
         }
         return bands.join(QLatin1Char(' '));
     };
-    const QString all = QStringLiteral("b0 b1 b2 b3 b4 b5 b6 b7 b8 b9");
-    t.check(bandsAt(48000) == all && bandsAt(44100) == all && bandsAt(32000) == all,
-            QStringLiteral("commands at 48, 44.1 and 32 kHz: every band (16 kHz is half of 32, which FFmpeg takes)"),
+    const QString eq = QStringLiteral("b0 b1 b2 b3 b4 b5 b6 b7 b8 b9");
+    const QString all = eq + QStringLiteral(" c0 c1 c2 c3 c4 c5 c6 c7 c8 c9");
+    t.check(bandsAt(48000) == all && bandsAt(44100) == all
+                && bandsAt(32000) == eq + QStringLiteral(" c0 c1 c2 c3 c4 c5 c6 c7 c8"),
+            QStringLiteral("commands at 48 and 44.1 kHz: every band; at 32 kHz the equaliser's 16 kHz (half of 32, "
+                           "which FFmpeg takes), never Studio clarity's 16,001 Hz"),
             bandsAt(32000));
-    t.check(bandsAt(22050) == QLatin1String("b0 b1 b2 b3 b4 b5 b6 b7 b8")
-                && bandsAt(16000) == QLatin1String("b0 b1 b2 b3 b4 b5 b6 b7 b8")
-                && bandsAt(11025) == QLatin1String("b0 b1 b2 b3 b4 b5 b6 b7")
-                && bandsAt(8000) == QLatin1String("b0 b1 b2 b3 b4 b5 b6 b7"),
-            QStringLiteral("  at 22.05 and 16 kHz none to 16 kHz; at 11.025 and 8 kHz none to 8 or 16 kHz"),
-            bandsAt(22050) + QStringLiteral(" | ") + bandsAt(8000));
+    t.check(bandsAt(22050) == QLatin1String("b0 b1 b2 b3 b4 b5 b6 b7 b8 c0 c1 c2 c3 c4 c5 c6 c7 c8")
+                && bandsAt(16000) == QLatin1String("b0 b1 b2 b3 b4 b5 b6 b7 b8 c0 c1 c2 c3 c4 c5 c6 c7")
+                && bandsAt(11025) == QLatin1String("b0 b1 b2 b3 b4 b5 b6 b7 c0 c1 c2 c3 c4 c5 c6 c7")
+                && bandsAt(8000) == QLatin1String("b0 b1 b2 b3 b4 b5 b6 b7 c0 c1 c2 c3 c4 c5 c6"),
+            QStringLiteral("  at 22.05 kHz none to 16 kHz; at 16 kHz none to Studio clarity's 8 kHz either; at "
+                           "11.025 kHz none to 8 or 16 kHz; at 8 kHz none to Studio clarity's 4 kHz either"),
+            bandsAt(16000) + QStringLiteral(" | ") + bandsAt(8000));
     t.check(bandsAt(0).isEmpty() && commandsAt(commandsFor(rest8), 0).size() == 5
                 && commandsAt(commands(neutral(), paramsFor(bass)), 8000) == expected,
             QStringLiteral("  the rate not known: no band, the other five kept; the rest never left out"),
@@ -279,6 +313,114 @@ void testChain(Checks &t)
                 && number(-2.99, 1) == QLatin1String("-3") && number(1.0, 3) == QLatin1String("1")
                 && number(0.891, 3) == QLatin1String("0.891") && number(4.5, 1) == QLatin1String("4.5"),
             QStringLiteral("numbers as the chain writes them: no trailing zeros, never -0"));
+}
+
+// --------------------------------------------------------------- Studio clarity
+
+void testClarity(Checks &t)
+{
+    t.note(QStringLiteral("- Studio clarity"));
+    using namespace SoundChain;
+    // The facts read from LastWave: the ISO octave centres (4, 8 and 16 kHz
+    // written 1 Hz above, see kClarityHz) and these gains, nothing else.
+    const std::array<int, kBands> centres = { 31, 63, 125, 250, 500, 1000, 2000, 4001, 8001, 16001 };
+    const std::array<double, kBands> gains = { 2.7, 2.2, 0.6, -2.6, -0.6, 1.2, 3.0, 4.0, 4.3, 4.8 };
+    t.check(kClarityHz == centres && isClarityCurve(gains),
+            QStringLiteral("its curve: +2.7 +2.2 +0.6 -2.6 -0.6 +1.2 +3 +4 +4.3 +4.8 dB at 31 Hz to 16 kHz"));
+
+    const Settings clarity = clarityAlone();
+    const Params p = paramsFor(clarity);
+    t.check(graph(p) == QLatin1String(kGoldenClarity),
+            QStringLiteral("alone: the golden text, its ten bands at the curve, turned down 3.4 dB, the limiter on"),
+            describe(p));
+    t.check(needsChain(clarity) && isClarityCurve(p.clarity) && p.gains == Params().gains && p.shelfDb == 0.0
+                && p.wet == 0.0 && !p.has8D && near(p.preDb, -3.4, 1e-9) && near(p.limit, kLimit, 1e-9),
+            QStringLiteral("  a chain of its own bands only, the equaliser's left at 0"), describe(p));
+    t.check(isNeutral(paramsFor(Settings())) && !isNeutral(p), QStringLiteral("  and off, the chain at rest again"));
+
+    // One octave wide, as LastWave's t=o:w=1, written as the Q that FFmpeg
+    // turns into the same coefficients (worked out apart, in Python, from
+    // FFmpeg's octave formula, to 4 places).
+    QStringList at48;
+    for (int i = 0; i < kBands; ++i)
+        at48 << number(clarityWidth(i, 48000), 4);
+    t.check(at48.join(QLatin1Char(' ')) == QLatin1String("1.4142 1.4142 1.4141 1.414 1.4132 1.41 1.3975 1.3479 1.1588 0.5319"),
+            QStringLiteral("its widths in the text: an octave each at 48 kHz, as Qs"), at48.join(QLatin1Char(' ')));
+    t.check(widthsAt(48000).isEmpty() && widthsAt(0).isEmpty(),
+            QStringLiteral("  none to send at 48 kHz, nor with the rate not known"));
+    const QList<Command> at44 = widthsAt(44100);
+    t.check(describe(at44) == QLatin1String("w 1.4139 equalizer@c3 | w 1.413 equalizer@c4 | w 1.4092 equalizer@c5 | "
+                                            "w 1.3944 equalizer@c6 | w 1.3358 equalizer@c7 | w 1.1145 equalizer@c8 | "
+                                            "w 0.4034 equalizer@c9"),
+            QStringLiteral("  at 44.1 kHz seven, the octave there"), describe(at44));
+    const auto targets = [](const QList<Command> &list) {
+        QStringList names;
+        for (const Command &c : list)
+            names << c.target.mid(10);
+        return names.join(QLatin1Char(' '));
+    };
+    t.check(targets(widthsAt(32000)) == QLatin1String("c3 c4 c5 c6 c7 c8")
+                && targets(widthsAt(8000)) == QLatin1String("c0 c1 c2 c3 c4 c5 c6"),
+            QStringLiteral("  at 32 kHz none to 16 kHz, at 8 kHz none above 2 kHz: an octave there reaches past half "
+                           "the rate"),
+            targets(widthsAt(32000)) + QStringLiteral(" | ") + targets(widthsAt(8000)));
+    bool kept = true;
+    for (int rate : { 8000, 11025, 16000, 22050, 32000, 44100, 48000, 88200, 96000 })
+        kept = kept && commandsAt(widthsAt(rate), rate) == widthsAt(rate);
+    t.check(kept, QStringLiteral("  every width sent is to a band FFmpeg builds at that rate, 8 to 96 kHz"));
+
+    // With the equaliser: two stages, each as it is set. Nothing of one is
+    // added into the other, so nothing needs clamping; the two together are
+    // turned down as one curve.
+    Settings withEq = clarity;
+    withEq.eq = true;
+    withEq.preset = QStringLiteral("bass_boost");
+    withEq.gains = preset(withEq.preset)->gains;
+    const Params pe = paramsFor(withEq);
+    t.check(pe.gains == preset(withEq.preset)->gains && isClarityCurve(pe.clarity) && near(pe.preDb, -5.2, 1e-9),
+            QStringLiteral("with the equaliser on Bass boost: its bands the preset's, Studio clarity's its own, turned "
+                           "down 5.2 dB for the two"),
+            describe(pe));
+    Settings loud = clarity;
+    loud.eq = true;
+    loud.preset = QStringLiteral("custom");
+    loud.gains.fill(12.0);
+    const Params pl = paramsFor(loud);
+    const double left = peakResponseDb(pl.gains, pl.clarity, pl.shelfDb) + pl.preDb;
+    t.check(std::all_of(pl.gains.cbegin(), pl.gains.cend(), [](double g) { return g == 12.0; })
+                && isClarityCurve(pl.clarity) && near(pl.preDb, -17.3, 1e-9) && left <= 6.0 + 1e-6,
+            QStringLiteral("  with every band at +12: none clamped or moved, 17.3 dB down, +%1 dB left for the "
+                           "limiter (at most 6)").arg(num(left)),
+            describe(pl));
+    Settings down = loud;
+    down.gains.fill(-12.0);
+    const Params pd = paramsFor(down);
+    t.check(pd.gains[0] == -12.0 && isClarityCurve(pd.clarity) && pd.preDb <= 0.0,
+            QStringLiteral("  with every band at -12: the same, and nothing turned up"), describe(pd));
+
+    // Not one at a time with anything: Slowed and Nightcore own the speed,
+    // Studio clarity the colour.
+    Settings slowed = clarity;
+    slowed.slowedReverb = true;
+    Settings nightcore = clarity;
+    nightcore.nightcore = true;
+    t.check(sanitized(slowed).clarity && sanitized(nightcore).clarity && near(speedFactor(slowed), 0.85, 1e-9)
+                && near(speedFactor(nightcore), 1.25, 1e-9) && isClarityCurve(paramsFor(slowed).clarity)
+                && near(paramsFor(slowed).wet, 0.70, 1e-9) && isClarityCurve(paramsFor(nightcore).clarity),
+            QStringLiteral("with Slowed + reverb (0.85x, the hall) and with Nightcore (1.25x): kept on, both heard"));
+
+    const QList<Command> on = commands(neutral(), p);
+    QStringList onBands;
+    for (const Command &c : on) {
+        if (c.target.startsWith(QLatin1String("equalizer@c")))
+            onBands << c.value;
+    }
+    t.check(on.size() == 12 && on.first() == Command{ QStringLiteral("volume"), QStringLiteral("-3.4dB"), QStringLiteral("volume@pre") }
+                && on.last() == Command{ QStringLiteral("limit"), QStringLiteral("0.891"), QStringLiteral("alimiter@lim") }
+                && onBands.join(QLatin1Char(' ')) == QLatin1String("2.7 2.2 0.6 -2.6 -0.6 1.2 3 4 4.3 4.8"),
+            QStringLiteral("switched on: twelve commands, the pre-gain, its ten bands, the limiter"), describe(on));
+    t.check(commands(p, neutral()).size() == 12 && commands(p, p).isEmpty(),
+            QStringLiteral("  and off, the same twelve back; the same values, none"));
 }
 
 // --------------------------------------------------------------- the ramps
@@ -292,15 +434,21 @@ void testRamps(Checks &t)
     const int steps = stepsBetween(neutral(), paramsFor(bass));
     t.check(steps == 11, QStringLiteral("High bass +6 on takes 11 steps (165 ms): the limiter's ceiling, 0.01 a step"),
             QString::number(steps));
+    const int claritySteps = stepsBetween(neutral(), paramsFor(clarityAlone()));
+    t.check(claritySteps == 11, QStringLiteral("Studio clarity on takes 11 too: the same smooth ramp"),
+            QString::number(claritySteps));
 
-    // Every preset with every High bass, reverb and 8D, ramped from rest and
-    // back to it: no step beyond its limit, everything there on one step.
+    // Every preset with every High bass, reverb and 8D, with Studio clarity
+    // and without, ramped from rest and back to it: no step beyond its limit,
+    // everything there on one step.
     int cases = 0;
     int bad = 0;
     int longest = 0;
+    int longestWithout = 0;   // without Studio clarity
     QString firstBad;
     const auto ramp = [&](Params from, const Params &to) {
         const int planned = stepsBetween(from, to);
+        const bool clarity = from.clarity[0] != 0.0 || to.clarity[0] != 0.0;
         int taken = 0;
         while (from != to && taken < 200) {
             const Params next = stepToward(from, to);
@@ -309,8 +457,10 @@ void testRamps(Checks &t)
                           && std::fabs(next.panWet - from.panWet) <= 0.07 + 1e-9
                           && std::fabs(next.wet - from.wet) <= 0.07 + 1e-9
                           && std::fabs(next.limit - from.limit) <= 0.01 + 1e-9;
-            for (int i = 0; i < kBands; ++i)
-                within = within && std::fabs(next.gains[size_t(i)] - from.gains[size_t(i)]) <= 1.0 + 1e-9;
+            for (int i = 0; i < kBands; ++i) {
+                within = within && std::fabs(next.gains[size_t(i)] - from.gains[size_t(i)]) <= 1.0 + 1e-9
+                         && std::fabs(next.clarity[size_t(i)] - from.clarity[size_t(i)]) <= 1.0 + 1e-9;
+            }
             if (!within && firstBad.isEmpty())
                 firstBad = describe(from) + QStringLiteral(" -> ") + describe(next);
             if (!within)
@@ -324,26 +474,31 @@ void testRamps(Checks &t)
                 firstBad = QStringLiteral("%1 steps planned, %2 taken, to %3").arg(planned).arg(taken).arg(describe(to));
         }
         longest = std::max(longest, taken);
+        if (!clarity)
+            longestWithout = std::max(longestWithout, taken);
         ++cases;
     };
     for (const Preset &preset : presets()) {
         for (int bassDb : { 0, 3, 6, 9, 12 }) {
             for (int level = 0; level <= 3; ++level) {
                 for (bool with8D : { false, true }) {
-                    Settings s;
-                    s.eq = true;
-                    s.gains = preset.gains;
-                    s.preset = preset.id;
-                    s.highBass = bassDb > 0;
-                    s.highBassDb = bassDb > 0 ? bassDb : 6;
-                    s.slowedReverb = level > 0;
-                    s.reverbLevel = level;
-                    s.eightD = with8D;
-                    const Params target = paramsFor(s);
-                    Params rest = neutral();
-                    rest.has8D = target.has8D;
-                    ramp(rest, target);
-                    ramp(target, rest);
+                    for (bool withClarity : { false, true }) {
+                        Settings s;
+                        s.eq = true;
+                        s.gains = preset.gains;
+                        s.preset = preset.id;
+                        s.highBass = bassDb > 0;
+                        s.highBassDb = bassDb > 0 ? bassDb : 6;
+                        s.slowedReverb = level > 0;
+                        s.reverbLevel = level;
+                        s.eightD = with8D;
+                        s.clarity = withClarity;
+                        const Params target = paramsFor(s);
+                        Params rest = neutral();
+                        rest.has8D = target.has8D;
+                        ramp(rest, target);
+                        ramp(target, rest);
+                    }
                 }
             }
         }
@@ -351,7 +506,11 @@ void testRamps(Checks &t)
     t.check(bad == 0, QStringLiteral("%1 ramps, there and back: every step within its limit, all values arriving "
                                      "together, the longest %2 steps").arg(cases).arg(longest),
             firstBad);
-    t.check(longest <= 30, QStringLiteral("  none longer than 30 steps (450 ms)"), QString::number(longest));
+    t.check(longestWithout <= 30, QStringLiteral("  none longer than 30 steps (450 ms) without Studio clarity"),
+            QString::number(longestWithout));
+    // Studio clarity on top of the strongest of everything turns the sound
+    // down 3 dB more, which the pre-gain's 0.5 dB a step takes 7 steps for.
+    t.check(longest <= 37, QStringLiteral("  and 37 (555 ms) with it on top of everything"), QString::number(longest));
 
     // The graph's shape is the one it was built with.
     Settings eightD;
@@ -484,6 +643,45 @@ void testClipping(Checks &t)
                                           "measured doing in libmpv, within 0.05 dB"),
             QStringLiteral("worst %1 dB").arg(num(worst, 3)));
 
+    // Studio clarity, with what it can meet: worked out apart (Python, RBJ at
+    // 48 kHz, 240 points, the widths and centres the text writes).
+    struct ClarityRow {
+        const char *name;
+        std::array<double, kBands> gains;
+        double shelf;
+        double wet;
+        double peak;
+        double pre;
+    };
+    const QList<ClarityRow> clarityTable = {
+        { "Studio clarity", flat, 0, 0, 6.67, -3.34 },
+        { "Studio clarity + High bass +6", flat, 6, 0, 9.03, -4.52 },
+        { "Studio clarity + Bass boost", gainsOf("bass_boost"), 0, 0, 10.23, -5.12 },
+        { "Studio clarity + Treble boost", gainsOf("treble_boost"), 0, 0, 12.76, -6.76 },
+        { "Studio clarity + all bands +12", allUp, 0, 0, 23.29, -17.29 },
+        { "Studio clarity + reverb", flat, 0, 0.7, 6.67, -5.34 },
+    };
+    for (const ClarityRow &row : clarityTable) {
+        const double peak = peakResponseDb(row.gains, kClarityDb, row.shelf);
+        const double pre = preGainDb(peak, row.wet);
+        t.check(near(peak, row.peak, 0.05) && near(pre, row.pre, 0.05),
+                QStringLiteral("%1: peak %2 dB, turned down %3 dB").arg(QLatin1String(row.name), num(row.peak), num(-row.pre)),
+                QStringLiteral("%1, %2").arg(num(peak), num(pre)));
+    }
+    // Sine tones through kGoldenClarity inside the shipped libmpv at 48 kHz
+    // (ao=pcm, the pre-gain taken back off), against the model; which was
+    // also LastWave's own octave bands there, within 0.02 dB at every tone.
+    const QList<Measured> clarity48 = { { 31, 3.09 }, { 63, 2.68 }, { 125, 0.62 }, { 250, -2.42 }, { 500, -0.66 },
+                                        { 1000, 1.78 }, { 2000, 4.23 }, { 4000, 5.88 }, { 6000, 5.39 }, { 8000, 6.66 },
+                                        { 10000, 5.82 }, { 12000, 5.23 }, { 14000, 5.30 }, { 16000, 5.29 },
+                                        { 18000, 4.47 }, { 20000, 2.74 } };
+    double worstClarity = 0.0;
+    for (const Measured &m : clarity48)
+        worstClarity = std::max(worstClarity, std::fabs(responseDb(flat, kClarityDb, 0, m.hz) - m.db));
+    t.check(worstClarity <= 0.05, QStringLiteral("Studio clarity's curve is what its bands were measured doing in "
+                                                 "libmpv, 31 Hz to 20 kHz, within 0.05 dB"),
+            QStringLiteral("worst %1 dB").arg(num(worstClarity, 3)));
+
     // Over everything there is to choose.
     bool neverUp = true;
     double mostLeft = -100.0;
@@ -491,24 +689,27 @@ void testClipping(Checks &t)
         for (int bassDb : { 0, 3, 6, 9, 12 }) {
             for (int level = 0; level <= 3; ++level) {
                 for (bool with8D : { false, true }) {
-                    Settings s;
-                    s.eq = true;
-                    s.gains = preset.gains;
-                    s.highBass = bassDb > 0;
-                    s.highBassDb = bassDb > 0 ? bassDb : 6;
-                    s.slowedReverb = level > 0;
-                    s.reverbLevel = level;
-                    s.eightD = with8D;
-                    const Params p = paramsFor(s);
-                    neverUp = neverUp && p.preDb <= 0.0;
-                    mostLeft = std::max(mostLeft, peakResponseDb(p.gains, p.shelfDb) + p.preDb);
+                    for (bool withClarity : { false, true }) {
+                        Settings s;
+                        s.eq = true;
+                        s.gains = preset.gains;
+                        s.highBass = bassDb > 0;
+                        s.highBassDb = bassDb > 0 ? bassDb : 6;
+                        s.slowedReverb = level > 0;
+                        s.reverbLevel = level;
+                        s.eightD = with8D;
+                        s.clarity = withClarity;
+                        const Params p = paramsFor(s);
+                        neverUp = neverUp && p.preDb <= 0.0;
+                        mostLeft = std::max(mostLeft, peakResponseDb(p.gains, p.clarity, p.shelfDb) + p.preDb);
+                    }
                 }
             }
         }
     }
     t.check(neverUp, QStringLiteral("the pre-gain never turns anything up"));
     t.check(mostLeft <= 6.0 + 1e-6, QStringLiteral("  and never leaves more than +6 dB for the limiter, over every "
-                                                   "preset, High bass, reverb and 8D"),
+                                                   "preset, High bass, reverb, 8D and Studio clarity"),
             QStringLiteral("at most %1 dB").arg(num(mostLeft)));
     t.check(near(20.0 * std::log10(kLimit), -1.0, 0.01), QStringLiteral("the limiter's 0.891 is -1.00 dBFS"),
             num(20.0 * std::log10(kLimit), 3));
@@ -516,6 +717,11 @@ void testClipping(Checks &t)
     t.check(curve.size() == 120 && near(curve.first(), responseDb(gainsOf("bass_boost"), 6, 31), 1e-9)
                 && near(curve.last(), responseDb(gainsOf("bass_boost"), 6, 16000), 1e-9),
             QStringLiteral("the drawn curve: 120 points from 31 Hz to 16 kHz"));
+    const QList<double> withClarity = responseCurve(gainsOf("bass_boost"), kClarityDb, 6, 120);
+    t.check(withClarity.size() == 120 && near(withClarity.last(), responseDb(gainsOf("bass_boost"), kClarityDb, 6, 16000), 1e-9)
+                && withClarity.last() > curve.last() + 4.0,
+            QStringLiteral("  and with Studio clarity, its lift at the top in it"),
+            QStringLiteral("%1 against %2 dB at 16 kHz").arg(num(withClarity.last()), num(curve.last())));
 }
 
 // --------------------------------------------------------------- the model
@@ -523,8 +729,8 @@ void testClipping(Checks &t)
 void clearSoundSettings(Library *library)
 {
     for (const char *key : { "sound.slowed_reverb", "sound.slowed_speed", "sound.reverb", "sound.nightcore",
-                             "sound.nightcore_speed", "sound.8d", "sound.high_bass", "sound.high_bass_db", "sound.eq",
-                             "sound.eq_preset", "sound.eq_gains" })
+                             "sound.nightcore_speed", "sound.8d", "sound.high_bass", "sound.high_bass_db",
+                             "sound.clarity", "sound.eq", "sound.eq_preset", "sound.eq_gains" })
         library->setSetting(QString::fromLatin1(key), QString());
 }
 
@@ -541,7 +747,8 @@ void testModel(Checks &t, Library *library)
         SoundEffects fresh(nullptr, library);
         fresh.restore();
         const SoundChain::Settings s = fresh.settings();
-        t.check(!s.slowedReverb && !s.nightcore && !s.eightD && !s.highBass && !s.eq && near(s.slowedSpeed, 0.85, 1e-9)
+        t.check(!s.slowedReverb && !s.nightcore && !s.eightD && !s.highBass && !s.clarity && !s.eq
+                    && near(s.slowedSpeed, 0.85, 1e-9)
                     && s.reverbLevel == 2 && near(s.nightcoreSpeed, 1.25, 1e-9) && s.highBassDb == 6
                     && s.preset == QLatin1String("flat") && s.gains == SoundChain::Settings().gains,
                 QStringLiteral("a fresh data folder: everything off, 0.85x, medium reverb, 1.25x, +6 dB, Flat"));
@@ -649,6 +856,59 @@ void testModel(Checks &t, Library *library)
             QStringLiteral("values out of range are the defaults (speed 7, reverb 9, +5 dB, \"yes\")"));
     s = restored({ { "sound.slowed_reverb", "1" }, { "sound.nightcore", "1" } });
     t.check(s.slowedReverb && !s.nightcore, QStringLiteral("Slowed and Nightcore both kept on: Slowed"));
+    s = restored({ { "sound.clarity", "1" }, { "sound.nightcore", "1" } });
+    t.check(s.clarity && s.nightcore, QStringLiteral("Studio clarity kept on beside Nightcore: both"));
+    s = restored({ { "sound.clarity", "yes" } });
+    t.check(!s.clarity, QStringLiteral("  and \"yes\" for it is off, as for the others"));
+
+    t.note(QStringLiteral("- Studio clarity, kept and shown"));
+    clearSoundSettings(library);
+    {
+        SoundEffects clear(nullptr, library);
+        clear.restore();
+        int said = 0;
+        QObject::connect(&clear, &SoundEffects::effectsChanged, &clear, [&said]() { ++said; });
+        clear.setStudioClarity(true);
+        t.check(clear.studioClarity() && setting(library, "sound.clarity") == QLatin1String("1") && said == 1,
+                QStringLiteral("Studio clarity on: written at once, said once"), QString::number(said));
+        clear.setStudioClarity(true);
+        t.check(said == 1, QStringLiteral("  and the same again not at all"));
+        t.check(clear.active() && clear.summary() == QStringLiteral("Studio clarity") && near(clear.headroomDb(), 3.4, 1e-9),
+                QStringLiteral("  the effects active (the bar's glyph red), the summary naming it, turned down 3.4 dB"),
+                QStringLiteral("%1, %2 dB").arg(clear.summary(), num(clear.headroomDb(), 1)));
+        clear.setSlowedReverb(true);
+        clear.setHighBass(true);
+        clear.setEqualiser(true);
+        clear.applyPreset(QStringLiteral("bass_boost"));
+        t.check(clear.studioClarity() && clear.slowedReverb()
+                    && clear.summary() == QStringLiteral("Slowed 0.85× + reverb · High bass +6 dB · Studio clarity · EQ Bass boost"),
+                QStringLiteral("  with Slowed + reverb, High bass and the equaliser: all of them on, named in that order"),
+                clear.summary());
+        t.check(clear.settings().gains == SoundChain::preset(QStringLiteral("bass_boost"))->gains
+                    && clear.bandGains().first().toDouble() == 6.0,
+                QStringLiteral("  the equaliser's bands still the preset's: nothing added into them"));
+        clear.setNightcore(true);
+        t.check(clear.studioClarity() && clear.nightcore() && !clear.slowedReverb(),
+                QStringLiteral("  Nightcore on: Slowed gives way, Studio clarity does not"));
+        const QVariantList drawn = clear.responseCurve(120);
+        std::array<double, SoundChain::kBands> bass = SoundChain::preset(QStringLiteral("bass_boost"))->gains;
+        t.check(drawn.size() == 120
+                    && near(drawn.last().toDouble(), SoundChain::responseDb(bass, SoundChain::kClarityDb, 6, 16000), 1e-9),
+                QStringLiteral("  the curve behind the sliders carries it while it is on"),
+                num(drawn.last().toDouble()));
+    }
+    {
+        SoundEffects next(nullptr, library);
+        next.restore();
+        t.check(next.studioClarity() && next.nightcore() && next.highBass(),
+                QStringLiteral("the next launch reads Studio clarity back on, beside the rest"), next.summary());
+        next.turnAllOff();
+        t.check(!next.studioClarity() && !next.active() && setting(library, "sound.clarity") == QLatin1String("0"),
+                QStringLiteral("  Turn all off turns it off too, and writes it"));
+        t.check(next.responseCurve(120).last().toDouble() < 1.0,
+                QStringLiteral("  and the curve behind the sliders is without it again"),
+                num(next.responseCurve(120).last().toDouble()));
+    }
 
     t.note(QStringLiteral("- what is shown"));
     clearSoundSettings(library);
@@ -921,6 +1181,7 @@ int runSoundSelfTest(Library *library)
         return t.finish();
     }
     testChain(t);
+    testClarity(t);
     testRamps(t);
     testPresets(t);
     testClipping(t);
@@ -944,9 +1205,15 @@ int runSoundLiveSelfTest(Library *library)
     const QString tonePath = QDir(data).filePath(QStringLiteral("sound-tone48.wav"));
     const QString monoPath = QDir(data).filePath(QStringLiteral("sound-mono48.wav"));
     const QString lowPath = QDir(data).filePath(QStringLiteral("sound-tone8k.wav"));
+    // Studio clarity's other rates: 44.1 kHz, which takes widths of its own,
+    // and 32 kHz, half of which is 16 kHz.
+    const QString cdPath = QDir(data).filePath(QStringLiteral("sound-tone44k.wav"));
+    const QString path32 = QDir(data).filePath(QStringLiteral("sound-tone32k.wav"));
     const QByteArray slowTone = toneWav(8000, 1, 120.0, 440.0, 0.25);
     if (!writeFile(tonePath, tone) || !writeFile(monoPath, toneWav(48000, 1, 20.0, 440.0, 0.25))
-        || !writeFile(lowPath, toneWav(8000, 1, 6.0, 440.0, 0.25))) {
+        || !writeFile(lowPath, toneWav(8000, 1, 6.0, 440.0, 0.25))
+        || !writeFile(cdPath, toneWav(44100, 2, 20.0, 440.0, 0.25))
+        || !writeFile(path32, toneWav(32000, 2, 10.0, 440.0, 0.25))) {
         t.check(false, QStringLiteral("the tones written to the scratch folder"), data);
         return t.finish();
     }
@@ -1018,13 +1285,32 @@ int runSoundLiveSelfTest(Library *library)
     t.check(engine.levellingPreamp() == QLatin1String("4"),
             QStringLiteral("  the levelling preamp unchanged mid-song (a 4 dB step otherwise)"), engine.levellingPreamp());
 
-    t.note(QStringLiteral("- Slowed + reverb"));
+    t.note(QStringLiteral("- Studio clarity on mid-song, beside High bass"));
+    s.clarity = true;
+    before = pos;
+    engine.setEffects(s);
+    took = settle(s);
+    t.check(took >= 0 && took <= 600 && isClarityCurve(engine.effectParams().clarity),
+            QStringLiteral("its ten bands ramped to the curve within 600 ms, as the others' are"),
+            QStringLiteral("%1 ms: %2").arg(took).arg(describe(engine.effectParams())));
+    refused = engine.effectsRefused();
+    t.check(refused.isEmpty() && engine.effectsAnswer(), QStringLiteral("  every filter in it takes its values, its ten "
+                                                                       "bands too"),
+            refused.join(QStringLiteral(", ")));
+    t.check(engine.clarityWidthsSent() == 0, QStringLiteral("  at 48 kHz no widths sent: the text's are the octave there"),
+            QString::number(engine.clarityWidthsSent()));
+    pause(400);
+    t.check(pos > before + 300, QStringLiteral("  the clock kept moving"), QStringLiteral("%1 -> %2 ms").arg(before).arg(pos));
+
+    t.note(QStringLiteral("- Slowed + reverb, Studio clarity kept on"));
     s.slowedReverb = true;
     engine.setEffects(s);
     t.check(near(engine.speedProperty(), 0.85, 1e-6) && !engine.pitchCorrection() && near(engine.playbackRate(), 0.85, 1e-9),
             QStringLiteral("speed 0.85, pitch correction off"), num(engine.speedProperty()));
     took = settle(s);
-    t.check(took >= 0, QStringLiteral("  the reverb in, the pre-gain down to -5.0 dB"), describe(engine.effectParams()));
+    t.check(took >= 0 && isClarityCurve(engine.effectParams().clarity),
+            QStringLiteral("  the reverb in, the pre-gain down for it, Studio clarity's bands where they were"),
+            describe(engine.effectParams()));
     // Measured once what was made at the old speed (the output's buffers,
     // about 0.4 s with no device) has been heard.
     pause(600);
@@ -1051,6 +1337,8 @@ int runSoundLiveSelfTest(Library *library)
     pause(600);
     r = rate(3000);
     t.check(r >= 1.18 && r <= 1.32, QStringLiteral("  the clock runs at 1.25x"), num(r, 3));
+    t.check(engine.effects().clarity && isClarityCurve(engine.effectParams().clarity) && engine.effectsAnswer(),
+            QStringLiteral("  Studio clarity still on with it"), describe(engine.effectParams()));
     s.nightcore = false;
     s.slowedReverb = true;
     engine.setEffects(s);
@@ -1065,8 +1353,9 @@ int runSoundLiveSelfTest(Library *library)
     t.check(took >= 0 && engine.effectsAnswer(), QStringLiteral("a band moved mid-song arrives"), describe(engine.effectParams()));
     engine.seekAbsolute(20000);
     const bool sought = waitUntil([&]() { return pos >= 20100 && engine.effectsAnswer(); }, 4000);
-    t.check(sought && engine.audioFilterProperty().contains(QLatin1String("equalizer@b1=f=62:t=q:w=1.41:g=4.5")),
-            QStringLiteral("  after a seek the chain is written with it, and answers"));
+    t.check(sought && engine.audioFilterProperty().contains(QLatin1String("equalizer@b1=f=62:t=q:w=1.41:g=4.5"))
+                && engine.audioFilterProperty().contains(QLatin1String("equalizer@c9=f=16001:t=q:w=0.5319:g=4.8")),
+            QStringLiteral("  after a seek the chain is written with it, Studio clarity's bands beside it, and answers"));
     t.check(engine.levellingPreamp() == QLatin1String("0"), QStringLiteral("  and the preamp follows the chain there: 0"),
             engine.levellingPreamp());
     t.check(settle(s) >= 0, QStringLiteral("  its values the wanted ones"), describe(engine.effectParams()));
@@ -1107,14 +1396,17 @@ int runSoundLiveSelfTest(Library *library)
     t.note(QStringLiteral("- the 8 kHz mono file with everything on"));
     engine.stop();
     s = everything();
+    s.clarity = true;
     engine.setEffects(s);
-    t.check(play(lowPath), QStringLiteral("everything on, an 8 kHz mono file plays"));
+    t.check(play(lowPath), QStringLiteral("everything on, Studio clarity too, an 8 kHz mono file plays"));
     t.check(waitUntil([&]() { return engine.effectsAnswer(); }, 2000), QStringLiteral("  and its chain answers"));
     // 8 and 16 kHz are past what an 8 kHz file holds (4 kHz): FFmpeg passed
     // those two bands over, and a command to either crashed libmpv. None is
-    // sent them, by the ramp, by a new device or by this check.
+    // sent them, by the ramp, by a new device or by this check; nor to Studio
+    // clarity's 4,001 Hz, past it too, nor a width above 2 kHz.
     refused = engine.effectsRefused();
-    t.check(refused.isEmpty(), QStringLiteral("  every filter in it takes its values (the bands past 4 kHz never sent one)"),
+    t.check(refused.isEmpty(), QStringLiteral("  every filter in it takes its values and widths (the bands past 4 kHz "
+                                              "never sent one)"),
             refused.join(QStringLiteral(", ")));
     before = pos;
     pause(500);
@@ -1136,6 +1428,52 @@ int runSoundLiveSelfTest(Library *library)
             QStringLiteral("  the output set again mid-song (every value sent again): it plays on"),
             QStringLiteral("%1 -> %2 ms").arg(before).arg(pos));
 
+    t.note(QStringLiteral("- Studio clarity at 44.1 and 32 kHz"));
+    engine.stop();
+    s = clarityAlone();
+    engine.setEffects(s);
+    int widthsBefore = engine.clarityWidthsSent();
+    t.check(play(cdPath), QStringLiteral("Studio clarity on, a 44.1 kHz file plays"));
+    t.check(waitUntil([&]() { return engine.effectsAnswer(); }, 2000) && settle(s) >= 0,
+            QStringLiteral("  its chain answers, at the curve"), describe(engine.effectParams()));
+    // Sent once the graph built for the file answers (the first tick).
+    const bool sentCd = waitUntil([&]() { return engine.clarityWidthsSent() >= widthsBefore + 7; }, 1000);
+    t.check(sentCd, QStringLiteral("  its seven widths for 44.1 kHz sent once the graph answered"),
+            QStringLiteral("%1 sent").arg(engine.clarityWidthsSent() - widthsBefore));
+    widthsBefore = engine.clarityWidthsSent();
+    // effectsRefused sends the widths too, as sendWidths does, and waits for
+    // each answer: all seven taken says mpv takes the command, at this rate.
+    refused = engine.effectsRefused();
+    t.check(refused.isEmpty() && SoundChain::widthsAt(44100).size() == 7,
+            QStringLiteral("  every filter takes its values, and seven bands their widths for 44.1 kHz"),
+            refused.join(QStringLiteral(", ")));
+    before = pos;
+    pause(500);
+    t.check(pos > before + 300, QStringLiteral("  its clock moving"), QStringLiteral("%1 -> %2 ms").arg(before).arg(pos));
+    engine.seekAbsolute(10000);
+    const bool soughtCd = waitUntil([&]() {
+        return pos >= 10100 && engine.effectsAnswer() && engine.clarityWidthsSent() >= widthsBefore + 7;
+    }, 4000);
+    refused = engine.effectsRefused();
+    t.check(soughtCd && refused.isEmpty(),
+            QStringLiteral("  and after a seek, which builds the graph again: the seven sent again, and taken"),
+            QStringLiteral("%1 sent; %2").arg(engine.clarityWidthsSent() - widthsBefore).arg(refused.join(QStringLiteral(", "))));
+    engine.stop();
+    widthsBefore = engine.clarityWidthsSent();
+    t.check(play(path32), QStringLiteral("Studio clarity on, a 32 kHz file plays"));
+    const bool sent32 = waitUntil([&]() { return engine.effectsAnswer(); }, 2000)
+                        && waitUntil([&]() { return engine.clarityWidthsSent() >= widthsBefore + 6; }, 1000);
+    t.check(sent32, QStringLiteral("  and its chain answers, six widths sent (none to 16 kHz)"),
+            QStringLiteral("%1 sent").arg(engine.clarityWidthsSent() - widthsBefore));
+    // Half of 32 kHz is 16 kHz: Studio clarity's top band, written at 16,001 Hz,
+    // is past it, passed over by FFmpeg, and never sent anything.
+    refused = engine.effectsRefused();
+    t.check(refused.isEmpty(), QStringLiteral("  every filter takes its values and widths (none sent to 16,001 Hz)"),
+            refused.join(QStringLiteral(", ")));
+    before = pos;
+    pause(500);
+    t.check(pos > before + 300, QStringLiteral("  its clock moving"), QStringLiteral("%1 -> %2 ms").arg(before).arg(pos));
+
     t.note(QStringLiteral("- every preset, with and without the 8D branch"));
     engine.stop();
     for (const SoundChain::Preset &preset : SoundChain::presets()) {
@@ -1150,6 +1488,7 @@ int runSoundLiveSelfTest(Library *library)
             all.slowedReverb = true;
             all.reverbLevel = 3;
             all.eightD = with8D;
+            all.clarity = true;
             engine.setEffects(all);
             const bool played = play(tonePath);
             const bool answered = waitUntil([&]() { return engine.effectsAnswer(); }, 2000);
@@ -1166,8 +1505,8 @@ int runSoundLiveSelfTest(Library *library)
                                                                                    + refusing.join(QStringLiteral(", ")));
             engine.stop();
         }
-        t.check(fails.isEmpty(), QStringLiteral("%1 with High bass +12 and heavy reverb answers, every filter of it, "
-                                                "with and without 8D").arg(preset.name),
+        t.check(fails.isEmpty(), QStringLiteral("%1 with High bass +12, heavy reverb and Studio clarity answers, every "
+                                                "filter of it, with and without 8D").arg(preset.name),
                 fails.join(QStringLiteral("; ")));
     }
 
@@ -1266,8 +1605,10 @@ int runSoundLiveSelfTest(Library *library)
     s = SoundChain::Settings();
     s.slowedReverb = true;
     s.highBass = true;
+    s.clarity = true;
     engine.setEffects(s);
-    t.check(play(server.url(QStringLiteral("/upA"))), QStringLiteral("a stream plays with Slowed + reverb and High bass"));
+    t.check(play(server.url(QStringLiteral("/upA"))),
+            QStringLiteral("a stream plays with Slowed + reverb, High bass and Studio clarity"));
     waitUntil([&]() { return engine.duration() > 0 && engine.hasLoadedFile(); }, 3000);
     pause(1000);
     bool swapped = false;
@@ -1533,5 +1874,7 @@ int runSoundLiveSelfTest(Library *library)
     QFile::remove(tonePath);
     QFile::remove(monoPath);
     QFile::remove(lowPath);
+    QFile::remove(cdPath);
+    QFile::remove(path32);
     return t.finish();
 }

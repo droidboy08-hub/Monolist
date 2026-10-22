@@ -6,11 +6,11 @@
 
 #include <array>
 
-// The sound effects (Slowed + reverb, Nightcore, 8D audio, High bass and the
-// equaliser) as mpv is given them: one chain of audio filters, labelled @fx,
-// written only from the fixed templates below and never from anything a user
-// typed; and the numbers behind it. Pure: nothing here talks to mpv
-// (MpvEngine does) or keeps settings (SoundEffects does).
+// The sound effects (Slowed + reverb, Nightcore, 8D audio, High bass, Studio
+// clarity and the equaliser) as mpv is given them: one chain of audio
+// filters, labelled @fx, written only from the fixed templates below and
+// never from anything a user typed; and the numbers behind it. Pure: nothing
+// here talks to mpv (MpvEngine does) or keeps settings (SoundEffects does).
 //
 // The chain, in order (graph() writes it):
 //   aformat stereo   so a 5.1 or mono source reaches every filter as two
@@ -18,6 +18,8 @@
 //   volume@pre       turned down by as much as the boosts below need
 //                    (preGainDb), so they do not clip;
 //   equalizer@b0..9  the ten bands, 31 Hz to 16 kHz, Q 1.41;
+//   equalizer@c0..9  Studio clarity: ten bands of its own, one octave wide,
+//                    at the gains of kClarityDb or at 0 (see kClarityHz);
 //   lowshelf@hb      High bass: a shelf at 100 Hz, Q 0.707. Not FFmpeg's
 //                    "bass", which is a different shape than the maths here;
 //   [8D]             only while 8D is in this song's graph: the song folded
@@ -60,6 +62,41 @@ constexpr double kEightDWeight = 1.41;
 // The room 8D brings with it: at least this much reverb while 8D is on.
 constexpr double kEightDRoom = 0.30;
 
+// Studio clarity, the owner's (2026-10-21): the curve of LastWave's "Studio
+// Master Clarity", which the owner heard and asked for. Ten peaking bands on
+// the ISO octave centres, each one octave wide (FFmpeg's t=o:w=1), at these
+// gains: the deep lows and everything from 2 kHz up lifted, 250 Hz taken
+// down. Only these numbers come from LastWave, never its code.
+//
+// A stage of its own, after the equaliser's bands, not added into them: the
+// equaliser's bands are Q 1.41 on 62 Hz, which is an octave at the bottom
+// but narrower than one at the top (the bilinear transform squeezes them),
+// and the curve put on them came out 2.5 dB short around 12 kHz at 48 kHz,
+// which is its air. On bands of its own it is the curve heard there, and the
+// equaliser's sliders keep saying what they do: no band of the listener's is
+// moved, cut or clamped by it. Where the two add up, the pre-gain counts the
+// sum as it counts any boost (half of the peak up to 12 dB, all of it above),
+// and the limiter catches what is left, so it never clips.
+//
+// The centres as the text writes them: 4, 8 and 16 kHz 1 Hz above, so that
+// none is ever exactly half a common rate (8, 16, 32 kHz) and FFmpeg passes
+// it over there, as it does any band above half the rate. A band exactly at
+// half the rate is two poles on z = -1, and in the chain's floating point it
+// rang at half the rate even at 0 dB: at 32 kHz the chain at rest put out a
+// 16 kHz tone at -6 dBFS within half a second (measured in the shipped
+// libmpv). 1 Hz is a ten-thousandth of an octave at 16 kHz.
+constexpr std::array<int, kBands> kClarityHz = { 31, 63, 125, 250, 500, 1000, 2000, 4001, 8001, 16001 };
+constexpr std::array<double, kBands> kClarityDb = { 2.7, 2.2, 0.6, -2.6, -0.6, 1.2, 3.0, 4.0, 4.3, 4.8 };
+// The rate the chain's text makes those bands an octave wide for: the rate of
+// YouTube's Opus, which is played first. The text gives each band as a Q
+// (t=q), never as an octave: FFmpeg's octave width divides by sin(w0), which
+// is 0 at half the rate, and at 32 kHz the 16 kHz band, at any gain, turned
+// all the sound to nothing (measured, FFmpeg 2026-09). At other rates
+// MpvEngine sends the bands that rate's widths (widthsAt) once the graph is
+// built: measured in the shipped libmpv, the curve is then the octave bands'
+// within 0.02 dB from 31 Hz to 20 kHz, at 48, 44.1 and 22.05 kHz.
+constexpr int kClarityRate = 48000;
+
 // What the listener chose. Out-of-range values are put right by sanitized().
 struct Settings {
     bool slowedReverb = false;
@@ -70,6 +107,7 @@ struct Settings {
     bool eightD = false;
     bool highBass = false;
     int highBassDb = 6;             // 3, 6, 9 or 12
+    bool clarity = false;           // Studio clarity, with no strength to choose
     bool eq = false;
     QString preset = QStringLiteral("flat");   // a preset's id, or "custom"
     std::array<double, kBands> gains {};       // dB, applied while eq is on
@@ -85,6 +123,7 @@ struct Settings {
 struct Params {
     double preDb = 0.0;                   // volume@pre
     std::array<double, kBands> gains {};  // equalizer@bN
+    std::array<double, kBands> clarity {};  // equalizer@cN: kClarityDb, or 0
     double shelfDb = 0.0;                 // lowshelf@hb
     double panWet = 0.0;                  // the 8D branch's weight in amix@pan, 0 to kEightDWeight
     double wet = 0.0;                     // the reverb's weight in amix@mix, 0 to 1
@@ -149,9 +188,24 @@ QList<Command> commandsFor(const Params &params);
 // band above half the rate (16 kHz in a 22.05 kHz file, 8 kHz in an 8 kHz
 // one) is passed over by FFmpeg as it builds the graph ("Invalid frequency"),
 // and a command to it then crashed the shipped libmpv, every time: such a
-// band is left out. Every other filter takes commands at any rate. With the
-// rate not known (0), every band is left out.
+// band is left out, the equaliser's and Studio clarity's alike. Every other
+// filter takes commands at any rate. With the rate not known (0), every band
+// is left out.
 QList<Command> commandsAt(const QList<Command> &commands, int sampleRate);
+// The width, as a Q, that makes Studio clarity's band `band` one octave wide
+// at `sampleRate`, as FFmpeg's own octave width would: FFmpeg takes
+// sin(w0) * sinh(ln 2 / 2 * w0 / sin(w0)) for an octave and sin(w0) / (2 Q)
+// for a Q, so the two are the same band, coefficient for coefficient, at
+// Q = 1 / (2 sinh(ln 2 / 2 * w0 / sin(w0))). 0 for a band at or above 40 %
+// of the rate (see widthsAt).
+double clarityWidth(int band, int sampleRate);
+// The commands that make Studio clarity's bands one octave wide at
+// `sampleRate`, for the bands whose width there prints differently from the
+// text's (kClarityRate): none at 48 kHz, seven at 44.1 kHz, none with the rate
+// not known. A band at or above 40 % of the rate keeps the text's width: an
+// octave there reaches past half the rate, where the octave's formula runs
+// away, to a lift of all the sound and then to none at all.
+QList<Command> widthsAt(int sampleRate);
 // One 15 ms step of a ramp from `from` toward `to`: every value moves
 // together, so all arrive at once, and none by more than its limit (a band or
 // the shelf 1 dB, the pre-gain 0.5 dB, a weight 0.07, the limit 0.01). The
@@ -160,11 +214,16 @@ Params stepToward(const Params &from, const Params &to);
 // How many steps stepToward takes to get there.
 int stepsBetween(const Params &from, const Params &to);
 
-// The combined response of the bands and the shelf at `hz`, in dB, by the
-// same RBJ formulas FFmpeg's equalizer and lowshelf use, at 48 kHz.
+// The combined response of the bands, Studio clarity's bands and the shelf
+// at `hz`, in dB, by the same RBJ formulas FFmpeg's equalizer and lowshelf
+// use, at 48 kHz. Without `clarity`, its bands at 0.
+double responseDb(const std::array<double, kBands> &gains, const std::array<double, kBands> &clarity,
+                  double shelfDb, double hz);
 double responseDb(const std::array<double, kBands> &gains, double shelfDb, double hz);
 // Its largest value over 240 points from 20 Hz to 20 kHz: the sliders
 // understate it, since neighbouring bands add up.
+double peakResponseDb(const std::array<double, kBands> &gains, const std::array<double, kBands> &clarity,
+                      double shelfDb);
 double peakResponseDb(const std::array<double, kBands> &gains, double shelfDb);
 // How far the sound is turned down before the boosts: half of the curve's
 // peak up to 12 dB and all of it above (so at most +6 dB reaches the
@@ -172,6 +231,8 @@ double peakResponseDb(const std::array<double, kBands> &gains, double shelfDb);
 double preGainDb(double peakDb, double wet);
 // The curve at `points` frequencies from the first band's centre to the
 // last's, evenly spaced on a log scale: what the sliders' row spans.
+QList<double> responseCurve(const std::array<double, kBands> &gains, const std::array<double, kBands> &clarity,
+                            double shelfDb, int points);
 QList<double> responseCurve(const std::array<double, kBands> &gains, double shelfDb, int points);
 
 // The sixteen presets, Flat first.

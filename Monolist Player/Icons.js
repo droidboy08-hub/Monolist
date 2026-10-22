@@ -67,6 +67,16 @@ var data = {
                         { d: "M8 6 H4 a2 2 0 0 0 -2 2 v6 a2 2 0 0 0 2 2 h4" },
                         { d: "M18 15 A1 1 0 1 1 16 15 A1 1 0 1 1 18 15" },
                         { d: "M17 9 h0.01" }],
+    // Lucide's speaker, square: where the sound goes (the player bar's
+    // output button). One box rather than monitor-speaker's two, so it is as
+    // wide as the glyphs beside it.
+    "speaker":         [{ d: "M5 2 H19 V22 H5 Z" },
+                        { d: "M16 14 A4 4 0 1 1 8 14 A4 4 0 1 1 16 14" },
+                        { d: "M12 6 h0.01" }],
+    // Lucide's mic: the lyrics, which are sung.
+    "mic":             [{ d: "M12 2 a3 3 0 0 0 -3 3 v7 a3 3 0 0 0 6 0 V5 a3 3 0 0 0 -3 -3 Z" },
+                        { d: "M19 10 v2 a7 7 0 0 1 -14 0 v-2" },
+                        { d: "M12 19 v3" }],
     "volume-2":        [{ d: "M11 5 L6.5 8.5 H3 a1 1 0 0 0 -1 1 v5 a1 1 0 0 0 1 1 h3.5 L11 19 Z" },
                         { d: "M16 9 a5 5 0 0 1 0 6" },
                         { d: "M19.4 5.6 a9 9 0 0 1 0 12.8" }],

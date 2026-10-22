@@ -955,6 +955,18 @@ QString PlaybackController::streamInfo() const
     return parts.join(QStringLiteral(" · "));
 }
 
+QString PlaybackController::streamQuality() const
+{
+    // Under the same conditions as the line it shortens, so the two never
+    // disagree about whether anything is playing.
+    if (m_soundOrigin.isEmpty() || m_sourceLabel.isEmpty() || !m_engine)
+        return {};
+    const MpvEngine::StreamInfo sound = m_engine->streamInfo();
+    if (sound.codec.isEmpty() || sound.kbps <= 0)
+        return {};
+    return QStringLiteral("%1 %2").arg(codecName(sound.codec).toUpper()).arg(sound.kbps);
+}
+
 void PlaybackController::setSoundOrigin(const QString &origin)
 {
     // A new load, whatever it is: its line is still to be written.

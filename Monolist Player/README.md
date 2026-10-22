@@ -367,7 +367,7 @@ whichever contrasts better.
 
 ### Sound effects
 
-`Sound` (`soundeffects.*`) holds five effects, each kept from one launch to
+`Sound` (`soundeffects.*`) holds six effects, each kept from one launch to
 the next (the `sound.*` settings):
 
 * **Slowed + reverb**: every song at 0.80, 0.85 or 0.90 of its speed, the
@@ -378,6 +378,16 @@ the next (the `sound.*` settings):
 * **8D audio**: the song carried round the head once every ten seconds, in a
   light room of its own; best with headphones.
 * **High bass**: a shelf under 100 Hz, +3, +6, +9 or +12 dB.
+* **Studio clarity**: the curve of LastWave's "Studio Master Clarity", which
+  the owner asked for: ten peaking bands on the octave centres, one octave
+  wide, at +2.7, +2.2, +0.6, -2.6, -0.6, +1.2, +3, +4, +4.3 and +4.8 dB from
+  31 Hz to 16 kHz. A stage of its own after the equaliser, not added into its
+  bands, so each keeps what it is set to (the equaliser's bands are narrower
+  at the top, and the curve on them lost 2.5 dB of its air). Its bands are an
+  octave wide at the song's own rate: the chain is written for 48 kHz, and at
+  44.1 kHz the engine sends seven of them their widths once the graph runs.
+  Measured inside the shipped libmpv, the result is the octave bands' curve
+  within 0.02 dB. Only the numbers come from LastWave, never its code.
 * **Equaliser**: ten bands from 31 Hz to 16 kHz, up to 12 dB up or down each
   in 0.5 dB steps, with 16 curves to start from.
 
@@ -393,9 +403,10 @@ effects stay off until Monolist restarts, which a toast says.
 
 They are on the player bar: the sliders glyph beside the output button is red
 while any effect is on, and opens them all in a popup standing on the bar.
-Settings > Playback has the same block, with a line of explanation under each
-effect (`--settings-section effects`), and Now Playing's sound line names the
-effects that are on.
+Settings > Playback has the same block, with a line of explanation under the
+effects that need one (`--settings-section effects`), and Now Playing's sound
+line names the effects that are on. The mini player has them as switches over
+its cover.
 
 ## Layout
 
@@ -507,7 +518,9 @@ suggestion rows, Downloads, the player bar, song cards — from its dots or a
 right click: play next, queue, like, add to a playlist, remove it from this
 playlist, from History or from the library (every playlist and the like, on a
 second click), go to its artists and album, copy its link or open it on
-YouTube, and its download. Albums, playlists and artists on cards have Play,
+YouTube, and its download. On the player bar, its "…" heads that menu with
+what the bar keeps behind it: the mini player, the sleep timer, the video, and
+in a narrow window the lyrics and the output. Albums, playlists and artists on cards have Play,
 Open, Save or Remove from library and their link; the user's playlists (on
 their page, their card and in the sidebar) have Play, Shuffle, Add all to
 queue or to another playlist, Rename and Delete. A suggestion is only a name
@@ -836,8 +849,10 @@ first failure`.
     monolist --sound-test                           the sound effects with no libmpv and no sound card: the
                                                     chain's text against the copies proven inside libmpv,
                                                     the ramps' steps, the 16 curves, the clipping maths
-                                                    against the filters' measured response, what is kept and
-                                                    read back, Slowed and Nightcore never on together (needs
+                                                    against the filters' measured response, Studio clarity
+                                                    (its bands and widths at each rate, beside the
+                                                    equaliser, never clipping), what is kept and read back,
+                                                    Slowed and Nightcore never on together (needs
                                                     MONOLIST_DATA_DIR; in the release gate)
     monolist --icon-test                            the app icon choice: both pictures, the setting, and
                                                     shortcuts pointed at the executable's icons, on
@@ -865,7 +880,8 @@ first failure`.
     monolist --sound-live-test                      the same effects on the real mpv with no sound device
                                                     (MONOLIST_MPV_AO=null): switched on and off mid-song, the
                                                     clock at 0.85x and 1.25x, every curve with the strongest
-                                                    bass and reverb (every filter answering), 8D added
+                                                    bass, reverb and Studio clarity (every filter answering),
+                                                    Studio clarity's widths at 44.1 and 32 kHz, 8D added
                                                     mid-song, a chain mpv refuses or will not build (a song
                                                     from JioSaavn, and a picture with its sound), links that
                                                     will not open failing as with no effects on, a slow seek
