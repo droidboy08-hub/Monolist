@@ -66,6 +66,9 @@ ApplicationWindow {
     // results can be used in its place: { rowId, title, artist, durationMs,
     // playlistId }, or null.
     property var importPick: null
+    // The settings have been read (Component.onCompleted): until then the
+    // player bar is not built, so the one not chosen is never made at launch.
+    property bool settingsRead: false
 
     // — ambient colour —
     // The playing song's colour, measured from its cover (CoverPalette),
@@ -195,6 +198,8 @@ ApplicationWindow {
         Theme.mode = Library.settingValue("appearance", "system")
         Theme.ambientEnabled = Library.settingValue("ambient", "1") !== "0"
         Theme.monochrome = Library.settingValue("monochrome", "1") !== "0"
+        Theme.playerBar = Library.settingValue("appearance.player_bar", "modern") === "classic" ? "classic" : "modern"
+        settingsRead = true
         sidebarCollapsed = Library.settingValue("sidebar.collapsed", "0") === "1"
         measureAmbient()
         if (initialQuery.length > 0)
@@ -831,12 +836,19 @@ ApplicationWindow {
 
     // Above Now Playing, so that view slides out from behind the bar and
     // tucks back behind it: it is the bar enlarged, not a page over it.
-    NowPlayingBar {
+    // The bar chosen in Settings > Appearance (Theme.playerBar): Modern, the
+    // owner's "Quiet" one, or Classic, the bar before it. Only that one is
+    // built; choosing the other builds it in its place, at once. Everything
+    // that stands on the bar (Now Playing's height, the toast, the picture's
+    // panel) follows this Loader, which takes the bar's own height.
+    Loader {
         id: playerBar
         z: 850
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
+        active: window.settingsRead
+        sourceComponent: Theme.playerBar === "classic" ? classicBar : modernBar
         // Over the picture in full screen, and gone with the rest of its
         // chrome once the pointer has been still a moment.
         readonly property bool tucked: window.videoFullscreen && !fullscreenVideo.chromeShown
@@ -849,30 +861,64 @@ ApplicationWindow {
             }
         }
         HoverHandler { id: barHover }
-        // Now Playing covers the docked queue, so there the button shows the
-        // queue where it can be seen: the view's own UP NEXT pane.
-        queueOpen: window.nowPlayingOpen ? nowPlaying.pane === "queue" : window.queueOpen
-        nowPlayingOpen: window.nowPlayingOpen
-        onQueueToggled: {
-            if (window.nowPlayingOpen)
-                nowPlaying.pane = nowPlaying.pane === "queue" ? "lyrics" : "queue"
-            else
-                window.queueOpen = !window.queueOpen
+
+        // The effects popup, wherever the bar keeps its glyph (--effects-popup).
+        function showEffects() {
+            const modern = item as NowPlayingBar
+            const classic = item as NowPlayingBarClassic
+            if (modern)
+                modern.showEffects()
+            else if (classic)
+                classic.showEffects()
         }
-        onNowPlayingToggled: window.nowPlayingOpen = !window.nowPlayingOpen
-        // The lyrics are Now Playing's: the button opens it on them, and
-        // puts it away again when that is what it shows.
-        lyricsOpen: window.nowPlayingOpen && nowPlaying.pane === "lyrics"
-        onLyricsToggled: {
-            if (lyricsOpen) {
-                window.nowPlayingOpen = false
-            } else {
-                nowPlaying.pane = "lyrics"
-                window.nowPlayingOpen = true
+    }
+
+    // What either bar asks of the window.
+    // Now Playing covers the docked queue, so there the button shows the
+    // queue where it can be seen: the view's own UP NEXT pane.
+    readonly property bool barQueueOpen: window.nowPlayingOpen ? nowPlaying.pane === "queue" : window.queueOpen
+    function toggleQueueFromBar() {
+        if (window.nowPlayingOpen)
+            nowPlaying.pane = nowPlaying.pane === "queue" ? "lyrics" : "queue"
+        else
+            window.queueOpen = !window.queueOpen
+    }
+
+    Component {
+        id: modernBar
+
+        NowPlayingBar {
+            queueOpen: window.barQueueOpen
+            nowPlayingOpen: window.nowPlayingOpen
+            onQueueToggled: window.toggleQueueFromBar()
+            onNowPlayingToggled: window.nowPlayingOpen = !window.nowPlayingOpen
+            // The lyrics are Now Playing's: the button opens it on them, and
+            // puts it away again when that is what it shows.
+            lyricsOpen: window.nowPlayingOpen && nowPlaying.pane === "lyrics"
+            onLyricsToggled: {
+                if (lyricsOpen) {
+                    window.nowPlayingOpen = false
+                } else {
+                    nowPlaying.pane = "lyrics"
+                    window.nowPlayingOpen = true
+                }
             }
+            onEffectsSettingsRequested: window.openEffectsSettings()
+            onMiniPlayerRequested: window.enterMini()
         }
-        onEffectsSettingsRequested: window.openEffectsSettings()
-        onMiniPlayerRequested: window.enterMini()
+    }
+
+    Component {
+        id: classicBar
+
+        NowPlayingBarClassic {
+            queueOpen: window.barQueueOpen
+            nowPlayingOpen: window.nowPlayingOpen
+            onQueueToggled: window.toggleQueueFromBar()
+            onNowPlayingToggled: window.nowPlayingOpen = !window.nowPlayingOpen
+            onEffectsSettingsRequested: window.openEffectsSettings()
+            onMiniPlayerRequested: window.enterMini()
+        }
     }
 
     // — the mini player: in place of this window, never beside it —

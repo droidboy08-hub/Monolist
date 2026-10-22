@@ -25,6 +25,10 @@ QtObject {
     // pictures print black and white until they are the subject (Artwork's
     // `colour`); off, every picture is in colour throughout.
     property bool monochrome: true
+    // Settings > Appearance's "Player bar", kept in the settings
+    // (appearance.player_bar): "modern" (NowPlayingBar) or "classic"
+    // (NowPlayingBarClassic). Main builds only the one chosen.
+    property string playerBar: "modern"
     readonly property real ambientShare: ambient.a * (dark ? 0.16 : 0.11)
     function ambientOver(base, share) {
         return share > 0 ? Qt.tint(base, Qt.rgba(ambient.r, ambient.g, ambient.b, share)) : base

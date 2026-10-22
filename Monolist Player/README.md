@@ -432,7 +432,11 @@ its cover.
                              cards, queue panel, lyrics pane, title bar parts,
                              ArtistLine (an artist line whose names are links),
                              EffectsPanel and BandSlider (the sound effects),
-                             MiniPlayer (the mini player's own window)
+                             MiniPlayer (the mini player's own window),
+                             NowPlayingBar and NowPlayingBarClassic (the
+                             player bar, Modern or Classic: Settings >
+                             Appearance > Player bar, appearance.player_bar,
+                             switched at once; Main builds only the one chosen)
     views/                   Home, Search, Library, Downloads, Page (album or
                              YouTube Music playlist), Artist, Shelf (a shelf's
                              "show all"), Playlist, Now Playing
@@ -1102,8 +1106,8 @@ be, for a look at a state:
     monolist --query "<text>"                       search, with the text typed in
     monolist --open-queue  /  --now-playing         with the queue, or Now Playing, open
     monolist --effects-popup                        with the player bar's sound effects popup open
-    monolist --settings-section <section>           Settings, scrolled to recommendations, downloads,
-                                                    connections, effects, signin, ytmusic or backup
+    monolist --settings-section <section>           Settings, scrolled to appearance, recommendations,
+                                                    downloads, connections, effects, signin, ytmusic or backup
     monolist --ytm-demo <state>[+file]              the YouTube Music row as active, checking, unreachable,
                                                     rejected (a session that ended), notsignedin (an import
                                                     answered as signed out), unreadable (a stored copy that

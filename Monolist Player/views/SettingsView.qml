@@ -53,6 +53,12 @@ ScrollPage {
         Library.setSetting("appearance", mode)
     }
 
+    // Settings > Appearance > Player bar: the bar is rebuilt at once (Main).
+    function setPlayerBar(style) {
+        Theme.playerBar = style
+        Library.setSetting("appearance.player_bar", style)
+    }
+
     function revealSection() {
         if (section.length === 0)
             return
@@ -63,6 +69,7 @@ ScrollPage {
         var target = section === "recommendations" ? recommendationsHeader
                    : section === "downloads" ? downloadsHeader
                    : section === "connections" ? connectionsHeader
+                   : section === "appearance" ? appearanceHeader
                    : section === "effects" ? effectsBlock
                    : section === "signin" ? ytmRow
                    : section === "ytmusic" ? (homeToggle.visible ? homeToggle : ytmRow)
@@ -152,6 +159,124 @@ ScrollPage {
         font.weight: Font.Bold
         font.letterSpacing: Theme.tracking(11, 0.08)
         color: Theme.neutral700
+    }
+
+    // A player bar in small, for its choice: the top rule, the cover and the
+    // title, the transport with its progress line (beside it in Classic,
+    // under it in Modern) and the glyphs at the right. Modern has the
+    // softened corners on its cover and play square, and its sound badge.
+    component BarSketch: Item {
+        id: sketch
+        property bool classic: false
+        readonly property int corner: classic ? 0 : 2
+
+        width: 160
+        height: 40
+
+        Rectangle {
+            width: parent.width
+            height: Theme.ruleWidth
+            color: Theme.text
+        }
+
+        Item {
+            y: Theme.ruleWidth
+            width: parent.width
+            height: parent.height - Theme.ruleWidth
+
+            // The cover, and the title over the artist.
+            Rectangle {
+                x: 6
+                anchors.verticalCenter: parent.verticalCenter
+                width: 18
+                height: 18
+                radius: sketch.corner
+                antialiasing: !sketch.classic
+                color: Theme.neutral500
+            }
+            Rectangle {
+                x: 30
+                y: Math.round(parent.height / 2) - 5
+                width: 22
+                height: 4
+                color: Theme.text
+            }
+            Rectangle {
+                x: 30
+                y: Math.round(parent.height / 2) + 2
+                width: 15
+                height: 3
+                color: Theme.neutral500
+            }
+
+            // The transport: shuffle, previous, play, next, repeat.
+            Item {
+                id: sketchTransport
+                x: sketch.classic ? 60 : 59
+                y: Math.round((parent.height - height) / 2) - (sketch.classic ? 0 : 3)
+                width: 42
+                height: 14
+
+                Repeater {
+                    model: [0, 7, 32, 39]
+                    delegate: Rectangle {
+                        required property int modelData
+                        x: modelData
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 3
+                        height: 3
+                        color: Theme.neutral700
+                    }
+                }
+                Rectangle {
+                    x: 14
+                    width: 14
+                    height: 14
+                    radius: sketch.corner
+                    antialiasing: !sketch.classic
+                    color: Theme.accent
+                }
+            }
+
+            // The progress line, the part played in red.
+            Rectangle {
+                x: sketch.classic ? sketchTransport.x + sketchTransport.width + 6 : sketchTransport.x - 4
+                y: sketch.classic ? Math.round(parent.height / 2) - 1
+                                  : sketchTransport.y + sketchTransport.height + 4
+                width: sketch.classic ? 24 : sketchTransport.width + 8
+                height: 2
+                color: Theme.neutral300
+
+                Rectangle {
+                    width: Math.round(parent.width * 0.4)
+                    height: parent.height
+                    color: Theme.accent
+                }
+            }
+
+            // Modern's sound badge, then the glyphs.
+            Rectangle {
+                visible: !sketch.classic
+                x: 118
+                anchors.verticalCenter: parent.verticalCenter
+                width: 12
+                height: 7
+                color: "transparent"
+                border.width: 1
+                border.color: Theme.neutral500
+            }
+            Repeater {
+                model: 4
+                delegate: Rectangle {
+                    required property int index
+                    x: 136 + index * 6
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 3
+                    height: 3
+                    color: Theme.neutral700
+                }
+            }
+        }
     }
 
     // A line of the YouTube Music guide: an instruction to follow, so ink.
@@ -413,6 +538,7 @@ ScrollPage {
         // Paper and ink, or ink and paper, or as Windows has it; and the
         // song's colour through it all.
         SectionHeader {
+            id: appearanceHeader
             width: parent.width
             number: "02"
             title: "Appearance"
@@ -464,6 +590,72 @@ ScrollPage {
             onToggled: {
                 Theme.monochrome = !Theme.monochrome
                 Library.setSetting("monochrome", Theme.monochrome ? "1" : "0")
+            }
+        }
+
+        // The player bar: Modern (NowPlayingBar) or Classic, the bar before
+        // it (NowPlayingBarClassic). Chosen as the icon below is, by a small
+        // picture of each, and changed at once (Theme.playerBar, Main).
+        Column {
+            width: parent.width
+            spacing: Theme.space3
+
+            SmallCaps { text: "PLAYER BAR" }
+
+            Row {
+                spacing: Theme.space4
+
+                Repeater {
+                    model: [
+                        { id: "classic", name: "Classic" },
+                        { id: "modern", name: "Modern" }
+                    ]
+
+                    delegate: Item {
+                        id: barChoice
+                        required property var modelData
+                        readonly property bool current: Theme.playerBar === modelData.id
+                        width: barPlate.width
+                        height: barPlate.height + Theme.space2 + barName.implicitHeight
+
+                        Accessible.role: Accessible.RadioButton
+                        Accessible.name: modelData.name + " player bar"
+                        Accessible.checked: current
+
+                        // The chosen one framed in ink; the pointer's in grey.
+                        Rectangle {
+                            id: barPlate
+                            width: 176
+                            height: 60
+                            color: "transparent"
+                            border.width: Theme.ruleWidth
+                            border.color: barChoice.current ? Theme.text
+                                        : barChoiceHover.hovered ? Theme.neutral500 : "transparent"
+
+                            BarSketch {
+                                x: 8
+                                anchors.verticalCenter: parent.verticalCenter
+                                classic: barChoice.modelData.id === "classic"
+                            }
+                        }
+
+                        Text {
+                            id: barName
+                            anchors.top: barPlate.bottom
+                            anchors.topMargin: Theme.space2
+                            width: parent.width
+                            horizontalAlignment: Text.AlignHCenter
+                            text: barChoice.modelData.name
+                            font.family: Theme.fontFamily
+                            font.pixelSize: 13
+                            font.weight: barChoice.current ? Font.Bold : Theme.weightRegular
+                            color: Theme.text
+                        }
+
+                        HoverHandler { id: barChoiceHover; cursorShape: Qt.PointingHandCursor }
+                        TapHandler { onTapped: root.setPlayerBar(barChoice.modelData.id) }
+                    }
+                }
             }
         }
 

@@ -306,6 +306,7 @@ qt_add_qml_module(monolist
         components/PlayingBars.qml
         components/TrackTable.qml
         components/NowPlayingBar.qml
+        components/NowPlayingBarClassic.qml
         components/ProgressSlider.qml
         components/HRule.qml
         components/PosterButton.qml

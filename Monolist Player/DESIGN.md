@@ -30,7 +30,8 @@ Appearance turns it off. Both are atmosphere, not hierarchy: nothing reads only
 by them, and the page is legible without either.
 
 **And two more, the owner's (2026-10-21).** The player bar's cover and its red
-play square have the list covers' 6px corners. And Now Playing is a stage
+play square have the list covers' 6px corners (the Modern bar's; Classic keeps
+its square ones). And Now Playing is a stage
 rather than a page (its "Ambient stage", see 3): one field of the cover's own
 colour over the whole sheet, and on it the cover with 10px corners standing
 off the field on a soft shadow, the one shadow in the app. The shadow is drawn
@@ -284,6 +285,14 @@ nothing at all.
   everything is there; at 1120 the slider has folded; at 900 and 880 the
   lyrics, the output and the badge have gone and the title is shorter; at 760
   the cover and the heart are left.
+* **The bar before it stays, as a choice.** Settings > Appearance > Player bar,
+  above the app icon: two small pictures, Classic and Modern (the owner's,
+  2026-10-22). Modern is the quiet bar above, and the default; Classic is the
+  bar as it was in 0.1.152, square play button and all, with Studio clarity in
+  its red sliders like every other effect. Only the chosen bar is built, and
+  choosing the other replaces it at once.
+  *Why.* The owner wanted the new bar offered, not imposed; a picture says
+  which is which without a line of explanation.
 * **Now Playing keeps the player bar visible, and slides out from behind it.**
   *Why.* Opening the big view should not take away the controls the user already
   knows; it adds the cover, the lyrics and the queue, and changes nothing else.
