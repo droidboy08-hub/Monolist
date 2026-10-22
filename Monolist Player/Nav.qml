@@ -35,8 +35,11 @@ QtObject {
     property bool pagesCovered: false
 
     // The rounded corners of a list's covers (Artwork's radius), drawn once
-    // for all of them rather than once a cover. Main makes it.
+    // for all of them rather than once a cover. Main makes it. The player
+    // bar's cover has the same 6px corners at 56px, so it has its own: a
+    // list cover's stretched to 56 would round it by 8.4.
     property Item coverMask: null
+    property Item barCoverMask: null
 
     function openSuggestions(shelf) {
         if (shelf >= 0)

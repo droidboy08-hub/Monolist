@@ -1028,6 +1028,24 @@ ApplicationWindow {
 
         Component.onCompleted: Nav.coverMask = coverMask
     }
+    // The same corners for the player bar's cover, at its own 56px: one
+    // more small layer, drawn once.
+    Item {
+        id: barCoverMask
+        width: 56
+        height: 56
+        visible: false
+        layer.enabled: true
+        layer.smooth: true
+
+        Rectangle {
+            anchors.fill: parent
+            radius: 6
+            antialiasing: true
+        }
+
+        Component.onCompleted: Nav.barCoverMask = barCoverMask
+    }
 
     // — the picture, full screen —
     // Over everything but the player bar, which stands on it while the

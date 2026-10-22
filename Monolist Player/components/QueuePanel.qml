@@ -12,6 +12,14 @@ Rectangle {
     // Off where the panel sits inside another view that has its own.
     property bool showHead: true
     property bool showRule: true
+    // What it is printed in: the page's ink, greys and rules, or the tints of
+    // a colour field it stands on (Now Playing's). `plate` is the paper of a
+    // row being carried.
+    property color ink: Theme.text
+    property color soft: Theme.neutral700
+    property color rule: Theme.divider
+    property color hoverTint: Theme.rowHover
+    property color plate: Theme.bg
     signal closeRequested()
 
     color: Theme.bg
@@ -144,7 +152,7 @@ Rectangle {
             font.pixelSize: 20
             font.weight: Theme.weightBlack
             font.letterSpacing: Theme.tracking(20, -0.01)
-            color: Theme.text
+            color: root.ink
         }
 
         IconButton {
@@ -152,7 +160,8 @@ Rectangle {
             anchors.rightMargin: Theme.space4
             anchors.verticalCenter: parent.verticalCenter
             iconName: "x"
-            iconColor: Theme.neutral700
+            iconColor: root.soft
+            hoverColor: root.ink
             iconSize: 14
             onClicked: root.closeRequested()
         }
@@ -161,7 +170,7 @@ Rectangle {
             anchors.bottom: parent.bottom
             width: parent.width
             height: Theme.ruleWidth
-            color: Theme.divider
+            color: root.rule
         }
     }
 
@@ -248,6 +257,7 @@ Rectangle {
                 topPadding: Theme.space6
                 bottomPadding: Theme.space2
                 text: "NOW PLAYING"
+                color: root.soft
             }
             Caption {
                 visible: entry.index === Player.queue.currentIndex + 1
@@ -255,6 +265,7 @@ Rectangle {
                 topPadding: Theme.space6
                 bottomPadding: Theme.space2
                 text: "UP NEXT · " + Player.queue.upcomingCount
+                color: root.soft
             }
             Caption {
                 visible: entry.index === Player.queue.radioStartIndex
@@ -276,10 +287,10 @@ Rectangle {
                 // A row being carried is a plate of paper in an ink frame.
                 Rectangle {
                     anchors.fill: parent
-                    color: entry.held ? Theme.bg
-                         : entryHover.hovered && !entry.isCurrent ? Theme.rowHover : "transparent"
+                    color: entry.held ? root.plate
+                         : entryHover.hovered && !entry.isCurrent ? root.hoverTint : "transparent"
                     border.width: entry.held ? Theme.ruleWidth : 0
-                    border.color: Theme.text
+                    border.color: root.ink
 
                     Behavior on color {
                         enabled: !entryHover.hovered && !entry.held
@@ -304,7 +315,7 @@ Rectangle {
                     width: 16
                     height: 16
                     name: "grip"
-                    color: grip.containsMouse || grip.pressed ? Theme.text : Theme.neutral700
+                    color: grip.containsMouse || grip.pressed ? root.ink : root.soft
                 }
                 MouseArea {
                     id: grip
@@ -364,7 +375,7 @@ Rectangle {
                         font.family: Theme.fontFamily
                         font.pixelSize: 14
                         font.weight: entry.isCurrent ? Font.Bold : Theme.weightRegular
-                        color: entry.isCurrent ? Theme.accent700 : Theme.text
+                        color: entry.isCurrent ? Theme.accent700 : root.ink
                     }
                     ArtistLine {
                         width: parent.width
@@ -372,7 +383,7 @@ Rectangle {
                         credits: entry.credits
                         font.family: Theme.fontFamily
                         font.pixelSize: 12
-                        color: Theme.neutral700
+                        color: root.soft
                     }
                 }
 
@@ -393,7 +404,7 @@ Rectangle {
                         text: entry.durationMs > 0 ? entry.durationText : ""
                         font.family: Theme.fontFamily
                         font.pixelSize: 12
-                        color: entry.isCurrent ? Theme.accent700 : Theme.neutral700
+                        color: entry.isCurrent ? Theme.accent700 : root.soft
                     }
 
                     Row {
@@ -405,7 +416,8 @@ Rectangle {
                         IconButton {
                             side: 30
                             iconName: "dots"
-                            iconColor: Theme.neutral700
+                            iconColor: root.soft
+                            hoverColor: root.ink
                             iconSize: 15
                             onClicked: root.openMenu(entry.index, null)
                         }
@@ -413,7 +425,8 @@ Rectangle {
                             visible: !entry.isCurrent
                             side: 30
                             iconName: "x"
-                            iconColor: Theme.neutral700
+                            iconColor: root.soft
+                            hoverColor: root.ink
                             iconSize: 12
                             onClicked: Player.removeFromQueue(entry.index)
                         }
@@ -442,7 +455,7 @@ Rectangle {
         text: "Nothing queued. Play something from Search, Home or your Downloads."
         font.family: Theme.fontFamily
         font.pixelSize: 13
-        color: Theme.neutral700
+        color: root.soft
     }
 
     // — foot: autoplay and clearing —
@@ -455,7 +468,7 @@ Rectangle {
         Rectangle {
             width: parent.width
             height: Theme.ruleWidth
-            color: Theme.divider
+            color: root.rule
         }
 
         Row {
@@ -470,7 +483,7 @@ Rectangle {
                 anchors.verticalCenter: parent.verticalCenter
                 color: Player.autoplay ? Theme.accent : "transparent"
                 border.width: Theme.ruleWidth
-                border.color: Player.autoplay ? Theme.accent : Theme.text
+                border.color: Player.autoplay ? Theme.accent : root.ink
 
                 Icon {
                     anchors.centerIn: parent
@@ -488,7 +501,7 @@ Rectangle {
                 text: "Autoplay similar songs"
                 font.family: Theme.fontFamily
                 font.pixelSize: 13
-                color: Theme.text
+                color: root.ink
             }
 
             TapHandler { onTapped: Player.autoplay = !Player.autoplay }
@@ -505,7 +518,7 @@ Rectangle {
             font.pixelSize: 12
             font.weight: Font.Bold
             font.letterSpacing: Theme.tracking(12, 0.12)
-            color: clearHover.hovered ? Theme.accent700 : Theme.neutral700
+            color: clearHover.hovered ? Theme.accent700 : root.soft
 
             HoverHandler { id: clearHover; cursorShape: Qt.PointingHandCursor }
             TapHandler { onTapped: Player.clearUpcoming() }
@@ -517,6 +530,6 @@ Rectangle {
         visible: root.showRule
         width: Theme.ruleWidth
         height: parent.height
-        color: Theme.divider
+        color: root.rule
     }
 }

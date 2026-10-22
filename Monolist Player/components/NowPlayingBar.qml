@@ -400,10 +400,13 @@ Rectangle {
             }
         }
 
+        // Its corners softened as a list cover's are (6px), through the mask
+        // Main draws once for it (Nav.barCoverMask), not a layer of its own.
         Artwork {
             id: barArt
             width: root.coverSide
             height: root.coverSide
+            radius: 6
             placeholder: ""
             source: Player.currentTrack.artwork !== undefined ? Player.currentTrack.artwork : ""
 
@@ -528,10 +531,13 @@ Rectangle {
             }
 
             // The one red thing on the bar, and the one control that is a
-            // shape rather than a glyph: it is what the bar is for.
+            // shape rather than a glyph: it is what the bar is for. Its
+            // corners softened (6px) like the cover's beside it.
             Rectangle {
                 width: 40
                 height: 40
+                radius: 6
+                antialiasing: true
                 anchors.verticalCenter: parent.verticalCenter
                 color: playArea.containsMouse || playArea.pressed ? Theme.accent600 : Theme.accent
 

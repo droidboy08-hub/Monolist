@@ -1,13 +1,17 @@
 import QtQuick
 import QtQuick.Controls.Basic
+import QtQuick.Effects
 import Monolist
 import Monolist.Backend
 import "../components"
 
-// Now Playing, full size. At the left the poster, printed for this song: its
-// cover, in colour, on a field of the cover's own colour, and the title set
-// large. At the right, on paper, the lyrics lit line by line, or what plays
-// next. The player bar stays below, so the controls stay where they were.
+// Now Playing, full size: the owner's "Ambient stage" (2026-10-21). One calm
+// field of the playing cover's own colour over the whole sheet, deep in dark
+// and pale in light, everything on it printed in tints of that colour. At the
+// left the cover, its corners softened and standing off the field on a soft
+// shadow, the song's name under it and two small tags (the sound, and what
+// plays next). At the right the lyrics set large, or what plays next. The
+// player bar stays below, so the controls stay where they were.
 Rectangle {
     id: root
 
@@ -25,55 +29,71 @@ Rectangle {
     readonly property var track: Player.currentTrack
     readonly property bool hasTrack: track.title !== undefined
     readonly property string artwork: track.artwork !== undefined ? track.artwork : ""
-    readonly property bool wide: width >= 980
+    // Wide enough for the cover beside the lyrics; narrower, the song heads
+    // the page and the lyrics take its whole width.
+    readonly property bool wide: width >= 1000
     // The picture is up once mpv has a frame to give, not when it was asked
     // for: until then the cover stays, and the switch shows it is working.
-    readonly property bool videoShowing: Player.videoPlaying
-                                         && (wide ? videoSurface.showing : narrowSurface.showing)
+    readonly property bool videoShowing: Player.videoPlaying && videoSurface.showing
     readonly property bool videoWaiting: Player.videoWanted && !videoShowing
-    // What the switch says, wherever it is.
-    readonly property string switchTip: !Player.videoAvailable ? "This song has no video"
-                                      : videoShowing ? "Show the cover"
-                                      : "Play the video"
-    // Where the sound is coming from, once it is, and what mpv says it is:
-    // "STREAMING · INNERTUBE · OPUS · 48 KHZ · 139 KBPS" (Player.streamInfo;
-    // the codec and the rest follow the source a moment later, once the
-    // sound has started). Set like the lyrics' credit, since it is the same
-    // kind of note.
-    readonly property string soundStream: hasTrack && !Player.resolving && Player.streamInfo.length > 0
-                                          ? Player.streamInfo.toUpperCase() : ""
-    // The sound effects that are on follow it ("… · SLOWED 0.85× + REVERB ·
-    // HIGH BASS +6 DB"): they are what the song sounds like, so they are
-    // named where its sound is.
-    readonly property string soundEffects: hasTrack && Sound.active && !Sound.failed
-                                           ? Sound.summary.toUpperCase() : ""
-    readonly property string soundSource: [soundStream, soundEffects].filter(part => part.length > 0).join(" · ")
-    // The line as printed `width` wide: one line while both fit on it, else
-    // the effects on a line of their own, so neither is cut short.
-    function soundLine(width) {
-        return soundStream.length > 0 && soundEffects.length > 0 && soundMetrics.advanceWidth > width
-               ? soundStream + "\n" + soundEffects : soundSource
+    readonly property string switchTip: videoWaiting ? "Loading the video"
+                                      : Player.videoWanted ? "Show the cover (V)"
+                                      : "Play the video (V)"
+
+    // The sound as mpv reports it, "OPUS · 133 KBPS" (Player.streamQuality,
+    // the player bar's badge), once both the codec and the rate are known.
+    readonly property string quality: hasTrack && !Player.resolving && Player.streamQuality.length > 0
+                                      ? Player.streamQuality.replace(/ (\d+)$/, " · $1 KBPS") : ""
+    // The sound effects that are on ("SLOWED 0.85× + REVERB · HIGH BASS +6
+    // DB"): they are what the song sounds like, so they are named beside it.
+    readonly property string effects: hasTrack && Sound.active && !Sound.failed
+                                      ? Sound.summary.toUpperCase() : ""
+    // What plays next, or null. Read through the counts, so the tag follows
+    // a reorder, an addition or a song ending.
+    readonly property var nextTrack: {
+        const upcoming = Player.queue.upcomingCount
+        const at = Player.queue.currentIndex + 1
+        return upcoming > 0 && at < Player.queue.count ? Player.queue.get(at) : null
+    }
+    readonly property bool showUpNext: hasTrack && nextTrack !== null
+
+    // — the colour field —
+    // The cover's colour as CoverPalette measured it; kept from the last song
+    // until the next one's is known, transparent for a song with no cover.
+    property color coverColour: "transparent"
+    function measure() {
+        if (artwork.length > 0)
+            CoverPalette.request(artwork)
+        else
+            coverColour = "transparent"
+    }
+    onArtworkChanged: measure()
+    Component.onCompleted: measure()
+    Connections {
+        target: CoverPalette
+        function onColourReady(source, colour) {
+            if (source === root.artwork)
+                root.coverColour = colour
+        }
     }
 
-    TextMetrics {
-        id: soundMetrics
-        font.family: Theme.fontFamily
-        font.pixelSize: 11
-        font.weight: Font.Bold
-        font.letterSpacing: Theme.tracking(11, 0.1)
-        text: root.soundSource
+    // The cover's hue, calm: its strength held to a third, deep in dark
+    // (#18222d for a blue cover) and pale in light (#dde6ef). A grey cover,
+    // or none, gives a grey field.
+    function fieldFrom(c, dark) {
+        const known = c.a > 0
+        const hue = known && c.hslHue >= 0 ? c.hslHue : 0
+        let strength = known ? Math.min(0.34, c.hslSaturation * 0.85) : 0
+        if (strength < 0.06)
+            strength = 0
+        return Qt.hsla(hue, strength, dark ? 0.135 : 0.9, 1)
     }
-
-    // The cover's colour as the field, signal red until it is known.
-    property color field: Theme.red
-    // Ink or paper, whichever reads better on the field; paper when it is
-    // close, as on the red poster. Printed ink and paper, so a cover's field
-    // reads the same in either appearance. (Not "onField": a name starting
-    // "on" and a capital is taken for a signal handler, and read as nothing.)
-    readonly property color posterInk: contrast(field, Theme.paper) * 1.1 >= contrast(field, Theme.ink)
-                                       ? Theme.paper : Theme.ink
-
-    color: Theme.bg
+    property color field: fieldFrom(coverColour, Theme.dark)
+    // Atmosphere, not information: nobody waits for it, so it takes its time.
+    Behavior on field {
+        ColorAnimation { duration: Theme.slow; easing.type: Theme.enterCurve }
+    }
+    color: field
 
     // Relative luminance and contrast ratio, as WCAG defines them.
     function luminance(c) {
@@ -81,208 +101,73 @@ Rectangle {
         return 0.2126 * linear(c.r) + 0.7152 * linear(c.g) + 0.0722 * linear(c.b)
     }
     function contrast(a, b) {
-        var la = luminance(a), lb = luminance(b)
+        const la = luminance(a), lb = luminance(b)
         return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05)
     }
-    // A field to print on: never so pale it fades into the paper, nor so dark
-    // it reads as black.
-    function fieldFrom(c) {
-        var hue = c.hslHue < 0 ? 0 : c.hslHue
-        return Qt.hsla(hue, Math.min(1, c.hslSaturation * 1.1), Math.max(0.24, Math.min(0.6, c.hslLightness)), 1)
+    // A tint of the field's own hue, at `share` of its strength, standing
+    // `ratio` off it in contrast: lighter on a deep field, darker on a pale
+    // one. Found by halving the lightness, so it holds on any cover's colour
+    // rather than only on the blue the mockup was drawn with.
+    function tone(f, ratio, share) {
+        const hue = f.hslHue < 0 ? 0 : f.hslHue
+        const strength = f.hslSaturation * share
+        const lighter = Theme.dark
+        let lo = lighter ? f.hslLightness : 0
+        let hi = lighter ? 1 : f.hslLightness
+        for (let i = 0; i < 14; ++i) {
+            const mid = (lo + hi) / 2
+            const enough = contrast(f, Qt.hsla(hue, strength, mid, 1)) >= ratio
+            if (lighter === enough)
+                hi = mid
+            else
+                lo = mid
+        }
+        return Qt.hsla(hue, strength, lighter ? hi : lo, 1)
     }
+    // The mockup's inks, as contrasts against its field: the line being sung
+    // and the titles in printed paper or ink; the artist and the notes
+    // ("soft"); what is still to be sung ("next", readable); what has been
+    // sung ("past", faded); the rules.
+    readonly property color ink: Theme.dark ? Theme.paper : Theme.ink
+    readonly property color soft: tone(field, Theme.dark ? 7.5 : 5.6, 0.55)
+    readonly property color next: tone(field, Theme.dark ? 5.2 : 4.8, 0.55)
+    readonly property color past: tone(field, Theme.dark ? 3.0 : 2.3, 0.5)
+    readonly property color line: tone(field, Theme.dark ? 1.8 : 1.6, 0.7)
+    // The pointer's tint on a control printed on the field.
+    function tint(amount) { return Qt.rgba(ink.r, ink.g, ink.b, amount) }
+    // The cover's shadow: black in dark; in light a deep shade of the field's
+    // own hue, lighter, so the pale page is not smudged grey.
+    readonly property color shadowFar: Theme.dark ? Qt.rgba(0, 0, 0, 0.5)
+                                                  : Qt.hsla(field.hslHue < 0 ? 0 : field.hslHue,
+                                                            Math.min(0.45, field.hslSaturation * 1.25), 0.19, 0.28)
+    readonly property color shadowNear: Theme.dark ? Qt.rgba(0, 0, 0, 0.35)
+                                                   : Qt.hsla(field.hslHue < 0 ? 0 : field.hslHue,
+                                                             Math.min(0.45, field.hslSaturation * 1.25), 0.19, 0.18)
 
-    onArtworkChanged: if (artwork.length > 0) CoverPalette.request(artwork)
-    Component.onCompleted: if (artwork.length > 0) CoverPalette.request(artwork)
-
-    Connections {
-        target: CoverPalette
-        function onColourReady(source, colour) {
-            if (source === root.artwork)
-                root.field = root.fieldFrom(colour)
-        }
-    }
-
-    // Atmosphere, not information: nobody waits for the field to finish
-    // changing, so it can take its time.
-    Behavior on field {
-        ColorAnimation { duration: Theme.slow; easing.type: Theme.enterCurve }
-    }
-
-    // Closing sits with the window buttons, on whichever side the system
-    // keeps them: the hand is already there to deal with the window, and it
-    // should not have to cross the screen to put the player away. A plate
-    // with a word on it, not a bare glyph, so it is not read as one of the
-    // window's own buttons.
-    component CloseButton: Button {
-        id: closeButton
-
-        // The ink it is printed in: the palette's on paper, the poster's own
-        // over the colour field.
-        property color ink: Theme.text
-        property bool overField: false
-        // The full height of the bar, like Windows' caption buttons beside it.
-        property bool tall: false
-
-        height: tall ? parent.height : 36
-        leftPadding: Theme.space3 + 2
-        rightPadding: Theme.space4
-        hoverEnabled: true
-        focusPolicy: Qt.NoFocus
-        Accessible.name: "Close Now Playing"
-
-        background: Rectangle {
-            color: closeButton.overField
-                   ? Qt.rgba(closeButton.ink.r, closeButton.ink.g, closeButton.ink.b,
-                             closeButton.down ? 0.34 : closeButton.hovered ? 0.26 : 0.16)
-                   : (closeButton.down ? Theme.neutral500 : closeButton.hovered ? Theme.neutral300 : Theme.surface)
-        }
-
-        contentItem: Row {
-            spacing: Theme.space2 + 2
-
-            Icon {
-                anchors.verticalCenter: parent.verticalCenter
-                width: 18
-                height: 18
-                thickness: 2.4
-                name: "chevron-down"
-                color: closeButton.ink
-            }
-            Text {
-                anchors.verticalCenter: parent.verticalCenter
-                text: "CLOSE"
-                font.family: Theme.fontFamily
-                font.pixelSize: 12
-                font.weight: Font.Bold
-                font.letterSpacing: Theme.tracking(12, 0.14)
-                color: closeButton.ink
-            }
-            // The key that does the same, printed on the button rather than
-            // hidden in a tooltip.
-            Rectangle {
-                anchors.verticalCenter: parent.verticalCenter
-                width: escLabel.implicitWidth + 10
-                height: escLabel.implicitHeight + 4
-                color: "transparent"
-                border.width: 1.5
-                border.color: Qt.rgba(closeButton.ink.r, closeButton.ink.g, closeButton.ink.b, 0.7)
-
-                Text {
-                    id: escLabel
-                    anchors.centerIn: parent
-                    text: "ESC"
-                    font.family: Theme.fontFamily
-                    font.pixelSize: 10
-                    font.weight: Font.Bold
-                    font.letterSpacing: Theme.tracking(10, 0.08)
-                    color: Qt.rgba(closeButton.ink.r, closeButton.ink.g, closeButton.ink.b, 0.8)
-                }
-            }
-        }
-
-        HoverHandler { cursorShape: Qt.PointingHandCursor }
-
-        ToolTip.visible: hovered
-        ToolTip.delay: 600
-        ToolTip.text: "Close Now Playing (Esc)"
-    }
-
-    // What sets the close button apart from the window's own: a 2px rule the
-    // height of the bar beside square buttons, a short tinted one beside
-    // round ones.
-    component ClusterRule: Item {
-        property color ink: Theme.text
-
-        width: Theme.ruleWidth
-        height: parent.height
-
-        Rectangle {
-            anchors.centerIn: parent
-            width: parent.width
-            height: Chrome.roundButtons ? 20 : parent.height
-            color: Chrome.roundButtons ? Qt.rgba(parent.ink.r, parent.ink.g, parent.ink.b, 0.25)
-                                       : Theme.divider
-        }
-    }
-
-    // One side of the cover / video switch: ChoiceChip's switch, printed in
-    // the poster's ink and with a glyph, over the colour field.
-    component PictureChoice: Rectangle {
-        id: choice
-
-        property string label: ""
-        property string iconName: ""
-        property bool selected: false
-        property bool available: true
-        property string hint: ""
-        property color ink: Theme.text
-        property color field: Theme.accent
-        signal picked()
-
-        implicitWidth: choiceRow.implicitWidth + Theme.space3 * 2
-        implicitHeight: 32
-        opacity: available ? 1 : 0.45
-        color: selected ? ink : (choiceHover.hovered && available ? Qt.rgba(ink.r, ink.g, ink.b, 0.14)
-                                                                  : "transparent")
-        border.width: Theme.ruleWidth
-        border.color: ink
-
-        Accessible.role: Accessible.RadioButton
-        Accessible.name: label
-        Accessible.checked: selected
-
-        Behavior on color {
-            enabled: !choice.selected && !choiceHover.hovered
-            ColorAnimation { duration: Theme.quick }
-        }
-
-        Row {
-            id: choiceRow
-            anchors.centerIn: parent
-            spacing: Theme.space2
-
-            Icon {
-                anchors.verticalCenter: parent.verticalCenter
-                width: 14
-                height: 14
-                thickness: 2.2
-                name: choice.iconName
-                color: choice.selected ? choice.field : choice.ink
-            }
-            Text {
-                anchors.verticalCenter: parent.verticalCenter
-                text: choice.label
-                font.family: Theme.fontFamily
-                font.pixelSize: 12
-                font.weight: Font.Bold
-                font.letterSpacing: Theme.tracking(12, 0.14)
-                color: choice.selected ? choice.field : choice.ink
-            }
-        }
-
-        // Still under the pointer when there is nothing to switch to, so the
-        // tooltip can say why.
-        HoverHandler {
-            id: choiceHover
-            cursorShape: choice.available && !choice.selected ? Qt.PointingHandCursor : Qt.ArrowCursor
-        }
-        // Takes the press: a plain tap also counted toward a double-click on
-        // the title bar under it, which maximised the window.
-        TapHandler {
-            enabled: choice.available && !choice.selected
-            gesturePolicy: TapHandler.ReleaseWithinBounds
-            onTapped: choice.picked()
-        }
-
-        ToolTip.visible: choiceHover.hovered && hint.length > 0
-        ToolTip.delay: 400
-        ToolTip.text: hint
-    }
+    // — measures —
+    // As the mockup has them at 1440: 120 at either side and between the
+    // cover and the lyrics, the cover 420 and 56 below the strip; less as the
+    // window is smaller.
+    readonly property int edge: Math.round(Math.max(Theme.space8, Math.min(120, width * 0.083)))
+    readonly property int contentTop: Theme.titleBarHeight
+                                      + Math.round(Math.max(Theme.space6, Math.min(56, (height - 600) / 4)))
+    readonly property int columnWidth: Math.round(Math.min(420, (width - 3 * edge) * 0.45))
+    readonly property int gap: 20
+    // The cover is as large as the column, or as the height leaves room for
+    // over the song's name and tags.
+    readonly property int coverRoom: height - contentTop - gap - info.height
+                                     - (tags.visible ? gap + tags.height : 0) - Theme.space6
+    readonly property int coverSide: Math.max(120, Math.min(columnWidth, coverRoom))
+    // Narrow: the song heads the page, a smaller cover beside its name.
+    readonly property int narrowEdge: width >= 700 ? Theme.space8 : Theme.space6
+    readonly property int headTop: Theme.titleBarHeight + Theme.space4
+    readonly property int headCover: width >= 700 ? 96 : 72
+    readonly property int pictureRadius: wide || videoShowing ? 10 : 8
 
     // Swallows clicks, so nothing underneath takes them. Only where nothing
     // of this view's own is under the pointer: a plain TapHandler over it
-    // (the cover's) passes the press on below this, to the handlers under
-    // the view, so Main also turns off what is under it while it is open.
+    // passes the press on below this, to the handlers under the view, so
+    // Main also turns off what is under it while it is open.
     MouseArea {
         anchors.fill: parent
         acceptedButtons: Qt.AllButtons
@@ -292,143 +177,380 @@ Rectangle {
     // lit on the hidden page.
     HoverHandler { blocking: true }
 
-    // — the poster —
-    Rectangle {
-        id: poster
-        visible: root.wide
-        width: visible ? Math.round(Math.min(root.width * 0.46, (root.height - Theme.titleBarHeight) * 0.86 + Theme.space8 * 2)) : 0
-        height: parent.height
-        color: root.field
+    // — the picture: the cover, or the same song moving —
+    // In its place in either layout. The video takes the cover's place at its
+    // own 16:9, the column's width, with the same corners and shadow; the
+    // cover stays up under it until the first frame arrives, so the picture
+    // never appears as a black box.
+    Item {
+        id: picture
 
-        Column {
-            id: posterContent
-            anchors.left: parent.left
+        readonly property real aspect: videoSurface.aspectRatio > 0 ? videoSurface.aspectRatio : 16 / 9
+        // Wide: the column's width, or less where the height is short.
+        readonly property int wideVideoWidth: Math.max(160, Math.min(root.columnWidth,
+                                                                     Math.round(root.coverRoom * aspect)))
+        // Narrow: the page's width under the song's name, no taller than half
+        // of what is left, so the lyrics keep room below.
+        readonly property real narrowTop: tags.visible ? tags.y + tags.height + root.gap : info.y + info.height + root.gap
+        readonly property int narrowVideoWidth: Math.max(160, Math.min(root.width - 2 * root.narrowEdge,
+                                                                       Math.round((root.height - narrowTop) * 0.5 * aspect)))
+
+        x: root.wide ? root.edge : root.narrowEdge
+        y: root.wide ? root.contentTop : root.videoShowing ? narrowTop : root.headTop
+        width: root.videoShowing ? (root.wide ? wideVideoWidth : narrowVideoWidth)
+                                 : (root.wide ? root.coverSide : root.headCover)
+        height: root.videoShowing ? Math.round(width / aspect) : width
+
+        // Two shadows, as the mockup's two: a wide soft one well below, a
+        // close one under the edge. Drawn by a shader from the shape alone,
+        // so nothing is rendered again while the song plays.
+        RectangularShadow {
+            anchors.fill: parent
+            radius: root.pictureRadius
+            offset.y: root.wide ? 28 : 12
+            blur: root.wide ? 56 : 28
+            color: root.shadowFar
+        }
+        RectangularShadow {
+            anchors.fill: parent
+            radius: root.pictureRadius
+            offset.y: root.wide ? 6 : 3
+            blur: root.wide ? 16 : 8
+            color: root.shadowNear
+        }
+
+        // The video's corners, as the cover's: a mask, since clipping cuts
+        // square. Drawn once for the picture's size, and only while a video
+        // plays; the frames then go through it as they arrive.
+        Item {
+            id: pictureCorners
+            anchors.fill: parent
+            visible: false
+            layer.enabled: Player.videoPlaying
+            layer.smooth: true
+
+            Rectangle {
+                anchors.fill: parent
+                radius: root.pictureRadius
+                antialiasing: true
+            }
+        }
+
+        // Under the cover, so the still stays up until the first frame. Drawn
+        // into a layer, for the mask, only while the picture shows.
+        Item {
+            anchors.fill: parent
+            layer.enabled: root.videoShowing
+            layer.effect: MultiEffect {
+                maskEnabled: true
+                maskSource: pictureCorners
+                maskThresholdMin: 0.5
+                maskSpreadAtMin: 1.0
+            }
+
+            // mpv's frames have no alpha (bgr0: the fourth byte is 0), which
+            // a picture drawn straight to the window never shows. Copied into
+            // the layer as they are, that 0 reads as transparent, and the
+            // mask's blend then adds the picture onto the field behind it,
+            // washed out on a pale one. So the frames are blended onto black
+            // here instead (a hair under full opacity is what makes Qt blend
+            // rather than copy), which leaves the layer opaque.
+            Rectangle {
+                anchors.fill: parent
+                visible: root.videoShowing
+                color: "black"
+            }
+            VideoSurface {
+                id: videoSurface
+                anchors.fill: parent
+                visible: root.videoHere && Player.videoPlaying
+                opacity: 0.99
+            }
+        }
+
+        Artwork {
+            id: cover
+            anchors.fill: parent
+            visible: !root.videoShowing
+            source: root.artwork
+            placeholder: ""
+            colour: true
+            radius: root.pictureRadius
+            color: root.line
+        }
+        // No cover, or nothing playing: a note on the plate.
+        Icon {
+            visible: !root.videoShowing && !cover.ready
+            anchors.centerIn: parent
+            width: Math.round(parent.width * 0.16)
+            height: width
+            thickness: 1.75
+            name: "music"
+            color: root.past
+        }
+
+        // A double-click on the moving picture fills the screen with it.
+        // Takes the press: a plain tap here was what let a click on the
+        // cover play the song in the hidden row beneath.
+        TapHandler {
+            gesturePolicy: TapHandler.ReleaseWithinBounds
+            onDoubleTapped: if (root.videoShowing) root.fullscreenRequested()
+        }
+
+        // Picture in picture and full screen sit on the picture, once it
+        // plays. The switch between it and the cover is in the strip.
+        Row {
+            visible: root.videoShowing
             anchors.right: parent.right
             anchors.bottom: parent.bottom
-            anchors.margins: Theme.space8
-            spacing: Theme.space6
+            anchors.margins: Theme.space3
+            spacing: Theme.space1
 
-            // The cover, or the same song moving. A video is 16:9 where a
-            // cover is square, so it takes the poster's full width where the
-            // height allows, rather than the cover's plate with black bars.
-            Item {
-                id: stage
+            PlateButton {
+                iconName: "pip"
+                tip: "Picture in picture"
+                onClicked: root.pipRequested()
+            }
+            PlateButton {
+                iconName: "fullscreen"
+                tip: "Full screen (F)"
+                onClicked: root.fullscreenRequested()
+            }
+        }
+    }
 
-                // Room above the song's name, below the strip.
-                readonly property int room: poster.height - Theme.titleBarHeight - info.implicitHeight
-                                            - Theme.space8 * 2 - Theme.space6
-                readonly property int edge: Math.max(120, Math.min(posterContent.width, room))
-                readonly property real aspect: videoSurface.aspectRatio > 0 ? videoSurface.aspectRatio : 16 / 9
-                readonly property int videoWidth: Math.max(120, Math.min(posterContent.width,
-                                                                         Math.round(room * aspect)))
+    // — the song's name —
+    // Under the cover when wide; beside the small cover, or over the moving
+    // picture, when narrow.
+    Column {
+        id: info
 
-                width: root.videoShowing ? videoWidth : edge
-                height: root.videoShowing ? Math.round(videoWidth / aspect) : edge
+        readonly property real narrowX: root.videoShowing ? root.narrowEdge
+                                                          : root.narrowEdge + root.headCover + root.gap
+        // Narrow, beside the cover, the name and the tags stand centred on it.
+        readonly property real block: height + (tags.visible ? Theme.space3 + tags.height : 0)
 
-                // Under the cover, so the still stays up until the first
-                // frame arrives and the picture never appears as a black box.
-                VideoSurface {
-                    id: videoSurface
-                    anchors.fill: parent
-                    visible: root.videoHere && Player.videoPlaying
-                }
+        x: root.wide ? root.edge : narrowX
+        y: root.wide ? picture.y + picture.height + root.gap
+                     : root.videoShowing ? root.headTop
+                     : root.headTop + Math.max(0, Math.round((root.headCover - block) / 2))
+        width: root.wide ? root.columnWidth : root.width - narrowX - root.narrowEdge
+        spacing: Theme.space1
 
-                Artwork {
-                    id: cover
-                    anchors.fill: parent
-                    visible: !root.videoShowing
-                    source: root.artwork
-                    placeholder: ""
-                    colour: true
-                }
+        Text {
+            width: parent.width
+            text: root.hasTrack ? root.track.title : ""
+            wrapMode: Text.WordWrap
+            maximumLineCount: 2
+            elide: Text.ElideRight
+            font.family: Theme.fontFamily
+            font.pixelSize: root.wide ? 30 : 24
+            font.weight: Theme.weightBlack
+            font.letterSpacing: Theme.tracking(root.wide ? 30 : 24, -0.01)
+            lineHeight: 1.05
+            lineHeightMode: Text.ProportionalHeight
+            color: root.ink
+        }
+        // Each name opens its page, and closes this view to show it.
+        ArtistLine {
+            width: parent.width
+            artist: root.hasTrack ? root.track.artist : ""
+            credits: root.hasTrack ? root.track.credits : undefined
+            font.family: Theme.fontFamily
+            font.pixelSize: root.wide ? 17 : 15
+            color: root.soft
+        }
+    }
 
-                // A double-click on the moving picture fills the screen with it.
-                // Takes the press: this plain tap was what let a click on the
-                // cover play the song in the hidden row beneath.
-                TapHandler {
-                    gesturePolicy: TapHandler.ReleaseWithinBounds
-                    onDoubleTapped: if (root.videoShowing) root.fullscreenRequested()
-                }
+    // — two small tags: the sound, and what plays next —
+    Flow {
+        id: tags
 
-                // Picture in picture and full screen sit on the picture, once
-                // it plays.
-                // The cover / video switch is in the strip above.
-                Row {
-                    visible: root.videoShowing
-                    anchors.right: parent.right
-                    anchors.bottom: parent.bottom
-                    anchors.margins: Theme.space3
-                    spacing: Theme.space1
+        // From what the tags show, not from their own `visible`, which is
+        // false while this is hidden and would keep it hidden.
+        visible: root.quality.length > 0 || root.effects.length > 0 || root.showUpNext
+        x: info.x
+        y: info.y + info.height + (root.wide ? root.gap : Theme.space3)
+        width: info.width
+        spacing: Theme.space2
 
-                    PlateButton {
-                        iconName: "pip"
-                        tip: "Picture in picture"
-                        onClicked: root.pipRequested()
-                    }
-                    PlateButton {
-                        iconName: "fullscreen"
-                        tip: "Full screen (F)"
-                        onClicked: root.fullscreenRequested()
-                    }
-                }
+        Rectangle {
+            id: qualityTag
+            visible: root.quality.length > 0
+            width: qualityText.implicitWidth + 20 + 2 * Theme.ruleWidth
+            height: 30
+            color: "transparent"
+            border.width: Theme.ruleWidth
+            border.color: root.line
+
+            Text {
+                id: qualityText
+                anchors.centerIn: parent
+                text: root.quality
+                font.family: Theme.fontFamily
+                font.pixelSize: 11
+                font.weight: Font.Bold
+                font.letterSpacing: Theme.tracking(11, 0.08)
+                color: root.soft
+            }
+            // The whole line under the pointer, as on the player bar's badge.
+            HoverHandler { id: qualityHover }
+            ToolTip.visible: qualityHover.hovered && Player.streamInfo.length > 0
+            ToolTip.delay: 600
+            ToolTip.text: Player.streamInfo
+        }
+
+        Rectangle {
+            id: effectsTag
+            visible: root.effects.length > 0
+            width: Math.min(effectsText.implicitWidth + 20 + 2 * Theme.ruleWidth, tags.width)
+            height: 30
+            color: "transparent"
+            border.width: Theme.ruleWidth
+            border.color: root.line
+
+            Text {
+                id: effectsText
+                anchors.verticalCenter: parent.verticalCenter
+                x: 10 + Theme.ruleWidth
+                width: parent.width - 20 - 2 * Theme.ruleWidth
+                text: root.effects
+                elide: Text.ElideRight
+                font.family: Theme.fontFamily
+                font.pixelSize: 11
+                font.weight: Font.Bold
+                font.letterSpacing: Theme.tracking(11, 0.08)
+                color: root.soft
+            }
+        }
+
+        // What plays next; a click shows the whole queue at the right.
+        Rectangle {
+            id: upNextTag
+            visible: root.showUpNext
+            width: Math.min(Theme.ruleWidth * 2 + 10 + upNextLabel.implicitWidth + Theme.space2
+                            + upNextSong.implicitWidth + Theme.space2 + 16 + Theme.space2, tags.width)
+            height: 30
+            color: upNextArea.pressed ? root.tint(0.16) : upNextArea.containsMouse ? root.tint(0.1) : "transparent"
+            border.width: Theme.ruleWidth
+            border.color: root.line
+
+            Accessible.role: Accessible.Button
+            Accessible.name: "Up next: " + upNextSong.text
+
+            Behavior on color {
+                enabled: !upNextArea.containsMouse
+                ColorAnimation { duration: Theme.quick }
             }
 
-            Column {
-                id: info
-                width: parent.width
-                spacing: Theme.space2
-
-                Text {
-                    width: parent.width
-                    text: root.hasTrack ? root.track.title : ""
-                    wrapMode: Text.WordWrap
-                    maximumLineCount: 2
-                    elide: Text.ElideRight
-                    font.family: Theme.fontFamily
-                    font.pixelSize: poster.width >= 520 ? 48 : 36
-                    font.weight: Theme.weightBlack
-                    font.letterSpacing: Theme.tracking(poster.width >= 520 ? 48 : 36, -0.03)
-                    lineHeight: 0.95
-                    lineHeightMode: Text.ProportionalHeight
-                    color: root.posterInk
-                }
-                // Each name opens its page, and closes this view to show it.
-                ArtistLine {
-                    width: parent.width
-                    artist: root.hasTrack ? root.track.artist : ""
-                    credits: root.hasTrack ? root.track.credits : undefined
-                    font.family: Theme.fontFamily
-                    font.pixelSize: 20
-                    font.weight: Theme.weightMedium
-                    color: root.posterInk
-                }
-                Text {
-                    visible: text.length > 0
-                    width: parent.width
-                    text: root.hasTrack && root.track.album ? root.track.album.toUpperCase() : ""
-                    elide: Text.ElideRight
-                    font.family: Theme.fontFamily
-                    font.pixelSize: 12
-                    font.weight: Font.Bold
-                    font.letterSpacing: Theme.tracking(12, 0.14)
-                    color: root.posterInk
-                    opacity: 0.8
-                }
-                Text {
-                    visible: text.length > 0
-                    width: parent.width
-                    text: root.soundLine(width)
-                    wrapMode: Text.WordWrap
-                    maximumLineCount: root.soundEffects.length > 0 ? 3 : 1
-                    elide: Text.ElideRight
-                    font.family: Theme.fontFamily
-                    font.pixelSize: 11
-                    font.weight: Font.Bold
-                    font.letterSpacing: Theme.tracking(11, 0.1)
-                    color: root.posterInk
-                    opacity: 0.65
-                }
+            Text {
+                id: upNextLabel
+                x: Theme.ruleWidth + 10
+                anchors.verticalCenter: parent.verticalCenter
+                text: "UP NEXT"
+                font.family: Theme.fontFamily
+                font.pixelSize: 11
+                font.weight: Theme.weightBlack
+                font.letterSpacing: Theme.tracking(11, 0.08)
+                color: Theme.accent700
             }
+            Text {
+                id: upNextSong
+                anchors.left: upNextLabel.right
+                anchors.leftMargin: Theme.space2
+                anchors.right: upNextChevron.left
+                anchors.rightMargin: Theme.space2
+                anchors.verticalCenter: parent.verticalCenter
+                text: root.nextTrack ? [root.nextTrack.title, root.nextTrack.artist]
+                                       .filter(part => part && part.length > 0).join(" · ") : ""
+                elide: Text.ElideRight
+                font.family: Theme.fontFamily
+                font.pixelSize: 13
+                color: root.ink
+            }
+            Icon {
+                id: upNextChevron
+                anchors.right: parent.right
+                anchors.rightMargin: Theme.ruleWidth + Theme.space2
+                anchors.verticalCenter: parent.verticalCenter
+                width: 16
+                height: 16
+                thickness: 1.75
+                name: "chevron-right"
+                color: root.ink
+            }
+
+            MouseArea {
+                id: upNextArea
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.pane = "queue"
+            }
+        }
+    }
+
+    // — the right side: the lyrics, or what plays next —
+    Item {
+        id: side
+
+        readonly property real narrowTop: Math.max(picture.y + picture.height,
+                                                   tags.visible ? tags.y + tags.height : info.y + info.height)
+                                          + Theme.space6
+        x: root.wide ? root.edge + root.columnWidth + root.edge : root.narrowEdge
+        y: root.wide ? root.contentTop : narrowTop
+        width: root.wide ? root.width - x - root.edge : root.width - 2 * root.narrowEdge
+        height: root.height - y
+
+        // Where the lyrics come from, and whether they keep time.
+        Text {
+            id: paneHead
+            width: parent.width
+            height: 16
+            visible: root.pane === "lyrics"
+            text: Lyrics.source.length === 0 || (Lyrics.state !== "synced" && Lyrics.state !== "plain") ? ""
+                  : (Lyrics.state === "plain" ? "NOT TIME-SYNCED · " : "SYNCED · ") + Lyrics.source.toUpperCase()
+            elide: Text.ElideRight
+            font.family: Theme.fontFamily
+            font.pixelSize: 11
+            font.weight: Font.Bold
+            font.letterSpacing: Theme.tracking(11, 0.1)
+            color: root.soft
+        }
+
+        LyricsPane {
+            visible: root.pane === "lyrics"
+            anchors.top: paneHead.bottom
+            anchors.topMargin: Theme.space2
+            anchors.bottom: parent.bottom
+            anchors.left: parent.left
+            anchors.right: parent.right
+            marked: false
+            readingLine: 0.28
+            paper: root.field
+            ink: root.ink
+            pastInk: root.past
+            nextInk: root.next
+            hoverInk: root.soft
+        }
+
+        // The queue's own rows, printed in the field's tints. Its captions
+        // and covers stand a margin in from its edge, so it starts that much
+        // to the left and above, and they line up with the lyrics'.
+        QueuePanel {
+            visible: root.pane === "queue"
+            x: -Theme.space6
+            y: -Theme.space6
+            width: parent.width + Theme.space6 + Theme.space4
+            height: parent.height - y
+            showHead: false
+            showRule: false
+            color: "transparent"
+            ink: root.ink
+            soft: root.soft
+            rule: root.line
+            hoverTint: root.tint(Theme.dark ? 0.06 : 0.05)
+            plate: root.field
         }
     }
 
@@ -436,331 +558,231 @@ Rectangle {
     Item {
         id: strip
 
-        // macOS keeps its traffic lights at the left, and some Linux
-        // desktops their buttons: closing goes there with them.
-        readonly property bool closeAtLeft: Chrome.nativeButtons || Chrome.buttonsOnLeft
-        // Over the poster things are drawn in the poster's own ink: grey and
-        // ink from the palette would be arbitrary there, because what is
-        // behind them is whatever colour the cover is.
-        readonly property color leftInk: root.wide ? root.posterInk : Theme.text
+        // Where the window's own buttons are drawn here: at the right on
+        // Windows, at the left on a desktop that keeps them there; none on
+        // macOS, whose traffic lights are the system's.
+        readonly property bool buttonsAtRight: !Chrome.nativeButtons && !Chrome.buttonsOnLeft
+        readonly property bool buttonsAtLeft: !Chrome.nativeButtons && Chrome.buttonsOnLeft
 
-        anchors.left: parent.left
-        anchors.right: parent.right
+        width: parent.width
         height: Theme.titleBarHeight
 
+        // Its empty parts drag the window, as the top strip does everywhere.
         WindowDragArea {
             anchors.fill: parent
         }
 
-        // Under the paper side only; the poster runs to the top.
-        Rectangle {
-            anchors.bottom: parent.bottom
-            x: poster.width
-            width: parent.width - poster.width
-            height: Theme.ruleWidth
-            color: Theme.divider
-        }
-
-        // — at the left: the window buttons and close, where the system
-        // keeps its buttons there, and the page's name —
+        // — at the left: close (after the window's buttons, where the system
+        // keeps them there) —
         Row {
             id: leftCluster
             anchors.left: parent.left
             anchors.leftMargin: Chrome.nativeButtons ? Chrome.nativeButtonsInset
-                              : Chrome.buttonsOnLeft ? 0 : Theme.space6
-            anchors.top: parent.top
-            height: parent.height - Theme.ruleWidth
-            spacing: Theme.space3
+                              : strip.buttonsAtLeft ? 0 : Theme.space3
+            height: parent.height
+            spacing: Theme.space2
 
             WindowButtons {
-                visible: Chrome.buttonsOnLeft && !Chrome.nativeButtons
+                visible: strip.buttonsAtLeft
                 height: parent.height
                 rightPadding: 0
-                ink: strip.leftInk
+                ink: root.soft
+                overField: true
             }
-            ClusterRule {
-                visible: Chrome.buttonsOnLeft && !Chrome.nativeButtons
-                ink: strip.leftInk
-            }
-            CloseButton {
-                visible: strip.closeAtLeft
+
+            // Down, back to the bar it came from. A word and its key, so it
+            // is not read as one of the window's own buttons.
+            Item {
+                id: closeButton
                 anchors.verticalCenter: parent.verticalCenter
-                ink: strip.leftInk
-                overField: root.wide
-                onClicked: root.closeRequested()
+                width: closeRow.implicitWidth + Theme.space2 * 2
+                height: 40
+
+                Accessible.role: Accessible.Button
+                Accessible.name: "Close Now Playing"
+
+                // The pointer's tint: in at once, out over a moment.
+                Rectangle {
+                    anchors.fill: parent
+                    color: root.tint(closeArea.pressed ? 0.16 : 0.1)
+                    opacity: closeArea.containsMouse || closeArea.pressed ? 1 : 0
+                    Behavior on opacity {
+                        enabled: !closeArea.containsMouse
+                        NumberAnimation { duration: Theme.quick }
+                    }
+                }
+
+                Row {
+                    id: closeRow
+                    anchors.centerIn: parent
+                    spacing: Theme.space2
+
+                    Icon {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 16
+                        height: 16
+                        thickness: 2.4
+                        name: "chevron-down"
+                        color: root.ink
+                    }
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "CLOSE"
+                        font.family: Theme.fontFamily
+                        font.pixelSize: 12
+                        font.weight: Theme.weightBlack
+                        font.letterSpacing: Theme.tracking(12, 0.12)
+                        color: root.ink
+                    }
+                    // The key that does the same, printed on the button
+                    // rather than hidden in a tooltip; given up in the
+                    // narrowest windows, where the strip has no room for it.
+                    Rectangle {
+                        visible: root.width >= 560
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: escLabel.implicitWidth + 8
+                        height: escLabel.implicitHeight + 2
+                        color: "transparent"
+                        border.width: 1.5
+                        border.color: root.ink
+
+                        Text {
+                            id: escLabel
+                            anchors.centerIn: parent
+                            text: "ESC"
+                            font.family: Theme.fontFamily
+                            font.pixelSize: 9
+                            font.weight: Theme.weightBlack
+                            font.letterSpacing: Theme.tracking(9, 0.06)
+                            color: root.ink
+                        }
+                    }
+                }
+
+                // Takes the press, so a double-click on it is not also one on
+                // the title bar beneath, which would maximise the window.
+                MouseArea {
+                    id: closeArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.closeRequested()
+                }
+
+                ToolTip.visible: closeArea.containsMouse
+                ToolTip.delay: 600
+                ToolTip.text: "Close Now Playing (Esc)"
             }
         }
 
-        // Given up before it would run into the picture switch.
-        Text {
-            anchors.left: leftCluster.right
-            anchors.leftMargin: strip.closeAtLeft ? Theme.space3 : 0
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.verticalCenterOffset: -Theme.ruleWidth / 2
-            visible: !root.wide || x + implicitWidth <= pictureSwitch.x - Theme.space4
-            text: "NOW PLAYING"
-            font.family: Theme.fontFamily
-            font.pixelSize: 12
-            font.weight: Font.Bold
-            font.letterSpacing: Theme.tracking(12, 0.18)
-            color: strip.leftInk
-        }
-
-        // — the switch between the still and the moving picture —
-        // In the strip at the poster's right edge, directly above the picture
-        // it changes, and always there with both sides, so it never moves:
-        // a song without a video dims its VIDEO side and says so.
+        // — at the right: the pane switch, the video, the window's buttons —
         Row {
-            id: pictureSwitch
-
-            visible: root.wide
-            x: poster.width - Theme.space8 - width
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: -Theme.ruleWidth
-
-            PictureChoice {
-                label: "COVER"
-                iconName: "image"
-                ink: root.posterInk
-                field: root.field
-                selected: !Player.videoWanted || !Player.videoAvailable
-                hint: selected ? "" : "Show the cover (V)"
-                onPicked: Player.videoWanted = false
-            }
-            PictureChoice {
-                label: "VIDEO"
-                iconName: root.videoWaiting ? "dots" : "video"
-                ink: root.posterInk
-                field: root.field
-                available: Player.videoAvailable
-                selected: Player.videoWanted && Player.videoAvailable
-                hint: !Player.videoAvailable ? "This song has no video"
-                    : root.videoWaiting ? "Loading the video"
-                    : selected ? "" : "Play the video (V)"
-                onPicked: Player.videoWanted = true
-            }
-        }
-
-        // — at the right: close, then the window buttons —
-        Row {
-            visible: !strip.closeAtLeft
-            anchors.top: parent.top
+            id: rightCluster
             anchors.right: parent.right
-            height: parent.height - Theme.ruleWidth
-            spacing: Chrome.roundButtons ? Theme.space3 : 0
+            anchors.rightMargin: strip.buttonsAtRight ? 0 : Theme.space3
+            height: parent.height
+            spacing: Theme.space2
 
-            CloseButton {
+            // LYRICS | UP NEXT: one frame in the field's rule, the side shown
+            // printed in reverse.
+            Rectangle {
+                id: paneSwitch
                 anchors.verticalCenter: parent.verticalCenter
-                tall: !Chrome.roundButtons
-                onClicked: root.closeRequested()
-            }
-            ClusterRule {}
-            WindowButtons {
-                height: parent.height
-                leftPadding: 0
-            }
-        }
-    }
+                width: paneRow.width + 2 * Theme.ruleWidth
+                height: 30 + 2 * Theme.ruleWidth
+                color: "transparent"
+                border.width: Theme.ruleWidth
+                border.color: root.line
 
-    // — the paper side —
-    Item {
-        id: side
-        anchors.left: poster.right
-        anchors.right: parent.right
-        anchors.top: strip.bottom
-        anchors.bottom: parent.bottom
+                Row {
+                    id: paneRow
+                    x: Theme.ruleWidth
+                    y: Theme.ruleWidth
 
-        // Narrow windows have no poster: the song goes above the lyrics, with
-        // the video switch at the end of its line, and the picture, while it
-        // plays, below it.
-        Row {
-            id: compactHead
-            visible: !root.wide
-            x: Theme.space8
-            y: Theme.space6
-            width: parent.width - Theme.space8 * 2
-            height: visible ? 64 : 0
-            spacing: Theme.space4
+                    Repeater {
+                        model: [{ label: "LYRICS", pane: "lyrics" }, { label: "UP NEXT", pane: "queue" }]
 
-            Artwork {
-                width: 64
-                height: 64
-                source: root.artwork
-                placeholder: ""
-                colour: true
-            }
-            Column {
-                anchors.verticalCenter: parent.verticalCenter
-                width: parent.width - 64 - narrowToggle.width - Theme.space4 * 2
-                spacing: 2
+                        Rectangle {
+                            id: choice
 
-                Text {
-                    width: parent.width
-                    text: root.hasTrack ? root.track.title : ""
-                    elide: Text.ElideRight
-                    font.family: Theme.fontFamily
-                    font.pixelSize: 22
-                    font.weight: Theme.weightBlack
-                    color: Theme.text
-                }
-                ArtistLine {
-                    width: parent.width
-                    artist: root.hasTrack ? root.track.artist : ""
-                    credits: root.hasTrack ? root.track.credits : undefined
-                    font.family: Theme.fontFamily
-                    font.pixelSize: 14
-                    color: Theme.neutral700
-                }
-                Text {
-                    visible: text.length > 0
-                    width: parent.width
-                    text: root.soundLine(width)
-                    wrapMode: Text.WordWrap
-                    maximumLineCount: root.soundEffects.length > 0 ? 3 : 1
-                    elide: Text.ElideRight
-                    font.family: Theme.fontFamily
-                    font.pixelSize: 11
-                    font.weight: Font.Bold
-                    font.letterSpacing: Theme.tracking(11, 0.1)
-                    color: Theme.neutral600
+                            required property var modelData
+                            readonly property bool selected: root.pane === modelData.pane
+
+                            width: choiceLabel.implicitWidth + 28
+                            height: 30
+                            color: selected ? root.ink : choiceHover.hovered ? root.tint(0.1) : "transparent"
+
+                            Accessible.role: Accessible.RadioButton
+                            Accessible.name: modelData.label
+                            Accessible.checked: selected
+
+                            // Choosing is immediate; the hover tint fades out.
+                            Behavior on color {
+                                enabled: !choice.selected && !choiceHover.hovered
+                                ColorAnimation { duration: Theme.quick }
+                            }
+
+                            Text {
+                                id: choiceLabel
+                                anchors.centerIn: parent
+                                text: choice.modelData.label
+                                font.family: Theme.fontFamily
+                                font.pixelSize: 11
+                                font.weight: Theme.weightBlack
+                                font.letterSpacing: Theme.tracking(11, 0.1)
+                                color: choice.selected ? root.field : root.ink
+                            }
+
+                            HoverHandler {
+                                id: choiceHover
+                                cursorShape: choice.selected ? Qt.ArrowCursor : Qt.PointingHandCursor
+                            }
+                            // Takes the press: a plain tap also counted toward
+                            // a double-click on the title bar under it, which
+                            // maximised the window.
+                            TapHandler {
+                                gesturePolicy: TapHandler.ReleaseWithinBounds
+                                onTapped: root.pane = choice.modelData.pane
+                            }
+                        }
+                    }
                 }
             }
 
-            // On paper, so a bare glyph like the rest of the page's, and the
-            // player bar's switch exactly: the camera always, grey at rest,
-            // red while the picture is on, greyed out for a song with none
-            // rather than hidden. The cover glyph belongs to the plate on the
-            // picture, where the glyph is what a click brings back.
+            // The video, for a song that has one: grey at rest, ink under the
+            // pointer, red while the picture is on, dots while it loads.
             IconButton {
-                id: narrowToggle
+                visible: Player.videoAvailable
                 anchors.verticalCenter: parent.verticalCenter
                 side: 40
-                iconSize: 18
-                enabled: Player.videoAvailable
-                opacity: enabled ? 1 : 0.45
+                iconSize: 20
+                iconThickness: 1.75
                 iconName: root.videoWaiting ? "dots" : "video"
-                iconColor: Player.videoWanted ? Theme.accent : Theme.neutral700
+                iconColor: Player.videoWanted ? Theme.accent : root.soft
+                hoverColor: Player.videoWanted ? Theme.accentGlyphHover : root.ink
                 onClicked: Player.videoWanted = !Player.videoWanted
+                Accessible.name: root.switchTip
                 ToolTip.visible: hovered
                 ToolTip.delay: 400
                 ToolTip.text: root.switchTip
             }
-        }
 
-        // The picture in a narrow window: the full width of the page, at its
-        // own shape, and no taller than half the page, so the lyrics keep
-        // room below. Laid out as soon as the video starts loading, with the
-        // cover in it until the first frame, so the picture never arrives as
-        // a black box and nothing below jumps twice.
-        Item {
-            id: narrowStage
-            visible: !root.wide && Player.videoPlaying
-            anchors.top: compactHead.bottom
-            anchors.topMargin: Theme.space6
-            x: Theme.space8
-            readonly property real room: Math.max(120, (side.height - compactHead.height) * 0.5)
-            width: Math.min(parent.width - Theme.space8 * 2, room * narrowSurface.aspectRatio)
-            height: visible ? Math.round(width / narrowSurface.aspectRatio) : 0
-            clip: true
-
-            VideoSurface {
-                id: narrowSurface
-                anchors.fill: parent
-                visible: root.videoHere && Player.videoPlaying
-            }
-
-            Artwork {
-                anchors.fill: parent
-                visible: !root.videoShowing
-                source: root.artwork
-                placeholder: ""
-                colour: true
-            }
-
-            TapHandler {
-                onDoubleTapped: if (root.videoShowing) root.fullscreenRequested()
-            }
-
-            Row {
-                visible: root.videoShowing
-                anchors.right: parent.right
-                anchors.bottom: parent.bottom
-                anchors.margins: Theme.space3
-                spacing: Theme.space1
-
-                PlateButton {
-                    iconName: "pip"
-                    tip: "Picture in picture"
-                    onClicked: root.pipRequested()
-                }
-                PlateButton {
-                    iconName: "fullscreen"
-                    tip: "Full screen (F)"
-                    onClicked: root.fullscreenRequested()
-                }
-            }
-        }
-
-        Item {
-            id: paneHead
-            anchors.top: narrowStage.visible ? narrowStage.bottom
-                       : compactHead.visible ? compactHead.bottom : parent.top
-            anchors.topMargin: Theme.space6
-            x: Theme.space8
-            width: parent.width - Theme.space8 * 2
-            height: 32
-
-            // Negative spacing lets neighbouring segments share one 2px rule.
-            Row {
-                spacing: -Theme.ruleWidth
-
-                ChoiceChip {
-                    label: "LYRICS"
-                    selected: root.pane === "lyrics"
-                    onPicked: root.pane = "lyrics"
-                }
-                ChoiceChip {
-                    label: "UP NEXT · " + Player.queue.upcomingCount
-                    selected: root.pane === "queue"
-                    onPicked: root.pane = "queue"
-                }
-            }
-
-            Text {
-                anchors.right: parent.right
+            // Sets the window's buttons apart from the view's own.
+            Rectangle {
+                visible: strip.buttonsAtRight
                 anchors.verticalCenter: parent.verticalCenter
-                visible: root.pane === "lyrics" && Lyrics.source.length > 0
-                text: (Lyrics.state === "plain" ? "NOT TIME-SYNCED · " : "") + "LYRICS: " + Lyrics.source.toUpperCase()
-                font.family: Theme.fontFamily
-                font.pixelSize: 11
-                font.weight: Font.Bold
-                font.letterSpacing: Theme.tracking(11, 0.1)
-                color: Theme.neutral600
+                width: Theme.ruleWidth
+                height: 20
+                color: root.line
             }
-        }
 
-        LyricsPane {
-            visible: root.pane === "lyrics"
-            anchors.top: paneHead.bottom
-            anchors.topMargin: Theme.space6
-            anchors.bottom: parent.bottom
-            anchors.left: parent.left
-            anchors.leftMargin: Theme.space8 - gutter
-            anchors.right: parent.right
-            anchors.rightMargin: Theme.space6
-        }
-
-        QueuePanel {
-            visible: root.pane === "queue"
-            anchors.top: paneHead.bottom
-            anchors.topMargin: Theme.space2
-            anchors.bottom: parent.bottom
-            anchors.left: parent.left
-            anchors.leftMargin: Theme.space2
-            anchors.right: parent.right
-            showHead: false
-            showRule: false
-            color: "transparent"
+            WindowButtons {
+                visible: strip.buttonsAtRight
+                height: parent.height
+                leftPadding: 0
+                ink: root.soft
+                overField: true
+            }
         }
     }
 }

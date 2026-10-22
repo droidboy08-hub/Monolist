@@ -29,9 +29,18 @@ gradient, at the head of the page; a grey cover gives none, and Settings >
 Appearance turns it off. Both are atmosphere, not hierarchy: nothing reads only
 by them, and the page is legible without either.
 
+**And two more, the owner's (2026-10-21).** The player bar's cover and its red
+play square have the list covers' 6px corners. And Now Playing is a stage
+rather than a page (its "Ambient stage", see 3): one field of the cover's own
+colour over the whole sheet, and on it the cover with 10px corners standing
+off the field on a soft shadow, the one shadow in the app. The shadow is drawn
+by a shader from the shape alone (RectangularShadow), so it costs nothing
+while the song plays.
+
 **One accent, used sparingly.** Red marks what is *active* (the song playing,
-the open page, the line being sung) and what is *primary* (Play, and nothing
-else on the same screen).
+the open page) and what is *primary* (Play, and nothing else on the same
+screen). The line being sung is the exception: on Now Playing's field it is
+the one line in full ink, the rest in tints, with no red mark beside it.
 
 *Why.* An accent that appears everywhere stops meaning anything. Because red
 means "here", it can be small — a 10px square, a heart, a 2px rule — and still
@@ -82,7 +91,7 @@ a slow machine.
 | `Theme.quick` | 120 ms | A colour or opacity changing in place: a like, a selected chip, a row leaving hover; and a page gliding the length of a turn of the wheel |
 | `Theme.normal` | 220 ms | Something appearing or disappearing where it already is: a toast, a control fading in |
 | `Theme.page` | 320 ms | Something arriving from elsewhere: Now Playing, the queue panel |
-| `Theme.slow` | 520 ms | Long distances and atmosphere: the lyrics scrolling, the poster's colour field |
+| `Theme.slow` | 520 ms | Long distances and atmosphere: the lyrics scrolling, Now Playing's colour field |
 
 *Why these.* Under about 100ms a change reads as instantaneous — which is what a
 pointer's own feedback must be, or the app feels laggy. Between 200 and 320ms
@@ -233,8 +242,11 @@ nothing at all.
   bar "cluttered, with uneven looking icons" beside LastWave's "lean and
   clean" one. At the left the cover (56px), the title (15px, extrabold) over
   the artist (13px, grey), and the heart at the end of the side; a click on the
-  cover or the title opens Now Playing, a right click the song's menu. In the
-  middle shuffle, previous, the red play square (40px), next and repeat, and
+  cover or the title opens Now Playing, a right click the song's menu. The
+  cover's corners are softened to 6px, as a list cover's are, through a mask
+  drawn once for it (Nav.barCoverMask) rather than a layer of its own. In the
+  middle shuffle, previous, the red play square (40px, 6px corners), next and
+  repeat, and
   under them a 3px progress line, red as far as the song has got, with the
   times either side in 11px equal-width figures. At the right a badge with the
   codec and bitrate mpv reports ("OPUS 160", "AAC 320" from JioSaavn; the whole
@@ -279,28 +291,48 @@ nothing at all.
   tucks back behind it when closed — the bar is drawn on top throughout. Sliding
   *over* the bar and off the bottom would read as a page leaving, which is the
   wrong story: nothing left, the player is simply small again.
-* **Now Playing closes beside the window buttons, on whichever side they are.**
-  A **⌄ CLOSE** plate, with its key (Esc) printed on it, sits next to minimise:
-  on Windows at the right, the full height of the bar like the caption buttons
-  it joins; on Linux wherever the desktop's own button layout puts close
-  (GNOME's `button-layout`, KDE's `kwinrc`), left or right; on macOS after the
-  traffic lights. The player bar's Now Playing button turns to the same
-  chevron, in red, while the view is open.
-  *Why.* The close used to be a small chevron at the top left while Windows
-  keeps its buttons at the top right, so putting the player away meant
-  crossing the whole window. The corner with the window buttons is where the
-  hand already goes to deal with the window. It is a plate with a word, split
-  off by a rule, so it is not mistaken for one of the window's own buttons —
-  the red X is one button further on.
-* **The picture switch is COVER | VIDEO, above the picture it changes.** In the
-  strip at the poster's right edge, printed in the poster's ink. Both sides are
-  always there, so it never moves: a song without a video dims VIDEO and says
-  why under the pointer, and while a video loads VIDEO is already chosen and
-  shows dots, with the cover up until the first frame. `V` does the same. A
-  video takes the poster's full width, where a cover keeps its square.
-  *Why.* The old switch was a bare 40px glyph on the cover's corner; a glyph
-  that changes between "video" and "image" reads as a status, not a choice.
-  Two labelled sides say what there is to choose and which one is on.
+* **Now Playing is an ambient stage.** The owner's choice (2026-10-21, "A ·
+  Ambient stage"). One calm field over the whole sheet, the playing cover's
+  own colour (CoverPalette) held to a third of its strength: deep in dark
+  (#18222d for a blue cover), pale in light (#dde6ef); a grey cover gives a
+  grey field. Everything on it is printed in tints of the same hue, each found
+  by its contrast against the field rather than written down, so a yellow or a
+  red cover reads as well as the mockup's blue: the titles and the line being
+  sung in printed paper (dark) or ink (light), the artist and the notes
+  ("soft", 7.5:1 dark, 5.6:1 light), the lines still to come ("next", 5.2 and
+  4.8), the lines sung ("past", 3 and 2.3), the rules (1.8 and 1.6). At the
+  left the cover, 420px at most (less where the height or the width is
+  short), with 10px corners and a soft shadow; under it the title (30px,
+  extrabold), the artist (17px, soft, each name a link), then two small tags:
+  the sound as mpv reports it ("OPUS · 133 KBPS", the whole stream line under
+  the pointer) and UP NEXT with the next song, which shows the queue. A third
+  tag names the sound effects while any is on. At the right the lyrics at
+  36px, headed by where they come from ("SYNCED · LRCLIB"), or the queue in
+  the field's tints. No NOW PLAYING label, no album line and no stream line:
+  the badge says what the line said. A window under 1000px puts the song at
+  the head of the page, a 96px cover beside its name and tags, and the lyrics
+  under it at the full width.
+  *Why.* The poster split the screen into a coloured half and a paper half,
+  and the lyrics, the thing read for minutes, sat on the plain one. One field
+  makes the whole sheet the song's, and the type, not a panel, carries the
+  hierarchy on it. Tints of the field's own hue, rather than the page's warm
+  greys, keep the field one colour.
+* **Now Playing closes at the top left.** A **⌄ CLOSE** with its key (Esc)
+  printed on it, in the field's ink, after the window's buttons where the
+  system keeps them at the left, and after the traffic lights on macOS. Under
+  the pointer it takes a tint of the ink. The player bar's Now Playing button
+  turns to the same chevron, in red, while the view is open. In the narrowest
+  windows the key is given up for room.
+  *Why.* The stage's strip is the owner's design: the close the old screen
+  had, where the page begins, and the right end kept for what changes the page
+  (LYRICS | UP NEXT, the video) and the window's own buttons.
+* **The video is a glyph in the strip, for a song that has one.** Beside
+  LYRICS | UP NEXT: grey at rest, ink under the pointer, red while the picture
+  is on, dots while it loads (the cover stays up until the first frame). A
+  song without a video shows no glyph. `V` does the same.
+  *Why.* The COVER | VIDEO switch spent a labelled pair on a choice most songs
+  do not have; the stage keeps its strip to a few marks, and a red glyph says
+  "on" as the player bar's does.
 * **Window buttons follow the desktop.** Square caption buttons the height of
   the bar on Windows; round ones, centred, on Linux, in the order and on the
   side the desktop lists them. With them on the left, the sidebar's brand holds
@@ -310,18 +342,15 @@ nothing at all.
   *Why.* Each layer covers the one below only for as long as it is being used,
   and the two that are always true — the player bar, and the app's answer to
   what you just did — are never covered.
-* **The video plays where the cover is, and the switch is right above it.**
+* **The video plays where the cover is.**
   *Why.* The video is the same song moving: it belongs in the place the still
-  occupies, not in a panel of its own, and the control that swaps them belongs
-  next to the thing it swaps (COVER | VIDEO, in the strip; see above). The
-  picture takes the poster's width at its own 16:9 shape rather than sitting
-  in black bars — bars would be the only black in a paper interface. Its
-  bottom edge stays put, so the title below it does not move. The cover stays
-  up until the first frame arrives, so the panel is never a black box, and the
-  switch shows three dots while the picture is being fetched. Songs with no
-  video (YouTube Music's own audio tracks are a still image) show the switch
-  greyed rather than hidden, so the feature is findable. What stays on the
-  picture is full screen, once it plays: that one acts on the picture itself.
+  occupies, not in a panel of its own. The picture takes the cover column's
+  width at its own 16:9 shape, with the cover's corners and shadow, rather
+  than sitting in black bars; the title and the tags close up under it. The
+  cover stays up until the first frame arrives, so the place is never a black
+  box, and the strip's glyph shows three dots while the picture is being
+  fetched. What stays on the picture is picture in picture and full screen,
+  once it plays: those act on the picture itself.
 * **Video is never fetched until it is asked for.**
   *Why.* It costs many times the bandwidth of audio and most listening does not
   want it. Asking is one click, and the song carries on from the same second.
@@ -331,8 +360,8 @@ nothing at all.
   Playing, and its close button turns the picture off while the song plays on
   as sound. The player bar has the same switch, Video in its "…" (and, while
   the picture is on, a red video glyph beside "…" that turns it off), so the
-  picture can be asked for, and put away, from anywhere. In a narrow window the switch ends the song's line and the
-  picture plays under it, full width and no taller than half the page.
+  picture can be asked for, and put away, from anywhere. In a narrow window the picture plays under the song's
+  name, full width and no taller than half of what is left.
   *Why.* A picture nobody can see should not be decoded, and one that vanished
   whenever Now Playing closed would make the switch mean "only in Now
   Playing". So there is no hidden state: wherever the video is on, it is on
@@ -361,9 +390,9 @@ nothing at all.
   *Why.* One place and one look for "this whole list", so it is found where
   it was found last time, and it never competes with the page's own red Play.
 * **Lyrics sit at the right, the cover at the left.**
-  *Why.* Lyrics are read left-to-right and change constantly; they need the side
-  that is not interrupted by the cover's colour field, and they need to start at
-  a consistent left edge.
+  *Why.* Lyrics are read left-to-right and change constantly; they need the
+  wider side, clear of the picture, and they need to start at a consistent left
+  edge.
 * **The sound effects are a glyph on the player bar, red while any is on.**
   Slowed + reverb, Nightcore, 8D audio, High bass, Studio clarity and the
   equaliser are kept from one launch to the next, so the sliders glyph beside
@@ -371,8 +400,8 @@ nothing at all.
   them all in a popup built like the volume popup's: paper in a 2px ink frame,
   standing on the bar, no motion. Settings > Playback has the same block
   (EFFECTS, not SOUND, which is the quality above it), with a line of
-  explanation under each effect that needs one, and Now Playing's sound line
-  names the effects that are on. The glyph stays on the bar at any width; it
+  explanation under each effect that needs one, and a tag beside Now Playing's
+  sound badge names the effects that are on. The glyph stays on the bar at any width; it
   is the one of the right side's glyphs that never folds.
   *Why.* An effect kept from yesterday — a song slowed the next morning — has
   to explain itself where the hand already is, and be one click from undone; a

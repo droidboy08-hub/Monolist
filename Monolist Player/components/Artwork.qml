@@ -69,10 +69,14 @@ Rectangle {
     }
 
     // The rounded corners, as a mask: clipping cuts square. A list cover's
-    // (6px) is the one Main draws for all of them; any other radius, or
-    // before that one is made, its own.
-    readonly property bool sharedCorners: root.radius === 6 && root.width === 40 && root.height === 40
-                                          && Nav.coverMask !== null
+    // (6px at 40) and the player bar's (6px at 56) are the ones Main draws
+    // once for all of them; any other radius or size, or before those are
+    // made, its own.
+    readonly property Item sharedMask: root.radius !== 6 || root.width !== root.height ? null
+                                     : root.width === 40 ? Nav.coverMask
+                                     : root.width === 56 ? Nav.barCoverMask
+                                     : null
+    readonly property bool sharedCorners: sharedMask !== null
     Item {
         id: corners
         anchors.fill: parent
@@ -93,7 +97,7 @@ Rectangle {
         saturation: root.colour || !Theme.monochrome ? 0.0 : -1.0
         visible: image.status === Image.Ready
         maskEnabled: root.radius > 0
-        maskSource: root.sharedCorners ? Nav.coverMask : corners
+        maskSource: root.sharedCorners ? root.sharedMask : corners
         // Soft at the curve, so the corners are not stepped.
         maskThresholdMin: 0.5
         maskSpreadAtMin: 1.0

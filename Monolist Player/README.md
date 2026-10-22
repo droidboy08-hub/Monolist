@@ -215,9 +215,10 @@ JioSaavn link mpv refuses is forgotten and the song carries on from
 YouTube's ladder at the same second, from a link fetched beside it. Requests
 carry an Indian `X-Forwarded-For` while "Send Indian region headers" is on,
 because some songs are offered only in India, and follow redirects only to
-JioSaavn's own hosts. Now Playing says which source is playing, and what
-mpv says arrived ("STREAMING · JIOSAAVN · AAC · 44.1 → 48 KHZ · 321 KBPS": the
-file's own average, container included).
+JioSaavn's own hosts. Now Playing's sound badge says what mpv says arrived
+("AAC · 321 KBPS": the file's own average, container included), and under the
+pointer which source it came from and the rest ("Streaming · JioSaavn · AAC ·
+44.1 → 48 kHz · 321 kbps").
 
 A JioSaavn match that comes after YouTube has started the song (it missed the
 1.2 s) moves the song over mid-song (QT7; "Switch to JioSaavn mid-song",
@@ -361,9 +362,11 @@ from there. LRCLIB can be self-hosted; the `lrclib_url` setting points
 elsewhere, and `lyrics.lrclib=search` goes back to its search alone, taken by
 length, as before.
 
-The Now Playing view prints the cover on a field of its own dominant colour
-(`CoverPalette`, measured from the cached artwork), with ink or paper type,
-whichever contrasts better.
+The Now Playing view (the owner's "Ambient stage") lays one calm field of the
+cover's own colour (`CoverPalette`, measured from the cached artwork) over the
+whole sheet, deep in dark and pale in light, and prints everything on it in
+tints of the same hue, each found by its contrast against the field, so they
+read on any cover's colour.
 
 ### Sound effects
 
@@ -404,8 +407,8 @@ effects stay off until Monolist restarts, which a toast says.
 They are on the player bar: the sliders glyph beside the output button is red
 while any effect is on, and opens them all in a popup standing on the bar.
 Settings > Playback has the same block, with a line of explanation under the
-effects that need one (`--settings-section effects`), and Now Playing's sound
-line names the effects that are on. The mini player has them as switches over
+effects that need one (`--settings-section effects`), and a tag beside Now
+Playing's sound badge names the effects that are on. The mini player has them as switches over
 its cover.
 
 ## Layout
@@ -784,8 +787,9 @@ or else mpv's own measure); what the sound device was opened with; whether the
 sound is resampled; and mpv's volume. For example
 `stream: CmThpha4Hoo from Streaming · InnerTube: aac 44100 Hz stereo floatp,
 130 kbps (file average) -> wasapi 48000 Hz stereo float, resampled 44100 ->
-48000 Hz, volume 65%`. Now Playing shows the short form of the same line
-(`Player.streamInfo`). A song that had to be rescued (a refused link, an
+48000 Hz, volume 65%`. Now Playing and the player bar show its codec and
+bitrate (`Player.streamQuality`), and the short form of the same line
+(`Player.streamInfo`) under the pointer. A song that had to be rescued (a refused link, an
 early end, a refused file) says what rescued it once its sound starts:
 `playback: <id> rescued: its sound came from InnerTube, 301 ms after the
 first failure`.

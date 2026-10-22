@@ -12,11 +12,15 @@ import Monolist.Backend
 //
 // Linux: round, centred in the bar, as GTK and Breeze draw them, a tint of
 // the ink behind each glyph. Set `ink` where the bar is not paper (the Now
-// Playing poster), and the buttons are drawn in that instead.
+// Playing's colour field), and the buttons are drawn in that instead.
 Row {
     id: root
 
     property color ink: Theme.text
+    // Over a colour field rather than paper (Now Playing): the square
+    // buttons answer the pointer with a tint of the ink, as the round ones
+    // do, rather than with a plate of paper.
+    property bool overField: false
 
     readonly property bool maximized: Window.window !== null
                                       && Window.window.visibility === Window.Maximized
@@ -47,6 +51,8 @@ Row {
                              button.down ? 0.28 : button.hovered ? 0.18 : 0.1)
                    : button.danger ? (button.down ? (Theme.dark ? Theme.accent600 : Theme.accent700)
                                                   : button.hovered ? Theme.accent : "transparent")
+                                   : root.overField ? Qt.rgba(root.ink.r, root.ink.g, root.ink.b,
+                                                              button.down ? 0.2 : button.hovered ? 0.12 : 0)
                                    : (button.down ? Theme.neutral300 : button.hovered ? Theme.surface : "transparent")
         }
 

@@ -88,7 +88,7 @@ QtObject {
     // colour changing in place; 220 ms is something appearing where it
     // already is; 320 ms is something arriving from elsewhere; past 400 ms
     // the user is waiting, so it is kept for long distances (the lyrics
-    // scrolling) and for atmosphere (the poster's colour field).
+    // scrolling) and for atmosphere (Now Playing's colour field).
     readonly property int instant: 0
     readonly property int quick: 120
     readonly property int normal: 220
