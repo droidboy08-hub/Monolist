@@ -19,6 +19,10 @@ Item {
     property bool marked: true
     // Room for the red mark to the left of the lines.
     readonly property int gutter: marked ? 28 : 0
+    // Lines centred across the pane rather than set from its left edge. Now
+    // Playing's wide stage wants them in the middle of the space beside the
+    // cover, not leaning against it (the owner's word: too close).
+    property bool centered: false
     // How far down the pane the line being sung is held.
     property real readingLine: 0.36
     // What it is printed on and in: paper and the page's greys, or the tints
@@ -144,8 +148,10 @@ Item {
 
                     Text {
                         id: label
-                        x: root.gutter
-                        width: parent.width - root.gutter - Theme.space4
+                        x: root.centered ? Theme.space4 : root.gutter
+                        width: root.centered ? parent.width - Theme.space4 * 2
+                                             : parent.width - root.gutter - Theme.space4
+                        horizontalAlignment: root.centered ? Text.AlignHCenter : Text.AlignLeft
                         visible: !line.gap || root.synced
                         text: line.gap ? "• • •" : line.text
                         wrapMode: Text.WordWrap
@@ -256,6 +262,7 @@ Item {
 
         Text {
             width: parent.width
+            horizontalAlignment: root.centered ? Text.AlignHCenter : Text.AlignLeft
             text: Lyrics.state === "instrumental" ? "Instrumental"
                 : Lyrics.state === "none" ? "No lyrics for this song."
                 : Lyrics.state === "error" ? "The lyrics could not be fetched."
@@ -270,6 +277,7 @@ Item {
 
         Text {
             visible: Lyrics.state === "none" || Lyrics.state === "error"
+            x: root.centered ? Math.round((parent.width - width) / 2) : 0
             text: Lyrics.state === "error" ? "TRY AGAIN" : "SEARCH AGAIN"
             font.family: Theme.fontFamily
             font.pixelSize: 12

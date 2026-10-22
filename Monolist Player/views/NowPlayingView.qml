@@ -507,6 +507,7 @@ Rectangle {
             id: paneHead
             width: parent.width
             height: 16
+            horizontalAlignment: root.wide ? Text.AlignHCenter : Text.AlignLeft
             visible: root.pane === "lyrics"
             text: Lyrics.source.length === 0 || (Lyrics.state !== "synced" && Lyrics.state !== "plain") ? ""
                   : (Lyrics.state === "plain" ? "NOT TIME-SYNCED · " : "SYNCED · ") + Lyrics.source.toUpperCase()
@@ -526,6 +527,7 @@ Rectangle {
             anchors.left: parent.left
             anchors.right: parent.right
             marked: false
+            centered: root.wide
             readingLine: 0.28
             paper: root.field
             ink: root.ink
