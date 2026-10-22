@@ -31,7 +31,8 @@ by them, and the page is legible without either.
 
 **And two more, the owner's (2026-10-21).** The player bar's cover and its red
 play square have the list covers' 6px corners (the Modern bar's; Classic keeps
-its square ones). And Now Playing is a stage
+its square ones, and Classic modern squares them again, each in a 2px ink
+frame standing 2px off it). And Now Playing is a stage
 rather than a page (its "Ambient stage", see 3): one field of the cover's own
 colour over the whole sheet, and on it the cover with 10px corners standing
 off the field on a soft shadow, the one shadow in the app. The shadow is drawn
@@ -232,9 +233,15 @@ nothing at all.
   *Why.* It is used from every page, so it lives in the chrome rather than in
   any page; the top-right corner is the one place the sidebar never covers.
 * **Navigation is the sidebar; the library lives under it.**
-  *Why.* Places (Home, Search, Library, Downloads, Settings) are fixed and few;
+  *Why.* Places (Home, Search, Library, Downloads) are fixed and few;
   playlists are many and change, so they scroll under a rule that separates the
   fixed from the personal.
+* **Settings is at the sidebar's foot, under the account.** The owner's
+  (2026-10-22): the YouTube Music sign-in and Settings stay together, the
+  last two rows, in the folded rail too (the account's mark, the gear under
+  it) and in the narrow window's sidebar.
+  *Why.* Neither is a place in the music: one is who is listening, the other
+  how the app behaves, and both are reached for now and then, not all day.
 * **The player bar spans the full width, below everything.**
   *Why.* It belongs to the app, not to a page: it keeps playing while views come
   and go, and its position is the one thing that must never move.
@@ -286,11 +293,15 @@ nothing at all.
   lyrics, the output and the badge have gone and the title is shorter; at 760
   the cover and the heart are left.
 * **The bar before it stays, as a choice.** Settings > Appearance > Player bar,
-  above the app icon: two small pictures, Classic and Modern (the owner's,
-  2026-10-22). Modern is the quiet bar above, and the default; Classic is the
+  above the app icon: small pictures of Classic, Modern and Classic modern (the
+  owner's, 2026-10-22), on as many lines as the width needs. Modern is the
+  quiet bar above, and the default; Classic is the
   bar as it was in 0.1.152, square play button and all, with Studio clarity in
-  its red sliders like every other effect. Only the chosen bar is built, and
-  choosing the other replaces it at once.
+  its red sliders like every other effect. Classic modern is the Modern bar
+  with the cover and the play square square again, each in a 2px ink frame
+  2px off it (paper-ink in dark), drawn outside them so nothing moves; with it
+  the folded sidebar's playlist covers wear the same frame, the open one's in
+  red. Only the chosen bar is built, and choosing another replaces it at once.
   *Why.* The owner wanted the new bar offered, not imposed; a picture says
   which is which without a line of explanation.
 * **Now Playing keeps the player bar visible, and slides out from behind it.**

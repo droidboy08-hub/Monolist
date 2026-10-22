@@ -198,7 +198,8 @@ ApplicationWindow {
         Theme.mode = Library.settingValue("appearance", "system")
         Theme.ambientEnabled = Library.settingValue("ambient", "1") !== "0"
         Theme.monochrome = Library.settingValue("monochrome", "1") !== "0"
-        Theme.playerBar = Library.settingValue("appearance.player_bar", "modern") === "classic" ? "classic" : "modern"
+        const bar = Library.settingValue("appearance.player_bar", "modern")
+        Theme.playerBar = bar === "classic" || bar === "classicmodern" ? bar : "modern"
         settingsRead = true
         sidebarCollapsed = Library.settingValue("sidebar.collapsed", "0") === "1"
         measureAmbient()
@@ -837,7 +838,9 @@ ApplicationWindow {
     // Above Now Playing, so that view slides out from behind the bar and
     // tucks back behind it: it is the bar enlarged, not a page over it.
     // The bar chosen in Settings > Appearance (Theme.playerBar): Modern, the
-    // owner's "Quiet" one, or Classic, the bar before it. Only that one is
+    // owner's "Quiet" one; Classic, the bar before it; or Classic modern,
+    // the Modern bar with its cover and play square framed (the same bar,
+    // so moving between those two only redraws them). Only that one is
     // built; choosing the other builds it in its place, at once. Everything
     // that stands on the bar (Now Playing's height, the toast, the picture's
     // panel) follows this Loader, which takes the bar's own height.
@@ -888,6 +891,7 @@ ApplicationWindow {
         id: modernBar
 
         NowPlayingBar {
+            framed: Theme.framed
             queueOpen: window.barQueueOpen
             nowPlayingOpen: window.nowPlayingOpen
             onQueueToggled: window.toggleQueueFromBar()

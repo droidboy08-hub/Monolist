@@ -166,12 +166,6 @@ Rectangle {
                 active: root.currentView === "downloads"
                 onClicked: root.viewRequested("downloads")
             }
-            NavItem {
-                iconName: "settings"
-                label: "Settings"
-                active: root.currentView === "settings"
-                onClicked: root.viewRequested("settings")
-            }
         }
 
         Rectangle {
@@ -444,9 +438,10 @@ Rectangle {
     // the sign-in. Signed in, the account's initials and name, and a click
     // opens the library, as it always did; the gear opens the account's
     // settings. A session that ended asks, in red, to be signed in again.
+    // Settings stands under it (below).
     Item {
         id: userStrip
-        anchors.bottom: parent.bottom
+        anchors.bottom: settingsRow.top
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.rightMargin: Theme.ruleWidth
@@ -594,5 +589,21 @@ Rectangle {
                 color: userHover.hovered || userStrip.ended ? Theme.accent : Theme.neutral700
             }
         }
+    }
+
+    // — Settings —
+    // Under the account rather than among the places above: the two are
+    // about the app and the one using it, not about the music, and the
+    // owner wanted them together (2026-10-22). The last thing in the
+    // sidebar, so it comes after the account in the order of the page.
+    NavItem {
+        id: settingsRow
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        width: parent.width - Theme.ruleWidth
+        iconName: "settings"
+        label: "Settings"
+        active: root.currentView === "settings"
+        onClicked: root.viewRequested("settings")
     }
 }

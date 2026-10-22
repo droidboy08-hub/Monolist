@@ -7,7 +7,8 @@ import "../ImportText.js" as ImportText
 // The sidebar folded to a rail: the owner's choice (2026-10-01), from the
 // Spotify-like design. The brand's first letter, which opens the sidebar
 // again; the views as icons; the playlists as their covers; and the account
-// at the foot. Each is named under the pointer.
+// at the foot, with Settings under it as in the sidebar. Each is named under
+// the pointer.
 Rectangle {
     id: root
 
@@ -133,8 +134,7 @@ Rectangle {
                 { icon: "home", view: "home", label: "Home" },
                 { icon: "search", view: "search", label: "Search" },
                 { icon: "library", view: "library", label: "Your Library" },
-                { icon: "download", view: "downloads", label: "Downloads" },
-                { icon: "settings", view: "settings", label: "Settings" }
+                { icon: "download", view: "downloads", label: "Downloads" }
             ]
 
             RailButton {
@@ -206,22 +206,26 @@ Rectangle {
     }
 
     // — the playlists, as covers —
-    // A cover in an ink frame is the one open.
+    // A cover in an ink frame is the one open. With the Classic modern
+    // player bar every playlist's cover wears its frame, as the bar's cover
+    // does, and the open one's is red; making and importing one, outlined
+    // plates already, have none.
     component CoverButton: RailButton {
         id: coverButton
         property var artworks: []
         property string plate: ""
         property bool active: false
+        readonly property bool framed: Theme.framed && plate !== "new" && plate !== "import"
         height: root.coverSize + Theme.space2
 
         Rectangle {
-            visible: coverButton.active
+            visible: coverButton.active || coverButton.framed
             anchors.centerIn: parent
-            width: root.coverSize + Theme.ruleWidth * 4
+            width: root.coverSize + 2 * (Theme.frameGap + Theme.frameWidth)
             height: width
             color: "transparent"
-            border.width: Theme.ruleWidth
-            border.color: Theme.text
+            border.width: Theme.frameWidth
+            border.color: coverButton.framed && coverButton.active ? Theme.accent : Theme.text
         }
         CollectionCover {
             anchors.centerIn: parent
@@ -297,12 +301,14 @@ Rectangle {
     }
 
     // — the account —
+    // 66 over Settings' 44: its rule where the sidebar's is (68 over 42), so
+    // folding the sidebar does not move it.
     Item {
         id: account
-        anchors.bottom: parent.bottom
+        anchors.bottom: settingsButton.top
         anchors.left: parent.left
         width: root.railWidth
-        height: 68
+        height: 66
 
         readonly property string accountState: Account.state
         readonly property bool signedIn: accountState === "active" || accountState === "checking"
@@ -365,5 +371,22 @@ Rectangle {
         ToolTip.delay: 400
         ToolTip.text: account.signedIn ? (Account.accountName.length > 0 ? Account.accountName : "YouTube Music")
                       : account.ended ? "Sign in again" : "Sign in to YouTube Music"
+    }
+
+    // — Settings, under the account, as in the sidebar —
+    RailButton {
+        id: settingsButton
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        label: "Settings"
+        onClicked: root.viewRequested("settings")
+
+        Icon {
+            anchors.centerIn: parent
+            width: 18
+            height: 18
+            name: "settings"
+            color: root.currentView === "settings" ? Theme.accent700 : Theme.text
+        }
     }
 }

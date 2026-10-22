@@ -164,11 +164,13 @@ ScrollPage {
     // A player bar in small, for its choice: the top rule, the cover and the
     // title, the transport with its progress line (beside it in Classic,
     // under it in Modern) and the glyphs at the right. Modern has the
-    // softened corners on its cover and play square, and its sound badge.
+    // softened corners on its cover and play square, and its sound badge;
+    // Classic modern is Modern with the two square, each in a thin frame.
     component BarSketch: Item {
         id: sketch
         property bool classic: false
-        readonly property int corner: classic ? 0 : 2
+        property bool framed: false
+        readonly property int corner: classic || framed ? 0 : 2
 
         width: 160
         height: 40
@@ -186,14 +188,16 @@ ScrollPage {
 
             // The cover, and the title over the artist.
             Rectangle {
+                id: sketchCover
                 x: 6
                 anchors.verticalCenter: parent.verticalCenter
                 width: 18
                 height: 18
                 radius: sketch.corner
-                antialiasing: !sketch.classic
+                antialiasing: sketch.corner > 0
                 color: Theme.neutral500
             }
+            SketchFrame { visible: sketch.framed; target: sketchCover }
             Rectangle {
                 x: 30
                 y: Math.round(parent.height / 2) - 5
@@ -229,20 +233,22 @@ ScrollPage {
                     }
                 }
                 Rectangle {
+                    id: sketchPlay
                     x: 14
                     width: 14
                     height: 14
                     radius: sketch.corner
-                    antialiasing: !sketch.classic
+                    antialiasing: sketch.corner > 0
                     color: Theme.accent
                 }
+                SketchFrame { visible: sketch.framed; target: sketchPlay }
             }
 
             // The progress line, the part played in red.
             Rectangle {
                 x: sketch.classic ? sketchTransport.x + sketchTransport.width + 6 : sketchTransport.x - 4
                 y: sketch.classic ? Math.round(parent.height / 2) - 1
-                                  : sketchTransport.y + sketchTransport.height + 4
+                                  : sketchTransport.y + sketchTransport.height + (sketch.framed ? 5 : 4)
                 width: sketch.classic ? 24 : sketchTransport.width + 8
                 height: 2
                 color: Theme.neutral300
@@ -277,6 +283,18 @@ ScrollPage {
                 }
             }
         }
+    }
+
+    // Classic modern's frame in small: a 1px ink rule, 1px off its target.
+    component SketchFrame: Rectangle {
+        property Item target
+        x: target ? target.x - 2 : 0
+        y: target ? target.y - 2 : 0
+        width: (target ? target.width : 0) + 4
+        height: (target ? target.height : 0) + 4
+        color: "transparent"
+        border.width: 1
+        border.color: Theme.text
     }
 
     // A line of the YouTube Music guide: an instruction to follow, so ink.
@@ -593,22 +611,26 @@ ScrollPage {
             }
         }
 
-        // The player bar: Modern (NowPlayingBar) or Classic, the bar before
-        // it (NowPlayingBarClassic). Chosen as the icon below is, by a small
-        // picture of each, and changed at once (Theme.playerBar, Main).
+        // The player bar: Modern (NowPlayingBar), Classic, the bar before
+        // it (NowPlayingBarClassic), or Classic modern, Modern with its cover
+        // and play square framed. Chosen as the icon below is, by a small
+        // picture of each, and changed at once (Theme.playerBar, Main). A
+        // narrow window puts what does not fit on the next line.
         Column {
             width: parent.width
             spacing: Theme.space3
 
             SmallCaps { text: "PLAYER BAR" }
 
-            Row {
+            Flow {
+                width: parent.width
                 spacing: Theme.space4
 
                 Repeater {
                     model: [
                         { id: "classic", name: "Classic" },
-                        { id: "modern", name: "Modern" }
+                        { id: "modern", name: "Modern" },
+                        { id: "classicmodern", name: "Classic modern" }
                     ]
 
                     delegate: Item {
@@ -636,6 +658,7 @@ ScrollPage {
                                 x: 8
                                 anchors.verticalCenter: parent.verticalCenter
                                 classic: barChoice.modelData.id === "classic"
+                                framed: barChoice.modelData.id === "classicmodern"
                             }
                         }
 

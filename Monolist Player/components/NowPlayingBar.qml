@@ -26,6 +26,11 @@ Rectangle {
     signal effectsSettingsRequested()
     // The mini player, in place of the window (Main.qml).
     signal miniPlayerRequested()
+    // Classic modern (Settings > Appearance > Player bar): this bar with
+    // its cover and play square square-cornered, each in an ink frame a
+    // little way off it. The frames stand outside them, so nothing moves.
+    property bool framed: false
+    readonly property int frameOut: Theme.frameGap + Theme.frameWidth
 
     color: Theme.bg
     implicitHeight: Theme.playerBarHeight
@@ -401,12 +406,13 @@ Rectangle {
         }
 
         // Its corners softened as a list cover's are (6px), through the mask
-        // Main draws once for it (Nav.barCoverMask), not a layer of its own.
+        // Main draws once for it (Nav.barCoverMask), not a layer of its own;
+        // square in its frame (Classic modern).
         Artwork {
             id: barArt
             width: root.coverSide
             height: root.coverSide
-            radius: 6
+            radius: root.framed ? 0 : 6
             placeholder: ""
             source: Player.currentTrack.artwork !== undefined ? Player.currentTrack.artwork : ""
 
@@ -422,6 +428,7 @@ Rectangle {
                 color: Theme.neutral600
             }
         }
+        BarFrame { visible: root.framed; target: barArt }
 
         Column {
             id: titleColumn
@@ -532,12 +539,14 @@ Rectangle {
 
             // The one red thing on the bar, and the one control that is a
             // shape rather than a glyph: it is what the bar is for. Its
-            // corners softened (6px) like the cover's beside it.
+            // corners softened (6px) like the cover's beside it; square in
+            // its frame, as the cover is (Classic modern).
             Rectangle {
+                id: playSquare
                 width: 40
                 height: 40
-                radius: 6
-                antialiasing: true
+                radius: root.framed ? 0 : 6
+                antialiasing: !root.framed
                 anchors.verticalCenter: parent.verticalCenter
                 color: playArea.containsMouse || playArea.pressed ? Theme.accent600 : Theme.accent
 
@@ -567,6 +576,8 @@ Rectangle {
                     cursorShape: Qt.PointingHandCursor
                     onClicked: Player.togglePlay()
                 }
+
+                BarFrame { visible: root.framed; target: playSquare }
             }
 
             BarButton {
@@ -976,6 +987,22 @@ Rectangle {
                 }
             }
         }
+    }
+
+    // Classic modern's frame: an ink rule round `target`, the frame's gap
+    // off it on every side, drawn outside it so the layout is the same.
+    // Beside its target, or in it where the target is in a Row (the play
+    // square), which would place a sibling as one of its own.
+    component BarFrame: Rectangle {
+        property Item target
+        readonly property bool inside: target !== null && target === parent
+        x: inside ? -root.frameOut : target ? target.x - root.frameOut : 0
+        y: inside ? -root.frameOut : target ? target.y - root.frameOut : 0
+        width: (target ? target.width : 0) + 2 * root.frameOut
+        height: (target ? target.height : 0) + 2 * root.frameOut
+        color: "transparent"
+        border.width: Theme.frameWidth
+        border.color: Theme.text
     }
 
     // One of the bar's glyph buttons: 20 px in a 36 px square, at the

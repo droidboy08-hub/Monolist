@@ -26,9 +26,16 @@ QtObject {
     // `colour`); off, every picture is in colour throughout.
     property bool monochrome: true
     // Settings > Appearance's "Player bar", kept in the settings
-    // (appearance.player_bar): "modern" (NowPlayingBar) or "classic"
-    // (NowPlayingBarClassic). Main builds only the one chosen.
+    // (appearance.player_bar): "modern" (NowPlayingBar), "classic"
+    // (NowPlayingBarClassic) or "classicmodern" (NowPlayingBar framed: its
+    // cover and play square square-cornered, each in an ink frame a little
+    // way off it). Main builds only the one chosen.
     property string playerBar: "modern"
+    // Classic modern's frames, worn by the folded sidebar's covers as well
+    // (SidebarRail): an ink rule, and the space between it and the picture.
+    readonly property bool framed: playerBar === "classicmodern"
+    readonly property int frameWidth: 2
+    readonly property int frameGap: 2
     readonly property real ambientShare: ambient.a * (dark ? 0.16 : 0.11)
     function ambientOver(base, share) {
         return share > 0 ? Qt.tint(base, Qt.rgba(ambient.r, ambient.g, ambient.b, share)) : base

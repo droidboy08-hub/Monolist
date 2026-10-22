@@ -434,9 +434,10 @@ its cover.
                              EffectsPanel and BandSlider (the sound effects),
                              MiniPlayer (the mini player's own window),
                              NowPlayingBar and NowPlayingBarClassic (the
-                             player bar, Modern or Classic: Settings >
-                             Appearance > Player bar, appearance.player_bar,
-                             switched at once; Main builds only the one chosen)
+                             player bar, Modern, Classic or Classic modern,
+                             which is Modern `framed`: Settings > Appearance >
+                             Player bar, appearance.player_bar, switched at
+                             once; Main builds only the one chosen)
     views/                   Home, Search, Library, Downloads, Page (album or
                              YouTube Music playlist), Artist, Shelf (a shelf's
                              "show all"), Playlist, Now Playing
