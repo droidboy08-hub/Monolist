@@ -536,19 +536,26 @@ QList<double> SoundChain::responseCurve(const std::array<double, kBands> &gains,
 const QList<SoundChain::Preset> &SoundChain::presets()
 {
     // Gentle curves, none above +6 dB on a slider: VLC's and Winamp's reach
-    // +16.8 dB once their bands add up.
+    // +16.8 dB once their bands add up. Studio master, Deep bass, Treble air,
+    // Vocal clarity and R&B have LastWave's numbers; Studio master is Studio
+    // clarity's curve, here to shape by hand.
     static const QList<Preset> list = {
         { QStringLiteral("flat"), QStringLiteral("Flat"), { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } },
+        { QStringLiteral("studio_master"), QStringLiteral("Studio master"), { 2.7, 2.2, 0.6, -2.6, -0.6, 1.2, 3.0, 4.0, 4.3, 4.8 } },
         { QStringLiteral("bass_boost"), QStringLiteral("Bass boost"), { 6, 5, 4, 2, 0, 0, 0, 0, 0, 0 } },
+        { QStringLiteral("deep_bass"), QStringLiteral("Deep bass"), { 4.8, 3.5, 2.5, 0, -0.5, 0, 0, 0, 0.5, 0.5 } },
         { QStringLiteral("bass_cut"), QStringLiteral("Bass cut"), { -6, -5, -4, -2, 0, 0, 0, 0, 0, 0 } },
         { QStringLiteral("treble_boost"), QStringLiteral("Treble boost"), { 0, 0, 0, 0, 0, 1, 2, 4, 5, 6 } },
+        { QStringLiteral("treble_air"), QStringLiteral("Treble air"), { 0, 0, -0.5, -0.5, 0.2, 1.0, 1.8, 3.0, 4.0, 5.0 } },
         { QStringLiteral("treble_cut"), QStringLiteral("Treble cut"), { 0, 0, 0, 0, 0, -1, -2, -4, -5, -6 } },
         { QStringLiteral("vocal"), QStringLiteral("Vocal"), { -2, -2, -1, 1, 3, 4, 3, 1, 0, -1 } },
+        { QStringLiteral("vocal_clarity"), QStringLiteral("Vocal clarity"), { -1.2, -0.5, 0, 1.0, 2.5, 3.5, 2.8, 2.0, 1.5, 1.0 } },
         { QStringLiteral("loudness"), QStringLiteral("Loudness"), { 5, 4, 1, 0, -1, 0, 0, 2, 4, 4 } },
         { QStringLiteral("small_speakers"), QStringLiteral("Small speakers"), { 0, 2, 4, 3, 1, 0, 1, 2, 2, 1 } },
         { QStringLiteral("rock"), QStringLiteral("Rock"), { 4, 3, 2, 0, -1, -1, 1, 2, 3, 4 } },
         { QStringLiteral("pop"), QStringLiteral("Pop"), { -1, 1, 2, 3, 2, 0, -1, -1, 0, 0 } },
         { QStringLiteral("hiphop"), QStringLiteral("Hip-hop"), { 5, 4, 2, 1, -1, -1, 1, 0, 1, 2 } },
+        { QStringLiteral("rnb"), QStringLiteral("R&B"), { 4.8, 3.5, 2.0, -0.5, -0.8, 0.5, 1.8, 2.5, 3.0, 3.0 } },
         { QStringLiteral("electronic"), QStringLiteral("Electronic"), { 4, 4, 1, 0, -2, 1, 0, 1, 3, 4 } },
         { QStringLiteral("acoustic"), QStringLiteral("Acoustic"), { 3, 3, 2, 1, 1, 1, 2, 2, 2, 1 } },
         { QStringLiteral("classical"), QStringLiteral("Classical"), { 3, 2, 1, 0, 0, 0, 0, 1, 2, 3 } },

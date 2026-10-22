@@ -539,8 +539,10 @@ void testPresets(Checks &t)
         for (double g : p.gains)
             inRange = inRange && std::fabs(g) <= kMaxGainDb && !p.name.isEmpty();
     }
-    t.check(list.size() == 16 && ids.size() == 16, QStringLiteral("sixteen presets, each its own id"),
+    t.check(list.size() == 21 && ids.size() == 21, QStringLiteral("twenty-one presets, each its own id"),
             QString::number(list.size()));
+    t.check(preset(QStringLiteral("studio_master")) && preset(QStringLiteral("studio_master"))->gains == kClarityDb,
+            QStringLiteral("  Studio master is Studio clarity's curve"));
     t.check(inRange, QStringLiteral("  ten gains each, all within +-12 dB, each named"));
     t.check(list.first().id == QLatin1String("flat")
                 && std::all_of(list.first().gains.cbegin(), list.first().gains.cend(), [](double g) { return g == 0.0; }),
@@ -945,9 +947,9 @@ void testModel(Checks &t, Library *library)
             num(shown.headroomDb(), 1));
     t.check(shown.responseCurve(120).size() == 120 && shown.responseCurve(120).first().toDouble() > 5.0,
             QStringLiteral("the curve for the sliders carries the shelf"));
-    t.check(shown.presets().size() == 16 && shown.bandLabels().size() == 10 && shown.slowedSpeeds().size() == 4
+    t.check(shown.presets().size() == 21 && shown.bandLabels().size() == 10 && shown.slowedSpeeds().size() == 4
                 && shown.nightcoreSpeeds().size() == 3 && shown.highBassSteps().size() == 4 && shown.reverbLevels().size() == 4,
-            QStringLiteral("the chips: 16 presets, 10 bands, 4 slowed and 3 nightcore speeds, 4 bass steps, 4 reverbs"));
+            QStringLiteral("the chips: 21 presets, 10 bands, 4 slowed and 3 nightcore speeds, 4 bass steps, 4 reverbs"));
     shown.setEightD(true);
     shown.setEqualiser(true);
     shown.turnAllOff();
