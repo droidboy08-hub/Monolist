@@ -4,16 +4,41 @@
 #include "playbackcontroller.h"
 
 #include <QAction>
+#include <QCoreApplication>
 #include <QGuiApplication>
 #include <QKeySequence>
 #include <QMenu>
 #include <QMenuBar>
+#include <QTranslator>
 #include <QVariant>
 #include <QWindow>
+
+namespace {
+
+// Qt names the application menu's items itself, from its own strings,
+// whatever the actions say: Settings… came out as "Preferences...", the name
+// macOS gave it before 13. Those strings are translatable, and this is the
+// translation.
+class MenuNames : public QTranslator
+{
+public:
+    using QTranslator::QTranslator;
+    QString translate(const char *context, const char *source, const char *, int) const override
+    {
+        if (qstrcmp(context, "MAC_APPLICATION_MENU") == 0 && qstrcmp(source, "Preferences...") == 0)
+            return QStringLiteral("Settings…");
+        return QString();
+    }
+    bool isEmpty() const override { return false; }
+};
+
+} // namespace
 
 MacMenuBar::MacMenuBar(PlaybackController *player, QObject *parent)
     : QObject(parent), m_player(player)
 {
+    QCoreApplication::installTranslator(new MenuNames(this));
+
     // With no parent, the menu bar at the top of the screen, for every
     // window of the app (the mini player's too).
     m_bar = new QMenuBar(nullptr);
@@ -24,10 +49,8 @@ MacMenuBar::MacMenuBar(PlaybackController *player, QObject *parent)
     QAction *about = app->addAction(QStringLiteral("About Monolist"));
     about->setMenuRole(QAction::AboutRole);
     connect(about, &QAction::triggered, this, [this]() { call("openSettingsAt", QStringLiteral("about")); });
-    // Not Qt's PreferencesRole, which takes Qt's own "Preferences…" name
-    // for the item; "Settings…" is what macOS has called it since 13.
     QAction *settings = app->addAction(QStringLiteral("Settings…"));
-    settings->setMenuRole(QAction::ApplicationSpecificRole);
+    settings->setMenuRole(QAction::PreferencesRole);
     settings->setShortcut(QKeySequence(QKeySequence::Preferences));
     connect(settings, &QAction::triggered, this, [this]() { call("openSettingsAt", QString()); });
 
