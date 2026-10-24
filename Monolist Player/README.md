@@ -817,7 +817,14 @@ file only. `build-windows.ps1` and `package-windows.ps1` take all four values
 from the Windows user's environment when the shell has none of its own, so
 `[Environment]::SetEnvironmentVariable('MONOLIST_GOOGLE_CLIENT_ID', '…', 'User')`
 once is enough; nothing prints them, and `--diag` says only whether there is a
-client.
+client. On a Mac, `build-macos.sh` takes any of the four the environment lacks
+from the login Keychain, kept there once with
+`security add-generic-password -U -a "$USER" -s MONOLIST_GOOGLE_CLIENT_ID -w`
+(and likewise `MONOLIST_GOOGLE_CLIENT_SECRET`, `MONOLIST_LASTFM_API_KEY`,
+`MONOLIST_LASTFM_SHARED_SECRET`), which asks for the value rather than taking
+it on the command line. GitHub's release workflows read repository secrets of
+the same four names (`gh secret set MONOLIST_GOOGLE_CLIENT_ID`, which also
+asks for the value).
 
 ### Typeface
 

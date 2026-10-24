@@ -40,9 +40,12 @@ jobs:
     timeout-minutes: 240
     env:
       # Built in when the repository has them as secrets; without them the
-      # app builds all the same and says it has no Last.fm key.
+      # app builds all the same and says it has no Last.fm key, or no Google
+      # sign-in for the Drive backup (README "Google sign-in client").
       MONOLIST_LASTFM_API_KEY: ${{ secrets.MONOLIST_LASTFM_API_KEY }}
       MONOLIST_LASTFM_SHARED_SECRET: ${{ secrets.MONOLIST_LASTFM_SHARED_SECRET }}
+      MONOLIST_GOOGLE_CLIENT_ID: ${{ secrets.MONOLIST_GOOGLE_CLIENT_ID }}
+      MONOLIST_GOOGLE_CLIENT_SECRET: ${{ secrets.MONOLIST_GOOGLE_CLIENT_SECRET }}
       HOMEBREW_NO_AUTO_UPDATE: '1'
       HOMEBREW_NO_INSTALL_CLEANUP: '1'
     steps:

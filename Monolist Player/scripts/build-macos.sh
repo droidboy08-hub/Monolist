@@ -122,6 +122,29 @@ if [ "$(sysctl -n sysctl.proc_translated 2>/dev/null || echo 0)" = "1" ]; then
     fail "this Terminal runs under Rosetta (Intel emulation). Quit it, untick \"Open using Rosetta\" in its Get Info window, and run this again."
 fi
 
+# --------------------------------------------------------------- the keys
+
+# The Last.fm key and the Google Drive backup's sign-in client are the
+# builder's and never committed (README "Last.fm key", "Google sign-in
+# client"). Taken from the environment, or else from the login Keychain,
+# where they are kept once (as build-windows.ps1 takes them from the Windows
+# user's environment):
+#     security add-generic-password -U -a "$USER" -s MONOLIST_GOOGLE_CLIENT_ID -w
+# (it asks for the value, so it is never typed on a command line or kept in a
+# shell's history). Nothing here prints a value: CMake says only whether
+# there is a key and a client.
+for name in MONOLIST_LASTFM_API_KEY MONOLIST_LASTFM_SHARED_SECRET \
+            MONOLIST_GOOGLE_CLIENT_ID MONOLIST_GOOGLE_CLIENT_SECRET; do
+    eval "value=\${$name:-}"
+    if [ -z "$value" ]; then
+        value="$(security find-generic-password -a "$USER" -s "$name" -w 2>/dev/null || true)"
+        if [ -n "$value" ]; then
+            export "$name=$value"
+        fi
+    fi
+done
+unset value
+
 # ---------------------------------------------------------------- toolchain
 
 if command -v brew >/dev/null 2>&1; then
