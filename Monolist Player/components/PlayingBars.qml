@@ -34,23 +34,33 @@ Item {
     implicitWidth: 14
     implicitHeight: 12
 
-    // Where the bars are in their rise and fall, in milliseconds: moved on
-    // by the timer, kept while they hold still. Every bar takes its place
-    // from it, so all three step together and draw once a step.
+    // Where the bars are in their rise and fall, in milliseconds: the app's
+    // one clock for them (Nav.barsClock), followed while they move and kept
+    // while they hold still. Every bar takes its place from it, so all three
+    // step together, every mark in sight steps in the same frame, and the
+    // window draws once a step.
     property real clock: 0
-    property real lastTick: 0
 
-    Timer {
-        interval: 66
-        repeat: true
-        running: root.moving
-        onRunningChanged: root.lastTick = Date.now()
-        onTriggered: {
-            const now = Date.now()
-            // A late tick (the computer busy, or asleep) moves only one step.
-            root.clock += Math.min(now - root.lastTick, 2 * interval)
-            root.lastTick = now
-        }
+    Connections {
+        target: Nav
+        enabled: root.moving
+        function onBarsClockChanged() { root.clock = Nav.barsClock }
+    }
+
+    // Counted while it moves, so that the clock runs only then.
+    property bool counted: false
+    function recount() {
+        if (moving === counted)
+            return
+        Nav.barsMoving += moving ? 1 : -1
+        counted = moving
+    }
+    onMovingChanged: recount()
+    Component.onCompleted: recount()
+    Component.onDestruction: {
+        if (counted)
+            Nav.barsMoving -= 1
+        counted = false
     }
 
     Repeater {

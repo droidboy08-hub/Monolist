@@ -451,7 +451,7 @@ Column {
                 // paper in an ink frame, over the rows it passes.
                 Rectangle {
                     anchors.fill: parent
-                    color: row.held ? Theme.bg : rowHover.hovered ? Theme.rowHover : "transparent"
+                    color: row.held ? Theme.bg : rowHover.hovered ? Theme.rowHover : Theme.clear(Theme.rowHover)
                     border.width: row.held ? Theme.ruleWidth : 0
                     border.color: Theme.text
 

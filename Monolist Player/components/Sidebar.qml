@@ -248,7 +248,7 @@ Rectangle {
 
         Rectangle {
             anchors.fill: parent
-            color: importHover.hovered ? Theme.surface : "transparent"
+            color: importHover.hovered ? Theme.surface : Theme.clear(Theme.surface)
 
             Behavior on color {
                 enabled: !importHover.hovered
@@ -466,7 +466,7 @@ Rectangle {
 
         Rectangle {
             anchors.fill: parent
-            color: userHover.hovered ? Theme.surface : "transparent"
+            color: userHover.hovered ? Theme.surface : Theme.clear(Theme.surface)
 
             Behavior on color {
                 enabled: !userHover.hovered

@@ -125,4 +125,11 @@ QtObject {
     readonly property int wideBreakpoint: 1180
 
     function tracking(px, em) { return px * em }
+
+    // A colour at no opacity, for a highlight to fade out to. Not
+    // "transparent": that is black at no opacity, and a colour fading to it
+    // passes through a translucent dark grey on the way, which showed as a
+    // dark band trailing the pointer down a list (the sidebar's rows, a
+    // table's). This fades the highlight in its own colour, out to nothing.
+    function clear(c) { return Qt.rgba(c.r, c.g, c.b, 0) }
 }

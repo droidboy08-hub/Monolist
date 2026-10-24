@@ -16,7 +16,7 @@ Rectangle {
 
     implicitWidth: choiceLabel.implicitWidth + Theme.space4 * 2
     implicitHeight: 32
-    color: selected ? Theme.text : (choiceHover.hovered ? Theme.rowHover : "transparent")
+    color: selected ? Theme.text : (choiceHover.hovered ? Theme.rowHover : Theme.clear(Theme.rowHover))
     border.width: Theme.ruleWidth
     border.color: Theme.text
 

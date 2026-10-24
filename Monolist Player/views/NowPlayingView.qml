@@ -431,7 +431,7 @@ Rectangle {
             width: Math.min(Theme.ruleWidth * 2 + 10 + upNextLabel.implicitWidth + Theme.space2
                             + upNextSong.implicitWidth + Theme.space2 + 16 + Theme.space2, tags.width)
             height: 30
-            color: upNextArea.pressed ? root.tint(0.16) : upNextArea.containsMouse ? root.tint(0.1) : "transparent"
+            color: upNextArea.pressed ? root.tint(0.16) : upNextArea.containsMouse ? root.tint(0.1) : Theme.clear(root.tint(0.1))
             border.width: Theme.ruleWidth
             border.color: root.line
 
@@ -712,7 +712,7 @@ Rectangle {
 
                             width: choiceLabel.implicitWidth + 28
                             height: 30
-                            color: selected ? root.ink : choiceHover.hovered ? root.tint(0.1) : "transparent"
+                            color: selected ? root.ink : choiceHover.hovered ? root.tint(0.1) : Theme.clear(root.tint(0.1))
 
                             Accessible.role: Accessible.RadioButton
                             Accessible.name: modelData.label

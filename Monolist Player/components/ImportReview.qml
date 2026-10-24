@@ -230,7 +230,7 @@ Column {
                 HoverHandler { id: checkHover }
                 Rectangle {
                     anchors.fill: parent
-                    color: checkHover.hovered ? Theme.rowHover : "transparent"
+                    color: checkHover.hovered ? Theme.rowHover : Theme.clear(Theme.rowHover)
 
                     Behavior on color {
                         enabled: !checkHover.hovered
@@ -341,7 +341,7 @@ Column {
         HoverHandler { id: missingHover }
         Rectangle {
             anchors.fill: parent
-            color: missingHover.hovered ? Theme.rowHover : "transparent"
+            color: missingHover.hovered ? Theme.rowHover : Theme.clear(Theme.rowHover)
 
             Behavior on color {
                 enabled: !missingHover.hovered

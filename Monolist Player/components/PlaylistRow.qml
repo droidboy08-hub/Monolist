@@ -23,7 +23,7 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        color: hover.hovered ? Theme.surface : "transparent"
+        color: hover.hovered ? Theme.surface : Theme.clear(Theme.surface)
 
         Behavior on color {
             enabled: !hover.hovered

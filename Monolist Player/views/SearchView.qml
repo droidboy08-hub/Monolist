@@ -270,7 +270,7 @@ ScrollPage {
                             HoverHandler { id: pickHover }
                             Rectangle {
                                 anchors.fill: parent
-                                color: pickHover.hovered ? Theme.rowHover : "transparent"
+                                color: pickHover.hovered ? Theme.rowHover : Theme.clear(Theme.rowHover)
 
                                 Behavior on color {
                                     enabled: !pickHover.hovered

@@ -53,7 +53,9 @@ class PlaybackController : public QObject
     Q_PROPERTY(qint64 position READ position WRITE setPosition NOTIFY positionChanged)
     Q_PROPERTY(qint64 duration READ duration NOTIFY durationChanged)
     Q_PROPERTY(qreal progress READ progress NOTIFY positionChanged)
-    Q_PROPERTY(QString positionText READ positionText NOTIFY positionChanged)
+    // Once a second, not at every position report (about twenty a second):
+    // its text changes only then.
+    Q_PROPERTY(QString positionText READ positionText NOTIFY positionTextChanged)
     Q_PROPERTY(QString durationText READ durationText NOTIFY durationChanged)
     Q_PROPERTY(qreal volume READ volume WRITE setVolume NOTIFY volumeChanged)
     Q_PROPERTY(bool shuffle READ shuffle WRITE setShuffle NOTIFY shuffleChanged)
@@ -280,6 +282,7 @@ Q_SIGNALS:
     void currentTrackChanged();
     void autoplayChanged();
     void positionChanged();
+    void positionTextChanged();
     void durationChanged();
     void volumeChanged();
     void stopAfterCurrentChanged();
@@ -377,6 +380,8 @@ private:
     void logStreamInfo();
     bool extendWithRadio();   // false when there is nothing to seed a radio from
     void refreshFavourite();
+    // positionChanged, and positionTextChanged when the second it shows moved.
+    void notePositionMoved();
     void setStatus(const QString &text, const QString &source, bool resolving, bool error = false);
     void setDuration(qint64 ms);
     void setPlayingFlag(bool playing);
@@ -532,6 +537,8 @@ private:
     Replay m_replay = Replay::None;
     bool m_autoplay = true;
     qint64 m_position = 0;
+    // The second positionText last said (notePositionText).
+    qint64 m_positionSecond = -1;
     qint64 m_duration = 0;
     qreal m_volume = 0.65;
     // A drag of the volume slider is dozens of changes a second: the value is

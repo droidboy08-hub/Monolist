@@ -231,7 +231,10 @@ Rectangle {
 
             width: ListView.view ? ListView.view.width : 0
             visible: !isPast
-            height: visible ? implicitHeight : 0
+            // By the row's own role, not its visibility, which is false for
+            // every row while the panel is closed: all of them were then of
+            // no height, so the list made every row of the queue at once.
+            height: isPast ? 0 : implicitHeight
             z: held ? 2 : 0
 
             // From the keyboard, once the grip has been pressed: Alt+Up and
@@ -352,7 +355,8 @@ Rectangle {
                     width: 40
                     height: 40
                     anchors.verticalCenter: parent.verticalCenter
-                    source: entry.artwork
+                    // Not for the songs already played, whose rows are not shown.
+                    source: entry.isPast ? "" : entry.artwork
                     sourceId: entry.videoId
                     hovered: entryHover.hovered && !entry.held
                     active: entry.isCurrent

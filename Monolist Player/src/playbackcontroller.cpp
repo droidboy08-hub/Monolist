@@ -205,7 +205,7 @@ PlaybackController::PlaybackController(MpvEngine *engine,
             // already moved m_position, so the jump never arrives here as a
             // step; nor does a picture's stream opening where the sound was.
             m_listen.positionChanged(ms);
-            Q_EMIT positionChanged();
+            notePositionMoved();
 
             // A song restarted with Previous is a listen again once it plays
             // past the point where Previous would go back instead (see
@@ -1596,7 +1596,7 @@ void PlaybackController::beginTrack(const QVariantMap &track, bool autoPlay)
     m_replay = Replay::None;
 
     Q_EMIT currentTrackChanged();
-    Q_EMIT positionChanged();
+    notePositionMoved();
     refreshFavourite();
 
     if (!engineAvailable()) {
@@ -2355,7 +2355,20 @@ void PlaybackController::setPosition(qint64 ms)
     m_listen.seeked(clamped);
     if (engineAvailable())
         m_engine->seekAbsolute(clamped);
+    notePositionMoved();
+}
+
+void PlaybackController::notePositionMoved()
+{
     Q_EMIT positionChanged();
+    // The clock's text (formatDuration: whole seconds, rounded down) changes
+    // once a second; its bindings, the player bar's among them, are told
+    // only then rather than at every report mpv makes.
+    const qint64 second = m_position / 1000;
+    if (second != m_positionSecond) {
+        m_positionSecond = second;
+        Q_EMIT positionTextChanged();
+    }
 }
 
 void PlaybackController::seekFraction(qreal fraction)

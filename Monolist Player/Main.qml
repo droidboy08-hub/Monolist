@@ -595,6 +595,12 @@ ApplicationWindow {
         // Shortcuts, which this does not touch.
         enabled: !window.nowPlayingOpen && window.videoPlace !== "fullscreen"
                  && !window.sidebarOverlayOpen
+        // Not drawn while Now Playing, all the way up, or the picture full
+        // screen stands over the whole of it: drawn beneath them all the
+        // same, it cost every frame of theirs. Opacity, not visible, so that
+        // nothing on it changes (its rows, where it is scrolled to); while
+        // Now Playing slides, the page shows under it as before.
+        opacity: Nav.pagesCovered ? 0 : 1
 
         // Every `ToolTip.text` in the app shows the same single tool tip, which
         // Qt makes in the Basic style: the system's font, on the style's own

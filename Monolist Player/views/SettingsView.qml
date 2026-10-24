@@ -446,7 +446,7 @@ ScrollPage {
 
                     Rectangle {
                         anchors.fill: parent
-                        color: countryHover.hovered ? Theme.rowHover : "transparent"
+                        color: countryHover.hovered ? Theme.rowHover : Theme.clear(Theme.rowHover)
 
                         Behavior on color {
                             enabled: !countryHover.hovered

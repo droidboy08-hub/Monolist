@@ -101,7 +101,7 @@ Rectangle {
             anchors.centerIn: parent
             width: 44
             height: 44
-            color: buttonHover.hovered ? Theme.surface : "transparent"
+            color: buttonHover.hovered ? Theme.surface : Theme.clear(Theme.surface)
 
             Behavior on color {
                 enabled: !buttonHover.hovered

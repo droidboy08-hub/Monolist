@@ -6,6 +6,7 @@ import QtQuick
 // each of them to the window would be a dozen relays for one sentence: "open
 // this". Main listens here and does the navigating.
 QtObject {
+    id: nav
     // `browseId` may be empty: the name alone is then looked up.
     signal artistRequested(string name, string browseId)
     // An album's or a YouTube Music playlist's page.
@@ -33,6 +34,27 @@ QtObject {
     // Now Playing, or the video full screen, stands over every page: what
     // moves on them (the playing song's bars) can hold still. Main sets it.
     property bool pagesCovered: false
+
+    // The playing song's bars (PlayingBars), wherever they show, step on one
+    // clock. Each kept a timer of its own, out of step with the others, so
+    // two in sight (the player bar's cover and the song's row) drew the
+    // window thirty times a second rather than fifteen. It runs while any of
+    // them moves (barsMoving counts them) and holds where it is otherwise.
+    property real barsClock: 0
+    property int barsMoving: 0
+    readonly property Timer barsTicker: Timer {
+        property real lastTick: 0
+        interval: 66
+        repeat: true
+        running: nav.barsMoving > 0
+        onRunningChanged: lastTick = Date.now()
+        onTriggered: {
+            const now = Date.now()
+            // A late tick (the computer busy, or asleep) moves only one step.
+            nav.barsClock += Math.min(now - lastTick, 2 * interval)
+            lastTick = now
+        }
+    }
 
     // The rounded corners of a list's covers (Artwork's radius), drawn once
     // for all of them rather than once a cover. Main makes it. The player
