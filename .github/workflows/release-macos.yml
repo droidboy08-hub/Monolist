@@ -77,10 +77,24 @@ jobs:
           NOTARY_KEY_ID: ${{ secrets.MONOLIST_NOTARY_KEY_ID }}
           NOTARY_ISSUER: ${{ secrets.MONOLIST_NOTARY_ISSUER }}
         run: |
-          if [ -z "$P12" ] || [ -z "$P12_PASSWORD" ] || [ -z "$NOTARY_KEY" ] || [ -z "$NOTARY_KEY_ID" ] || [ -z "$NOTARY_ISSUER" ]; then
+          # None: ad hoc, as before. Some but not all: a mistake, said so,
+          # rather than an unsigned release where a signed one was meant.
+          missing=""
+          present=0
+          for pair in P12:MONOLIST_DEVELOPER_ID_P12 P12_PASSWORD:MONOLIST_DEVELOPER_ID_P12_PASSWORD \
+                      NOTARY_KEY:MONOLIST_NOTARY_KEY_P8 NOTARY_KEY_ID:MONOLIST_NOTARY_KEY_ID \
+                      NOTARY_ISSUER:MONOLIST_NOTARY_ISSUER; do
+            variable="${pair%%:*}"
+            if [ -n "${!variable}" ]; then present=$((present + 1)); else missing="$missing ${pair#*:}"; fi
+          done
+          if [ "$present" -eq 0 ]; then
             echo "No Developer ID secrets: the disk image is signed ad hoc, as before."
             echo "enabled=false" >> "$GITHUB_OUTPUT"
             exit 0
+          fi
+          if [ -n "$missing" ]; then
+            echo "::error::Developer ID signing is only partly set up; these secrets are missing:$missing"
+            exit 1
           fi
           umask 077
           keychain="$RUNNER_TEMP/monolist-signing.keychain-db"

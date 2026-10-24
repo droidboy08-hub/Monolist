@@ -721,8 +721,63 @@ cmake --build build          # build/Monolist.app
 * **Appearance.** Light, Dark or Match macOS, as Windows has Match Windows.
 
 The app is signed ad hoc ("Sign to Run Locally"), which is all a Mac needs to
-run what was built on it. To give it to someone else, sign it with a Developer
-ID and notarise it; without that, macOS will refuse to open a downloaded copy.
+run what was built on it, and is what `build-macos.sh --dmg` makes: the
+unsigned disk image. Another Mac opens a downloaded copy of it only after its
+user chooses Open Anyway in System Settings › Privacy & Security, once. It
+needs no Apple account, and never stops working.
+
+#### Signed and notarised, for other Macs
+
+Signed with a Developer ID and notarised by Apple, the app opens on any Mac
+like any other. Nothing about it expires: the signature carries Apple's
+timestamp, so it stays valid after the certificate (five years) runs out, and
+copies already signed keep opening if the Apple Developer Program is not
+renewed; only new versions need it. Once, on the Mac that builds:
+
+1. Join the Apple Developer Program (developer.apple.com/programs, 99 USD a
+   year), as the account holder.
+2. Xcode › Settings › Accounts › your team › Manage Certificates › + ›
+   **Developer ID Application** (not Apple Development, which signs for this
+   Mac alone; not a cloud-managed one, which cannot be exported for CI).
+3. The notary service's login, kept in the keychain under a name of your
+   choosing: `xcrun notarytool store-credentials monolist-notary`, with your
+   Apple ID, team ID and an app-specific password made at account.apple.com.
+
+Then:
+
+```
+scripts/build-macos.sh --sign "Developer ID Application: Your Name (TEAMID)" --notarize monolist-notary
+```
+
+makes both disk images in `build-macos/dist`: `Monolist-unsigned.dmg` (the ad
+hoc build, as without `--sign`) and `Monolist.dmg` (signed, notarised, its
+ticket stapled, and the app inside stapled too, so it opens offline). Notary
+logs are kept in `build-macos/notary-*.json`. Without `--notarize`, the signed
+image is made but not notarised.
+
+What signing does (`build-macos.sh`, "Developer ID"): every piece of code
+signed again from the inside out with the hardened runtime and a timestamp:
+Qt's libraries, plugins and frameworks, FFmpeg, and yt-dlp inside its archive
+(its Python.framework's links, packed as copies by its project, put back
+first); Deno is signed and notarised by its makers and left alone. The app
+asks for no entitlements. It needs mpv's Lua scripts off (MpvEngine does so
+on a Mac): LuaJIT's run-time code is killed under the hardened runtime.
+
+The first launch of a Developer ID build on a Mac that ran an ad hoc one asks
+once for each sign-in kept in the Keychain (Always Allow): the Keychain ties
+each item to the signature that made it.
+
+GitHub's release workflow (`.github/workflows/release-macos.yml`) signs and
+notarises too when the repository has these secrets, and then publishes both
+images; without them it publishes the unsigned one, as before:
+
+| Secret | What |
+| :--- | :--- |
+| `MONOLIST_DEVELOPER_ID_P12` | The Developer ID Application certificate with its key, exported from Keychain Access as .p12, base64 (`base64 -i cert.p12 \| gh secret set MONOLIST_DEVELOPER_ID_P12`) |
+| `MONOLIST_DEVELOPER_ID_P12_PASSWORD` | That export's password |
+| `MONOLIST_NOTARY_KEY_P8` | An App Store Connect **team** API key (Users and Access › Integrations), the .p8 file, base64 |
+| `MONOLIST_NOTARY_KEY_ID` | Its key ID |
+| `MONOLIST_NOTARY_ISSUER` | Its issuer ID |
 
 The icon is `macos/Monolist.icns`: the owner's note
 (`packaging/icons/note.png`) on Apple's grid, drawn by `macos/make-icon.py`

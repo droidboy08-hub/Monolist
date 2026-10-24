@@ -365,7 +365,14 @@ Google sign-in window in WebKit (`src/macos/googlesignin_mac.mm`: the
 engine as it comes, a non-persistent data store per sign-in, only Google's
 and YouTube's pages, only YouTube's cookies, Google's refusal final; seen
 reaching Google's identifier page, not yet signed in with a real account,
-and Google may refuse WebKit as it may WebView2). Left there: the Dock's
+and Google may refuse WebKit as it may WebView2). Signing (2026-10-24, the owner wants both
+builds): `build-macos.sh --sign <identity> [--notarize <profile>]` makes
+Monolist-unsigned.dmg and the Developer ID Monolist.dmg (README "Signed and
+notarised"); the owner has only an Apple Development identity so far (team
+7YWFR8A74F), which signs for testing on this Mac; notarising needs the paid
+program's Developer ID Application certificate. Keep mpv's Lua scripts off
+on a Mac (MpvEngine): under the hardened runtime LuaJIT is killed whatever
+the entitlements; the app needs none. Left there: the Dock's
 icon while Monolist is closed (a dock tile plug-in), font weights (G04: 88
 `Font.Bold`, which no bundled face is), and the decisions on Developer ID
 signing and Intel Macs.

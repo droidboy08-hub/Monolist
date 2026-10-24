@@ -494,20 +494,25 @@ notarize() {
     say "Sending $sent to Apple's notary service (usually a few minutes)…"
     # Its answer, and its log, kept beside the build: the log lists every
     # piece of code the ticket covers, and any warnings, even when accepted.
-    result="$BUILD/notary-${sent%.*}.json"
+    # One pair for each thing sent (Monolist-zip, Monolist-dmg), and none
+    # left from an earlier run to be taken for this one's.
+    tag="${sent%.*}-${sent##*.}"
+    result="$BUILD/notary-$tag.json"
+    log="$BUILD/notary-$tag-log.json"
+    rm -f "$result" "$log"
     xcrun notarytool submit "$@" --wait --timeout 2h --output-format json > "$result" 2>&1 || true
     submission="$(plutil -extract id raw -o - "$result" 2>/dev/null || true)"
     status="$(plutil -extract status raw -o - "$result" 2>/dev/null || true)"
     if [ -n "$submission" ]; then
         shift
-        xcrun notarytool log "$submission" "$@" "$BUILD/notary-${sent%.*}-log.json" >/dev/null 2>&1 || true
+        xcrun notarytool log "$submission" "$@" "$log" >/dev/null 2>&1 || true
     fi
     if [ "$status" != "Accepted" ]; then
         cat "$result" >&2
-        [ -f "$BUILD/notary-${sent%.*}-log.json" ] && cat "$BUILD/notary-${sent%.*}-log.json" >&2
+        [ -f "$log" ] && cat "$log" >&2
         fail "Apple's notary service did not accept $sent (${status:-no answer})."
     fi
-    say "Accepted ($submission); its log: $BUILD/notary-${sent%.*}-log.json"
+    say "Accepted ($submission); its log: $log"
 }
 
 if [ -n "$identity" ]; then
