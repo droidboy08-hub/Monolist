@@ -62,6 +62,30 @@ jobs:
         shell: powershell
         run: powershell -NoProfile -ExecutionPolicy Bypass -File "Monolist Player\scripts\setup-windows.ps1" -Update -SkipGit -Installer -Vulkan
 
+      # The YouTube Music sign-in window's SDK (googlesignin_win.cpp), as the
+      # owner's PC has it, unpacked from NuGet's Microsoft.Web.WebView2 into
+      # webview2\sdk, where build-windows.ps1 and package-windows.ps1 look for
+      # it. Without it the release signed in by cookie import only. Pinned,
+      # and checked against the SHA-256 of the package NuGet published (its
+      # own SHA-512 matched when this was pinned).
+      - name: WebView2 SDK
+        shell: powershell
+        run: |
+          $version = '1.0.4314.35'
+          $sha256 = '90778deb1b77e36292828b4b5833c9255c27533f40e0ddd55891ae718944edc4'
+          $sdk = 'C:\dev\monolist-deps\webview2\sdk'
+          $package = Join-Path $env:RUNNER_TEMP "webview2-$version.zip"
+          Invoke-WebRequest -UseBasicParsing -OutFile $package `
+            -Uri "https://api.nuget.org/v3-flatcontainer/microsoft.web.webview2/$version/microsoft.web.webview2.$version.nupkg"
+          $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $package).Hash
+          if ($actual -ne $sha256) { throw "The WebView2 SDK $version did not match its checksum (got $actual)." }
+          if (Test-Path -LiteralPath $sdk) { Remove-Item -Recurse -Force -LiteralPath $sdk }
+          Expand-Archive -LiteralPath $package -DestinationPath $sdk
+          foreach ($file in 'build\native\include\WebView2.h', 'build\native\x64\WebView2Loader.dll') {
+            if (-not (Test-Path -LiteralPath (Join-Path $sdk $file))) { throw "The WebView2 SDK has no $file." }
+          }
+          Write-Host "WebView2 SDK $version, for the Google sign-in window"
+
       - name: Build, package and installer
         shell: powershell
         run: powershell -NoProfile -ExecutionPolicy Bypass -File "Monolist Player\scripts\package-windows.ps1" -Installer
