@@ -185,12 +185,48 @@ if [ "$deploy" -eq 1 ]; then
         "-executable=$APP/Contents/MacOS/ffmpeg" "-executable=$APP/Contents/MacOS/ffprobe"
     "$macdeployqt" "$APP" "$@"
 
+    # Plugins of Qt modules Monolist does not use (Homebrew's Qt has every
+    # module: the virtual keyboard, 3D, PDF, timelines), which macdeployqt
+    # copies without the frameworks they need. Each would load Homebrew's
+    # copy of what it lacks, and with it a second QtCore and QtGui beside
+    # the app's own: the PDF image plugin did, at the first cover shown.
+    find "$APP/Contents/PlugIns" -name '*.dylib' -print0 \
+        | while IFS= read -r -d '' plugin; do
+            for framework in $(otool -L "$plugin" | awk '/@rpath\/[^ ]*\.framework/ {print $1}' \
+                                   | sed 's#^@rpath/##; s#\.framework/.*#.framework#'); do
+                if [ ! -d "$APP/Contents/Frameworks/$framework" ]; then
+                    rm -f "$plugin"
+                    say "Left out ${plugin#$APP/Contents/} (it needs $framework, which Monolist does not use)"
+                    break
+                fi
+            done
+        done
+    # And the links macdeployqt made to them from their QML modules, which
+    # point at nothing now and would fail the signature.
+    find "$APP/Contents" -type l ! -exec test -e {} \; -delete
+
+    # Search paths into Homebrew that the linker left in the executable (the
+    # build tree's) and Homebrew in a few of its libraries, and libmpv's
+    # into Xcode's Swift (the system's, /usr/lib/swift, stays). With them,
+    # anything the bundle lacks is quietly loaded from this Mac's Homebrew
+    # beside the bundle's own copies; without them it fails, and shows.
+    find "$APP/Contents" -type f \( -name '*.dylib' -o -perm -u+x \) -print0 \
+        | while IFS= read -r -d '' binary; do
+            otool -l "$binary" 2>/dev/null \
+                | awk '/cmd LC_RPATH/ {rpath = 1; next} rpath && /path / {print $2; rpath = 0}' \
+                | grep -E "^($BREW_PREFIX|/usr/local|/opt/local|/Applications/Xcode[^/]*\.app)/" \
+                | while IFS= read -r path; do
+                    install_name_tool -delete_rpath "$path" "$binary" 2>/dev/null \
+                        && say "Removed the search path $path from ${binary#$APP/}"
+                done || true
+        done
+
     # Anything still loaded from Homebrew would tie the app to this Mac's
     # Homebrew, and break when it upgrades.
     leftovers="$(find "$APP/Contents" -type f \( -name '*.dylib' -o -perm -u+x \) -print0 \
                  | xargs -0 otool -L 2>/dev/null \
                  | awk '/^[[:space:]]/ {print $1}' \
-                 | grep -E "^($BREW_PREFIX|/usr/local|/opt/local)/" \
+                 | grep -E "^($BREW_PREFIX|/usr/local|/opt/local|/Applications/Xcode[^/]*\.app)/" \
                  | sort -u || true)"
     if [ -n "$leftovers" ]; then
         warn "these are still loaded from outside the app, so it runs on this Mac but is not self-contained:"

@@ -682,14 +682,31 @@ cmake --build build          # build/Monolist.app
 
 #### What is different on a Mac
 
-* **The window.** The design runs under a transparent title bar with the
-  traffic lights in its corner, as Windows keeps its snap layouts: full
-  screen, tiling and Mission Control work as for any other window. A double
-  click on the bar does what System Settings › Desktop & Dock says. This needs
-  Qt 6.9 or later; with an older Qt the system title bar simply stays.
+* **The window.** The design's 64 px top strip is the title bar, under a
+  transparent one, as Windows keeps its snap layouts: full screen, tiling and
+  Mission Control work as for any other window. The traffic lights are moved
+  into the strip, centred in it at the sidebar's edge, with the name after
+  them (the version beside the name gives way; Settings' About has it), and
+  put back whenever AppKit lays them out again. A double click on the strip
+  does what System Settings › Desktop & Dock says. This needs Qt 6.9 or
+  later; with an older Qt the system title bar simply stays. (Qt 6.9's
+  ApplicationWindow pads its content by the safe area, which under the
+  transparent title bar is the title bar: WindowChrome takes that back.)
+* **The menu bar.** Monolist (About, Settings… ⌘,, Hide, Quit), Controls
+  (Play or Pause, Next ⌘→, Previous ⌘←, Mini Player ⇧⌘M) and Window
+  (Minimize ⌘M, Zoom, Bring All to Front, the windows), in
+  `src/macos/menubar.*`. Space stays the window's, so typing in the search
+  field is never taken for it.
 * **Closing the window** leaves the app and the music running; the Dock icon
-  brings the window back, and ⌘Q quits. ⌘W, ⌘M and ⌃⌘F do what they do in any
-  Mac app.
+  brings the window back (not over the mini player, which stands in for it),
+  and ⌘Q quits. ⌘W and ⌃⌘F do what they do in any Mac app.
+* **Sign-ins** (Last.fm, YouTube Music, the Drive backup) are kept in the
+  login Keychain, one item per secret; a run with `MONOLIST_DATA_DIR` keeps
+  its own, apart from the library in use.
+* **Opening at login** is a LaunchAgent of the user's own
+  (`~/Library/LaunchAgents/io.github.droidboy08-hub.monolist.login.plist`),
+  as Windows' is a Run value, with the same choices; System Settings' Login
+  Items & Extensions can turn it off, and Settings says so.
 * **Media keys and Now Playing.** The play, next and previous keys, AirPods,
   the Touch Bar, Control Center and the lock screen control Monolist and show
   the song, its cover and its position. Without this, the play key opens
@@ -698,19 +715,18 @@ cmake --build build          # build/Monolist.app
   the shell's PATH, so Homebrew's folders (`/opt/homebrew/bin`,
   `/usr/local/bin`) and `~/.deno/bin` are added to it at startup: builds that
   do not carry their own tools (Xcode's) still find Homebrew's.
-* **Light appearance.** The design draws its own colours, so the app keeps
-  the light appearance in Dark Mode, as it looks on Windows.
+* **Appearance.** Light, Dark or Match macOS, as Windows has Match Windows.
 
 The app is signed ad hoc ("Sign to Run Locally"), which is all a Mac needs to
 run what was built on it. To give it to someone else, sign it with a Developer
 ID and notarise it; without that, macOS will refuse to open a downloaded copy.
 
-The icon is `macos/Monolist.icns`, drawn from the bundled Archivo by
-`macos/make-icon.py` (Pillow); run that again if the palette changes. It is
-still the "M." mark: Windows' icon became the owner's note
-(`packaging/icons/note.png`, 2026-10-02), which the Mac's should follow, drawn
-on Apple's grid. Settings' app icon choice changes the window's icon only off
-the Mac (the Dock keeps the bundle's).
+The icon is `macos/Monolist.icns`: the owner's note
+(`packaging/icons/note.png`) on Apple's grid, drawn by `macos/make-icon.py`
+(Pillow), which also draws each choice for the Dock (`icons/app/mac-*.png`)
+and the first icon, the "M.", kept on the Mac as a third choice beside the
+note and the red note. Settings' choice sets the Dock's icon while Monolist
+runs; closed, the Dock shows the bundle's.
 
 ### Last.fm key
 
@@ -1181,14 +1197,11 @@ links, playlists, likes and saved albums, and synced and plain lyrics.
 
 Known gaps:
 
-* macOS: prepared for, but not yet run on a Mac. The shared code compiles
-  with Clang against libc++ (Apple's standard library) with the Mac code paths
-  on; the Objective-C++ is checked against the AppKit and MediaPlayer
-  declarations it uses; the build scripts are tested under macOS's bash 3.2
-  with Homebrew, CMake and the signing tools stood in for. `ToolStore` has run
-  for real on Linux: unpacking the bundled archives, updating from GitHub
-  with the checksums checked, the daily check, and a failed update. The
-  first real build is the test of the rest.
+* macOS: built and run on a Mac since 2026-10-24 (macOS 26 on Apple silicon,
+  Homebrew's Qt 6.12, libmpv 0.41, FFmpeg 9): every offline self-test passes
+  there, and playback, the title bar, the menu bar, the Keychain and opening
+  at login were checked on it. Not yet used day to day there; the Dock's icon
+  while closed, and a signed and notarised build for other Macs, are left.
 * Linux builds and starts (checked on Ubuntu 24.04 with Qt 6.11.2), but has
   not been used day to day and has no packaging yet.
 * The output menu's CoreAudio devices and the wheel and trackpad scrolling

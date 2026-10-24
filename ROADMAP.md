@@ -170,32 +170,42 @@ Priority runs from 1 (first) to 9. Size: S under an hour, M a few hours, L a day
 
 ## macOS build
 
-- [ ] **M01** libmpv will refuse to start on macOS because LC_NUMERIC is never reset to 'C' *(P6, S)*
+- [x] **M01** libmpv will refuse to start on macOS because LC_NUMERIC is never reset to 'C' *(P6, S)*
+  Done (2026-09-26 build, checked 2026-10-24 on a Mac): main.cpp sets LC_NUMERIC to "C" before libmpv; `--play LrM_Y39Gmhk 15` streamed Opus 48 kHz through Homebrew's libmpv 0.41, and `--sound-live-test` passed (115 checks).
   Done when: std::setlocale(LC_NUMERIC, "C") is called right after QGuiApplication and before MpvEngine, and audio plays on macOS when launched from both Terminal and Finder.
-- [ ] **M02** The macOS title-bar flags need Qt 6.9, but CMake and the README allow 6.6 *(P6, S)*
+- [x] **M02** The macOS title-bar flags need Qt 6.9, but CMake and the README allow 6.6 *(P6, S)*
+  Done: WindowChrome guards the flags with QT_VERSION_CHECK(6, 9, 0) and keeps the system title bar before it.
   Done when: CMake requires 6.9 on APPLE and the README says so, or the flags are guarded with QT_VERSION_CHECK(6,9,0) and fall back to the standard title bar.
-- [ ] **M03** yt-dlp, FFmpeg and Deno aren't found when the app is opened from Finder, and any python3 makes yt-dlp look installed (Windows too) *(P6, S)*
+- [x] **M03** yt-dlp, FFmpeg and Deno aren't found when the app is opened from Finder, and any python3 makes yt-dlp look installed (Windows too) *(P6, S)*
+  Done: yt-dlp, Deno and FFmpeg are looked for in the bundle, Application Support's tools and Homebrew's folders (ytdlp.cpp toolDirectories), PATH included when opened from Finder.
   Done when: On macOS the lookup also searches the bundle's tools folder, ~/Library/Application Support/Monolist/tools, /opt/homebrew/bin and /usr/local/bin. The python fallback is used only if `-m yt_dlp --version` succeeds, and missing-tool messages give the right step for each platform.
 - [x] **M04** The build-without-libmpv option (-DMONOLIST_NO_MPV=ON) no longer compiles *(P6, S)*
   Done when: The stub matches the header and VideoSurface's mpv code is guarded, so a NO_MPV build compiles and shows 'Built without libmpv'.
-- [ ] **M05** The Mac build is a bare executable, not a Monolist.app *(P6, M)*
+- [x] **M05** The Mac build is a bare executable, not a Monolist.app *(P6, M)*
+  Done: CMake makes Monolist.app (macos/Info.plist.in, bundle id io.github.droidboy08-hub.monolist).
   Done when: On APPLE, CMake sets MACOSX_BUNDLE and OUTPUT_NAME Monolist and uses a cmake/Info.plist.in (bundle ID, version from PROJECT_VERSION, build number, minimum macOS, Music category, icon). cmake --build then produces a Monolist.app that opens from Finder.
-- [ ] **M06** No macOS setup or build script, and the README's Mac recipe is three lines *(P6, M)*
+- [x] **M06** No macOS setup or build script, and the README's Mac recipe is three lines *(P6, M)*
+  Done: scripts/setup-macos.sh (Homebrew) and scripts/build-macos.sh (--install, --dmg, --run, --xcode), run for real on 2026-10-24 (macOS 26, Qt 6.12.0).
   Done when: scripts/setup-macos.sh installs pinned Qt, CMake, Ninja, pkgconf and libmpv, plus arm64 yt-dlp_macos, ffmpeg/ffprobe and deno, with checksum checks. scripts/build-macos.sh configures, builds, runs the QML lint check, deploys into Monolist.app and supports --run. The README documents both.
-- [ ] **M07** Nothing turns the Mac build into a self-contained, signed .app or .dmg *(P6, L)*
+- [x] **M07** Nothing turns the Mac build into a self-contained, signed .app or .dmg *(P6, L)*
+  Done: build-macos.sh runs macdeployqt, puts FFmpeg beside the executable and yt-dlp and Deno (checksummed) in Resources, signs ad hoc and verifies, and --dmg makes the disk image.
   Done when: The build script runs macdeployqt with -qmldir, copies libmpv and its libraries into Contents/Frameworks, places ffmpeg, ffprobe, deno and yt-dlp where code signing allows, signs the app (ad-hoc or Developer ID, per the decision), and writes Monolist-<version>-arm64.dmg that runs on a clean Mac.
-- [ ] **M08** The Mac title bar has never been run: fixed 78 px inset, traffic lights off the 64 px bar, a gap in full screen, and double-click ignores the system setting *(P6, M)*
+- [x] **M08** The Mac title bar has never been run: fixed 78 px inset, traffic lights off the 64 px bar, a gap in full screen, and double-click ignores the system setting *(P6, M)*
+  Done 2026-10-24, on a Mac: ApplicationWindow's safe-area padding (Qt 6.9) pushed the design 32 pt down under an empty strip, now taken back; the traffic lights are moved into the 64 px strip, centred, at 24 pt, and put back whenever AppKit lays them out again; the inset is measured from them; full screen is AppKit's; a double click does what System Settings says.
   Done when: On a Mac, the inset comes from QWindow::safeAreaMargins and disappears in full screen. The traffic lights are centred in the bar with a small Objective-C++ helper, or the bar's contents line up with them. Double-click follows the system's double-click setting, checked with a screenshot.
-- [ ] **M09** No Mac menu bar or Cmd shortcuts, and closing the window quits and stops the music *(P6, M)*
+- [x] **M09** No Mac menu bar or Cmd shortcuts, and closing the window quits and stops the music *(P6, M)*
+  Done 2026-10-24: the menu bar (macos/menubar.*): Monolist (About, Settings… ⌘,), Controls (Play/Pause, Next ⌘→, Previous ⌘←, Mini Player ⇧⌘M), Window (Minimize ⌘M, Zoom, Bring All to Front, the windows). Closing leaves the music playing; the Dock brings the window back (not over the mini player).
   Done when: Native menus: App (About, Settings… Cmd+,, Quit), Controls (Play, Next, Previous) and Window (Minimize, Zoom). Closing the window hides it while music keeps playing, a Dock click brings it back, and Cmd+W and Cmd+M work.
-- [ ] **M10** 'Update components' only works from the Windows development folder *(P6, M)*
+- [x] **M10** 'Update components' only works from the Windows development folder *(P6, M)*
+  Done: ToolStore (src/macos/toolstore.*) keeps yt-dlp and Deno current in Application Support from their GitHub releases, checksums checked.
   Done when: A cross-platform updater downloads yt-dlp, FFmpeg and Deno for the current OS and architecture, with checksums, into a writable tools folder in the app's data folder that is searched before the bundled copies. A Homebrew development install instead suggests 'brew upgrade'.
 
 ## Distribution
 
-- [ ] **G01** The app has no icon on any platform *(P8, S)*
+- [x] **G01** The app has no icon on any platform *(P8, S)*
   Windows done 2026-09-29: packaging/make-icon.ps1 draws "M." (Archivo, paper on ink, the point in red) into monolist.ico, built into monolist.exe (IDI_ICON1, the window's and the taskbar's) and the installer. Left: the .icns for the Mac bundle.
-  2026-10-02, the owner's: the icon is now their note (packaging/icons/note.png), and Settings > Appearance offers it or a red note (make-icon.ps1 makes both; IDI_ICON1/IDI_ICON2; AppIcon points the app's own Start menu, desktop and pinned-taskbar shortcuts at the chosen one; --icon-test). Left: the Mac's .icns redrawn from the note on Apple's grid (macos/make-icon.py).
+  2026-10-02, the owner's: the icon is now their note (packaging/icons/note.png), and Settings > Appearance offers it or a red note (make-icon.ps1 makes both; IDI_ICON1/IDI_ICON2; AppIcon points the app's own Start menu, desktop and pinned-taskbar shortcuts at the chosen one; --icon-test).
+  2026-10-24, the Mac: macos/make-icon.py draws Monolist.icns from the note on Apple's grid, and the first icon, the M., is kept as a third choice there (the owner's), on the note's white square; the choice sets the Dock's icon while Monolist runs. Left: the Dock's icon while Monolist is closed stays the bundle's (the note); a dock tile plug-in would carry the choice there.
   Done when: An icon made from the 'MONOLIST.' wordmark ships as .ico on Windows (via an .rc file), .icns in the Mac bundle, and PNG for the window icon.
 - [x] **G02** No Windows build that can be given to someone else *(P8, M)*
   Done 2026-09-29: package-windows.ps1 (-Installer), packaging/monolist.iss, .github/workflows/release-windows.yml. Installed and run with the toolchain out of PATH: self-tests, playback, a download through the bundled yt-dlp and FFmpeg; uninstalled clean.
@@ -331,7 +341,8 @@ Built so far (batch 2): Last.fm connect, listening-time tracking, offline scrobb
 - [ ] **C04** Read-only imports: liked songs as "Liked on YouTube Music", library playlists, private playlists, history (design step 15) *(P4, L)*
   Done when: counts match the account.
   Built 2026-09-29, not yet seen with a real account: `YtmImport` (QML `AccountLibrary`) reads VLLM, FEmusic_liked_playlists and the first page of FEmusic_history with Auth::Required, one page at a time 3-6 s apart (a longer pause every ten), at most 50 pages of likes and 20 of playlists, on its own at most every 12 h (a minute or two after the session is confirmed) and SYNC NOW at most every 15 min, all through AccountGuard; a list replaces what was kept only when read to its end. Stored apart in ytm_tracks / ytm_playlists / ytm_lists (never the user's own likes, playlists, history, play_events or scrobbles); deleted on sign-out, the switch off (Settings → Connections, "Import my YouTube Music library", on by default) or another account; kept and marked as last read while a session is Rejected. Shown as "Liked on YouTube Music" (sidebar, Library, a read-only PlaylistView), the account's playlists in Library (opened with the account through Catalog::setAccountPages, so private ones open; F41 fixed for their continuations), and History → ON YOUTUBE MUSIC. --ytm-library-test passes against a stand-in; `--ytm-demo active+library` shows an invented one. Left for C02's live test: the real answers' shapes and page sizes.
-- [ ] **C05** macOS Keychain backend for the secret store (secretstore_mac.mm) — for the macOS session *(P6, M)*
+- [x] **C05** macOS Keychain backend for the secret store (secretstore_mac.mm) — for the macOS session *(P6, M)*
+  Done 2026-10-24: macos/secretstore_mac.cpp, the login Keychain, one generic password per secret, each data folder its own service; `--secret-test` 12 checks on the Mac.
   Done when: the secret-test self-test passes on a Mac.
 - [x] **C06** *(Engine step SI1, with no sign-in window: signing in stays the cookie import.)* Signed-in plumbing for the steps that use the account: the session's cookies kept for music, www and s.youtube.com, each call sent what a browser sends its host; X-Goog-AuthUser from a copied request (0 otherwise); the account's own visitor id, and a brand channel's onBehalfOfUser, learned from a signed-in answer and kept with the cookies; CookieImport::toNetscape writing youtube.com's cookies (never google.com's) for yt-dlp *(P4, M)*
   Done when: --cookie-test and --ytm-session-test pass, signed-out requests byte for byte unchanged, and signed-out playback benchmarks unchanged. Not yet seen against the real YouTube Music: whether its answers carry the DATASYNC_ID, and whether a brand channel is then served (C02's live test).

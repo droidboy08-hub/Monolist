@@ -110,9 +110,11 @@ Rectangle {
         id: leftGroup
         anchors.left: parent.left
         // With the sidebar folded away this bar starts at the window's edge,
-        // where macOS keeps its traffic lights.
-        anchors.leftMargin: (root.buttonsAtLeft > 0 ? root.buttonsAtLeft + Theme.space2 : Theme.space8)
-                            + (root.showMenuButton ? Chrome.nativeButtonsInset : 0)
+        // where macOS keeps its traffic lights: past them by the inset, which
+        // has the gap after them in it.
+        anchors.leftMargin: root.showMenuButton && Chrome.nativeButtons
+                            ? Chrome.nativeButtonsInset
+                            : (root.buttonsAtLeft > 0 ? root.buttonsAtLeft + Theme.space2 : Theme.space8)
         anchors.verticalCenter: parent.verticalCenter
         spacing: Theme.space2
 

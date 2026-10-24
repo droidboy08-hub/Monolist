@@ -42,8 +42,15 @@ owner's iPhone app (AryaMusix / "Mediano", Swift, not in this repo).
    a time. Keep the source on a LOCAL disk: building from a network share (the
    old Parallels setup) was a large part of why work was slow.
 3. Run with logs: `$env:QT_FORCE_STDERR_LOGGING='1'; $env:MONOLIST_MPV_LOG='warn'`.
-4. macOS: `Monolist Player/scripts/setup-macos.sh`, then `build-macos.sh`
-   (Monolist.app, Xcode project). Mac-only code lives in `src/macos/`.
+4. macOS (the owner's MacBook Pro, Apple silicon, macOS 26; Homebrew's Qt
+   6.12, libmpv 0.41, FFmpeg 9): `Monolist Player/scripts/setup-macos.sh`
+   once, then `scripts/build-macos.sh --install` (Release, self-contained,
+   signed ad hoc, into /Applications). For quick work a Debug build:
+   `cmake -S "Monolist Player" -B "Monolist Player/build-dev" -G Ninja
+   -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH="$(brew --prefix qt);$(brew --prefix)"`
+   then `cmake --build ... --parallel 10` (about 4 minutes from clean on the
+   M-series, seconds after). Mac-only code lives in `src/macos/`. The clone
+   is HTTPS (no SSH keys on the Mac); `gh` is installed for pushing.
 5. Package and installer: `package-windows.ps1 -Installer` (needs
    `setup-windows.ps1 -Installer` once, for Inno Setup): Release build, a
    self-contained folder with real copies of the tools and the Vulkan loader,
@@ -91,6 +98,15 @@ owner's iPhone app (AryaMusix / "Mediano", Swift, not in this repo).
   A window launched behind others (2026-10-21) never fired QML Timers either, so
   `--effects-popup` (opened by an 800 ms Timer) shot with no popup; with
   `QSG_RENDER_LOOP=basic` in the environment it opened every time.
+- On the Mac: self-tests run with `QT_QPA_PLATFORM=offscreen` (no window),
+  and the Mac helpers check for the Cocoa platform before touching AppKit;
+  `--shot` works there and logs where the traffic lights are ("shot:
+  traffic lights at x,y wxh"), since Qt's picture leaves them out and the
+  shell has no Screen Recording permission for `screencapture`. The Keychain
+  test (`--secret-test`) and the login agent's (`--startup-test`) only ever
+  touch items for the scratch library. `--scrobble-kill-test` waits to be
+  killed by hand, and `--library-test`, `--queue-test`, `--rec-test` need an
+  argument (without one the app just starts).
 - Recommender checks (need the data): `--artist-test <EmbeddingData> <GraphData>`
   (baseline 17 graph / 5 sounds-like / 0 none, 0 leaks), `--graph-test` (22
   countries, 0 leaks), `--content-test <EmbeddingData> <report>` (0 of 19 and
@@ -330,11 +346,21 @@ them; written as Qs for 48 kHz, with the song's own rate's widths sent by the
 engine once the graph answers (`widthsAt`, `sendWidths`); measured in the
 shipped libmpv within 0.02 dB of the octave bands at 48, 44.1 and 22.05 kHz.
 The owner has not yet listened to the defaults on a real device (reverb
-strengths, High bass +6 vs +9, Studio clarity). Left for the macOS
-session: `macos/mediasession.mm` should publish
-`MPNowPlayingInfoPropertyPlaybackRate = playing ? Player.playbackRate : 0`
-(Windows' media controls already get it), and `--sound-test` should be run
-on a Mac (Homebrew's FFmpeg) before shipping the effects there.
+strengths, High bass +6 vs +9, Studio clarity). On the Mac (2026-10-24) Now
+Playing publishes the playback rate, and `--sound-test` (131) and
+`--sound-live-test` (115) pass against Homebrew's FFmpeg 9 and libmpv 0.41.
+
+The Mac (2026-10-24, the owner: "this project is finished for Windows, you
+have to work on the Mac version"): the Windows build is the reference
+design; the Mac's own parts are the Keychain store, opening at login (a
+LaunchAgent), the title bar (the traffic lights moved into the 64 px strip),
+the menu bar, the Dock icon choice (the M. kept as a third icon, the
+owner's), Mac wording in Settings, and the icons from the note. Left there:
+the Dock's icon while Monolist is closed (a dock tile plug-in), the Google
+sign-in window (WebView2 is Windows'; a WKWebView one would need the same
+rules as GoogleSignIn and Google may refuse it), font weights (G04: 88
+`Font.Bold`, which no bundled face is), and the decisions on Developer ID
+signing and Intel Macs.
 
 Waiting on the owner: the Last.fm key (C01); a live test of the YouTube account
 features with a spare account (C02-C04, see the checklist).
