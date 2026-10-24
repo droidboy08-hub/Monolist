@@ -34,11 +34,13 @@ class Library;
 //    days or for another country; an empty or failed answer is not asked
 //    again for 3 days;
 //  - one at a time, 3 s after the seed (a newer seed going first), 20 s and
-//    a random 0-5 s after the last answer, 30 an hour and 200 a day, counted
-//    across restarts (home.justPlayed.pace); at most 3 waiting, the newest
-//    first, the rest dropped;
+//    a random 0-5 s after the last answer (one dropped as stale too), 30 in
+//    any hour and 200 in any day, counted back from now across restarts
+//    (home.justPlayed.pace); at most 3 waiting, the newest first, the rest
+//    dropped;
 //  - never again at once after a failure: a rest of 15 min, then 1 h, then
-//    3 h, and 1 h after three empty answers in a row; the rows stay as kept;
+//    3 h, and 1 h after three empty answers in a row; the rows stay as kept.
+//    A 400 is a failure too: the country is not dropped for it;
 //  - nothing while an import runs, while the account rests, while the window
 //    is hidden, minimised or in the tray, or once quitting;
 //  - at launch, nothing for 15 s, then at most 3 for seeds with nothing kept.
@@ -146,10 +148,7 @@ private:
     };
     // The pacer's counts, kept in home.justPlayed.pace (UTC seconds).
     struct Pace {
-        qint64 hourStart = 0;
-        int hourCount = 0;
-        qint64 dayStart = 0;
-        int dayCount = 0;
+        QVector<qint64> sent;    // each look-up of the last day, oldest first
         qint64 restUntil = 0;
         int failStreak = 0;
         int emptyStreak = 0;
@@ -168,7 +167,15 @@ private:
     void pump();
     void send(const QString &videoId);
     void answered(const QString &videoId, const QList<InnerTube::Track> &tracks, const QString &error);
+    // An answer of an older generation, not used: only paced, and rested on.
+    void dropped(const QString &error);
+    // The next look-up no sooner than the gap (and the jitter) from now.
+    void spaceNext();
+    // One failure more in a row, and its rest.
+    void failed(const QString &error);
     void rest(qint64 ms, const QString &reason);
+    void pruneSent(qint64 nowSecs);
+    qint64 capWaitMs(qint64 atMs, qint64 windowSecs, int cap) const;
     void backfill();
     void loadPace();
     void savePace() const;

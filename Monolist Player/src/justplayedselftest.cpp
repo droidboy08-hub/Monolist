@@ -454,6 +454,12 @@ QJsonObject paceOf(Library *library)
     return QJsonDocument::fromJson(library->settingValue(QStringLiteral("home.justPlayed.pace")).toUtf8()).object();
 }
 
+// The look-ups the stored pace counts (those of the last day).
+int sentCount(Library *library)
+{
+    return int(paceOf(library).value(QLatin1String("sent")).toArray().size());
+}
+
 // How long the stored rest has to go, in seconds of the fake clock.
 qint64 restLeft(Library *library)
 {
@@ -577,6 +583,9 @@ int runJustPlayedSelfTest(Library *library)
         } else if (mode == QLatin1String("500")) {
             answer.status = 500;
             answer.body = R"({"error":{"code":500}})";
+        } else if (mode == QLatin1String("400")) {
+            answer.status = 400;
+            answer.body = R"({"error":{"code":400,"status":"FAILED_PRECONDITION"}})";
         } else if (mode == QLatin1String("html")) {
             answer.type = "text/html; charset=utf-8";
             answer.body = "<html><body>Our systems have detected unusual traffic from your computer network."
@@ -822,6 +831,35 @@ int runJustPlayedSelfTest(Library *library)
         waitUntil([&]() { return askedToday() == 4; }, 3000);
         t.check(askedToday() == 4, QStringLiteral("7  and it asks once the day is over"));
         waitUntil([&]() { return !nextDay->inFlight(); }, 3000);
+        nextDay.reset();
+
+        // counted back from now, not by the clock's hours: three asked
+        // across the end of one hour leave room for one, not three, at the
+        // start of the next
+        freshState();
+        timing = quick();
+        timing.hourCap = 3;
+        auto rolling = started(timing);
+        wire(tracker, rolling.get());
+        const int rollFrom = int(standIn.nexts().size());
+        const auto askedRolling = [&]() { return int(standIn.nexts().size()) - rollFrom; };
+        listen(tracker, makeId(QStringLiteral("rl"), 1), true, 46);
+        waitUntil([&]() { return askedRolling() == 1 && !rolling->inFlight(); }, 3000);
+        passMs(50 * 60 * 1000);
+        for (int k = 2; k <= 3; ++k) {
+            listen(tracker, makeId(QStringLiteral("rl"), k), true, 46);
+            waitUntil([&]() { return askedRolling() == k && !rolling->inFlight(); }, 3000);
+        }
+        passMs(15 * 60 * 1000);
+        listen(tracker, makeId(QStringLiteral("rl"), 4), true, 46);
+        waitUntil([&]() { return askedRolling() == 4 && !rolling->inFlight(); }, 3000);
+        listen(tracker, makeId(QStringLiteral("rl"), 5), true, 46);
+        pause(700);
+        t.check(askedRolling() == 4, QStringLiteral("7  any hour: at 65 min the first is an hour old, one more goes, then a wait"),
+                QString::number(askedRolling()));
+        passMs(50 * 60 * 1000);
+        waitUntil([&]() { return askedRolling() == 5 && !rolling->inFlight(); }, 3000);
+        t.check(askedRolling() == 5, QStringLiteral("7  until the two of 50 min are an hour old"));
     }
 
     // ------------------------------------------------ 8. failures: one try, then a rest
@@ -864,6 +902,30 @@ int runJustPlayedSelfTest(Library *library)
             // The rest over, for the next.
             passMs((failure.restSecs + 2) * 1000);
         }
+        // A 400 with a country set (YouTube wanting more of a signed-out
+        // /next): a failure like any other, not a reason to drop the country
+        // and ask again.
+        {
+            int regionDrops = 0;
+            InnerTube::setRegionRejectedHandler([&regionDrops](const QString &) { ++regionDrops; });
+            InnerTube::setRegion(QStringLiteral("IN"));
+            const QString id = makeId(QStringLiteral("fl"), 10);
+            modes.insert(id, QStringLiteral("400"));
+            listen(tracker, id, true, 46);
+            waitUntil([&]() { return standIn.nexts().contains(id) && !justPlayed->inFlight(); }, 4000);
+            pause(1600);
+            const qint64 left = restLeft(library);
+            t.check(standIn.nexts().count(id) == 1 && regionDrops == 0 && InnerTube::region() == QLatin1String("IN"),
+                    QStringLiteral("8  a 400 with a country set: exactly one attempt, and the country kept"),
+                    QStringLiteral("%1 attempts, %2 drops, region %3").arg(standIn.nexts().count(id)).arg(regionDrops)
+                        .arg(InnerTube::region()));
+            t.check(left > 180 * 60 - 30 && left <= 180 * 60 + 1, QStringLiteral("8  then a rest of 180 min"),
+                    QStringLiteral("%1 s").arg(left));
+            InnerTube::setRegion(QString());
+            InnerTube::setRegionRejectedHandler(nullptr);
+            rowsHeld = rowsHeld && signatureOf(justPlayed->rows()) == onScreen;
+            passMs((180 * 60 + 2) * 1000);
+        }
         // A refused connection: nobody listening on that port.
         {
             QTcpServer gone;
@@ -872,13 +934,12 @@ int runJustPlayedSelfTest(Library *library)
             gone.close();
             InnerTube::setTestServer(deadBase);
             const int asked = int(standIn.requests.size());
-            const int dayCount = paceOf(library).value(QLatin1String("dayCount")).toInt();
+            const int sent = sentCount(library);
             listen(tracker, makeId(QStringLiteral("fl"), 4), true, 46);
-            waitUntil([&]() { return paceOf(library).value(QLatin1String("failStreak")).toInt() == 4; }, 8000);
+            waitUntil([&]() { return paceOf(library).value(QLatin1String("failStreak")).toInt() == 5; }, 8000);
             pause(1600);
             const qint64 left = restLeft(library);
-            t.check(paceOf(library).value(QLatin1String("dayCount")).toInt() == dayCount + 1
-                        && int(standIn.requests.size()) == asked,
+            t.check(sentCount(library) == sent + 1 && int(standIn.requests.size()) == asked,
                     QStringLiteral("8  a refused connection: one attempt"));
             t.check(left > 180 * 60 - 30 && left <= 180 * 60 + 1, QStringLiteral("8  and a rest of 3 h again"),
                     QStringLiteral("%1 s").arg(left));
@@ -927,6 +988,37 @@ int runJustPlayedSelfTest(Library *library)
         waitUntil([&]() { return standIn.nexts().contains(later); }, 3000);
         t.check(standIn.nexts().contains(later), QStringLiteral("8  and is clamped to now + 24 h"));
         waitUntil([&]() { return !clamped->inFlight(); }, 3000);
+    }
+
+    // ------------------------------------------------ 8. a change of country mid-fetch
+    {
+        freshState();
+        ListenTracker tracker;
+        auto justPlayed = started(quick());
+        wire(tracker, justPlayed.get());
+        const QString id = makeId(QStringLiteral("rg"), 1);
+        delays.insert(id, 400);
+        listen(tracker, id, true, 46);
+        waitUntil([&]() { return justPlayed->inFlight(); }, 3000);
+        justPlayed->onRegionChanged();
+        QElapsedTimer clock;
+        clock.start();
+        qint64 droppedAt = 0;
+        qint64 againAt = 0;
+        waitUntil([&]() {
+            if (droppedAt == 0 && !justPlayed->inFlight())
+                droppedAt = clock.elapsed();
+            if (againAt == 0 && standIn.nexts().count(id) >= 2)
+                againAt = clock.elapsed();
+            return againAt > 0 && !justPlayed->inFlight();
+        }, 4000);
+        pause(100);
+        t.check(standIn.nexts().count(id) == 2 && radioRows(id) == 1,
+                QStringLiteral("8  the country changed mid-fetch: that answer dropped, the song asked again, once"),
+                QString::number(standIn.nexts().count(id)));
+        t.check(droppedAt > 0 && againAt - droppedAt >= 280,
+                QStringLiteral("8  and only the gap (300 ms here) after the answer dropped"),
+                QStringLiteral("%1 ms").arg(againAt - droppedAt));
     }
 
     // ------------------------------------------------ 9. empty answers
@@ -1296,6 +1388,79 @@ int runJustPlayedSelfTest(Library *library)
         }
         t.check(firstFour, QStringLiteral("18 another rotation keeps each seed row's first 4 cards"));
         t.check(signatureOf(first) != signatureOf(other), QStringLiteral("18 and does change the rest"));
+
+        // Two seeds of one cluster whose radios share songs: what S1 draws
+        // from its tail never reaches S2's first four.
+        const QString p = makeId(QStringLiteral("ov"), 1);
+        const QString q = makeId(QStringLiteral("ov"), 2);
+        const QVector<Rec::SessionSeed> overlapping{
+            seed(p, QStringLiteral("Over P"), QStringLiteral("Over Maker P"), now - 60),
+            seed(q, QStringLiteral("Over Q"), QStringLiteral("Over Maker Q"), now - 3600),
+        };
+        const QVector<Rec::RadioTrack> radioP = family(QStringLiteral("ovs"), QStringLiteral("Over Shared"), 14, 40);
+        const QHash<QString, QVector<Rec::RadioTrack>> shared{
+            { p, radioP }, { q, radioP.mid(4, 20) + family(QStringLiteral("ovq"), QStringLiteral("Over Own"), 14, 30) } };
+        QString headP;
+        QString headQ;
+        bool steady = true;
+        bool apart = true;
+        for (int visit = 1; visit <= 8; ++visit) {
+            Rec::SessionOptions drawn;
+            drawn.rotation = Rec::rotationFor(visit, 0);
+            const QVector<Rec::SessionRow> rows = Rec::buildSessionRows(overlapping, shared, now, drawn, nullptr);
+            const Rec::SessionRow *rowP = rowOfKind(rows, QStringLiteral("s1"));
+            const Rec::SessionRow *rowQ = rowOfKind(rows, QStringLiteral("s2"));
+            if (!rowP || !rowQ || rowQ->seedVideoId != q || rowP->items.size() < 4 || rowQ->items.size() < 4) {
+                steady = false;
+                break;
+            }
+            QStringList fourP;
+            QStringList fourQ;
+            for (int i = 0; i < 4; ++i) {
+                fourP << rowP->items.at(i).videoId;
+                fourQ << rowQ->items.at(i).videoId;
+            }
+            if (visit == 1) {
+                headP = fourP.join(QLatin1Char(','));
+                headQ = fourQ.join(QLatin1Char(','));
+            }
+            steady = steady && fourP.join(QLatin1Char(',')) == headP && fourQ.join(QLatin1Char(',')) == headQ;
+            QSet<QString> ids;
+            for (const Rec::SessionRow &row : rows) {
+                for (const Rec::RadioTrack &track : row.items) {
+                    apart = apart && !ids.contains(track.videoId);
+                    ids.insert(track.videoId);
+                }
+            }
+        }
+        t.check(steady, QStringLiteral("18 radios sharing songs: S1's and S2's first 4 the same on 8 visits"));
+        t.check(apart, QStringLiteral("18 and still no song in two rows"));
+
+        // The time it takes, with a couple of days' listening: 60 seeds of
+        // their own artists, 50 songs a radio, in six families that share
+        // artists (so clusters form).
+        QVector<Rec::SessionSeed> many;
+        QHash<QString, QVector<Rec::RadioTrack>> manyRadios;
+        for (int k = 0; k < 60; ++k) {
+            const QString id = makeId(QStringLiteral("tm"), k);
+            many.append(seed(id, QStringLiteral("Timed %1").arg(k), QStringLiteral("Timed Maker %1").arg(k), now - 600 * (k + 1),
+                             k % 3 != 0, k % 7 == 0, 1 + k % 4));
+            QVector<Rec::RadioTrack> radio = family(QStringLiteral("tf%1").arg(k % 6), QStringLiteral("Family %1").arg(k % 6), 10, 20);
+            radio += family(QStringLiteral("to") + QString::number(k).rightJustified(2, QLatin1Char('0')),
+                            QStringLiteral("Own %1").arg(k), 10, 30);
+            manyRadios.insert(id, radio);
+        }
+        Rec::SessionOptions timed;
+        timed.rotation = Rec::rotationFor(3, 0);
+        QElapsedTimer took;
+        took.start();
+        int builtRows = 0;
+        for (int run = 0; run < 5; ++run)
+            builtRows += int(Rec::buildSessionRows(many, manyRadios, now, timed, nullptr).size());
+        const double ms = double(took.nsecsElapsed()) / 1e6 / 5.0;
+        t.check(builtRows == 5 * 4 && ms < 40.0,
+                QStringLiteral("18 60 seeds with 50-song radios: the rows in %1 ms a build").arg(ms, 0, 'f', 1),
+                QStringLiteral("%1 rows").arg(builtRows));
     }
 
     // ------------------------------------------------ 19. clusters

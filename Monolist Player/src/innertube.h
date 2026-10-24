@@ -375,6 +375,12 @@ public:
     // be tied to anything. Off by default; set before the first request.
     void setCookieless(bool on) { m_cookieless = on; }
 
+    // A 400 on this object's calls is a failure like any other: the country
+    // is not dropped for it (send()), nor the call made again. For Home's
+    // just-played rows (JustPlayed), whose one look-up a song must stay one,
+    // and must never cost the user the country they chose.
+    void setKeepsRegion(bool on) { m_keepsRegion = on; }
+
     // For the self-tests only: every request goes to this address
     // ("http://127.0.0.1:<port>") instead of YouTube, and objects made
     // afterwards do not warm up. Empty is YouTube again.
@@ -701,6 +707,7 @@ private:
 
     QNetworkAccessManager *m_network;
     bool m_cookieless = false;
+    bool m_keepsRegion = false;
     Slot m_search;
     Slot m_suggest;
     Slot m_radio;

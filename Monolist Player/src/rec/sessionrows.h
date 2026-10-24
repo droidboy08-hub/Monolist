@@ -123,7 +123,9 @@ QVector<RadioTrack> eligibleItems(const QVector<RadioTrack> &radio, const QVecto
 // first, the rotation drawing between the top two; S3 the newest of the
 // heaviest cluster neither covers. The mix takes what they left, from up to
 // five seeds, two a cluster. No song is in two rows; each row's first four
-// stay put across rotations. Rows in reading order: s1, mix, s2, s3.
+// stay put across rotations, a seed row leaving out all that one before it
+// could have drawn (its first 24), not only what the draw took. Rows in
+// reading order: s1, mix, s2, s3.
 QVector<SessionRow> buildSessionRows(const QVector<SessionSeed> &seeds,
                                      const QHash<QString, QVector<RadioTrack>> &radios, qint64 nowSecs,
                                      const SessionOptions &options, const SessionFilter &unwanted);

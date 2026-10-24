@@ -1688,8 +1688,9 @@ void InnerTube::send(Client client, const QString &endpoint, const QJsonObject &
                 if (reply->error() != QNetworkReply::NoError) {
                     // A country YouTube Music does not serve is refused with
                     // 400, every time, for everything. Rather than look
-                    // broken, drop the country and ask again as the system.
-                    if (status == 400 && !g_region.isEmpty()) {
+                    // broken, drop the country and ask again as the system
+                    // (not on an object that keeps it: setKeepsRegion).
+                    if (status == 400 && !g_region.isEmpty() && !m_keepsRegion) {
                         const QString refused = g_region;
                         g_region.clear();
                         if (g_regionRejected)

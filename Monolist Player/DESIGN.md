@@ -414,8 +414,9 @@ nothing at all.
   should not lose, and "Based on your recent listening" between them: plain
   shelves with PLAY ALL, no strapline, no loading or error text; a row that
   cannot be filled is absent. Home shows a copy of them, taken on a visit, or
-  while the pointer is off them, nothing scrolls and no menu is open; the
-  content under the reader stays where it was, and nothing animates.
+  while the pointer is on nothing they would move, nothing scrolls and no
+  menu is open (a card turned down goes at once); the content under the
+  reader stays where it was, and nothing animates.
   *Why.* A row that changed under the pointer would play something other
   than what was clicked, and a page that rearranged itself mid-read would be
   the page moving, not the music.

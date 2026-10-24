@@ -10,11 +10,13 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QLoggingCategory>
 #include <QPointer>
 #include <QRandomGenerator>
 #include <QRegularExpression>
 #include <QSqlQuery>
 
+#include <algorithm>
 #include <cstdio>
 
 namespace {
@@ -167,6 +169,9 @@ JustPlayed::JustPlayed(QObject *parent)
     connect(&m_timer, &QTimer::timeout, this, &JustPlayed::pump);
     m_launchTimer.setSingleShot(true);
     connect(&m_launchTimer, &QTimer::timeout, this, &JustPlayed::backfill);
+    // A 400 is a failure here, rested like any: never a second /next for
+    // it, nor the user's country dropped (and Home refetched) on its say.
+    m_innerTube.setKeepsRegion(true);
 }
 
 JustPlayed::~JustPlayed()
@@ -199,33 +204,69 @@ void JustPlayed::storeSetting(const QString &key, const QString &value) const
 void JustPlayed::loadPace()
 {
     const QJsonObject pace = QJsonDocument::fromJson(setting(kPaceKey).toUtf8()).object();
-    m_pace.hourStart = qint64(pace.value(QLatin1String("hourStart")).toDouble());
-    m_pace.hourCount = pace.value(QLatin1String("hourCount")).toInt();
-    m_pace.dayStart = qint64(pace.value(QLatin1String("day")).toDouble());
-    m_pace.dayCount = pace.value(QLatin1String("dayCount")).toInt();
+    const qint64 nowSecs = now() / 1000;
+    m_pace = Pace();
+    if (pace.contains(QLatin1String("sent"))) {
+        for (const QJsonValue &value : pace.value(QLatin1String("sent")).toArray())
+            m_pace.sent.append(qint64(value.toDouble()));
+    } else {
+        // The first beta's fixed windows: their counts, as made when the
+        // windows began.
+        const int hourCount = pace.value(QLatin1String("hourCount")).toInt();
+        const int dayCount = pace.value(QLatin1String("dayCount")).toInt();
+        for (int i = 0; i < qMax(0, dayCount - hourCount); ++i)
+            m_pace.sent.append(qint64(pace.value(QLatin1String("day")).toDouble()));
+        for (int i = 0; i < hourCount; ++i)
+            m_pace.sent.append(qint64(pace.value(QLatin1String("hourStart")).toDouble()));
+    }
     m_pace.restUntil = qint64(pace.value(QLatin1String("restUntil")).toDouble());
     m_pace.failStreak = pace.value(QLatin1String("failStreak")).toInt();
     m_pace.emptyStreak = pace.value(QLatin1String("emptyStreak")).toInt();
     // A clock that ran ahead (2026-10-21) must not stop the asking for days:
-    // a rest ends a day from now at the latest, and a window that would
-    // start later than now starts now, its count kept.
-    const qint64 nowSecs = now() / 1000;
+    // a rest ends a day from now at the latest, and a look-up dated later
+    // than now counts as made now.
     m_pace.restUntil = qMin(m_pace.restUntil, nowSecs + 24 * 3600);
-    if (m_pace.hourStart > nowSecs)
-        m_pace.hourStart = nowSecs;
-    if (m_pace.dayStart > nowSecs)
-        m_pace.dayStart = nowSecs;
+    for (qint64 &at : m_pace.sent)
+        at = qMin(at, nowSecs);
+    std::sort(m_pace.sent.begin(), m_pace.sent.end());
+    pruneSent(nowSecs);
+}
+
+// The look-ups of the last 24 hours, and no more of them than a cap counts.
+void JustPlayed::pruneSent(qint64 nowSecs)
+{
+    while (!m_pace.sent.isEmpty() && nowSecs - m_pace.sent.constFirst() >= 24 * 3600)
+        m_pace.sent.removeFirst();
+    const int kept = qMax(1, qMax(m_timing.hourCap, m_timing.dayCap));
+    if (m_pace.sent.size() > kept)
+        m_pace.sent.remove(0, m_pace.sent.size() - kept);
+}
+
+// How long until one more look-up fits under `cap` in the last
+// `windowSecs`: 0 when it does now.
+qint64 JustPlayed::capWaitMs(qint64 atMs, qint64 windowSecs, int cap) const
+{
+    const qint64 nowSecs = atMs / 1000;
+    int inside = 0;
+    for (const qint64 sent : m_pace.sent)
+        inside += nowSecs - sent < windowSecs ? 1 : 0;
+    if (inside < cap)
+        return 0;
+    if (cap <= 0)
+        return m_timing.recheckMs;
+    // Once the oldest of the newest `cap` is a window old.
+    return (m_pace.sent.at(m_pace.sent.size() - cap) + windowSecs) * 1000 - atMs;
 }
 
 void JustPlayed::savePace() const
 {
     if (m_quitting)
         return;
+    QJsonArray sent;
+    for (const qint64 at : m_pace.sent)
+        sent.append(at);
     const QJsonObject pace{
-        { QStringLiteral("hourStart"), m_pace.hourStart },
-        { QStringLiteral("hourCount"), m_pace.hourCount },
-        { QStringLiteral("day"), m_pace.dayStart },
-        { QStringLiteral("dayCount"), m_pace.dayCount },
+        { QStringLiteral("sent"), sent },
         { QStringLiteral("restUntil"), m_pace.restUntil },
         { QStringLiteral("failStreak"), m_pace.failStreak },
         { QStringLiteral("emptyStreak"), m_pace.emptyStreak }
@@ -338,10 +379,23 @@ void JustPlayed::visit()
 
 void JustPlayed::onRegionChanged()
 {
-    // An answer for the old country is still on its way: dropped. What is
-    // kept for it is shown, and asked again for the newest seed.
+    // An answer for the old country still on its way is dropped (the next
+    // waits its turn after it all the same), and that seed is asked again;
+    // what is kept for the old country is shown, and asked again for the
+    // newest seed.
     ++m_generation;
     recompose();
+    if (!m_enabled || m_quitting)
+        return;
+    const QString dropped = m_inFlight;
+    if (m_hasLive && m_live.videoId != dropped && wantsFetch(m_live.videoId, /*newest=*/true))
+        enqueue(m_live.videoId);
+    if (!dropped.isEmpty()) {
+        m_queue.removeAll(dropped);
+        m_queue.prepend(dropped);
+        while (m_queue.size() > kMaxQueue)
+            m_queue.removeLast();
+    }
 }
 
 // ------------------------------------------------------------------- seeds
@@ -651,6 +705,8 @@ void JustPlayed::noteRadio(const QString &seed, const QList<InnerTube::Track> &t
 
 void JustPlayed::logOverlaps(const QString &videoId)
 {
+    if (!QLoggingCategory::defaultCategory()->isDebugEnabled())
+        return;
     const QVector<Rec::RadioTrack> mine = m_radios.value(videoId).tracks;
     if (mine.isEmpty())
         return;
@@ -707,18 +763,10 @@ void JustPlayed::pump()
     const qint64 nowSecs = at / 1000;
     qint64 wait = qMax(qMax(m_launchUntil, m_debounceUntil), m_nextAllowedAt) - at;
     wait = qMax(wait, m_pace.restUntil * 1000 - at);
-    if (m_pace.hourStart > nowSecs || nowSecs - m_pace.hourStart >= 3600) {
-        m_pace.hourStart = nowSecs;
-        m_pace.hourCount = 0;
-    }
-    if (m_pace.dayStart > nowSecs || nowSecs - m_pace.dayStart >= 24 * 3600) {
-        m_pace.dayStart = nowSecs;
-        m_pace.dayCount = 0;
-    }
-    if (m_pace.hourCount >= m_timing.hourCap)
-        wait = qMax(wait, (m_pace.hourStart + 3600) * 1000 - at);
-    if (m_pace.dayCount >= m_timing.dayCap)
-        wait = qMax(wait, (m_pace.dayStart + 24 * 3600) * 1000 - at);
+    // 30 in any hour and 200 in any day, counted back from now.
+    pruneSent(nowSecs);
+    wait = qMax(wait, capWaitMs(at, 3600, m_timing.hourCap));
+    wait = qMax(wait, capWaitMs(at, 24 * 3600, m_timing.dayCap));
     if (wait > 0) {
         m_timer.start(int(qBound<qint64>(1, wait, qMax<qint64>(1, m_timing.recheckMs))));
         return;
@@ -734,8 +782,9 @@ void JustPlayed::send(const QString &videoId)
         return;
     }
     m_inFlight = videoId;
-    m_pace.hourCount += 1;
-    m_pace.dayCount += 1;
+    const qint64 nowSecs = now() / 1000;
+    m_pace.sent.append(nowSecs);
+    pruneSent(nowSecs);
     savePace();
     const quint64 generation = m_generation;
     // Signed out, no cookies (setCookieless), no slot and no second try.
@@ -747,7 +796,7 @@ void JustPlayed::send(const QString &videoId)
                 return;
             self->m_inFlight.clear();
             if (generation != self->m_generation) {
-                self->pump();
+                self->dropped(error);
                 return;
             }
             self->answered(videoId, tracks, error);
@@ -755,10 +804,34 @@ void JustPlayed::send(const QString &videoId)
         /*retries=*/0);
 }
 
+void JustPlayed::spaceNext()
+{
+    m_nextAllowedAt = now() + m_timing.gapMs
+                      + QRandomGenerator::global()->bounded(int(qMax<qint64>(0, m_timing.jitterMs)) + 1);
+}
+
+void JustPlayed::failed(const QString &error)
+{
+    m_pace.failStreak += 1;
+    const QList<qint64> &rests = m_timing.restsMs;
+    const qint64 ms = rests.isEmpty() ? 0 : rests.at(qMin(m_pace.failStreak, int(rests.size())) - 1);
+    rest(ms, error);
+}
+
+void JustPlayed::dropped(const QString &error)
+{
+    // Not wanted now (another country, or switched off and on), but asked
+    // all the same: the next waits its turn, and a refusal rests as any.
+    spaceNext();
+    if (!error.isEmpty() && error != InnerTube::noSongsError())
+        failed(error);
+    savePace();
+    pump();
+}
+
 void JustPlayed::answered(const QString &videoId, const QList<InnerTube::Track> &tracks, const QString &error)
 {
-    const qint64 at = now();
-    m_nextAllowedAt = at + m_timing.gapMs + QRandomGenerator::global()->bounded(int(qMax<qint64>(0, m_timing.jitterMs)) + 1);
+    spaceNext();
     QString title = seedTitle(videoId);
     // A seed a newer one has taken the place of: named as its radio names it.
     for (qsizetype i = 0; title.isEmpty() && i < tracks.size(); ++i) {
@@ -785,11 +858,8 @@ void JustPlayed::answered(const QString &videoId, const QList<InnerTube::Track> 
         }
     } else {
         // No retry: a rest, longer each time in a row.
-        m_pace.failStreak += 1;
         storeRadio(videoId, {}, false);
-        const QList<qint64> &rests = m_timing.restsMs;
-        const qint64 ms = rests.isEmpty() ? 0 : rests.at(qMin(m_pace.failStreak, int(rests.size())) - 1);
-        rest(ms, error);
+        failed(error);
     }
     savePace();
     recompose();

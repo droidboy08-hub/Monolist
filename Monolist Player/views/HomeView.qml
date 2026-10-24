@@ -30,9 +30,10 @@ import "../components"
 // filtered out. A row with nothing to show is left out, saying nothing.
 //
 // The rows from the songs just heard are a copy (sessionShown), taken again
-// on a visit, or while the pointer is off them, the page is still and no
-// menu is open, so they never change under the reader; and when the reader
-// is below them, the page keeps what is in view where it was.
+// on a visit, or while the pointer is on nothing they would move, the page
+// is still and no menu is open, so they never change under the reader; and
+// when the reader is below them, the page keeps what is in view where it
+// was.
 ScrollPage {
     id: root
 
@@ -52,6 +53,9 @@ ScrollPage {
     property bool sessionPending: false
     // A menu is open over the page (Main): nothing moves under it.
     property bool holdUpdates: false
+    // Now Playing is over the page, or the window is out of sight (Main):
+    // nothing is asked for what the page would show.
+    property bool covered: false
     readonly property bool session: JustPlayed.enabled && sessionShown.length > 0
     function sessionRow(kind) {
         if (!JustPlayed.enabled)
@@ -70,32 +74,79 @@ ScrollPage {
     readonly property bool hasMix: mixRow !== null
     readonly property bool hasS2: s2Row !== null
     readonly property bool hasS3: s3Row !== null
-    // The pointer is on one of those rows.
-    readonly property bool sessionHovered: s1Slot.hovered || mixSlot.hovered || s2Slot.hovered || s3Slot.hovered
+    // Where a part of the page is, shown or not: its own place, or where
+    // the next part shown starts, which is where it would appear.
+    function placeOf(part) {
+        const parts = column.children
+        let i = 0
+        while (i < parts.length && parts[i] !== part)
+            ++i
+        for (; i < parts.length; ++i) {
+            if (parts[i].visible && parts[i].width > 0 && parts[i].height > 0)
+                return parts[i].y
+        }
+        return column.height
+    }
+    // The stretch a new copy of the rows can move: from where the first of
+    // them is (or would be) to where what follows the last of them starts.
+    readonly property real sessionTop: placeOf(s1Slot)
+    readonly property real sessionEnd: placeOf(moodsPart)
+    // The pointer is on something a new copy would move: in that stretch or
+    // below it, while it reaches into the page in view. (Wholly above the
+    // view, keepStill holds what is in view.)
+    readonly property bool sessionHovered: pageHover.hovered && contentY < sessionEnd
+                                           && contentY + pageHover.point.position.y >= sessionTop
+
+    // The row of the copy shown that `row` is, card for card, if any.
+    function shownAs(row) {
+        for (let i = 0; i < sessionShown.length; ++i) {
+            const was = sessionShown[i]
+            if (was.key !== row.key || was.title !== row.title || was.items.length !== row.items.length)
+                continue
+            let same = true
+            for (let k = 0; same && k < row.items.length; ++k)
+                same = was.items[k].videoId === row.items[k].videoId
+            if (same)
+                return was
+        }
+        return null
+    }
 
     // JustPlayed's rows taken as the ones shown, unless the reader is on
     // them (`force`: a visit, where nothing is being read yet). Below them,
     // the page moves by what changed above, in the same frame, so what is in
-    // view stays where it is (keepStill).
+    // view stays where it is (keepStill). A row that has not changed stays
+    // the one shown, so its shelf stays as the reader left it.
     function commitSession(force) {
         if (!force && root.visible && (root.sessionHovered || root.scrolling || root.moving || root.holdUpdates)) {
             sessionPending = true
             return
         }
         sessionPending = false
+        sessionTurnedDown = false
         const rows = JustPlayed.enabled ? JustPlayed.rows : []
-        if (rows.length === 0 && sessionShown.length === 0)
+        const next = []
+        let same = rows.length === sessionShown.length
+        for (let i = 0; i < rows.length; ++i) {
+            const kept = shownAs(rows[i])
+            next.push(kept !== null ? kept : rows[i])
+            same = same && kept === sessionShown[i]
+        }
+        if (same)
             return
-        const anchor = contentY > s1Slot.y ? anchorAt(contentY) : null
+        const anchor = contentY > sessionTop ? anchorAt(contentY) : null
         stillAnchor = anchor
         stillY = anchor ? anchor.y : 0
-        sessionShown = rows
+        sessionShown = next
         mixGrid.forceLayout()
         column.forceLayout()
         if (anchor)
             stillRelease.restart()
     }
-    function tryCommit() { commitSession(false) }
+    // A card turned down from its menu goes at once, wherever the pointer is:
+    // the reader asked for it to go.
+    property bool sessionTurnedDown: false
+    function tryCommit() { commitSession(sessionTurnedDown) }
 
     // The part kept where it was while the page settles: a row's shelf
     // lays itself out a frame after it is shown, and Made for you can change
@@ -136,6 +187,15 @@ ScrollPage {
         target: JustPlayed
         function onRowsChanged() { Qt.callLater(root.tryCommit) }
         function onEnabledChanged() { Qt.callLater(root.tryCommit) }
+    }
+    // JustPlayed has the rows again by the time this is run (Recs tells it
+    // first, in main.cpp); unchanged, the commit changes nothing.
+    Connections {
+        target: Recs
+        function onTurnDownsChanged() {
+            root.sessionTurnedDown = true
+            Qt.callLater(root.tryCommit)
+        }
     }
     // Tried again once the reader has left the rows or the page is still. A
     // moment after, so that the pointer is back over what it was over when
@@ -373,7 +433,10 @@ ScrollPage {
                 Recs.wantCover(rows[i])
         }
     }
-    onMixesChanged: if (visible) askMixCovers()
+    // Asked for the page in front, and once it is again (revisit, or here):
+    // never for mixes built behind Now Playing or out of sight.
+    onMixesChanged: if (visible && !covered) askMixCovers()
+    onCoveredChanged: if (visible && !covered) askMixCovers()
 
     // — More like —
     readonly property var moreLikeCards: Catalog.moreLike.items !== undefined ? Catalog.moreLike.items : []
@@ -429,14 +492,19 @@ ScrollPage {
                               card.primaryArtist ? card.primaryArtist : "")
     }
 
-    // More like …'s artist: while Home follows what you play, the one heard
-    // most lately whose page YouTube Music has (JustPlayed), a song counted
-    // once a day; otherwise the one played most.
+    // More like …'s artist: while the songs just heard have rows, the one
+    // heard most lately whose page YouTube Music has (JustPlayed), else the
+    // one played most with a song counted once a day, else the one played
+    // most; with no such rows, the one played most, as before them.
     function loadMoreLike() {
-        if (JustPlayed.enabled)
-            Catalog.loadMoreLikeFrom(JustPlayed.moreLikeCandidates.concat([{ name: Library.topArtist(true), browseId: "" }]))
-        else
+        if (JustPlayed.enabled && JustPlayed.hasRows) {
+            const damped = Library.topArtist(true)
+            const most = Library.topArtist()
+            Catalog.loadMoreLikeFrom(JustPlayed.moreLikeCandidates.concat([{ name: damped, browseId: "" },
+                                                                           { name: most, browseId: "" }]))
+        } else {
             Catalog.loadMoreLike(Library.topArtist())
+        }
     }
 
     // A visit: the page opened, made at launch, or Now Playing closed over
@@ -526,7 +594,6 @@ ScrollPage {
         property var row: null
         property int number: 0
         property bool ruled: false
-        readonly property bool hovered: slotHover.hovered
 
         visible: row !== null && root.shows("songs")
         width: column.width
@@ -549,10 +616,17 @@ ScrollPage {
             origin: "home"
             onCardActivated: function(card) { root.openCard(card) }
         }
+    }
 
-        // Only to know that the reader is here (commitSession): it takes
-        // nothing from what is under it.
-        HoverHandler { id: slotHover }
+    // Only to know where the pointer is on the page (sessionHovered). Over
+    // the page, not in it, so nothing on the page can keep it from being
+    // told; it takes no presses and no wheel, and blocks no hover.
+    Item {
+        parent: root
+        anchors.fill: parent
+        z: 2
+
+        HoverHandler { id: pageHover }
     }
 
     Column {
@@ -806,6 +880,7 @@ ScrollPage {
 
         // — Moods & genres: a way in rather than a section, so not numbered —
         Item {
+            id: moodsPart
             visible: Catalog.moods.length > 0 && !root.filtered
             width: parent.width
             height: visible ? moodStrip.implicitHeight + Theme.space8 : 0

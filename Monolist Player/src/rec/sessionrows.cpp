@@ -85,27 +85,133 @@ QString seenKey(quint64 key)
     return QLatin1Char('#') + QString::number(key);
 }
 
-void claim(QSet<QString> &seen, const QVector<RadioTrack> &items)
+// A radio's song with its lead artist, its song key and whether it may be
+// offered at all (not turned down, suitable), worked out once a build: they
+// take a regular expression or two each, and a build looks at the same
+// radios again and again.
+struct Pick {
+    const RadioTrack *track = nullptr;
+    QString lead;
+    quint64 key = 0;
+    bool offered = true;
+};
+
+QVector<Pick> keyed(const QVector<RadioTrack> &radio, const SessionOptions &options, const SessionFilter &unwanted)
 {
-    for (const RadioTrack &track : items) {
-        seen.insert(track.videoId);
-        seen.insert(seenKey(songKey(track.title, track.artist, radioLeadKey(track))));
+    QVector<Pick> picks;
+    picks.reserve(radio.size());
+    for (const RadioTrack &track : radio) {
+        Pick pick;
+        pick.track = &track;
+        pick.lead = radioLeadKey(track);
+        pick.key = songKey(track.title, track.artist, pick.lead);
+        pick.offered = !(unwanted && unwanted(track.videoId, track.title, track.artist))
+                       && suitableForSuggestion(track.title, track.artist, options.hideExplicit);
+        picks.append(pick);
     }
+    return picks;
+}
+
+// The seeds' own songs, which no row offers: by id and by song.
+struct SeedSongs {
+    QSet<QString> ids;
+    QSet<quint64> keys;
+};
+
+SeedSongs seedSongs(const QVector<SessionSeed> &seeds)
+{
+    SeedSongs songs;
+    for (const SessionSeed &seed : seeds) {
+        songs.ids.insert(seed.videoId);
+        songs.keys.insert(songKey(seed.title, seed.artist, seed.leadKey));
+    }
+    return songs;
+}
+
+// eligibleItems, on a radio already keyed.
+QVector<Pick> eligibleFrom(const QVector<Pick> &radio, const SeedSongs &seeds, const SessionOptions &options,
+                           const QSet<QString> &seen)
+{
+    QVector<Pick> items;
+    QSet<QString> ids;
+    QSet<quint64> keys;
+    QHash<QString, int> perArtist;
+    for (const Pick &pick : radio) {
+        const RadioTrack &track = *pick.track;
+        if (track.videoId.isEmpty() || track.title.isEmpty())
+            continue;
+        if (seeds.ids.contains(track.videoId) || options.recentHeard.contains(track.videoId)
+            || seen.contains(track.videoId) || ids.contains(track.videoId))
+            continue;
+        if (seeds.keys.contains(pick.key) || keys.contains(pick.key) || seen.contains(seenKey(pick.key)))
+            continue;
+        if (!pick.offered)
+            continue;
+        if (!pick.lead.isEmpty() && perArtist.value(pick.lead) >= options.perArtist)
+            continue;
+        perArtist[pick.lead] += 1;
+        ids.insert(track.videoId);
+        keys.insert(pick.key);
+        items.append(pick);
+    }
+    return items;
+}
+
+void claim(QSet<QString> &seen, const QVector<Pick> &items)
+{
+    for (const Pick &pick : items) {
+        seen.insert(pick.track->videoId);
+        seen.insert(seenKey(pick.key));
+    }
+}
+
+QVector<RadioTrack> tracksOf(const QVector<Pick> &picks)
+{
+    QVector<RadioTrack> tracks;
+    tracks.reserve(picks.size());
+    for (const Pick &pick : picks)
+        tracks.append(*pick.track);
+    return tracks;
 }
 
 // A seed row's songs: 12 drawn from the first 24 it could offer, the first 4
 // always.
-QVector<RadioTrack> drawRow(const QVector<RadioTrack> &eligible, int wanted, quint64 rotation)
+QVector<Pick> drawRow(const QVector<Pick> &eligible, int wanted, quint64 rotation)
 {
-    const QVector<RadioTrack> pool = eligible.mid(0, kDrawFrom);
+    const QVector<Pick> pool = eligible.mid(0, kDrawFrom);
     QVector<quint64> keys;
     keys.reserve(pool.size());
-    for (const RadioTrack &track : pool)
-        keys.append(idKey(track.videoId));
-    QVector<RadioTrack> items;
+    for (const Pick &pick : pool)
+        keys.append(idKey(pick.track->videoId));
+    QVector<Pick> items;
     for (const int at : rotatedPicks(keys, wanted, rotation, kKeepFirst))
         items.append(pool.at(at));
     return items;
+}
+
+// The distinct lead artists of a radio's first 25 songs.
+QSet<QString> leadArtists(const QVector<RadioTrack> &radio)
+{
+    QSet<QString> keys;
+    for (int i = 0; i < std::min<int>(kOverlapTracks, int(radio.size())); ++i) {
+        const QString key = radioLeadKey(radio.at(i));
+        if (!key.isEmpty())
+            keys.insert(key);
+    }
+    return keys;
+}
+
+double overlapOf(const QSet<QString> &first, const QSet<QString> &second)
+{
+    const qsizetype smaller = std::min(first.size(), second.size());
+    if (smaller == 0)
+        return 0.0;
+    const QSet<QString> &fewer = first.size() <= second.size() ? first : second;
+    const QSet<QString> &more = first.size() <= second.size() ? second : first;
+    qsizetype shared = 0;
+    for (const QString &key : fewer)
+        shared += more.contains(key) ? 1 : 0;
+    return double(shared) / double(smaller);
 }
 
 int findRoot(QVector<int> &parent, int i)
@@ -181,42 +287,31 @@ QString radioLeadKey(const RadioTrack &track)
 
 double artistOverlap(const QVector<RadioTrack> &a, const QVector<RadioTrack> &b)
 {
-    const auto artists = [](const QVector<RadioTrack> &radio) {
-        QSet<QString> keys;
-        for (int i = 0; i < std::min<int>(kOverlapTracks, int(radio.size())); ++i) {
-            const QString key = radioLeadKey(radio.at(i));
-            if (!key.isEmpty())
-                keys.insert(key);
-        }
-        return keys;
-    };
-    const QSet<QString> first = artists(a);
-    const QSet<QString> second = artists(b);
-    const qsizetype smaller = std::min(first.size(), second.size());
-    if (smaller == 0)
-        return 0.0;
-    return double(QSet<QString>(first).intersect(second).size()) / double(smaller);
+    return overlapOf(leadArtists(a), leadArtists(b));
 }
 
 QVector<int> clusterSeeds(const QVector<SessionSeed> &seeds, const QHash<QString, QVector<RadioTrack>> &radios)
 {
     const int count = int(seeds.size());
+    // Each seed's artists once, not once a pair: 60 seeds are 1770 pairs.
+    QVector<QSet<QString>> artists(count);
+    for (int i = 0; i < count; ++i) {
+        const auto radio = radios.constFind(seeds.at(i).videoId);
+        if (radio != radios.cend())
+            artists[i] = leadArtists(*radio);
+    }
     QVector<int> parent(count);
     std::iota(parent.begin(), parent.end(), 0);
     for (int i = 0; i < count; ++i) {
-        const QVector<RadioTrack> radioI = radios.value(seeds.at(i).videoId);
         for (int j = i + 1; j < count; ++j) {
-            bool join = !seeds.at(i).leadKey.isEmpty() && seeds.at(i).leadKey == seeds.at(j).leadKey;
-            if (!join && !radioI.isEmpty()) {
-                const auto other = radios.constFind(seeds.at(j).videoId);
-                join = other != radios.cend() && !other->isEmpty() && artistOverlap(radioI, *other) >= kClusterOverlap;
-            }
-            if (join) {
-                const int a = findRoot(parent, i);
-                const int b = findRoot(parent, j);
-                if (a != b)
-                    parent[std::max(a, b)] = std::min(a, b);
-            }
+            const int a = findRoot(parent, i);
+            const int b = findRoot(parent, j);
+            if (a == b)
+                continue;   // together already
+            const bool join = (!seeds.at(i).leadKey.isEmpty() && seeds.at(i).leadKey == seeds.at(j).leadKey)
+                              || overlapOf(artists.at(i), artists.at(j)) >= kClusterOverlap;
+            if (join)
+                parent[std::max(a, b)] = std::min(a, b);
         }
     }
     QVector<int> clusters(count);
@@ -267,38 +362,7 @@ QVector<RadioTrack> eligibleItems(const QVector<RadioTrack> &radio, const QVecto
                                   const SessionOptions &options, const SessionFilter &unwanted,
                                   const QSet<QString> &seen)
 {
-    QSet<QString> seedIds;
-    QSet<quint64> seedKeys;
-    for (const SessionSeed &seed : seeds) {
-        seedIds.insert(seed.videoId);
-        seedKeys.insert(songKey(seed.title, seed.artist, seed.leadKey));
-    }
-    QVector<RadioTrack> items;
-    QSet<QString> ids;
-    QSet<quint64> keys;
-    QHash<QString, int> perArtist;
-    for (const RadioTrack &track : radio) {
-        if (track.videoId.isEmpty() || track.title.isEmpty())
-            continue;
-        if (seedIds.contains(track.videoId) || options.recentHeard.contains(track.videoId)
-            || seen.contains(track.videoId) || ids.contains(track.videoId))
-            continue;
-        const QString lead = radioLeadKey(track);
-        const quint64 key = songKey(track.title, track.artist, lead);
-        if (seedKeys.contains(key) || keys.contains(key) || seen.contains(seenKey(key)))
-            continue;
-        if (unwanted && unwanted(track.videoId, track.title, track.artist))
-            continue;
-        if (!suitableForSuggestion(track.title, track.artist, options.hideExplicit))
-            continue;
-        if (!lead.isEmpty() && perArtist.value(lead) >= options.perArtist)
-            continue;
-        perArtist[lead] += 1;
-        ids.insert(track.videoId);
-        keys.insert(key);
-        items.append(track);
-    }
-    return items;
+    return tracksOf(eligibleFrom(keyed(radio, options, unwanted), seedSongs(seeds), options, seen));
 }
 
 QVector<SessionRow> buildSessionRows(const QVector<SessionSeed> &seeds,
@@ -307,21 +371,37 @@ QVector<SessionRow> buildSessionRows(const QVector<SessionSeed> &seeds,
 {
     const int count = int(seeds.size());
     const QVector<int> clusters = clusterSeeds(seeds, radios);
-    QSet<QString> seen;
-    const auto usable = [&](int i) {
-        const auto radio = radios.constFind(seeds.at(i).videoId);
-        if (radio == radios.cend() || radio->isEmpty())
-            return QVector<RadioTrack>();
-        return eligibleItems(*radio, seeds, options, unwanted, seen);
+    const SeedSongs seedOwn = seedSongs(seeds);
+    // Each seed's radio keyed the first time a row looks at it.
+    QVector<QVector<Pick>> radioOf(count);
+    QVector<bool> keyedYet(count, false);
+    // Two claims. What a seed row could show whatever the rotation (the
+    // first 24 it could offer) is left out of the seed rows after it, so a
+    // draw in one never moves another's first four from one visit to the
+    // next; what the rows do show is left out of the mix.
+    QSet<QString> pooled;
+    QSet<QString> shown;
+    const auto usable = [&](int i, const QSet<QString> &seen) {
+        if (!keyedYet.at(i)) {
+            keyedYet[i] = true;
+            const auto radio = radios.constFind(seeds.at(i).videoId);
+            if (radio != radios.cend())
+                radioOf[i] = keyed(*radio, options, unwanted);
+        }
+        if (radioOf.at(i).isEmpty())
+            return QVector<Pick>();
+        return eligibleFrom(radioOf.at(i), seedOwn, options, seen);
     };
-    const auto seedRow = [&](const QString &kind, int i, const QVector<RadioTrack> &eligible) {
+    const auto seedRow = [&](const QString &kind, int i, const QVector<Pick> &eligible) {
         SessionRow row;
         row.kind = kind;
         row.seedVideoId = seeds.at(i).videoId;
         row.key = kind + QLatin1Char(':') + row.seedVideoId;
         row.title = moreLikeTitle(seeds.at(i));
-        row.items = drawRow(eligible, options.perRow, options.rotation);
-        claim(seen, row.items);
+        const QVector<Pick> picks = drawRow(eligible, options.perRow, options.rotation);
+        claim(pooled, eligible.mid(0, kDrawFrom));
+        claim(shown, picks);
+        row.items = tracksOf(picks);
         return row;
     };
 
@@ -329,7 +409,7 @@ QVector<SessionRow> buildSessionRows(const QVector<SessionSeed> &seeds,
     int s1 = -1;
     SessionRow rowS1;
     for (int i = 0; i < count && s1 < 0; ++i) {
-        const QVector<RadioTrack> eligible = usable(i);
+        const QVector<Pick> eligible = usable(i, pooled);
         if (eligible.size() >= options.minRow) {
             s1 = i;
             rowS1 = seedRow(QStringLiteral("s1"), i, eligible);
@@ -354,11 +434,11 @@ QVector<SessionRow> buildSessionRows(const QVector<SessionSeed> &seeds,
             else if (seeds.at(j).leadKey != seeds.at(s1).leadKey)
                 tiers[chosen ? 2 : 3].append(j);
         }
-        QVector<QPair<int, QVector<RadioTrack>>> found;
+        QVector<QPair<int, QVector<Pick>>> found;
         for (int tier = 0; tier < 4 && found.isEmpty(); tier += 2) {
             const QVector<int> pool = tiers[tier] + tiers[tier + 1];
             for (const int j : pool) {
-                const QVector<RadioTrack> eligible = usable(j);
+                const QVector<Pick> eligible = usable(j, pooled);
                 if (eligible.size() >= options.minRow)
                     found.append({ j, eligible });
                 if (found.size() == 2)
@@ -395,7 +475,7 @@ QVector<SessionRow> buildSessionRows(const QVector<SessionSeed> &seeds,
             for (int i = 0; i < count && s3 < 0; ++i) {
                 if (clusters.at(i) != cluster || nowSecs - seeds.at(i).lastAt > kAnchorSecs)
                     continue;
-                const QVector<RadioTrack> eligible = usable(i);
+                const QVector<Pick> eligible = usable(i, pooled);
                 if (eligible.size() >= options.minRow) {
                     s3 = i;
                     rowS3 = seedRow(QStringLiteral("s3"), i, eligible);
@@ -410,19 +490,19 @@ QVector<SessionRow> buildSessionRows(const QVector<SessionSeed> &seeds,
     // newest seeds, two a cluster at most, taken in turn (S1 twice a turn).
     SessionRow mix;
     {
-        QVector<QVector<RadioTrack>> lists;
+        QVector<QVector<Pick>> lists;
         QHash<int, int> perCluster;
         const auto take = [&](int i) {
             if (lists.size() >= kMixSeeds || perCluster.value(clusters.at(i)) >= kMixPerCluster)
                 return;
-            const QVector<RadioTrack> eligible = usable(i);
+            const QVector<Pick> eligible = usable(i, shown);
             if (eligible.isEmpty())
                 return;
-            const QVector<RadioTrack> pool = eligible.mid(0, 2 * options.mixRow);
+            const QVector<Pick> pool = eligible.mid(0, 2 * options.mixRow);
             QVector<quint64> keys;
-            for (const RadioTrack &track : pool)
-                keys.append(idKey(track.videoId));
-            QVector<RadioTrack> drawn;
+            for (const Pick &pick : pool)
+                keys.append(idKey(pick.track->videoId));
+            QVector<Pick> drawn;
             for (const int at : rotatedPicks(keys, options.mixRow, options.rotation))
                 drawn.append(pool.at(at));
             perCluster[clusters.at(i)] += 1;
@@ -441,36 +521,33 @@ QVector<SessionRow> buildSessionRows(const QVector<SessionSeed> &seeds,
             QSet<QString> ids;
             QSet<quint64> keys;
             QHash<QString, int> perArtist;
-            for (bool more = true; more && mix.items.size() < options.mixRow;) {
+            QVector<Pick> picked;
+            for (bool more = true; more && picked.size() < options.mixRow;) {
                 more = false;
                 for (const int k : std::as_const(turn)) {
-                    if (mix.items.size() >= options.mixRow)
+                    if (picked.size() >= options.mixRow)
                         break;
                     // The next song of this seed's that the mix can still take.
                     while (next[k] < lists.at(k).size()) {
-                        const RadioTrack &track = lists.at(k).at(next[k]++);
-                        const QString lead = radioLeadKey(track);
-                        const quint64 key = songKey(track.title, track.artist, lead);
-                        if (ids.contains(track.videoId) || keys.contains(key)
-                            || (!lead.isEmpty() && perArtist.value(lead) >= options.perArtist))
+                        const Pick &pick = lists.at(k).at(next[k]++);
+                        if (ids.contains(pick.track->videoId) || keys.contains(pick.key)
+                            || (!pick.lead.isEmpty() && perArtist.value(pick.lead) >= options.perArtist))
                             continue;
-                        ids.insert(track.videoId);
-                        keys.insert(key);
-                        perArtist[lead] += 1;
-                        mix.items.append(track);
+                        ids.insert(pick.track->videoId);
+                        keys.insert(pick.key);
+                        perArtist[pick.lead] += 1;
+                        picked.append(pick);
                         break;
                     }
                     more = more || next[k] < lists.at(k).size();
                 }
             }
-            if (mix.items.size() >= options.minMix) {
+            if (picked.size() >= options.minMix) {
                 mix.kind = QStringLiteral("mix");
                 mix.seedVideoId = seeds.at(s1).videoId;
                 mix.key = QStringLiteral("mix:") + mix.seedVideoId;
                 mix.title = QStringLiteral("Based on your recent listening");
-                claim(seen, mix.items);
-            } else {
-                mix.items.clear();
+                mix.items = tracksOf(picked);
             }
         }
     }

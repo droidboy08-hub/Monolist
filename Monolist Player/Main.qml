@@ -53,11 +53,16 @@ ApplicationWindow {
     property bool nowPlayingOpen: false
     // Opening Now Playing takes the picture back from the small panel; closing
     // it again leaves the picture off until the panel is asked for once more.
-    // Closed over Home, it is a visit to Home (HomeView.revisit).
+    // Closed over Home while Home follows what you play, it is a visit to
+    // Home (HomeView.revisit); not when it closed to open another page.
     onNowPlayingOpenChanged: {
         if (nowPlayingOpen)
             videoPip = false
-        else if (currentView === "home")
+        else if (JustPlayed.enabled && currentView === "home")
+            Qt.callLater(window.revisitHome)
+    }
+    function revisitHome() {
+        if (currentView === "home" && !nowPlayingOpen)
             homeView.revisit()
     }
     // The part of Settings a link asked for, until Settings has scrolled to it.
@@ -335,13 +340,14 @@ ApplicationWindow {
     // While Home follows what you play, Made for you is built again a moment
     // after a listen closes, at most once a minute, and only where no one is
     // reading what it would change: not on Search, a See all of the
-    // suggestions, or Home in front (Now Playing over it is not). What is
-    // skipped is caught up on the next visit.
+    // suggestions, or Home in front (Now Playing over it is not), and not
+    // while the window is out of sight. What is skipped is caught up on the
+    // next visit.
     property real recsAfterListenAt: 0
     function tryRecsRefresh() {
         const now = Date.now()
-        if (now - recsAfterListenAt < 60000 || currentView === "search" || currentView.indexOf("recs:") === 0
-                || (currentView === "home" && !nowPlayingOpen))
+        if (now - recsAfterListenAt < 60000 || !JustPlayed.watching || currentView === "search"
+                || currentView.indexOf("recs:") === 0 || (currentView === "home" && !nowPlayingOpen))
             return
         recsAfterListenAt = now
         Recs.refresh()
@@ -752,6 +758,9 @@ ApplicationWindow {
                         anchors.fill: parent
                         // Nothing on it moves while a menu is open over it.
                         holdUpdates: trackMenu.visible || cardMenu.visible || playlistMenu.visible
+                        // Mixes built behind Now Playing or out of sight ask
+                        // for no covers until Home is in front again.
+                        covered: JustPlayed.enabled && (window.nowPlayingOpen || !JustPlayed.watching)
                         onPageRequested: function(browseId) { window.openPage(browseId) }
                         onViewRequested: function(view) { window.navigate(view) }
                     }
