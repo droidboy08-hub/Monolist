@@ -860,6 +860,35 @@ int runJustPlayedSelfTest(Library *library)
         passMs(50 * 60 * 1000);
         waitUntil([&]() { return askedRolling() == 5 && !rolling->inFlight(); }, 3000);
         t.check(askedRolling() == 5, QStringLiteral("7  until the two of 50 min are an hour old"));
+        waitUntil([&]() { return !rolling->inFlight(); }, 3000);
+        rolling.reset();
+
+        // the clock ran two days ahead while the app ran, and was put back
+        // without a restart: what was asked meanwhile counts as asked now,
+        // so the hour's cap waits an hour, not two days and an hour
+        freshState();
+        timing = quick();
+        timing.hourCap = 3;
+        auto ahead = started(timing);
+        wire(tracker, ahead.get());
+        const int aheadFrom = int(standIn.nexts().size());
+        const auto askedAhead = [&]() { return int(standIn.nexts().size()) - aheadFrom; };
+        passMs(2 * 24 * 3600 * 1000LL);
+        for (int k = 1; k <= 3; ++k) {
+            listen(tracker, makeId(QStringLiteral("ck"), k), true, 46);
+            waitUntil([&]() { return askedAhead() == k && !ahead->inFlight(); }, 3000);
+        }
+        passMs(-2 * 24 * 3600 * 1000LL);
+        listen(tracker, makeId(QStringLiteral("ck"), 4), true, 46);
+        pause(700);
+        t.check(askedAhead() == 3, QStringLiteral("7  the clock put back mid-session: the hour's cap still holds a 4th"),
+                QString::number(askedAhead()));
+        passMs((3600 + 5) * 1000);
+        waitUntil([&]() { return askedAhead() == 4 && !ahead->inFlight(); }, 3000);
+        t.check(askedAhead() == 4, QStringLiteral("7  and lets it go an hour later, not two days and an hour"),
+                QString::number(askedAhead()));
+        t.check(sentCount(library) == 4, QStringLiteral("7  with the 3 dated ahead kept as now, not dropped"),
+                QString::number(sentCount(library)));
     }
 
     // ------------------------------------------------ 8. failures: one try, then a rest
@@ -1019,6 +1048,33 @@ int runJustPlayedSelfTest(Library *library)
         t.check(droppedAt > 0 && againAt - droppedAt >= 280,
                 QStringLiteral("8  and only the gap (300 ms here) after the answer dropped"),
                 QStringLiteral("%1 ms").arg(againAt - droppedAt));
+    }
+
+    // ------------------------------------------------ 8. a change of country with no listen open
+    {
+        freshState();
+        const QString newest = makeId(QStringLiteral("rn"), 1);
+        const QString older = makeId(QStringLiteral("rn"), 2);
+        addPlay(older, QStringLiteral("-600 seconds"), 1.0);
+        addPlay(newest, QStringLiteral("-120 seconds"), 1.0);
+        auto justPlayed = started(quick());
+        justPlayed->noteRadio(newest, asTracks(radioOf(newest)));
+        justPlayed->noteRadio(older, asTracks(radioOf(older)));
+        pause(500);
+        const int newestBefore = int(standIn.nexts().count(newest));
+        const int olderBefore = int(standIn.nexts().count(older));
+        t.check(newestBefore == 0 && olderBefore == 0 && !justPlayed->seeds().isEmpty()
+                    && justPlayed->seeds().first().videoId == newest,
+                QStringLiteral("8  the last song's listen closed, both radios kept: nothing asked"));
+        InnerTube::setRegion(QStringLiteral("GB"));
+        justPlayed->onRegionChanged();
+        waitUntil([&]() { return standIn.nexts().count(newest) == 1 && !justPlayed->inFlight(); }, 3000);
+        pause(500);
+        t.check(standIn.nexts().count(newest) == 1 && standIn.nexts().count(older) == 0,
+                QStringLiteral("8  the country changed with nothing playing: the newest seed is asked again, once,"
+                               " the older one not"),
+                QStringLiteral("newest %1, older %2").arg(standIn.nexts().count(newest)).arg(standIn.nexts().count(older)));
+        InnerTube::setRegion(QString());
     }
 
     // ------------------------------------------------ 9. empty answers

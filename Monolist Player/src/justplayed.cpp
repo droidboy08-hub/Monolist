@@ -226,15 +226,19 @@ void JustPlayed::loadPace()
     // a rest ends a day from now at the latest, and a look-up dated later
     // than now counts as made now.
     m_pace.restUntil = qMin(m_pace.restUntil, nowSecs + 24 * 3600);
-    for (qint64 &at : m_pace.sent)
-        at = qMin(at, nowSecs);
     std::sort(m_pace.sent.begin(), m_pace.sent.end());
     pruneSent(nowSecs);
 }
 
 // The look-ups of the last 24 hours, and no more of them than a cap counts.
+// One dated later than now counts as made now, here too, as the clock can
+// be put back while the app runs (one that ran ahead, corrected): the caps
+// then wait an hour or a day at most. Oldest first all the same: capping a
+// sorted list keeps it sorted, and what send() adds is now.
 void JustPlayed::pruneSent(qint64 nowSecs)
 {
+    for (qint64 &at : m_pace.sent)
+        at = qMin(at, nowSecs);
     while (!m_pace.sent.isEmpty() && nowSecs - m_pace.sent.constFirst() >= 24 * 3600)
         m_pace.sent.removeFirst();
     const int kept = qMax(1, qMax(m_timing.hourCap, m_timing.dayCap));
@@ -388,8 +392,10 @@ void JustPlayed::onRegionChanged()
     if (!m_enabled || m_quitting)
         return;
     const QString dropped = m_inFlight;
-    if (m_hasLive && m_live.videoId != dropped && wantsFetch(m_live.videoId, /*newest=*/true))
-        enqueue(m_live.videoId);
+    // The newest seed, whether its listen is still open or has closed.
+    const QString newest = newestSeed();
+    if (!newest.isEmpty() && newest != dropped && wantsFetch(newest, /*newest=*/true))
+        enqueue(newest);
     if (!dropped.isEmpty()) {
         m_queue.removeAll(dropped);
         m_queue.prepend(dropped);
@@ -721,6 +727,14 @@ void JustPlayed::logOverlaps(const QString &videoId)
     }
 }
 
+// The live seed while its listen is open, else the newest of the plays.
+QString JustPlayed::newestSeed() const
+{
+    if (m_hasLive)
+        return m_live.videoId;
+    return m_seeds.isEmpty() ? QString() : m_seeds.constFirst().videoId;
+}
+
 bool JustPlayed::wantsFetch(const QString &videoId, bool newest)
 {
     ensureRadios({ videoId });
@@ -761,6 +775,13 @@ void JustPlayed::pump()
         return;
     const qint64 at = now();
     const qint64 nowSecs = at / 1000;
+    // The clock put back while the app runs (one that ran ahead, corrected):
+    // each wait is from now at the longest, and a rest begun meanwhile ends
+    // a day from now at the latest, as loadPace has it.
+    m_launchUntil = qMin(m_launchUntil, at + m_timing.launchDelayMs);
+    m_debounceUntil = qMin(m_debounceUntil, at + m_timing.debounceMs);
+    m_nextAllowedAt = qMin(m_nextAllowedAt, at + m_timing.gapMs + qMax<qint64>(0, m_timing.jitterMs));
+    m_pace.restUntil = qMin(m_pace.restUntil, nowSecs + 24 * 3600);
     qint64 wait = qMax(qMax(m_launchUntil, m_debounceUntil), m_nextAllowedAt) - at;
     wait = qMax(wait, m_pace.restUntil * 1000 - at);
     // 30 in any hour and 200 in any day, counted back from now.
@@ -777,7 +798,7 @@ void JustPlayed::pump()
 void JustPlayed::send(const QString &videoId)
 {
     // Kept meanwhile (autoplay answered for it): nothing to ask.
-    if (!wantsFetch(videoId, /*newest=*/m_hasLive && m_live.videoId == videoId)) {
+    if (!wantsFetch(videoId, /*newest=*/videoId == newestSeed())) {
         pump();
         return;
     }

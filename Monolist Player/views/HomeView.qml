@@ -94,8 +94,9 @@ ScrollPage {
     // The pointer is on something a new copy would move: in that stretch or
     // below it, while it reaches into the page in view. (Wholly above the
     // view, keepStill holds what is in view.)
+    // (pageHover is the page's column's: its point is on the page.)
     readonly property bool sessionHovered: pageHover.hovered && contentY < sessionEnd
-                                           && contentY + pageHover.point.position.y >= sessionTop
+                                           && pageHover.point.position.y >= sessionTop
 
     // The row of the copy shown that `row` is, card for card, if any.
     function shownAs(row) {
@@ -618,21 +619,18 @@ ScrollPage {
         }
     }
 
-    // Only to know where the pointer is on the page (sessionHovered). Over
-    // the page, not in it, so nothing on the page can keep it from being
-    // told; it takes no presses and no wheel, and blocks no hover.
-    Item {
-        parent: root
-        anchors.fill: parent
-        z: 2
-
-        HoverHandler { id: pageHover }
-    }
-
     Column {
         id: column
         width: root.width
         spacing: 0
+
+        // Only to know where the pointer is on the page (sessionHovered).
+        // On the column every part of the page is in, as an ancestor's
+        // handler is told of hover after the card, tile or row under the
+        // pointer has taken it. Not an item laid over the page: on Qt 6.11
+        // a hovered handler on an item in front keeps hover from everything
+        // behind it, and no card, chip or row on Home lit up (2026-10-23).
+        HoverHandler { id: pageHover }
 
         // — the filter —
         Row {

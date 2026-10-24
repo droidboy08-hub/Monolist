@@ -161,6 +161,8 @@ private:
     // What rec_radio keeps for these ids, read into m_radios once.
     void ensureRadios(const QStringList &ids);
     void storeRadio(const QString &videoId, const QList<InnerTube::Track> &tracks, bool ok);
+    // The seed S1 would take first: the live one, else the newest play.
+    QString newestSeed() const;
     // Whether a seed's radio should be asked for now.
     bool wantsFetch(const QString &videoId, bool newest);
     void enqueue(const QString &videoId);
