@@ -702,7 +702,10 @@ cmake --build build          # build/Monolist.app
   and ⌘Q quits. ⌘W and ⌃⌘F do what they do in any Mac app.
 * **Sign-ins** (Last.fm, YouTube Music, the Drive backup) are kept in the
   login Keychain, one item per secret; a run with `MONOLIST_DATA_DIR` keeps
-  its own, apart from the library in use.
+  its own, apart from the library in use. YouTube Music's sign-in window is
+  WebKit's, as Windows' is WebView2, under the same rules: the engine as it
+  comes, its data in memory only, Google's and YouTube's pages only, and
+  Google's refusal taken as final, with the import offered instead.
 * **Opening at login** is a LaunchAgent of the user's own
   (`~/Library/LaunchAgents/io.github.droidboy08-hub.monolist.login.plist`),
   as Windows' is a Run value, with the same choices; System Settings' Login

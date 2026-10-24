@@ -1445,7 +1445,8 @@ ApplicationWindow {
             Text {
                 width: parent.width
                 text: "Google's own sign-in page opens in a window of Monolist's. Your password goes to Google "
-                      + "alone; Monolist keeps only the session Google gives back, encrypted on this PC."
+                      + "alone; Monolist keeps only the session Google gives back, "
+                      + (window.mac ? "in this Mac's Keychain." : "encrypted on this PC.")
                 wrapMode: Text.WordWrap
                 font.family: Theme.fontFamily
                 font.pixelSize: 14

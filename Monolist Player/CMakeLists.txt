@@ -441,14 +441,20 @@ endif()
 # Signing in on Google's own page in a window of the app's own (GoogleSignIn):
 # WebView2, the Edge engine Windows carries, through its SDK's headers and
 # the loader DLL put beside the exe (WebView2Loader.dll, loaded at run time,
-# so nothing links against it). Elsewhere, or without the SDK, a stub, and
-# the cookie import is the way to sign in.
+# so nothing links against it); on a Mac, WebKit. Elsewhere, or without the
+# SDK, a stub, and the cookie import is the way to sign in.
 set(MONOLIST_WEBVIEW2_DIR "" CACHE PATH "The WebView2 SDK's build/native folder, holding include/WebView2.h")
 if(WIN32 AND MONOLIST_WEBVIEW2_DIR AND EXISTS "${MONOLIST_WEBVIEW2_DIR}/include/WebView2.h")
     target_sources(monolist PRIVATE src/googlesignin.h src/googlesignin_win.cpp)
     target_include_directories(monolist SYSTEM PRIVATE "${MONOLIST_WEBVIEW2_DIR}/include")
     target_link_libraries(monolist PRIVATE ole32)
     message(STATUS "Monolist: Google sign-in window through WebView2 (${MONOLIST_WEBVIEW2_DIR})")
+elseif(APPLE)
+    # WebKit, which every Mac carries, under the same rules.
+    target_sources(monolist PRIVATE src/googlesignin.h src/macos/googlesignin_mac.mm)
+    set_source_files_properties(src/macos/googlesignin_mac.mm PROPERTIES COMPILE_OPTIONS "-fobjc-arc")
+    target_link_libraries(monolist PRIVATE "-framework WebKit")
+    message(STATUS "Monolist: Google sign-in window through WebKit")
 else()
     target_sources(monolist PRIVATE src/googlesignin.h src/googlesignin_stub.cpp)
     message(STATUS "Monolist: no Google sign-in window (no WebView2 SDK); cookie import only")

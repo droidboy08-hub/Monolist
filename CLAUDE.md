@@ -355,10 +355,13 @@ have to work on the Mac version"): the Windows build is the reference
 design; the Mac's own parts are the Keychain store, opening at login (a
 LaunchAgent), the title bar (the traffic lights moved into the 64 px strip),
 the menu bar, the Dock icon choice (the M. kept as a third icon, the
-owner's), Mac wording in Settings, and the icons from the note. Left there:
-the Dock's icon while Monolist is closed (a dock tile plug-in), the Google
-sign-in window (WebView2 is Windows'; a WKWebView one would need the same
-rules as GoogleSignIn and Google may refuse it), font weights (G04: 88
+owner's), Mac wording in Settings, the icons from the note, and the
+Google sign-in window in WebKit (`src/macos/googlesignin_mac.mm`: the
+engine as it comes, a non-persistent data store per sign-in, only Google's
+and YouTube's pages, only YouTube's cookies, Google's refusal final; seen
+reaching Google's identifier page, not yet signed in with a real account,
+and Google may refuse WebKit as it may WebView2). Left there: the Dock's
+icon while Monolist is closed (a dock tile plug-in), font weights (G04: 88
 `Font.Bold`, which no bundled face is), and the decisions on Developer ID
 signing and Intel Macs.
 

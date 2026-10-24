@@ -14,8 +14,9 @@ class YtmSession;
 // browser by hand, which stays as the way round when this one cannot be used.
 //
 // On Windows the page is shown by WebView2, the Edge engine Windows carries
-// (googlesignin_win.cpp); elsewhere there is none (googlesignin_stub.cpp), and
-// `available` is false. The window is the engine as it comes: its own user
+// (googlesignin_win.cpp); on a Mac by WebKit, under the same rules, with a
+// data store in memory for the private profile (macos/googlesignin_mac.mm);
+// elsewhere there is none (googlesignin_stub.cpp), and `available` is false. The window is the engine as it comes: its own user
 // agent and client hints (which name it "Microsoft Edge WebView2"), nothing
 // injected into the page, no request intercepted or rewritten, no automation
 // and no debugging port; InPrivate, so the session lives in memory, in a
