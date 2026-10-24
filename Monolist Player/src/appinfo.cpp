@@ -13,8 +13,10 @@
 #include <QGuiApplication>
 #include <QDir>
 #include <QFileInfo>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QSysInfo>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
@@ -358,7 +360,23 @@ void AppInfo::checkForUpdate()
 
         // Releases are tagged with the build number after the version
         // (v0.1.130), which is what tells two builds of one version apart.
-        if (compareVersions(version() + QLatin1Char('.') + buildNumber(), tag) < 0) {
+        const bool newer = compareVersions(version() + QLatin1Char('.') + buildNumber(), tag) < 0;
+#ifdef Q_OS_MACOS
+        // A release is a Mac's only once it carries a disk image for this
+        // Mac's processor (release-macos.yml): until then its page has the
+        // Windows files alone.
+        const QString macImage = QStringLiteral("-macos-%1.dmg").arg(QSysInfo::currentCpuArchitecture());
+        bool forThisMac = false;
+        for (const QJsonValue &asset : root.value(QStringLiteral("assets")).toArray())
+            forThisMac = forThisMac
+                         || asset.toObject().value(QStringLiteral("name")).toString().endsWith(macImage);
+        if (newer && !forThisMac) {
+            setUpdate(UpToDate, QStringLiteral("This is the newest release for a Mac (%1); %2 has no Mac "
+                                               "download yet.").arg(version(), tag));
+            return;
+        }
+#endif
+        if (newer) {
             setUpdate(Available, QStringLiteral("Monolist %1 is available.").arg(tag), page);
         } else {
             setUpdate(UpToDate,

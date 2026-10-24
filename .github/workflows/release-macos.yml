@@ -1,0 +1,127 @@
+# The Mac release: Monolist.app in a disk image, built on GitHub's own Apple
+# silicon Mac and added to the release the Windows workflow publishes for the
+# same tag (release-windows.yml), so the app's update check finds it there.
+#
+# The same tag starts both: v<version>.<build>, e.g. v0.1.170. This one waits
+# for the Windows one to have published the release, then adds
+# Monolist-<version>-macos-arm64.dmg, its checksum and a Mac section to the
+# notes; it never makes the release itself, so the two cannot race.
+#
+# Run by hand (Actions > macOS release > Run workflow), it builds the same
+# disk image as a downloadable artifact and releases nothing.
+name: macOS release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  macos:
+    runs-on: macos-15
+    timeout-minutes: 240
+    env:
+      # Built in when the repository has them as secrets; without them the
+      # app builds all the same and says it has no Last.fm key.
+      MONOLIST_LASTFM_API_KEY: ${{ secrets.MONOLIST_LASTFM_API_KEY }}
+      MONOLIST_LASTFM_SHARED_SECRET: ${{ secrets.MONOLIST_LASTFM_SHARED_SECRET }}
+      HOMEBREW_NO_AUTO_UPDATE: '1'
+      HOMEBREW_NO_INSTALL_CLEANUP: '1'
+    steps:
+      - name: Source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # the build number is the number of commits
+
+      - name: The tag is this commit's version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          build=$(git rev-list --count HEAD)
+          version=$(sed -n 's/^project(Monolist VERSION \([0-9.]*\).*/\1/p' "Monolist Player/CMakeLists.txt")
+          expected="v$version.$build"
+          if [ "$GITHUB_REF_NAME" != "$expected" ]; then
+            echo "The tag $GITHUB_REF_NAME names another build: this commit is $expected." >&2
+            exit 1
+          fi
+
+      # Homebrew's Qt, libmpv and FFmpeg, as on the owner's Mac.
+      - name: Toolchain
+        run: bash "Monolist Player/scripts/setup-macos.sh"
+
+      - name: Build, deploy, sign and the disk image
+        run: bash "Monolist Player/scripts/build-macos.sh" --dmg
+
+      # The build tree's app, which still loads Homebrew's Qt and so has its
+      # offscreen platform: the tests need no screen. The disk image's is the
+      # same program, deployed.
+      - name: Offline self-tests of the Release build
+        run: |
+          exe="Monolist Player/build-macos/Monolist.app/Contents/MacOS/Monolist"
+          failed=""
+          for test in --account-guard-test --cookie-test --secret-test --lastfm-test --saavn-test \
+                      --lyrics-query-test --format-test --sound-test --icon-test --startup-test; do
+            data="$RUNNER_TEMP/${test#--}"
+            mkdir -p "$data"
+            set +e
+            MONOLIST_DATA_DIR="$data" QT_QPA_PLATFORM=offscreen QT_FORCE_STDERR_LOGGING=1 \
+                "$exe" "$test" > "$data/out.txt" 2>&1
+            code=$?
+            set -e
+            summary=$(grep -E 'checks?, [0-9]+ failed' "$data/out.txt" | tail -n 1)
+            echo "$test  exit $code  $summary"
+            [ "$code" -eq 0 ] || failed="$failed $test"
+          done
+          if [ -n "$failed" ]; then
+            echo "Self-tests failed:$failed" >&2
+            exit 1
+          fi
+
+      - name: Name the disk image
+        id: image
+        run: |
+          build=$(git rev-list --count HEAD)
+          version=$(sed -n 's/^project(Monolist VERSION \([0-9.]*\).*/\1/p' "Monolist Player/CMakeLists.txt")
+          dist="Monolist Player/build-macos/dist"
+          name="Monolist-$version.$build-macos-arm64.dmg"
+          mv "$dist/Monolist.dmg" "$dist/$name"
+          (cd "$dist" && shasum -a 256 "$name" > "$name.sha256")
+          echo "dir=$dist" >> "$GITHUB_OUTPUT"
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+
+      - name: Keep the files
+        uses: actions/upload-artifact@v4
+        with:
+          name: monolist-macos
+          path: |
+            ${{ steps.image.outputs.dir }}/*.dmg
+            ${{ steps.image.outputs.dir }}/*.sha256
+
+      - name: Add to the release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          dir="${{ steps.image.outputs.dir }}"
+          name="${{ steps.image.outputs.name }}"
+          # The Windows workflow publishes the release; up to three hours.
+          for attempt in $(seq 1 180); do
+            gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1 && break
+            [ "$attempt" -eq 180 ] && { echo "No release $GITHUB_REF_NAME was published." >&2; exit 1; }
+            sleep 60
+          done
+          gh release upload "$GITHUB_REF_NAME" "$dir/$name" "$dir/$name.sha256" --clobber
+          gh release view "$GITHUB_REF_NAME" --json body --jq .body > notes.md
+          {
+            echo
+            echo "**macOS** (Apple silicon, macOS 15 or later: Homebrew builds Qt and mpv for the macOS they are built on):"
+            echo
+            echo "- **$name**: open it and drag Monolist to Applications. Everything the app needs is inside: Qt, mpv, yt-dlp, FFmpeg and Deno."
+            echo
+            echo 'The app is signed ad hoc, not by an Apple developer, so the first time macOS will not open it from a double click: right-click Monolist in Applications and choose Open, or allow it in System Settings > Privacy & Security.'
+            echo
+            echo "    $(cat "$dir/$name.sha256")"
+          } >> notes.md
+          gh release edit "$GITHUB_REF_NAME" --notes-file notes.md

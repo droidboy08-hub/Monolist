@@ -61,6 +61,11 @@ owner's iPhone app (AryaMusix / "Mediano", Swift, not in this repo).
    HEAD` of the tagged commit); `.github/workflows/release-windows.yml` builds
    the installer and zip on GitHub, runs offline self-tests on them and
    publishes the GitHub Release, which the app's update check reads.
+   `.github/workflows/release-macos.yml` (2026-10-24) builds the Mac's
+   `Monolist-<version>.<build>-macos-arm64.dmg` from the same tag on
+   GitHub's Apple silicon runner, runs the offline self-tests, waits for the
+   Windows job's release and adds the image and a Mac section to it. On a
+   Mac the update check offers a release only once it has that image.
 
 ## Testing
 
