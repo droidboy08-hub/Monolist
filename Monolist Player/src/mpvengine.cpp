@@ -271,6 +271,13 @@ QVariantList audioDevicesOf(const mpv_node &list)
             else if (qstrcmp(entry.u.list->keys[k], "description") == 0)
                 description = QString::fromUtf8(value.u.string);
         }
+#ifdef Q_OS_MACOS
+        // mpv lists every device of a Mac twice, once for CoreAudio (its
+        // output there, as WASAPI is on Windows) and once for AVFoundation:
+        // the output menu showed each speaker two times over. CoreAudio's.
+        if (name.startsWith(QLatin1String("avfoundation/")))
+            continue;
+#endif
         if (!name.isEmpty()) {
             devices.append(QVariantMap{ { QStringLiteral("name"), name },
                                         { QStringLiteral("description"), description } });

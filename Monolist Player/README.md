@@ -1207,8 +1207,10 @@ Known gaps:
   while closed, and a signed and notarised build for other Macs, are left.
 * Linux builds and starts (checked on Ubuntu 24.04 with Qt 6.11.2), but has
   not been used day to day and has no packaging yet.
-* The output menu's CoreAudio devices and the wheel and trackpad scrolling
-  on macOS and Linux are untested.
+* The output menu's devices and the wheel and trackpad scrolling on Linux
+  are untested. On the Mac both were checked (2026-10-24): the menu lists
+  CoreAudio's devices (mpv also lists each under AVFoundation, which is left
+  out), and `--scroll-test` scrolls Home at a frame a refresh at 120 Hz.
 
 ## About the Swift libraries
 
