@@ -430,6 +430,16 @@ ApplicationWindow {
         window.navigate("settings")
     }
 
+    // Settings, at one of its parts or its top, from wherever the app is:
+    // the Mac's menu bar (Settings…, About Monolist). The full window, in
+    // front, with Now Playing put down.
+    function openSettingsAt(section) {
+        window.nowPlayingOpen = false
+        window.settingsSection = section || ""
+        window.navigate("settings")
+        window.bringBack(true)
+    }
+
     // Settings > Playback's EFFECTS block, from the player bar's popup. Now
     // Playing covers the page, so it goes down first.
     function openEffectsSettings() {
@@ -1039,9 +1049,11 @@ ApplicationWindow {
         target.requestActivate()
     }
 
-    // The mini player; its own Shortcut of the same keys comes back.
+    // The mini player; its own Shortcut of the same keys comes back. On a
+    // Mac the menu bar's Controls > Mini Player has the keys (MacMenuBar).
     Shortcut {
         sequence: "Ctrl+Shift+M"
+        enabled: !window.mac
         onActivated: window.enterMini()
     }
 
@@ -1668,8 +1680,9 @@ ApplicationWindow {
         enabled: !topBar.searchFocused
         onActivated: Player.togglePlay()
     }
-    Shortcut { sequence: "Ctrl+Right"; onActivated: Player.next() }
-    Shortcut { sequence: "Ctrl+Left"; onActivated: Player.previous() }
+    // On a Mac, the menu bar's Controls > Next and Previous (MacMenuBar).
+    Shortcut { sequence: "Ctrl+Right"; enabled: !window.mac; onActivated: Player.next() }
+    Shortcut { sequence: "Ctrl+Left"; enabled: !window.mac; onActivated: Player.previous() }
     // StandardKey.Find maps to several sequences (Ctrl+F, F3); `sequences`
     // binds all of them, `sequence` would silently take only the first.
     Shortcut {
@@ -1706,12 +1719,11 @@ ApplicationWindow {
         onActivated: Player.videoWanted = !Player.videoWanted
     }
 
-    // The Mac's own window keys, which a Mac app has whether or not it has a
-    // Window menu to show them in. Closing leaves the app, and the music,
-    // running; the Dock icon brings the window back.
+    // The Mac's own window keys. Closing leaves the app, and the music,
+    // running; the Dock icon brings the window back. ⌘M is the menu bar's
+    // Window > Minimize (MacMenuBar).
     readonly property bool mac: Qt.platform.os === "osx"
     Shortcut { sequences: [StandardKey.Close]; enabled: window.mac; onActivated: window.close() }
-    Shortcut { sequence: "Ctrl+M"; enabled: window.mac; onActivated: window.showMinimized() }
     Shortcut {
         sequences: [StandardKey.FullScreen]
         enabled: window.mac

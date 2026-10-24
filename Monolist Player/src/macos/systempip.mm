@@ -196,7 +196,8 @@ bool SystemPip::Private::ensureObjects()
                 break;
             }
         }
-        if (!window)
+        // An NSView only on Qt's Cocoa platform.
+        if (!window || QGuiApplication::platformName() != QLatin1String("cocoa"))
             return false;
         NSView *view = (__bridge NSView *)reinterpret_cast<void *>(window->winId());
         if (!view)

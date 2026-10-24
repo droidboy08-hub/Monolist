@@ -77,7 +77,8 @@ ScrollPage {
                    : section === "effects" ? effectsBlock
                    : section === "signin" ? ytmRow
                    : section === "ytmusic" ? (homeToggle.visible ? homeToggle : ytmRow)
-                   : section === "backup" ? backupHeader : null
+                   : section === "backup" ? backupHeader
+                   : section === "about" ? aboutHeader : null
         revealed = target
         placeRevealed()
         if (target)
@@ -2066,6 +2067,7 @@ ScrollPage {
 
         // — about —
         SectionHeader {
+            id: aboutHeader
             width: parent.width
             number: "09"
             title: "About"

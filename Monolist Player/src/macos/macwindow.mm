@@ -1,5 +1,7 @@
 #include "macwindow.h"
 
+#include <QGuiApplication>
+#include <QMenu>
 #include <QWindow>
 
 #import <AppKit/AppKit.h>
@@ -70,11 +72,18 @@
 
 namespace {
 
+// AppKit's windows only on Qt's Cocoa platform: elsewhere (the offscreen
+// one, which self-tests run on) a window's id is not an NSView.
+bool onCocoa()
+{
+    return QGuiApplication::platformName() == QLatin1String("cocoa");
+}
+
 // The window's NSWindow, or nil while it has no native window. winId() is its
 // content view; handle() first, because winId() would create one.
 NSWindow *nativeWindow(QWindow *window)
 {
-    if (!window || !window->handle())
+    if (!window || !window->handle() || !onCocoa())
         return nil;
     NSView *view = (__bridge NSView *)reinterpret_cast<void *>(window->winId());
     return view.window;
@@ -162,6 +171,8 @@ QRect trafficLights(QWindow *window)
 
 void setDockIcon(const QImage &image)
 {
+    if (!onCocoa())
+        return;
     if (image.isNull()) {
         NSApp.applicationIconImage = nil;
         return;
@@ -178,6 +189,24 @@ void setDockIcon(const QImage &image)
     NSImage *picture = [[NSImage alloc] initWithSize:NSMakeSize(rgba.width() / 2.0, rgba.height() / 2.0)];
     [picture addRepresentation:rep];
     NSApp.applicationIconImage = picture;
+}
+
+void zoom(QWindow *window)
+{
+    if (NSWindow *native = nativeWindow(window))
+        [native performZoom:nil];
+}
+
+void useAsWindowsMenu(QMenu *menu)
+{
+    if (menu && onCocoa())
+        NSApp.windowsMenu = menu->toNSMenu();
+}
+
+void bringAllToFront()
+{
+    if (onCocoa())
+        [NSApp arrangeInFront:nil];
 }
 
 } // namespace MacWindow

@@ -449,7 +449,8 @@ Window {
     Shortcut { sequence: "Escape"; enabled: mini.effectsOpen; onActivated: mini.effectsOpen = false }
     // The keys that made the window small make it whole again (Main.qml's
     // own Shortcut goes the other way).
-    Shortcut { sequence: "Ctrl+Shift+M"; onActivated: mini.fullRequested() }
+    // On a Mac the menu bar's Controls > Mini Player has the keys.
+    Shortcut { sequence: "Ctrl+Shift+M"; enabled: Qt.platform.os !== "osx"; onActivated: mini.fullRequested() }
 
     // A button on the cover: a glyph on a plate of ink, so it reads on any
     // picture.

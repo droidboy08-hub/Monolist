@@ -469,6 +469,8 @@ if(APPLE)
         src/macos/secretstore_mac.cpp
         # Whether System Settings lets the login agent run (Startup).
         src/macos/loginitem.h          src/macos/loginitem.mm
+        # The menu bar: Monolist, Controls, Window.
+        src/macos/menubar.h            src/macos/menubar.cpp
         macos/Monolist.icns
     )
     target_compile_definitions(monolist PRIVATE MONOLIST_HAVE_KEYCHAIN)

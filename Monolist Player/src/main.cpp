@@ -90,6 +90,7 @@
 #ifdef Q_OS_MACOS
 #include "macos/macwindow.h"
 #include "macos/mediasession.h"
+#include "macos/menubar.h"
 #include "macos/toolstore.h"
 #endif
 #ifdef Q_OS_WIN
@@ -728,6 +729,8 @@ int main(int argc, char *argv[])
 #ifdef Q_OS_MACOS
     // The media keys, Control Center and the lock screen.
     MacMediaSession mediaSession(&player, artworkFetcher.network());
+    // The menu bar at the top of the screen.
+    MacMenuBar menuBar(&player);
 #endif
 #ifdef Q_OS_WIN
     // The media keys and Windows' media flyout, once there is a window.
@@ -1006,11 +1009,16 @@ int main(int argc, char *argv[])
         // Qt reports that click as the app becoming active, even when it
         // already was. ⌘Q quits.
         app.setQuitOnLastWindowClosed(false);
+        // Not while the mini player stands in for it: that hides the full
+        // window on purpose, and a click on the mini player from another app
+        // made the app active and brought the full window up behind it.
         QObject::connect(&app, &QGuiApplication::applicationStateChanged, window,
                          [window](Qt::ApplicationState state) {
-                             if (state == Qt::ApplicationActive && !window->isVisible())
+                             if (state == Qt::ApplicationActive && !window->isVisible()
+                                 && !window->property("miniMode").toBool())
                                  window->show();
                          });
+        menuBar.attach(window);
         // Once the app has settled: a stale yt-dlp is the usual reason a
         // track will not play, so it is kept current without asking.
         QTimer::singleShot(10000, &appInfo, [&appInfo]() { appInfo.startToolChecks(); });

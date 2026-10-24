@@ -3,6 +3,7 @@
 #include <QImage>
 #include <QRect>
 
+class QMenu;
 class QWindow;
 
 // The AppKit side of WindowChrome on macOS. Plain C++ here, so that
@@ -29,6 +30,18 @@ void titleBarDoubleClicked(QWindow *window);
 // where the title bar is AppKit's own, they are left to it. Applied to the
 // native window, so again whenever Qt makes a new one.
 void placeTrafficLights(QWindow *window, int left, int height);
+
+// The green button's zoom, for the Window menu: the window to its best size
+// and back, as AppKit decides it.
+void zoom(QWindow *window);
+
+// The menu AppKit keeps as the app's Window menu, listing the open windows
+// and adding Bring All to Front.
+void useAsWindowsMenu(QMenu *menu);
+
+// The app's windows in front of every other app's, as the Window menu's
+// Bring All to Front does.
+void bringAllToFront();
 
 // The Dock's picture of the app while it runs; a null image gives it back
 // the bundle's own.
