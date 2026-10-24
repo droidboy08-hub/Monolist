@@ -174,7 +174,7 @@ Window {
             }
             CoverButton {
                 iconName: "maximize-2"
-                tip: "Open Monolist (Ctrl+Shift+M)"
+                tip: Qt.platform.os === "osx" ? "Open Monolist (⇧⌘M)" : "Open Monolist (Ctrl+Shift+M)"
                 onClicked: mini.fullRequested()
             }
             CoverButton {

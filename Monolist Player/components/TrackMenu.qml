@@ -195,7 +195,7 @@ MonoMenu {
         visible: menu.atBar
         enabled: menu.atBar
         text: "Mini player"
-        hint: "Ctrl+Shift+M"
+        hint: Qt.platform.os === "osx" ? "⇧⌘M" : "Ctrl+Shift+M"
         onTriggered: menu.bar.miniPlayerRequested()
     }
     SleepMenu {

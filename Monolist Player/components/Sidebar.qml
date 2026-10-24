@@ -56,10 +56,11 @@ Rectangle {
         Row {
             id: brandName
             anchors.left: brandButtons.visible ? brandButtons.right : parent.left
-            // macOS keeps its traffic lights in the corner above the name, so
-            // the name keeps its place: set in beside them, it ran into the
-            // version at the sidebar's other end.
-            anchors.leftMargin: brandButtons.visible ? Theme.space2 : Theme.space6
+            // macOS keeps its traffic lights in this corner, centred in the
+            // strip as the name is (WindowChrome): the name follows them.
+            anchors.leftMargin: brandButtons.visible ? Theme.space2
+                                : Chrome.nativeButtons ? Math.max(Theme.space6, Chrome.nativeButtonsInset)
+                                : Theme.space6
             anchors.verticalCenter: parent.verticalCenter
             spacing: Theme.space2
 
@@ -98,7 +99,9 @@ Rectangle {
         ToolTip.text: "Fold the sidebar"
 
         Text {
-            visible: !root.showCloseButton
+            // Where the name has room for it: beside a Mac's traffic lights
+            // it has not, and Settings' About says the version all the same.
+            visible: !root.showCloseButton && x >= brandName.x + brandName.width + Theme.space4
             text: "V." + Qt.application.version
             anchors.right: parent.right
             anchors.rightMargin: Theme.space6

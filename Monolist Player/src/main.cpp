@@ -88,6 +88,7 @@
 #include "trackfiltermodel.h"
 #include "ytdlp.h"
 #ifdef Q_OS_MACOS
+#include "macos/macwindow.h"
 #include "macos/mediasession.h"
 #include "macos/toolstore.h"
 #endif
@@ -1048,6 +1049,12 @@ int main(int argc, char *argv[])
                 }
                 const bool saved = target && target->grabWindow().save(path);
                 qInfo("shot: %s %s", saved ? "saved" : "could not save", qUtf8Printable(QDir::toNativeSeparators(path)));
+#ifdef Q_OS_MACOS
+                // The system's buttons, which the picture leaves out.
+                if (const QRect lights = MacWindow::trafficLights(target); !lights.isEmpty())
+                    qInfo("shot: traffic lights at %d,%d %dx%d of %dx%d", lights.x(), lights.y(), lights.width(),
+                          lights.height(), target->width(), target->height());
+#endif
                 if (quit)
                     QCoreApplication::quit();
             };

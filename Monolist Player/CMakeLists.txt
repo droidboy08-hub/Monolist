@@ -199,7 +199,7 @@ execute_process(COMMAND ${CMAKE_COMMAND}
 #
 # SecretStore keeps session keys and cookies out of the database, encrypted by
 # the system for the signed-in user: DPAPI on Windows (crypt32), the Keychain
-# on macOS once secretstore_mac.mm is added (it defines MONOLIST_HAVE_KEYCHAIN).
+# on macOS (src/macos/secretstore_mac.cpp, added below with MONOLIST_HAVE_KEYCHAIN).
 # Anywhere else it reports that it is not available and stores nothing.
 target_sources(monolist PRIVATE
     src/secretstore.h              src/secretstore.cpp
@@ -395,6 +395,11 @@ qt_add_qml_module(monolist
         icons/app/note-64.png icons/app/note-128.png icons/app/note-256.png
         icons/app/note-red-16.png icons/app/note-red-24.png icons/app/note-red-32.png icons/app/note-red-48.png
         icons/app/note-red-64.png icons/app/note-red-128.png icons/app/note-red-256.png
+        # The Mac's (macos/make-icon.py): the first icon, the M., kept as a
+        # choice there, and each choice on Apple's grid for the Dock.
+        icons/app/m-16.png icons/app/m-24.png icons/app/m-32.png icons/app/m-48.png
+        icons/app/m-64.png icons/app/m-128.png icons/app/m-256.png
+        icons/app/mac-note.png icons/app/mac-note-red.png icons/app/mac-m.png
 )
 
 target_include_directories(monolist PRIVATE src)
@@ -460,14 +465,20 @@ if(APPLE)
         src/macos/toolstore.h          src/macos/toolstore.cpp
         # The system's own picture in picture (SystemPip).
         src/macos/systempip.mm
+        # Sign-ins kept in the login Keychain (SecretStore).
+        src/macos/secretstore_mac.cpp
+        # Whether System Settings lets the login agent run (Startup).
+        src/macos/loginitem.h          src/macos/loginitem.mm
         macos/Monolist.icns
     )
+    target_compile_definitions(monolist PRIVATE MONOLIST_HAVE_KEYCHAIN)
     set_source_files_properties(src/macos/macwindow.mm src/macos/mediasession.mm
-                                src/macos/systempip.mm
+                                src/macos/systempip.mm src/macos/loginitem.mm
         PROPERTIES COMPILE_OPTIONS "-fobjc-arc")
     set_source_files_properties(macos/Monolist.icns
         PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
-    target_link_libraries(monolist PRIVATE "-framework AppKit" "-framework MediaPlayer"
+    target_link_libraries(monolist PRIVATE "-framework AppKit" "-framework MediaPlayer" "-framework Security"
+        "-framework ServiceManagement"
         "-framework AVFoundation" "-framework AVKit" "-framework CoreMedia" "-framework CoreVideo"
         "-framework QuartzCore")
 

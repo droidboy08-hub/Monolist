@@ -3,6 +3,7 @@
 #include <QCoreApplication>
 #include <QCursor>
 #include <QEvent>
+#include <QVariant>
 #include <QWindow>
 
 #ifdef Q_OS_MACOS
@@ -148,13 +149,9 @@ bool WindowChrome::nativeButtons() const
 
 int WindowChrome::nativeButtonsInset() const
 {
-    // The traffic lights and their margin, where they sit over the content.
+    // The traffic lights and their margin, where they sit in the top strip.
     // Under a system title bar (Qt before 6.9) they are above it instead.
-#ifdef MONOLIST_MAC_EXPANDED_TITLE_BAR
-    return 78;
-#else
-    return 0;
-#endif
+    return m_nativeButtonsInset;
 }
 
 bool WindowChrome::buttonsOnLeft() const
@@ -263,6 +260,20 @@ void WindowChrome::attach(QWindow *window)
     window->installEventFilter(this);
     window->create();
     MacWindow::hideTitle(window);
+    // ApplicationWindow pads its content by the window's safe area (Qt 6.9),
+    // and under the transparent title bar that is the title bar itself: the
+    // whole design came out a title bar's height lower, with an empty strip
+    // above the top bar. The design's own top strip is the title bar, so the
+    // content starts at the window's top edge. Qt sets the padding again
+    // whenever the safe area changes (the native window made, full screen),
+    // so it is taken back each time, after Qt's own handler.
+    const auto noPadding = [window]() {
+        for (const char *side : { "topPadding", "leftPadding", "rightPadding", "bottomPadding" })
+            window->setProperty(side, QVariant(0));
+    };
+    noPadding();
+    connect(window, &QWindow::safeAreaMarginsChanged, window, noPadding);
+    placeTrafficLights();
 #elif defined(Q_OS_MACOS)
     // An older Qt: the system title bar stays, above the design's own.
 #else
@@ -336,10 +347,31 @@ bool WindowChrome::titleBarDoubleClicked()
 bool WindowChrome::eventFilter(QObject *watched, QEvent *event)
 {
 #ifdef MONOLIST_MAC_EXPANDED_TITLE_BAR
-    if (watched == m_window && event->type() == QEvent::Show)
+    if (watched == m_window && event->type() == QEvent::Show) {
         MacWindow::hideTitle(m_window);
+        placeTrafficLights();
+    }
 #endif
     return QObject::eventFilter(watched, event);
+}
+
+void WindowChrome::placeTrafficLights()
+{
+#ifdef MONOLIST_MAC_EXPANDED_TITLE_BAR
+    // In the top strip, centred in its height (Theme.titleBarHeight), the
+    // close button's edge where the sidebar's content begins (Theme.space6).
+    constexpr int stripHeight = 64;
+    constexpr int left = 24;
+    MacWindow::placeTrafficLights(m_window, left, stripHeight);
+    // And the room they take, for what sits beside them: past the zoom
+    // button by the gap the design leaves between neighbours (space4).
+    const QRect lights = MacWindow::trafficLights(m_window);
+    const int inset = lights.isEmpty() ? 0 : lights.right() + 1 + 16;
+    if (inset != m_nativeButtonsInset) {
+        m_nativeButtonsInset = inset;
+        Q_EMIT nativeButtonsInsetChanged();
+    }
+#endif
 }
 
 bool WindowChrome::nativeEventFilter(const QByteArray &eventType, void *message, qintptr *result)

@@ -2,6 +2,8 @@
 
 #include "ytmsession.h"
 
+#include <QWindow>
+
 // Where there is no engine to show Google's page with (not Windows, or a
 // build without the WebView2 SDK): not offered, and the import guide is the
 // way to sign in.

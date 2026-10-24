@@ -10,6 +10,10 @@ import "../components"
 ScrollPage {
     id: root
 
+    // The Mac's names for what Windows calls otherwise: the system, its
+    // settings, the Dock and the Keychain.
+    readonly property bool mac: Qt.platform.os === "osx"
+
     // Windows' Settings may have changed the sign-in start while the app
     // was open: read again as the page is shown.
     onVisibleChanged: if (visible) Startup.refresh()
@@ -487,7 +491,7 @@ ScrollPage {
             width: parent.width
             spacing: Theme.space3
 
-            SmallCaps { text: "WHEN YOU SIGN IN TO WINDOWS" }
+            SmallCaps { text: root.mac ? "WHEN YOU LOG IN" : "WHEN YOU SIGN IN TO WINDOWS" }
 
             // Four, wider together than a narrow window: they wrap, and
             // neighbours and rows share their rules.
@@ -522,19 +526,25 @@ ScrollPage {
             // own switch: choosing the shown option again makes it this one.
             Note {
                 width: parent.width
+                readonly property string signIn: root.mac ? "log in" : "sign in"
                 text: Startup.mode !== "off" && Startup.systemOff
-                      ? "Windows has Monolist turned off in its startup apps, so it will not open. Turn it on "
-                        + "in Windows' Settings > Apps > Startup."
+                      ? (root.mac
+                         ? "macOS has Monolist turned off in the background, so it will not open. Turn it on in "
+                           + "System Settings > General > Login Items & Extensions."
+                         : "Windows has Monolist turned off in its startup apps, so it will not open. Turn it on "
+                           + "in Windows' Settings > Apps > Startup.")
                       : Startup.otherCopy.length > 0
-                        ? "When you sign in, Windows opens the copy of Monolist in " + Startup.otherCopy
+                        ? "When you " + signIn + ", " + (root.mac ? "macOS" : "Windows")
+                          + " opens the copy of Monolist in " + Startup.otherCopy
                           + ", not this one. Choose again to have it open this one."
                         : Startup.mode === "mini"
-                          ? "The mini player opens when you sign in, ready and not playing; the full window "
+                          ? "The mini player opens when you " + signIn + ", ready and not playing; the full window "
                             + "stays closed until you ask for it."
                           : Startup.mode === "minimised"
-                            ? "Monolist opens on the taskbar when you sign in, ready and not playing."
+                            ? "Monolist opens " + (root.mac ? "in the Dock" : "on the taskbar") + " when you "
+                              + signIn + ", ready and not playing."
                             : Startup.mode === "open"
-                              ? "Monolist opens when you sign in, ready and not playing."
+                              ? "Monolist opens when you " + signIn + ", ready and not playing."
                               : "Monolist opens only when you open it."
             }
         }
@@ -576,7 +586,7 @@ ScrollPage {
                 onPicked: root.setAppearance("dark")
             }
             ChoiceChip {
-                label: "MATCH WINDOWS"
+                label: root.mac ? "MATCH MACOS" : "MATCH WINDOWS"
                 selected: Theme.mode !== "light" && Theme.mode !== "dark"
                 onPicked: root.setAppearance("system")
             }
@@ -584,8 +594,9 @@ ScrollPage {
 
         Note {
             visible: Theme.mode !== "light" && Theme.mode !== "dark"
-            text: "Following Windows, which is set to " + (Theme.dark ? "dark" : "light")
-                  + " (Settings > Personalisation > Colours)."
+            text: (root.mac ? "Following macOS, which is set to " : "Following Windows, which is set to ")
+                  + (Theme.dark ? "dark" : "light")
+                  + (root.mac ? " (System Settings > Appearance)." : " (Settings > Personalisation > Colours).")
         }
 
         ToggleRow {
@@ -749,8 +760,9 @@ ScrollPage {
 
             Note {
                 width: parent.width
-                text: "The icon on the taskbar, and on Monolist's shortcuts in the Start menu, on the desktop "
-                      + "and pinned to the taskbar."
+                text: root.mac ? "The icon in the Dock while Monolist is open."
+                               : "The icon on the taskbar, and on Monolist's shortcuts in the Start menu, on the desktop "
+                                 + "and pinned to the taskbar."
             }
         }
 
@@ -1197,7 +1209,9 @@ ScrollPage {
                        : "")
             steps: [
                 "Monolist opens Last.fm in your browser, where you approve it. Your password is never typed into this app.",
-                "Last.fm hands back a session key, which is kept on this computer, encrypted with your Windows sign-in (the Keychain on a Mac), and can be revoked from your Last.fm account at any time.",
+                root.mac
+                ? "Last.fm hands back a session key, which is kept on this Mac, in your Keychain, and can be revoked from your Last.fm account at any time."
+                : "Last.fm hands back a session key, which is kept on this computer, encrypted with your Windows sign-in, and can be revoked from your Last.fm account at any time.",
                 "A track counts as played once you have heard half of it or four minutes, whichever comes first; tracks of 30 seconds or less never count. "
                 + "While a track plays, Last.fm is also told what is playing now. Nothing else is sent."
             ]
@@ -1334,7 +1348,8 @@ ScrollPage {
                 + "as a private window in a browser is. You sign in there as on any website, two-step verification "
                 + "and all; your password goes to Google, never to Monolist.",
                 "Once YouTube Music opens signed in, the window closes by itself. Monolist keeps only the session "
-                + "YouTube gives back, encrypted with your Windows sign-in, never in the music database or any log, "
+                + "YouTube gives back, " + (root.mac ? "in your Mac's Keychain" : "encrypted with your Windows sign-in")
+                + ", never in the music database or any log, "
                 + "and the window's own copy is deleted. It then asks YouTube Music whether it works, and says "
                 + "Signed in only once YouTube Music does.",
                 "If Google will not sign in there (“This browser or app may not be secure”), Monolist does "
@@ -1349,7 +1364,8 @@ ScrollPage {
                 "Close the private window, but do not sign out first. Signing out ends the session at Google, and the "
                 + "copy Monolist holds would stop working at once; closing the window only throws away the browser's "
                 + "own copy.",
-                "Monolist reads the sign-in once and keeps it encrypted with your Windows sign-in (the Keychain on a Mac), "
+                "Monolist reads the sign-in once and keeps it "
+                + (root.mac ? "in your Mac's Keychain, " : "encrypted with your Windows sign-in, ")
                 + "never in the music database or any log. It then asks YouTube Music whether it works, and says Signed "
                 + "in only once YouTube Music does."
             ]

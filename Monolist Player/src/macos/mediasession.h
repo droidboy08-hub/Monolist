@@ -46,5 +46,6 @@ private:
     // itself, so the position is only told again when it jumps: a seek.
     qint64 m_publishedPosition = 0;
     bool m_publishedPlaying = false;
+    double m_publishedRate = 1.0;
     QElapsedTimer m_publishedAt;
 };

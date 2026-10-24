@@ -703,7 +703,7 @@ Rectangle {
             onClicked: root.miniPlayerRequested()
             ToolTip.visible: hovered
             ToolTip.delay: 600
-            ToolTip.text: "Mini player (Ctrl+Shift+M)"
+            ToolTip.text: Qt.platform.os === "osx" ? "Mini player (⇧⌘M)" : "Mini player (Ctrl+Shift+M)"
         }
         // The sound effects, red while any is on. On the bar for as long as
         // the title is, so the colour shows in a window snapped to half the

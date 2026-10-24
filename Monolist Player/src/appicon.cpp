@@ -11,6 +11,12 @@
 
 #include <iterator>
 
+#ifdef Q_OS_MACOS
+#include "macos/macwindow.h"
+
+#include <QImage>
+#endif
+
 #ifdef Q_OS_WIN
 #include <windows.h>
 #include <objbase.h>
@@ -32,6 +38,11 @@ struct Choice {
 const Choice kChoices[] = {
     { "note", "Note" },
     { "note-red", "Red note" },
+#ifdef Q_OS_MACOS
+    // The first icon, kept as a choice (the owner's, 2026-10-24). The Mac
+    // only: Windows' choices are icons inside the executable.
+    { "m", "M." },
+#endif
 };
 const int kSizes[] = { 16, 24, 32, 48, 64, 128, 256 };
 
@@ -39,6 +50,18 @@ QString picture(const QString &id, int size)
 {
     return QStringLiteral(":/qt/qml/Monolist/icons/app/%1-%2.png").arg(id).arg(size);
 }
+
+#ifdef Q_OS_MACOS
+// The Dock's icon while Monolist runs: the choice on Apple's grid, drawn by
+// macos/make-icon.py. The default is the bundle's own, so nothing is set
+// for it, and the Dock shows that as for any app.
+void showInDock(const QString &id)
+{
+    MacWindow::setDockIcon(id == QLatin1String(kDefault)
+                               ? QImage()
+                               : QImage(QStringLiteral(":/qt/qml/Monolist/icons/app/mac-%1.png").arg(id)));
+}
+#endif
 
 } // namespace
 
@@ -86,9 +109,12 @@ void AppIcon::restore()
     if (indexOf(saved) >= 0)
         m_current = saved;
 #ifndef Q_OS_MACOS
-    // The Mac's icon is the bundle's, drawn on Apple's grid (macos/), and
-    // the Dock would show this one larger than every other app's.
     QGuiApplication::setWindowIcon(iconFor(m_current));
+#else
+    // The Mac's icon is the bundle's, drawn on Apple's grid (macos/): a
+    // window icon would show in the Dock larger than every other app's.
+    if (m_current != QLatin1String(kDefault))
+        showInDock(m_current);
 #endif
     // A few seconds on: nothing about it is worth a moment of the launch.
     QTimer::singleShot(4000, this, &AppIcon::pointOwnShortcuts);
@@ -103,6 +129,8 @@ void AppIcon::choose(const QString &id)
         m_library->setSetting(QString::fromLatin1(kSettingKey), id);
 #ifndef Q_OS_MACOS
     QGuiApplication::setWindowIcon(iconFor(id));
+#else
+    showInDock(id);
 #endif
     pointOwnShortcuts();
     Q_EMIT currentChanged();

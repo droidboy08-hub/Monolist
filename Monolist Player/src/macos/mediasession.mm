@@ -89,6 +89,8 @@ MacMediaSession::MacMediaSession(PlaybackController *player, QNetworkAccessManag
     connect(m_player, &PlaybackController::currentTrackChanged, this, &MacMediaSession::trackChanged);
     connect(m_player, &PlaybackController::playingChanged, this, &MacMediaSession::publish);
     connect(m_player, &PlaybackController::durationChanged, this, &MacMediaSession::publish);
+    // Slowed and Nightcore play the song slower or faster than its own clock.
+    connect(m_player, &PlaybackController::playbackRateChanged, this, &MacMediaSession::publish);
     connect(m_player, &PlaybackController::positionChanged, this, &MacMediaSession::positionMoved);
 
     trackChanged();
@@ -129,7 +131,8 @@ void MacMediaSession::positionMoved()
 {
     if (!m_publishedAt.isValid())
         return;
-    const qint64 expected = m_publishedPosition + (m_publishedPlaying ? m_publishedAt.elapsed() : 0);
+    const qint64 expected = m_publishedPosition
+                            + (m_publishedPlaying ? qint64(m_publishedAt.elapsed() * m_publishedRate) : 0);
     if (qAbs(m_player->position() - expected) > kDriftMs)
         publish();
 }
@@ -148,6 +151,9 @@ void MacMediaSession::publish()
     const bool playing = m_player->playing();
     const qint64 position = m_player->position();
     const qint64 duration = m_player->duration();
+    // The song's seconds per second of the clock: below 1 under Slowed,
+    // above under Nightcore.
+    const double rate = m_player->playbackRate() > 0.0 ? m_player->playbackRate() : 1.0;
 
     // Setting nil through a subscript removes the key, which is what a
     // missing field should do.
@@ -160,7 +166,8 @@ void MacMediaSession::publish()
         info[MPMediaItemPropertyPlaybackDuration] = @(double(duration) / 1000.0);
     info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = @(double(position) / 1000.0);
     // The rate is what lets the system run the clock on by itself.
-    info[MPNowPlayingInfoPropertyPlaybackRate] = @(playing ? 1.0 : 0.0);
+    info[MPNowPlayingInfoPropertyPlaybackRate] = @(playing ? rate : 0.0);
+    info[MPNowPlayingInfoPropertyDefaultPlaybackRate] = @(1.0);
 
     if (NSImage *image = toNSImage(m_cover)) {
         info[MPMediaItemPropertyArtwork] =
@@ -177,6 +184,7 @@ void MacMediaSession::publish()
 
     m_publishedPosition = position;
     m_publishedPlaying = playing;
+    m_publishedRate = rate;
     m_publishedAt.start();
 }
 

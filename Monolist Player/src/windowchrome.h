@@ -36,8 +36,9 @@ class WindowChrome : public QObject, public QAbstractNativeEventFilter
     Q_PROPERTY(bool drawsResizeEdges READ drawsResizeEdges CONSTANT)
     // True where the system keeps its own window buttons (macOS).
     Q_PROPERTY(bool nativeButtons READ nativeButtons CONSTANT)
-    // Room the native buttons need at the left of the title bar.
-    Q_PROPERTY(int nativeButtonsInset READ nativeButtonsInset CONSTANT)
+    // Room the native buttons need at the left of the title bar: from the
+    // window's edge to past them. Known once the window is attached.
+    Q_PROPERTY(int nativeButtonsInset READ nativeButtonsInset NOTIFY nativeButtonsInsetChanged)
     // Which corner the window buttons belong in, and which buttons, in the
     // order they are drawn from left to right ("minimize", "maximize",
     // "close"). Windows: the right, all three. Linux: wherever the desktop's
@@ -87,6 +88,9 @@ public:
 
     bool nativeEventFilter(const QByteArray &eventType, void *message, qintptr *result) override;
 
+Q_SIGNALS:
+    void nativeButtonsInsetChanged();
+
 protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
 
@@ -94,9 +98,12 @@ private:
     // Read once, the first time it is asked for: the desktop's layout is not
     // followed live, as it is changed about as often as the desktop itself.
     void readButtonLayout() const;
+    // macOS: the traffic lights into the top strip, and the room they take.
+    void placeTrafficLights();
 
     QPointer<QWindow> m_window;
     mutable bool m_layoutRead = false;
     mutable bool m_buttonsOnLeft = false;
     mutable QStringList m_windowButtons;
+    int m_nativeButtonsInset = 0;
 };

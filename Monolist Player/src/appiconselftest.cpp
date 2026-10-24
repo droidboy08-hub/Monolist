@@ -9,6 +9,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QIcon>
+#include <QImage>
 
 #ifdef Q_OS_WIN
 #include <windows.h>
@@ -110,7 +111,19 @@ int runAppIconSelfTest(Library *library)
     // Never the real Start menu, desktop or taskbar from here.
     icons.setShortcutFolders({});
     const QVariantList choices = icons.choices();
+#ifdef Q_OS_MACOS
+    // The Mac keeps the first icon, the M., as a third.
+    checks.check(choices.size() == 3 && AppIcon::indexOf(QStringLiteral("m")) == 2,
+                 QStringLiteral("three icons to choose from, the M. among them"));
+    for (const QString &id : { QStringLiteral("note"), QStringLiteral("note-red"), QStringLiteral("m") }) {
+        const QString dock = QStringLiteral(":/qt/qml/Monolist/icons/app/mac-%1.png").arg(id);
+        const QImage picture(dock);
+        checks.check(picture.width() == 512 && picture.height() == 512 && picture.hasAlphaChannel(),
+                     QStringLiteral("%1's Dock picture is in the resources, 512 px with its margin").arg(id), dock);
+    }
+#else
     checks.check(choices.size() == 2, QStringLiteral("two icons to choose from"));
+#endif
     checks.check(icons.current() == QLatin1String("note"), QStringLiteral("the note is the default"));
     checks.check(AppIcon::indexOf(QStringLiteral("note")) == 0 && AppIcon::indexOf(QStringLiteral("note-red")) == 1,
                  QStringLiteral("the default is the executable's first icon, the red its second"));

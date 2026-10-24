@@ -16,8 +16,10 @@
 //    folder beside the database (secretstore_win.cpp). Not Credential Manager:
 //    its blobs are capped at 2,560 bytes, 512 in MinGW's headers, and a cookie
 //    jar outgrows either.
-//  - macOS: the Keychain, in secretstore_mac.mm, which defines
-//    MONOLIST_HAVE_KEYCHAIN from CMake when it is added.
+//  - macOS: the login Keychain, one generic password per secret
+//    (macos/secretstore_mac.cpp; CMake defines MONOLIST_HAVE_KEYCHAIN with
+//    it). Items made with MONOLIST_DATA_DIR set are kept apart from the
+//    library in use, as the Windows files are by sitting beside it.
 //  - Anywhere else: not available yet. Every call says so rather than falling
 //    back to a plain file, so whatever wanted to keep a secret can tell the
 //    user it will not be remembered.

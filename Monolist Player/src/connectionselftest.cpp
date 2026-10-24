@@ -245,6 +245,25 @@ int runSecretStoreSelfTest()
         t.note(QStringLiteral("tamper checks skipped: this store keeps no files"));
     }
 
+    // A store with no folder of its own keeps each data folder's secrets
+    // apart all the same: written for another library, never read here, as
+    // the files of one sit beside its own database alone. Only from a
+    // scratch library, whose folder the other one is made in.
+    if (!fileBacked && !qgetenv("MONOLIST_DATA_DIR").isEmpty()) {
+        const QByteArray here = qgetenv("MONOLIST_DATA_DIR");
+        const QString other = QDir(QString::fromLocal8Bit(here)).filePath(QStringLiteral("other-library"));
+        qputenv("MONOLIST_DATA_DIR", other.toLocal8Bit());
+        const Status wrote = SecretStore::write(QStringLiteral("selftest.swap-a"), "TESTSECRET-OTHER");
+        qputenv("MONOLIST_DATA_DIR", here);
+        QByteArray back("stale");
+        const Status read = SecretStore::read(QStringLiteral("selftest.swap-a"), &back);
+        t.check(wrote == Status::Ok && read == Status::NotFound && back.isEmpty(),
+                QStringLiteral("another library's secret is not this one's"), SecretStore::statusText(read));
+        qputenv("MONOLIST_DATA_DIR", other.toLocal8Bit());
+        SecretStore::remove(QStringLiteral("selftest.swap-a"));
+        qputenv("MONOLIST_DATA_DIR", here);
+    }
+
     // Delete: the file goes, the name reads as never written, and deleting
     // again is not an error.
     {
