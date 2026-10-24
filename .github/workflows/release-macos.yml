@@ -7,6 +7,21 @@
 # Monolist-<version>-macos-arm64.dmg, its checksum and a Mac section to the
 # notes; it never makes the release itself, so the two cannot race.
 #
+# Signed and notarised when the repository has these five secrets, and
+# exactly as before (signed ad hoc only) when it does not:
+#   MONOLIST_DEVELOPER_ID_P12           the "Developer ID Application"
+#                                       certificate and its key, exported
+#                                       from Keychain Access as .p12, base64
+#   MONOLIST_DEVELOPER_ID_P12_PASSWORD  that export's password
+#   MONOLIST_NOTARY_KEY_P8              an App Store Connect team API key
+#                                       (.p8), base64
+#   MONOLIST_NOTARY_KEY_ID              its key ID
+#   MONOLIST_NOTARY_ISSUER              its issuer ID
+# Signed, the release gets both images: -macos-arm64.dmg (signed,
+# notarised) and -macos-arm64-unsigned.dmg (the same build, ad hoc). The
+# certificate lives in a keychain of the job's own, deleted at its end, and
+# reaches no third-party action.
+#
 # Run by hand (Actions > macOS release > Run workflow), it builds the same
 # disk image as a downloadable artifact and releases nothing.
 name: macOS release
@@ -51,7 +66,54 @@ jobs:
       - name: Toolchain
         run: bash "Monolist Player/scripts/setup-macos.sh"
 
+      # The secrets are read here alone, and only tested for being there:
+      # "if:" may not name a secret.
+      - name: Signing identity
+        id: signing
+        env:
+          P12: ${{ secrets.MONOLIST_DEVELOPER_ID_P12 }}
+          P12_PASSWORD: ${{ secrets.MONOLIST_DEVELOPER_ID_P12_PASSWORD }}
+          NOTARY_KEY: ${{ secrets.MONOLIST_NOTARY_KEY_P8 }}
+          NOTARY_KEY_ID: ${{ secrets.MONOLIST_NOTARY_KEY_ID }}
+          NOTARY_ISSUER: ${{ secrets.MONOLIST_NOTARY_ISSUER }}
+        run: |
+          if [ -z "$P12" ] || [ -z "$P12_PASSWORD" ] || [ -z "$NOTARY_KEY" ] || [ -z "$NOTARY_KEY_ID" ] || [ -z "$NOTARY_ISSUER" ]; then
+            echo "No Developer ID secrets: the disk image is signed ad hoc, as before."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          umask 077
+          keychain="$RUNNER_TEMP/monolist-signing.keychain-db"
+          password="$(openssl rand -base64 33)"
+          echo "::add-mask::$password"
+          printf '%s' "$P12" | base64 --decode -o "$RUNNER_TEMP/developer-id.p12"
+          printf '%s' "$NOTARY_KEY" | base64 --decode -o "$RUNNER_TEMP/notary-key.p8"
+          security create-keychain -p "$password" "$keychain"
+          # Locked again after six hours, longer than the job may run.
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$password" "$keychain"
+          security import "$RUNNER_TEMP/developer-id.p12" -k "$keychain" -f pkcs12 -P "$P12_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$password" "$keychain" > /dev/null
+          # In front of the search list, the runner's own keychains kept.
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          rm -f "$RUNNER_TEMP/developer-id.p12"
+          identity="$(security find-identity -v -p codesigning "$keychain" | awk '/"Developer ID Application: / {print $2; exit}')"
+          if [ -z "$identity" ]; then
+            echo "The certificate in MONOLIST_DEVELOPER_ID_P12 is not a usable Developer ID Application identity." >&2
+            exit 1
+          fi
+          echo "Signing as $(security find-identity -v -p codesigning "$keychain" | sed -n 's/.*"\(Developer ID Application: .*\)"/\1/p' | head -n 1)"
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+          echo "identity=$identity" >> "$GITHUB_OUTPUT"
+          echo "keychain=$keychain" >> "$GITHUB_OUTPUT"
+          echo "key=$RUNNER_TEMP/notary-key.p8" >> "$GITHUB_OUTPUT"
+
       - name: Build, deploy, sign and the disk image
+        env:
+          MONOLIST_SIGN_IDENTITY: ${{ steps.signing.outputs.identity }}
+          MONOLIST_NOTARY_KEY: ${{ steps.signing.outputs.key }}
+          MONOLIST_NOTARY_KEY_ID: ${{ steps.signing.outputs.enabled == 'true' && secrets.MONOLIST_NOTARY_KEY_ID || '' }}
+          MONOLIST_NOTARY_ISSUER: ${{ steps.signing.outputs.enabled == 'true' && secrets.MONOLIST_NOTARY_ISSUER || '' }}
         run: bash "Monolist Player/scripts/build-macos.sh" --dmg
 
       # The build tree's app, which still loads Homebrew's Qt and so has its
@@ -79,7 +141,7 @@ jobs:
             exit 1
           fi
 
-      - name: Name the disk image
+      - name: Name the disk images
         id: image
         run: |
           build=$(git rev-list --count HEAD)
@@ -88,8 +150,16 @@ jobs:
           name="Monolist-$version.$build-macos-arm64.dmg"
           mv "$dist/Monolist.dmg" "$dist/$name"
           (cd "$dist" && shasum -a 256 "$name" > "$name.sha256")
+          unsigned=""
+          if [ -f "$dist/Monolist-unsigned.dmg" ]; then
+            unsigned="Monolist-$version.$build-macos-arm64-unsigned.dmg"
+            mv "$dist/Monolist-unsigned.dmg" "$dist/$unsigned"
+            (cd "$dist" && shasum -a 256 "$unsigned" > "$unsigned.sha256")
+          fi
           echo "dir=$dist" >> "$GITHUB_OUTPUT"
           echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "unsigned=$unsigned" >> "$GITHUB_OUTPUT"
+          echo "minimum=$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$dist/Monolist.app/Contents/Info.plist")" >> "$GITHUB_OUTPUT"
 
       - name: Keep the files
         uses: actions/upload-artifact@v4
@@ -98,14 +168,18 @@ jobs:
           path: |
             ${{ steps.image.outputs.dir }}/*.dmg
             ${{ steps.image.outputs.dir }}/*.sha256
+            Monolist Player/build-macos/notary-*.json
 
       - name: Add to the release
         if: startsWith(github.ref, 'refs/tags/')
         env:
           GH_TOKEN: ${{ github.token }}
+          SIGNED: ${{ steps.signing.outputs.enabled }}
         run: |
           dir="${{ steps.image.outputs.dir }}"
           name="${{ steps.image.outputs.name }}"
+          unsigned="${{ steps.image.outputs.unsigned }}"
+          minimum="${{ steps.image.outputs.minimum }}"
           # The Windows workflow publishes the release; up to three hours.
           for attempt in $(seq 1 180); do
             gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1 && break
@@ -113,15 +187,33 @@ jobs:
             sleep 60
           done
           gh release upload "$GITHUB_REF_NAME" "$dir/$name" "$dir/$name.sha256" --clobber
+          if [ -n "$unsigned" ]; then
+            gh release upload "$GITHUB_REF_NAME" "$dir/$unsigned" "$dir/$unsigned.sha256" --clobber
+          fi
           gh release view "$GITHUB_REF_NAME" --json body --jq .body > notes.md
           {
             echo
-            echo "**macOS** (Apple silicon, macOS 15 or later: Homebrew builds Qt and mpv for the macOS they are built on):"
+            echo "**macOS** (Apple silicon, macOS $minimum or later):"
             echo
-            echo "- **$name**: open it and drag Monolist to Applications. Everything the app needs is inside: Qt, mpv, yt-dlp, FFmpeg and Deno."
+            if [ "$SIGNED" = "true" ]; then
+              echo "- **$name**: open it and drag Monolist to Applications. Signed with a Developer ID and notarised by Apple: it opens like any other app."
+              echo "- **$unsigned**: the same build without the Developer ID signature, for those who would rather have it so: the first time, macOS will not open it until you allow it in System Settings > Privacy & Security."
+            else
+              echo "- **$name**: open it and drag Monolist to Applications."
+              echo
+              echo 'The app is signed ad hoc, not by an Apple developer, so the first time macOS will not open it: open it once, then choose Open Anyway in System Settings > Privacy & Security.'
+            fi
             echo
-            echo 'The app is signed ad hoc, not by an Apple developer, so the first time macOS will not open it from a double click: right-click Monolist in Applications and choose Open, or allow it in System Settings > Privacy & Security.'
+            echo "Everything the app needs is inside: Qt, mpv, yt-dlp, FFmpeg and Deno."
             echo
             echo "    $(cat "$dir/$name.sha256")"
+            [ -z "$unsigned" ] || echo "    $(cat "$dir/$unsigned.sha256")"
           } >> notes.md
           gh release edit "$GITHUB_REF_NAME" --notes-file notes.md
+
+      # The certificate and the API key leave with the job, whatever happened.
+      - name: Remove the signing keychain
+        if: always() && steps.signing.outputs.enabled == 'true'
+        run: |
+          security delete-keychain "${{ steps.signing.outputs.keychain }}" || true
+          rm -f "$RUNNER_TEMP/notary-key.p8" "$RUNNER_TEMP/developer-id.p12"

@@ -440,6 +440,19 @@ void applyBaseOptionsTo(mpv_handle *mpv)
     // a second, slower resolution path with different failure modes.
     setOptionOn(mpv, "ytdl", "no");
 
+#ifdef Q_OS_MACOS
+    // None of mpv's own Lua scripts either: its on-screen controller, stats,
+    // console, menus and the rest are a player's interface, which this mpv,
+    // drawing to Monolist's own window, never shows. On a Mac they would
+    // also end the app: Homebrew's mpv runs them on LuaJIT, whose machine
+    // code is written to memory as it goes, which the hardened runtime (a
+    // Developer ID build, notarised) kills the process for ("Code Signature
+    // Invalid"), the JIT entitlement or not.
+    for (const char *script : { "osc", "load-stats-overlay", "load-console", "load-select", "load-commands",
+                                "load-positioning", "load-context-menu", "load-auto-profiles", "load-scripts" })
+        setOptionOn(mpv, script, "no");
+#endif
+
     // Stop at end of file rather than holding the last frame; the controller
     // decides what plays next.
     setOptionOn(mpv, "keep-open", "no");

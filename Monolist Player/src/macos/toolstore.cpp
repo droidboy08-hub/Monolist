@@ -106,10 +106,17 @@ bool unpack(const QString &name, const QString &archive, const QString &version,
     QDir(retired).removeRecursively();
 
     // ditto keeps what a zip made on a Mac carries: permissions, symlinks
-    // and the signatures of the files inside.
+    // and the signatures of the files inside. Not the archive's quarantine
+    // (--noqtn): Monolist copied off a downloaded disk image carries one on
+    // every file, its tools' archives too, and ditto passed it on to every
+    // program it unpacked, so Gatekeeper refused yt-dlp in a build that is
+    // not notarised (and asked Apple about it at every run in one that is).
+    // The tools came inside the app the user chose to open; a notarised
+    // build's are in its ticket all the same, as the notary service reads
+    // the archives.
     QProcess ditto;
     ditto.start(QStringLiteral("/usr/bin/ditto"), { QStringLiteral("-x"), QStringLiteral("-k"),
-                                                   archive, staging });
+                                                   QStringLiteral("--noqtn"), archive, staging });
     if (!ditto.waitForFinished(kUnpackTimeoutMs) || ditto.exitStatus() != QProcess::NormalExit
         || ditto.exitCode() != 0) {
         ditto.kill();
