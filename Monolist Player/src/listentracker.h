@@ -34,6 +34,10 @@ public:
     static constexpr qint64 kMinimumTrackMs = 30000;   // this long or shorter never counts
     static constexpr qint64 kEnoughMs = 240000;        // four minutes always does
     static constexpr qint64 kMaxStepMs = 2500;
+    // Heard this long (or the whole threshold, when that is shorter), a song
+    // has settled: long enough to say it was not a skip. Home's just-played
+    // rows take their seeds here, well before a listen qualifies.
+    static constexpr qint64 kSettledMs = 45000;
     // After a pause this long, Last.fm's "now playing" has long lapsed and is
     // worth saying again when the music resumes.
     static constexpr qint64 kLongPauseMs = 5 * 60 * 1000;
@@ -72,6 +76,10 @@ Q_SIGNALS:
     // engine knows better; `startedAt` is when it started, in UTC seconds.
     void listenStarted(const QVariantMap &track, qint64 startedAt, bool chosenByUser);
     void listenQualified(const QVariantMap &track, qint64 startedAt, bool chosenByUser);
+    // Heard for min(kSettledMs, the threshold), once per listen, never for a
+    // track that cannot count. Emitted before listenQualified when both fall
+    // on the same step.
+    void listenSettled(const QVariantMap &track, qint64 startedAt, bool chosenByUser);
     // Playing again after a long pause.
     void listenResumed(const QVariantMap &track, qint64 startedAt, bool chosenByUser);
 
@@ -89,6 +97,7 @@ private:
     qint64 m_heardMs = 0;
     bool m_started = false;
     bool m_qualified = false;
+    bool m_settled = false;
     qint64 m_startedAt = 0;      // UTC seconds
     qint64 m_pausedSince = 0;    // wall clock ms; 0 while playing
 };

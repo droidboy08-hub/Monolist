@@ -1213,26 +1213,73 @@ void Catalog::loadMoreLike(const QString &artist)
     }
 
     // Within the day, for the same artist and country: no request.
-    {
-        QSqlQuery query(AppDatabase::connection());
-        query.prepare(QStringLiteral("SELECT region, saved_at, body FROM home_cache WHERE part = ?"));
-        query.addBindValue(QStringLiteral("moreLike"));
-        if (query.exec() && query.next() && query.value(0).toString() == InnerTube::region()
-            && QDateTime::currentSecsSinceEpoch() - query.value(1).toLongLong() < 24 * 3600) {
-            const QVariantMap kept = QJsonDocument::fromJson(qUncompress(query.value(2).toByteArray()))
-                                         .toVariant().toMap();
-            if (kept.value(QStringLiteral("artist")).toString() == name
-                && !kept.value(QStringLiteral("items")).toList().isEmpty()) {
-                m_moreLike = kept;
-                Q_EMIT moreLikeChanged();
-                return;
-            }
-        }
-    }
+    if (showKeptMoreLike(QStringLiteral("moreLike"), name))
+        return;
+    findMoreLike(name, /*perArtist=*/false);
+}
 
+void Catalog::loadMoreLikeFrom(const QVariantList &candidates)
+{
+    QString name;
+    QString browseId;
+    bool any = false;
+    for (const QVariant &value : candidates) {
+        const QVariantMap candidate = value.toMap();
+        const QString wanted = candidate.value(QStringLiteral("name")).toString().trimmed();
+        const QString key = ArtistLinks::looseKey(wanted);
+        if (key.isEmpty())
+            continue;
+        any = true;
+        if (m_moreLikeMisses.contains(key))
+            continue;
+        name = wanted;
+        browseId = candidate.value(QStringLiteral("browseId")).toString();
+        break;
+    }
+    if (!any) {
+        loadMoreLike(QString());
+        return;
+    }
+    if (name.isEmpty() || name == m_moreLikeFor)
+        return;   // every one has missed, or it is shown, or being found
+    if (QDateTime::currentSecsSinceEpoch() - m_moreLikeFailedAt < 300)
+        return;
+    m_moreLikeFor = name;
+
+    if (showKeptMoreLike(QStringLiteral("moreLike:") + ArtistLinks::looseKey(name), name))
+        return;
+    // A page already known to be the artist's own: one browse, no search.
+    if (!browseId.isEmpty()) {
+        browseMoreLike(name, { name, browseId, QString() }, /*perArtist=*/true);
+        return;
+    }
+    findMoreLike(name, /*perArtist=*/true);
+}
+
+bool Catalog::showKeptMoreLike(const QString &part, const QString &name)
+{
+    QSqlQuery query(AppDatabase::connection());
+    query.prepare(QStringLiteral("SELECT region, saved_at, body FROM home_cache WHERE part = ?"));
+    query.addBindValue(part);
+    if (!query.exec() || !query.next() || query.value(0).toString() != InnerTube::region()
+        || QDateTime::currentSecsSinceEpoch() - query.value(1).toLongLong() >= 24 * 3600)
+        return false;
+    const QVariantMap kept = QJsonDocument::fromJson(qUncompress(query.value(2).toByteArray()))
+                                 .toVariant().toMap();
+    if (kept.value(QStringLiteral("artist")).toString() != name
+        || kept.value(QStringLiteral("items")).toList().isEmpty())
+        return false;
+    m_moreLike = kept;
+    Q_EMIT moreLikeChanged();
+    return true;
+}
+
+void Catalog::findMoreLike(const QString &name, bool perArtist)
+{
     // The artist by that very name (or that name written another way), never
     // whoever sounds nearest; then their page, and its shelf of artists.
-    m_innerTube.searchArtists(name, [this, name](const QList<InnerTube::ArtistHit> &hits, const QString &error) {
+    m_innerTube.searchArtists(name, [this, name, perArtist](const QList<InnerTube::ArtistHit> &hits,
+                                                            const QString &error) {
         if (name != m_moreLikeFor)
             return;
         if (!error.isEmpty()) {
@@ -1256,51 +1303,77 @@ void Catalog::loadMoreLike(const QString &artist)
                 }
             }
         }
-        if (!found || found->browseId.isEmpty())
+        if (!found || found->browseId.isEmpty()) {
+            if (perArtist)
+                m_moreLikeMisses.insert(ArtistLinks::looseKey(name));
             return;
-        const InnerTube::ArtistHit hit = *found;
-        m_innerTube.browse(hit.browseId, [this, name, hit](const QJsonObject &root, const QString &error) {
-            if (name != m_moreLikeFor)
-                return;
-            if (!error.isEmpty()) {
-                m_moreLikeFor.clear();
-                m_moreLikeFailedAt = QDateTime::currentSecsSinceEpoch();
-                return;
+        }
+        browseMoreLike(name, *found, perArtist);
+    });
+}
+
+void Catalog::browseMoreLike(const QString &name, const InnerTube::ArtistHit &hit, bool perArtist)
+{
+    m_innerTube.browse(hit.browseId, [this, name, hit, perArtist](const QJsonObject &root, const QString &error) {
+        if (name != m_moreLikeFor)
+            return;
+        if (!error.isEmpty()) {
+            m_moreLikeFor.clear();
+            m_moreLikeFailedAt = QDateTime::currentSecsSinceEpoch();
+            return;
+        }
+        const InnerTube::Artist page = InnerTube::parseArtist(hit.browseId, root);
+        // The shelf whose every card is an artist's ("Fans might also
+        // like"), in whatever language it is titled.
+        QVariantList items;
+        for (const InnerTube::Shelf &shelf : page.shelves) {
+            if (shelf.cards.isEmpty())
+                continue;
+            bool artists = true;
+            for (const InnerTube::Card &card : shelf.cards)
+                artists = artists && card.type == QLatin1String("artist");
+            if (artists) {
+                items = shelfToMap(shelf).value(QStringLiteral("items")).toList();
+                break;
             }
-            const InnerTube::Artist page = InnerTube::parseArtist(hit.browseId, root);
-            // The shelf whose every card is an artist's ("Fans might also
-            // like"), in whatever language it is titled.
-            QVariantList items;
-            for (const InnerTube::Shelf &shelf : page.shelves) {
-                if (shelf.cards.isEmpty())
-                    continue;
-                bool artists = true;
-                for (const InnerTube::Card &card : shelf.cards)
-                    artists = artists && card.type == QLatin1String("artist");
-                if (artists) {
-                    items = shelfToMap(shelf).value(QStringLiteral("items")).toList();
-                    break;
-                }
-            }
-            if (items.isEmpty())
-                return;
-            m_moreLike = {
-                { QStringLiteral("artist"), name },
-                { QStringLiteral("name"), page.name.isEmpty() ? hit.name : page.name },
-                { QStringLiteral("browseId"), hit.browseId },
-                { QStringLiteral("artwork"), hit.artwork },
-                { QStringLiteral("items"), items }
-            };
+        }
+        if (items.isEmpty()) {
+            // A page that links no one: the next name is tried on the next
+            // visit, and this one not again this launch.
+            if (perArtist)
+                m_moreLikeMisses.insert(ArtistLinks::looseKey(name));
+            return;
+        }
+        m_moreLike = {
+            { QStringLiteral("artist"), name },
+            { QStringLiteral("name"), page.name.isEmpty() ? hit.name : page.name },
+            { QStringLiteral("browseId"), hit.browseId },
+            { QStringLiteral("artwork"), hit.artwork },
+            { QStringLiteral("items"), items }
+        };
+        const QByteArray body = qCompress(QJsonDocument::fromVariant(m_moreLike).toJson(QJsonDocument::Compact));
+        const qint64 now = QDateTime::currentSecsSinceEpoch();
+        // The one part an older build reads, always; for loadMoreLikeFrom
+        // the artist's own as well, and those a week old let go.
+        QStringList parts{ QStringLiteral("moreLike") };
+        if (perArtist) {
+            parts << QStringLiteral("moreLike:") + ArtistLinks::looseKey(name);
+            QSqlQuery prune(AppDatabase::connection());
+            prune.prepare(QStringLiteral("DELETE FROM home_cache WHERE part LIKE 'moreLike:%' AND saved_at < ?"));
+            prune.addBindValue(now - 7 * 24 * 3600);
+            prune.exec();
+        }
+        for (const QString &part : std::as_const(parts)) {
             QSqlQuery query(AppDatabase::connection());
             query.prepare(QStringLiteral(
                 "INSERT OR REPLACE INTO home_cache (part, region, saved_at, body) VALUES (?, ?, ?, ?)"));
-            query.addBindValue(QStringLiteral("moreLike"));
+            query.addBindValue(part);
             query.addBindValue(InnerTube::region());
-            query.addBindValue(QDateTime::currentSecsSinceEpoch());
-            query.addBindValue(qCompress(QJsonDocument::fromVariant(m_moreLike).toJson(QJsonDocument::Compact)));
+            query.addBindValue(now);
+            query.addBindValue(body);
             query.exec();
-            Q_EMIT moreLikeChanged();
-        });
+        }
+        Q_EMIT moreLikeChanged();
     });
 }
 

@@ -402,6 +402,20 @@ void AppDatabase::createSchema()
         " artwork TEXT NOT NULL DEFAULT '',"
         " looked_at INTEGER NOT NULL DEFAULT 0)"));
 
+    // YouTube Music's radio for a song just played, asked signed out for
+    // Home's just-played rows (JustPlayed): at most 50 of its songs as
+    // compact JSON, compressed, with the country and when. ok = 0 is an
+    // answer that was empty or failed, remembered so it is not asked again
+    // at once. Not home_cache, whose every row is decoded at launch; not in
+    // the library's backup; emptied with the history.
+    q.exec(QStringLiteral(
+        "CREATE TABLE IF NOT EXISTS rec_radio ("
+        " video_id TEXT PRIMARY KEY,"
+        " region TEXT NOT NULL DEFAULT '',"
+        " fetched_at INTEGER NOT NULL DEFAULT 0,"
+        " ok INTEGER NOT NULL DEFAULT 0,"
+        " body BLOB)"));
+
     // How loud YouTube measured each song (Loudness): the chosen format's
     // loudnessDb, kept so a download or a later launch levels it the same.
     q.exec(QStringLiteral(

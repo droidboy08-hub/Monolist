@@ -97,6 +97,11 @@ qt_add_executable(monolist
     src/rec/graph.h                src/rec/graph.cpp
     src/rec/suitable.h             src/rec/suitable.cpp
     src/rec/shelves.h              src/rec/shelves.cpp
+    # Home's just-played rows: composed from YouTube Music's radio for the
+    # songs just heard (rec/sessionrows, pure), and the radios asked for,
+    # signed out and paced, and kept (JustPlayed; --just-played-probe).
+    src/rec/sessionrows.h          src/rec/sessionrows.cpp
+    src/justplayed.h               src/justplayed.cpp
     src/recommender.h              src/recommender.cpp
     # Fetches those files from their own repository (Monolist-data), checked
     # against its manifest, into the data folder.

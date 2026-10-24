@@ -309,6 +309,13 @@ Q_SIGNALS:
     void listenStarted(const QVariantMap &track, qint64 startedAt, bool chosenByUser);
     void listenQualified(const QVariantMap &track, qint64 startedAt, bool chosenByUser);
     void listenResumed(const QVariantMap &track, qint64 startedAt, bool chosenByUser);
+    // Heard for min(45 s, the threshold): no longer a skip (ListenTracker).
+    void listenSettled(const QVariantMap &track, qint64 startedAt, bool chosenByUser);
+    // Autoplay's radio answered for `seed`, whether or not it is still the
+    // radio the queue wants: Home's just-played rows keep it (justplayed.h).
+    void radioFetched(const QString &seed, const QList<InnerTube::Track> &tracks);
+    // Closed listens were written to play_events, labels and all.
+    void playEventsWritten();
 
 private:
     void startQueue(QList<QueueTrack> tracks, int start, bool autoPlay);

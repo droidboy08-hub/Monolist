@@ -175,6 +175,11 @@ public:
     // Finds `artist`'s page and the artists on it, signed out, unless that
     // artist's were found within the day; an empty name clears it.
     Q_INVOKABLE void loadMoreLike(const QString &artist);
+    // The same for Home with its just-played rows: the first of
+    // [{ name, browseId }] not already found this launch to link no one,
+    // kept a day per artist (home_cache "moreLike:<looseKey>"). A known
+    // page is browsed straight away, with no search.
+    Q_INVOKABLE void loadMoreLikeFrom(const QVariantList &candidates);
     QVariantMap moreLike() const { return m_moreLike; }
     QVariantMap featured() const { return m_featured; }
     SearchResultModel *recent() { return &m_recent; }
@@ -298,6 +303,14 @@ private:
     // left waiting (its parts, a Play that wanted all of it).
     void dropAccountPage(const QString &why);
     void dropAccountListing(const QString &why);
+    // More like, in its parts: what `part` kept for `name` shown (this
+    // country, within the day; false when nothing was); the artist by that
+    // name found; and their page browsed for its shelf of artists, shown and
+    // kept. `perArtist` (loadMoreLikeFrom) also keeps it under the artist's
+    // own part, and remembers a name that found no such shelf.
+    bool showKeptMoreLike(const QString &part, const QString &name);
+    void findMoreLike(const QString &name, bool perArtist);
+    void browseMoreLike(const QString &name, const InnerTube::ArtistHit &hit, bool perArtist);
     static QVariantMap shelfToMap(const InnerTube::Shelf &shelf);
     static QVariantMap moreToMap(const InnerTube::Link &more);
     static QList<SearchResultModel::Item> toItems(const QList<InnerTube::Track> &tracks);
@@ -414,4 +427,5 @@ private:
     QVariantMap m_moreLike;
     QString m_moreLikeFor;            // the artist it is for, or being found for
     qint64 m_moreLikeFailedAt = 0;    // when an ask last failed (seconds), to wait a while
+    QSet<QString> m_moreLikeMisses;   // looseKeys that linked no one, this launch
 };

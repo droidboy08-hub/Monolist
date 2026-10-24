@@ -129,6 +129,21 @@ QString ArtistLinks::idFor(const QString &name) const
     return loose != m_loose.cend() ? m_links.value(*loose).browseId : QString();
 }
 
+bool ArtistLinks::isArtistPage(const QString &name) const
+{
+    const QString trimmed = name.trimmed();
+    if (trimmed.isEmpty())
+        return false;
+    const auto exact = m_links.constFind(trimmed);
+    if (exact != m_links.cend())
+        return exact->artistPage;
+    const QString key = looseKey(trimmed);
+    if (key.isEmpty())
+        return false;
+    const auto loose = m_loose.constFind(key);
+    return loose != m_loose.cend() && m_links.value(*loose).artistPage;
+}
+
 QVariantList ArtistLinks::credits(const QString &artist, const QVariant &known) const
 {
     // The track's own: exact, and each name already has its page. A name it

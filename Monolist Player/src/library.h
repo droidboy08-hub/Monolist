@@ -172,8 +172,10 @@ public:
     QVariantList recentPlaces() const { return m_recentPlaces; }
     // The artist played most these last eight weeks, by the first name of
     // each credit, for Home's "More like"; empty while too little has been
-    // played to say (three plays of someone at least).
-    Q_INVOKABLE QString topArtist() const;
+    // played to say (three plays of someone at least). `damped`, for Home
+    // with its just-played rows: the last four weeks, each song counted once
+    // a day, so a Repeat All loop is not most of the count.
+    Q_INVOKABLE QString topArtist(bool damped = false) const;
 
     QString region() const;
     void setRegion(const QString &code);

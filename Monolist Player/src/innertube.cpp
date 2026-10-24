@@ -3069,10 +3069,18 @@ void InnerTube::searchArtists(const QString &query,
          });
 }
 
+// An answer that came back whole with no songs in it, as watchPlaylist
+// tells it from a failure.
+QString InnerTube::noSongsError()
+{
+    return QStringLiteral("YouTube Music sent no songs for it.");
+}
+
 // The same call as the radio's, for a playlist YouTube Music named itself:
 // an artist's shuffle ("RDAO…") or mix ("RDEM…"), answered as a queue.
 void InnerTube::watchPlaylist(const Watch &watch,
-                              std::function<void(const QList<Track> &, const QString &)> done)
+                              std::function<void(const QList<Track> &, const QString &)> done,
+                              int retries)
 {
     if (watch.playlistId.isEmpty() && watch.videoId.isEmpty()) {
         done({}, QStringLiteral("nothing to play"));
@@ -3095,8 +3103,9 @@ void InnerTube::watchPlaylist(const Watch &watch,
                  return;
              }
              const QList<Track> tracks = parseRadio(root);
-             done(tracks, tracks.isEmpty() ? QStringLiteral("YouTube Music sent no songs for it.") : QString());
-         });
+             done(tracks, tracks.isEmpty() ? noSongsError() : QString());
+         },
+         retries);
 }
 
 QList<InnerTube::Track> InnerTube::parseRadio(const QJsonObject &root)

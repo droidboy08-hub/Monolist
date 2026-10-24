@@ -397,6 +397,7 @@ PlaybackController::PlaybackController(MpvEngine *engine,
     connect(&m_listen, &ListenTracker::listenStarted, this, &PlaybackController::listenStarted);
     connect(&m_listen, &ListenTracker::listenQualified, this, &PlaybackController::listenQualified);
     connect(&m_listen, &ListenTracker::listenResumed, this, &PlaybackController::listenResumed);
+    connect(&m_listen, &ListenTracker::listenSettled, this, &PlaybackController::listenSettled);
 
     m_volumeSave.setSingleShot(true);
     m_volumeSave.setInterval(kVolumeSaveDelayMs);
@@ -462,6 +463,9 @@ PlaybackController::PlaybackController(MpvEngine *engine,
 
     connect(&m_innerTube, &InnerTube::radioReady, this,
             [this](const QString &seed, const QList<InnerTube::Track> &found) {
+                // Told first, even when the queue has moved on: the answer
+                // is as good for Home's rows either way.
+                Q_EMIT radioFetched(seed, found);
                 if (seed != m_radioSeed)
                     return;   // a newer context replaced the queue meanwhile
                 m_radioSeed.clear();
@@ -1489,6 +1493,8 @@ void PlaybackController::writePlayEvents()
         if (!finish.exec())
             qWarning("Monolist: could not close a play event: %s", qPrintable(finish.lastError().text()));
     }
+    if (!writes.isEmpty())
+        Q_EMIT playEventsWritten();
 }
 
 // Everything that decides *where* audio comes from lives here; the rest of the

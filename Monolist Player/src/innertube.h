@@ -489,9 +489,15 @@ public:
                       int retries = 1);
     static QList<Track> parseSearch(const QJsonObject &root);
     // The songs behind a Watch — an artist's Shuffle or Mix — as the queue
-    // YouTube Music would play, the first song first.
+    // YouTube Music would play, the first song first. `retries` as
+    // searchTracks has it: Home's just-played rows ask with 0, so a refusal
+    // is taken at once and rested on (justplayed.h). An answer with no
+    // songs in it comes with noSongsError(), so a caller can tell it from a
+    // failure.
     void watchPlaylist(const Watch &watch,
-                       std::function<void(const QList<Track> &tracks, const QString &error)> done);
+                       std::function<void(const QList<Track> &tracks, const QString &error)> done,
+                       int retries = 1);
+    static QString noSongsError();
 
     // account/account_menu: who is signed in. Asked only with the account;
     // without one it only offers to sign in.

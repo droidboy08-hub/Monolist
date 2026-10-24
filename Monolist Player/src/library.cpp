@@ -356,16 +356,25 @@ void Library::reloadPlaces()
     Q_EMIT recentPlacesChanged();
 }
 
-QString Library::topArtist() const
+QString Library::topArtist(bool damped) const
 {
     // Plays that were heard (half a minute, or to the end), by credit, the
-    // first name of a joint one standing for it.
+    // first name of a joint one standing for it. Damped, a song's plays on
+    // one day are one.
     QSqlQuery query(AppDatabase::connection());
-    query.exec(QStringLiteral(
-        "SELECT artist, COUNT(*) FROM play_events"
-        " WHERE kind = 'play' AND artist <> '' AND started_at >= datetime('now', '-56 days')"
-        "   AND (listened_ms >= 30000 OR completed = 1)"
-        " GROUP BY artist"));
+    if (damped) {
+        query.exec(QStringLiteral(
+            "SELECT artist, COUNT(DISTINCT video_id || '|' || substr(started_at, 1, 10)) FROM play_events"
+            " WHERE kind = 'play' AND artist <> '' AND started_at >= datetime('now', '-28 days')"
+            "   AND (listened_ms >= 30000 OR completed = 1)"
+            " GROUP BY artist"));
+    } else {
+        query.exec(QStringLiteral(
+            "SELECT artist, COUNT(*) FROM play_events"
+            " WHERE kind = 'play' AND artist <> '' AND started_at >= datetime('now', '-56 days')"
+            "   AND (listened_ms >= 30000 OR completed = 1)"
+            " GROUP BY artist"));
+    }
     // As the suggestions read a credit (rec/shelves.cpp firstPerformer):
     // spaced joiners only, so "AC/DC" and "Malcolm X" stay whole, and the
     // " - Topic" of an auto-generated channel off.
@@ -1279,6 +1288,10 @@ void Library::clearHistory()
     // JioSaavn's remembered answers name every song played or queued next:
     // a cache, but one that would outlive the history it mirrors.
     q.exec(QStringLiteral("DELETE FROM saavn_matches"));
+    // Home's just-played rows: the radios asked for songs played, and the
+    // More like <artist> answers named after who was played.
+    q.exec(QStringLiteral("DELETE FROM rec_radio"));
+    q.exec(QStringLiteral("DELETE FROM home_cache WHERE part LIKE 'moreLike:%'"));
     // And on every device the backup reaches: what a merge derives History
     // from is the plays (play_events, kept here too), so the clearing is
     // kept with its time and the plays before it stay out of History there.
@@ -1306,6 +1319,11 @@ void Library::removeFromHistory(const QString &videoId)
         "DELETE FROM history WHERE track_id IN (SELECT id FROM tracks WHERE source_id = ?)"));
     plays.addBindValue(videoId);
     plays.exec();
+    // Its radio, asked for Home's just-played rows.
+    QSqlQuery radio(AppDatabase::connection());
+    radio.prepare(QStringLiteral("DELETE FROM rec_radio WHERE video_id = ?"));
+    radio.addBindValue(videoId);
+    radio.exec();
     // The same for one song, as Clear history is kept.
     LibraryBackup::recordRemoval(LibraryBackup::kRemovedHistory, videoId);
     reloadHistory();

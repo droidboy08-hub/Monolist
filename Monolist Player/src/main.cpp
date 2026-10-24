@@ -63,6 +63,7 @@
 #include "appiconselftest.h"
 #include "searchselftest.h"
 #include "importselftest.h"
+#include "justplayed.h"
 #include "playlistimport.h"
 #include "startup.h"
 #include "startupselftest.h"
@@ -414,6 +415,17 @@ int main(int argc, char *argv[])
              i = arguments.indexOf(QStringLiteral("--set"), i + 1)) {
             library.setSetting(arguments.at(i + 1), arguments.at(i + 2));
             qWarning("Monolist: setting %s = %s", qPrintable(arguments.at(i + 1)), qPrintable(arguments.at(i + 2)));
+        }
+
+        // --just-played-probe <id>...: YouTube Music's radio for up to five
+        // songs, asked as Home's just-played rows ask (signed out, without
+        // cookies unless home.justPlayed.jar is 1), 20 s apart, live; in
+        // MONOLIST_DATA_DIR only. After --set, so that it can be given.
+        if (const int probeFlag = int(arguments.indexOf(QStringLiteral("--just-played-probe"))); probeFlag >= 0) {
+            QStringList ids;
+            for (int i = probeFlag + 1; i < arguments.size() && !arguments.at(i).startsWith(QLatin1String("--")); ++i)
+                ids << arguments.at(i);
+            return runJustPlayedProbe(&library, ids);
         }
 
         // --saavn "<title>" "<artist>" [seconds] [--no-india-headers]: one
@@ -794,6 +806,37 @@ int main(int argc, char *argv[])
     importer.load();
     recommender.setCoversPaused(importer.busy());
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "Importer",  &importer);
+    // Home's just-played rows: YouTube Music's radio for the songs just
+    // heard, asked signed out and cookieless on an InnerTube of its own,
+    // never through AccountGuard, paced and kept (justplayed.h). Made after
+    // what it listens to, so it is gone before any of them.
+    JustPlayed justPlayed;
+    justPlayed.setFilter([&recommender](const QString &id, const QString &title, const QString &artist) {
+        return recommender.unwanted(id, title, artist);
+    });
+    justPlayed.setArtists(&artistLinks);
+    justPlayed.setHideExplicit(recommender.hideExplicit());
+    QObject::connect(&recommender, &Recommender::hideExplicitChanged, &justPlayed, [&justPlayed, &recommender]() {
+        justPlayed.setHideExplicit(recommender.hideExplicit());
+    });
+    QObject::connect(&recommender, &Recommender::turnDownsChanged, &justPlayed, &JustPlayed::recompose);
+    QObject::connect(&player, &PlaybackController::listenSettled, &justPlayed, &JustPlayed::noteSettled);
+    QObject::connect(&player, &PlaybackController::listenQualified, &justPlayed, &JustPlayed::noteQualified);
+    QObject::connect(&player, &PlaybackController::radioFetched, &justPlayed, &JustPlayed::noteRadio);
+    QObject::connect(&player, &PlaybackController::playEventsWritten, &justPlayed, &JustPlayed::reloadSeeds);
+    QObject::connect(&library, &Library::historyChanged, &justPlayed, &JustPlayed::reloadSeeds);
+    QObject::connect(&library, &Library::regionChanged, &justPlayed, &JustPlayed::onRegionChanged);
+    QObject::connect(&importer, &PlaylistImport::busyChanged, &justPlayed, [&importer, &justPlayed]() {
+        justPlayed.setPaused(importer.busy());
+    });
+    justPlayed.setPaused(importer.busy());
+    QObject::connect(&ytmSession.guard(), &AccountGuard::pausedChanged, &justPlayed, [&ytmSession, &justPlayed]() {
+        justPlayed.setAccountResting(ytmSession.guard().paused());
+    });
+    justPlayed.setAccountResting(ytmSession.guard().paused());
+    QObject::connect(&app, &QCoreApplication::aboutToQuit, &justPlayed, &JustPlayed::shutdown);
+    justPlayed.load();
+    qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "JustPlayed", &justPlayed);
     // The library's backup: a file saved and brought back from Settings, and
     // the same file kept in the user's own Google Drive. Told of every change
     // a backup carries — an edit to the library, a turn-down, a play — which

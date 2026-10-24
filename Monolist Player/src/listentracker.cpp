@@ -45,6 +45,7 @@ void ListenTracker::begin(const QVariantMap &track, bool chosenByUser)
     m_heardMs = 0;
     m_started = false;
     m_qualified = false;
+    m_settled = false;
     m_startedAt = 0;
     m_pausedSince = 0;
 }
@@ -122,10 +123,16 @@ QVariantMap ListenTracker::current() const
 
 void ListenTracker::checkQualified()
 {
-    if (!m_active || !m_started || m_qualified)
+    if (!m_active || !m_started)
         return;
     const qint64 needed = thresholdMs(m_durationMs);
-    if (needed < 0 || m_heardMs < needed)
+    // Settled first, so a listen that has already qualified (a length
+    // learned late) still settles, and in that order.
+    if (!m_settled && needed >= 0 && m_heardMs >= qMin(kSettledMs, needed)) {
+        m_settled = true;
+        Q_EMIT listenSettled(current(), m_startedAt, m_chosenByUser);
+    }
+    if (m_qualified || needed < 0 || m_heardMs < needed)
         return;
     m_qualified = true;
     Q_EMIT listenQualified(current(), m_startedAt, m_chosenByUser);

@@ -42,6 +42,9 @@ public:
     // The page for one name: as written, or failing that in another case or
     // with other accents and punctuation. Empty when no answer linked it.
     Q_INVOKABLE QString idFor(const QString &name) const;
+    // Whether that page is an artist's own, rather than a channel that goes
+    // by the name (a lyric or fan upload's). False when no answer linked it.
+    Q_INVOKABLE bool isArtistPage(const QString &name) const;
 
     // Letters and digits only, case-folded and without accents: how two
     // spellings of one name ("Guns N' Roses", "Guns N’ Roses") are matched.
