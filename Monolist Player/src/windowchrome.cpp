@@ -3,6 +3,7 @@
 #include <QCoreApplication>
 #include <QCursor>
 #include <QEvent>
+#include <QScreen>
 #include <QVariant>
 #include <QWindow>
 
@@ -260,6 +261,21 @@ void WindowChrome::attach(QWindow *window)
     window->installEventFilter(this);
     window->create();
     MacWindow::hideTitle(window);
+    // Placed by nobody (Qt puts a window it was given no place for at the
+    // screen's left edge, its title bar above the top, for AppKit to push
+    // down under the menu bar; -qwindowgeometry is applied as the native
+    // window is made): the middle of the screen's usable part, and no
+    // larger than it, as a Mac window opens. Left so, it sat flush in the
+    // corner, and on a smaller screen ran past the Dock.
+    if (const QScreen *screen = window->screen()) {
+        const QRect area = screen->availableGeometry();
+        if (window->x() == area.x() && window->y() <= area.y()) {
+            const QSize size = window->size().boundedTo(area.size()).expandedTo(window->minimumSize());
+            window->setGeometry(QRect(area.x() + (area.width() - size.width()) / 2,
+                                      area.y() + (area.height() - size.height()) / 2, size.width(),
+                                      size.height()));
+        }
+    }
     // ApplicationWindow pads its content by the window's safe area (Qt 6.9),
     // and under the transparent title bar that is the title bar itself: the
     // whole design came out a title bar's height lower, with an empty strip
