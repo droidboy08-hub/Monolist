@@ -36,12 +36,14 @@ AlbumCard {
     opensPage: (card.videoId || "").length === 0
     playLoading: playable && Catalog.collectionLoading === card.browseId
     // A song's or a video's is the song menu; anything else's, the card's.
+    // A card Monolist put there (Home's rows from the songs just heard) is
+    // a suggestion, whose menu can turn it down.
     hasMenu: (card.videoId || "").length > 0 || (card.browseId || "").length > 0
     onPlayRequested: root.activated(root.card)
     onPlayClicked: Catalog.playCollection(root.card.browseId, root.card.title || "", root.origin)
     onMenuRequested: {
         if (!root.collection && card.type !== "artist" && (card.videoId || "").length > 0)
-            Menus.openTrack(Menus.trackOfCard(root.card), {})
+            Menus.openTrack(Menus.trackOfCard(root.card), { suggestion: root.card.suggestion === true })
         else
             Menus.openCard(root.card, root.origin)
     }

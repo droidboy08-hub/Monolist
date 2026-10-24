@@ -14,6 +14,9 @@ Flickable {
     // Room below the end for whatever stands over the page's foot (the mini
     // video): without it the last rows sit under it and cannot be reached.
     bottomMargin: Nav.pageClearance
+    // The wheel is moving the page (SmoothWheel): Home holds its new rows
+    // until it is still.
+    readonly property bool scrolling: wheel.scrolling
 
     ScrollBar.vertical: MonoScrollBar {}
 

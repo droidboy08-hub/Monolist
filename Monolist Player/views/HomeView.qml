@@ -4,22 +4,35 @@ import Monolist.Backend
 import "../components"
 
 // Home: what to play now first, then what is new. The owner's choice of
-// 2026-10-01 (a mix of this design and Spotify's quick start):
+// 2026-10-01 (a mix of this design and Spotify's quick start), with the
+// songs just heard leading it (JustPlayed, while Settings has Home follow
+// what you play):
 //
 //   - a row of filters, which keep to songs, albums, playlists or artists
 //     everything below them;
 //   - Jump back in: the places opened lately (Library.recentPlaces), Liked
 //     songs first, as plates to open or play in one click;
+//   - More like <the song just heard>: YouTube Music's radio for it;
+//   - Based on your recent listening: the radios of the last few songs,
+//     taken in turn;
 //   - Recommended for today: YouTube Music's quick picks as cards, the
 //     account's own when its feed is Home's;
+//   - More like <a song of another kind heard lately>;
 //   - Made for you: the suggestions from this computer (Recs) as mixes;
-//   - More like …: the artists YouTube Music links with the one played most
-//     (Catalog.moreLike);
+//   - More like …: the artists YouTube Music links with the one heard most
+//     lately (Catalog.moreLike);
+//   - More like <a song of the taste heard most in the last two weeks>, so
+//     that it is not lost under today's;
 //
 // then the moods, the newest release on the red poster, Recently played and
 // YouTube Music's feed, its shelves in their own order under their own
 // headings. Sections are numbered in reading order while nothing is
-// filtered out.
+// filtered out. A row with nothing to show is left out, saying nothing.
+//
+// The rows from the songs just heard are a copy (sessionShown), taken again
+// on a visit, or while the pointer is off them, the page is still and no
+// menu is open, so they never change under the reader; and when the reader
+// is below them, the page keeps what is in view where it was.
 ScrollPage {
     id: root
 
@@ -31,6 +44,143 @@ ScrollPage {
     contentHeight: column.implicitHeight
 
     readonly property bool personal: Catalog.personalFeed
+
+    // — the songs just heard (JustPlayed) —
+    // The rows as shown: JustPlayed.rows when last taken (commitSession).
+    property var sessionShown: []
+    // JustPlayed has rows not taken yet, held while the reader was on them.
+    property bool sessionPending: false
+    // A menu is open over the page (Main): nothing moves under it.
+    property bool holdUpdates: false
+    readonly property bool session: JustPlayed.enabled && sessionShown.length > 0
+    function sessionRow(kind) {
+        if (!JustPlayed.enabled)
+            return null
+        for (let i = 0; i < sessionShown.length; ++i) {
+            if (sessionShown[i].kind === kind)
+                return sessionShown[i]
+        }
+        return null
+    }
+    readonly property var s1Row: sessionRow("s1")
+    readonly property var mixRow: sessionRow("mix")
+    readonly property var s2Row: sessionRow("s2")
+    readonly property var s3Row: sessionRow("s3")
+    readonly property bool hasS1: s1Row !== null
+    readonly property bool hasMix: mixRow !== null
+    readonly property bool hasS2: s2Row !== null
+    readonly property bool hasS3: s3Row !== null
+    // The pointer is on one of those rows.
+    readonly property bool sessionHovered: s1Slot.hovered || mixSlot.hovered || s2Slot.hovered || s3Slot.hovered
+
+    // JustPlayed's rows taken as the ones shown, unless the reader is on
+    // them (`force`: a visit, where nothing is being read yet). Below them,
+    // the page moves by what changed above, in the same frame, so what is in
+    // view stays where it is (keepStill).
+    function commitSession(force) {
+        if (!force && root.visible && (root.sessionHovered || root.scrolling || root.moving || root.holdUpdates)) {
+            sessionPending = true
+            return
+        }
+        sessionPending = false
+        const rows = JustPlayed.enabled ? JustPlayed.rows : []
+        if (rows.length === 0 && sessionShown.length === 0)
+            return
+        const anchor = contentY > s1Slot.y ? anchorAt(contentY) : null
+        stillAnchor = anchor
+        stillY = anchor ? anchor.y : 0
+        sessionShown = rows
+        mixGrid.forceLayout()
+        column.forceLayout()
+        if (anchor)
+            stillRelease.restart()
+    }
+    function tryCommit() { commitSession(false) }
+
+    // The part kept where it was while the page settles: a row's shelf
+    // lays itself out a frame after it is shown, and Made for you can change
+    // with the rows, so its place is followed for a moment, not read once.
+    // Each move is made as the layout makes it, before the frame is drawn.
+    property Item stillAnchor: null
+    property real stillY: 0
+    function keepStill() {
+        if (!stillAnchor || stillAnchor.y === stillY)
+            return
+        const moved = stillAnchor.y - stillY
+        stillY = stillAnchor.y
+        contentY = Math.max(0, contentY + moved)
+    }
+    Connections {
+        target: root.stillAnchor
+        function onYChanged() { root.keepStill() }
+    }
+    Timer {
+        id: stillRelease
+        interval: 300
+        onTriggered: root.stillAnchor = null
+    }
+    // What the page keeps still: the first of its parts, other than the
+    // session rows, that reaches `y` or starts below it.
+    function anchorAt(y) {
+        const parts = column.children
+        for (let i = 0; i < parts.length; ++i) {
+            const part = parts[i]
+            if (part === s1Slot || part === mixSlot || part === s2Slot || part === s3Slot)
+                continue
+            if (part.visible && part.height > 0 && part.y + part.height > y)
+                return part
+        }
+        return null
+    }
+    Connections {
+        target: JustPlayed
+        function onRowsChanged() { Qt.callLater(root.tryCommit) }
+        function onEnabledChanged() { Qt.callLater(root.tryCommit) }
+    }
+    // Tried again once the reader has left the rows or the page is still. A
+    // moment after, so that the pointer is back over what it was over when
+    // the wheel stopped (ScrollPage holds hover while it turns).
+    function retryCommit() {
+        if (sessionPending)
+            sessionRetry.restart()
+    }
+    onSessionHoveredChanged: retryCommit()
+    onScrollingChanged: retryCommit()
+    onMovementEnded: retryCommit()
+    onHoldUpdatesChanged: retryCommit()
+    Timer {
+        id: sessionRetry
+        interval: 150
+        onTriggered: root.tryCommit()
+    }
+
+    // A session card plays its row, as shown, from that card on.
+    function playSessionRow(key, index) {
+        for (let r = 0; r < sessionShown.length; ++r) {
+            const row = sessionShown[r]
+            if (row.key !== key)
+                continue
+            const tracks = []
+            for (let i = 0; i < row.items.length; ++i) {
+                const card = row.items[i]
+                tracks.push({
+                    sourceId: card.videoId,
+                    title: card.title,
+                    artist: card.artist ? card.artist : card.subtitle,
+                    album: card.album ? card.album : "",
+                    albumId: card.albumId ? card.albumId : "",
+                    credits: card.credits ? card.credits : [],
+                    artwork: card.artwork,
+                    durationMs: card.durationMs ? card.durationMs : 0,
+                    isVideo: card.type === "video",
+                    primaryArtist: card.primaryArtist ? card.primaryArtist : ""
+                })
+            }
+            if (tracks.length > 0)
+                Player.playTracks(tracks, Math.max(0, Math.min(tracks.length - 1, index)), "home")
+            return
+        }
+    }
 
     // — the filter —
     // "all", "songs", "albums", "playlists" or "artists".
@@ -170,8 +320,11 @@ ScrollPage {
 
     // — Made for you: the suggestions' own shelves as mixes —
     // The listener's (from what they played) when there are any; for
-    // someone who has played nothing yet, the ones to start from.
-    readonly property var personalKinds: ["taste", "recent", "song", "artist"]
+    // someone who has played nothing yet, the ones to start from. Under the
+    // rows from the songs just heard, not Recs' own "More like <song>": those
+    // rows say it, from YouTube Music's radio.
+    readonly property var personalKinds: root.session ? ["taste", "recent", "artist"]
+                                                      : ["taste", "recent", "song", "artist"]
     readonly property var mixes: {
         const shelves = Recs.shelves
         let picked = []
@@ -228,10 +381,14 @@ ScrollPage {
 
     // — numbers, in reading order, while nothing is filtered out —
     readonly property bool hasRecent: Catalog.recent.count > 0
-    readonly property int todayNumber: hasPicks ? 1 : 0
-    readonly property int mixesNumber: todayNumber + (hasMixes ? 1 : 0)
+    readonly property int s1Number: hasS1 ? 1 : 0
+    readonly property int mixNumber: s1Number + (hasMix ? 1 : 0)
+    readonly property int todayNumber: mixNumber + (hasPicks ? 1 : 0)
+    readonly property int s2Number: todayNumber + (hasS2 ? 1 : 0)
+    readonly property int mixesNumber: s2Number + (hasMixes ? 1 : 0)
     readonly property int moreLikeNumber: mixesNumber + (hasMoreLike ? 1 : 0)
-    readonly property int recentNumber: moreLikeNumber + (hasRecent && !personal ? 1 : 0)
+    readonly property int s3Number: moreLikeNumber + (hasS3 ? 1 : 0)
+    readonly property int recentNumber: s3Number + (hasRecent && !personal ? 1 : 0)
     readonly property int shelfBase: recentNumber
     function number(n) { return root.filtered ? "" : pad(n) }
 
@@ -255,7 +412,9 @@ ScrollPage {
     }
 
     function openCard(card) {
-        if (card.quickIndex !== undefined)
+        if (card.rowKey !== undefined)
+            root.playSessionRow(card.rowKey, card.rowIndex)
+        else if (card.quickIndex !== undefined)
             Player.playModel(Catalog.quickPicks, card.quickIndex, "home")
         else if (card.type === "album" || card.type === "playlist")
             pageRequested(card.browseId)
@@ -270,25 +429,38 @@ ScrollPage {
                               card.primaryArtist ? card.primaryArtist : "")
     }
 
-    // Built as the page opens, and when it is opened again: a like or a
-    // listen since changes what to suggest. Nothing is rebuilt when nothing
-    // changed (Recs.refresh), and More like asks nothing within the day.
-    onVisibleChanged: {
-        if (visible) {
-            Recs.refresh()
+    // More like …'s artist: while Home follows what you play, the one heard
+    // most lately whose page YouTube Music has (JustPlayed), a song counted
+    // once a day; otherwise the one played most.
+    function loadMoreLike() {
+        if (JustPlayed.enabled)
+            Catalog.loadMoreLikeFrom(JustPlayed.moreLikeCandidates.concat([{ name: Library.topArtist(true), browseId: "" }]))
+        else
             Catalog.loadMoreLike(Library.topArtist())
-            askMixCovers()
-        }
+    }
+
+    // A visit: the page opened, made at launch, or Now Playing closed over
+    // it (Main). The rows from the songs just heard are drawn again and
+    // taken at once; the rest is built again, and nothing is rebuilt when
+    // nothing changed (Recs.refresh), and More like asks nothing within the
+    // day.
+    function revisit() {
+        JustPlayed.visit()
+        commitSession(true)
+        Recs.refresh()
+        loadMoreLike()
+        askMixCovers()
+    }
+    onVisibleChanged: {
+        if (visible)
+            revisit()
         askForMore()
     }
     // Home is the page a launch opens on, so it is not made visible: the
     // same, once it is made.
     Component.onCompleted: {
-        if (!visible)
-            return
-        Recs.refresh()
-        Catalog.loadMoreLike(Library.topArtist())
-        askMixCovers()
+        if (visible)
+            revisit()
     }
 
     // The number, the title and the table, with the rule under it, and the
@@ -344,6 +516,43 @@ ScrollPage {
             showDownloads: true
             onTrackActivated: function(index) { Player.playModel(section.model, index, "home") }
         }
+    }
+
+    // One of the rows from the songs just heard (JustPlayed), from the copy
+    // shown: a shelf of song cards, under a rule when a section is above it.
+    // No line above the title, and nothing at all while it has no row.
+    component SessionShelf: Item {
+        id: slot
+        property var row: null
+        property int number: 0
+        property bool ruled: false
+        readonly property bool hovered: slotHover.hovered
+
+        visible: row !== null && root.shows("songs")
+        width: column.width
+        height: visible ? sessionShelf.implicitHeight + Theme.space8 * 2 + (ruled ? Theme.ruleWidth : 0) : 0
+
+        HRule {
+            visible: slot.ruled
+            x: Theme.space8
+            width: parent.width - Theme.space8 * 2
+        }
+
+        CardShelf {
+            id: sessionShelf
+            x: Theme.space8
+            y: Theme.space8 + (slot.ruled ? Theme.ruleWidth : 0)
+            width: parent.width - Theme.space8 * 2
+            number: root.number(slot.number)
+            title: slot.row !== null ? slot.row.title : ""
+            items: slot.row !== null ? root.cardsFor(slot.row.items) : []
+            origin: "home"
+            onCardActivated: function(card) { root.openCard(card) }
+        }
+
+        // Only to know that the reader is here (commitSession): it takes
+        // nothing from what is under it.
+        HoverHandler { id: slotHover }
     }
 
     Column {
@@ -442,16 +651,39 @@ ScrollPage {
             }
         }
 
+        // — More like <the song just heard>, and Based on your recent
+        // listening —
+        SessionShelf {
+            id: s1Slot
+            row: root.s1Row
+            number: root.s1Number
+        }
+        SessionShelf {
+            id: mixSlot
+            row: root.mixRow
+            number: root.mixNumber
+            ruled: root.hasS1
+        }
+
         // — Recommended for today —
         Item {
+            id: todaySection
+            readonly property bool ruled: (root.hasS1 || root.hasMix) && root.shows("songs")
+
             visible: root.hasPicks && root.shows("songs")
             width: parent.width
-            height: visible ? todayShelf.implicitHeight + Theme.space8 * 2 : 0
+            height: visible ? todayShelf.implicitHeight + Theme.space8 * 2 + (ruled ? Theme.ruleWidth : 0) : 0
+
+            HRule {
+                visible: todaySection.ruled
+                x: Theme.space8
+                width: parent.width - Theme.space8 * 2
+            }
 
             CardShelf {
                 id: todayShelf
                 x: Theme.space8
-                y: Theme.space8
+                y: Theme.space8 + (todaySection.ruled ? Theme.ruleWidth : 0)
                 width: parent.width - Theme.space8 * 2
                 number: root.number(root.todayNumber)
                 title: "Recommended for today"
@@ -464,18 +696,31 @@ ScrollPage {
             }
         }
 
+        // — More like <a song of another kind heard lately> —
+        SessionShelf {
+            id: s2Slot
+            row: root.s2Row
+            number: root.s2Number
+            ruled: root.hasS1 || root.hasMix || root.hasPicks
+        }
+
         // — Made for you —
         Column {
+            id: mixesSection
+            // A row of songs is above it, whose rule is its gap.
+            readonly property bool ruled: (root.hasS1 || root.hasMix || root.hasPicks || root.hasS2)
+                                          && root.shows("songs")
+
             visible: root.hasMixes && (root.shows("songs") || root.filter === "playlists")
             x: Theme.space8
             width: root.width - Theme.space8 * 2
-            // Under Recommended for today its rule is the gap; first, a gap of its own.
-            topPadding: root.hasPicks && root.shows("songs") ? 0 : Theme.space8
+            // Under a row of songs its rule is the gap; first, a gap of its own.
+            topPadding: ruled ? 0 : Theme.space8
             bottomPadding: Theme.space8
             spacing: Theme.space6
 
             HRule {
-                visible: root.hasPicks && root.shows("songs")
+                visible: mixesSection.ruled
                 width: parent.width
             }
 
@@ -544,11 +789,19 @@ ScrollPage {
                 width: parent.width - Theme.space8 * 2
                 number: root.number(root.moreLikeNumber)
                 title: "More like " + (Catalog.moreLike.name !== undefined ? Catalog.moreLike.name : "")
-                strapline: "Artists YouTube Music links with the one you play most"
+                strapline: JustPlayed.enabled ? "" : "Artists YouTube Music links with the one you play most"
                 items: root.moreLikeCards
                 origin: "home"
                 onCardActivated: function(card) { root.openCard(card) }
             }
+        }
+
+        // — More like <a song of the taste heard most in two weeks> —
+        SessionShelf {
+            id: s3Slot
+            row: root.s3Row
+            number: root.s3Number
+            ruled: true
         }
 
         // — Moods & genres: a way in rather than a section, so not numbered —

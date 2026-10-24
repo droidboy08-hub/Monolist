@@ -1108,6 +1108,16 @@ ScrollPage {
             onToggled: Recs.hideExplicit = !Recs.hideExplicit
         }
 
+        // Home's rows from the songs just heard (JustPlayed), from YouTube
+        // Music's radio asked signed out. The beta's off switch: off, Home is
+        // as it was and nothing is asked.
+        ToggleRow {
+            width: parent.width
+            label: "Home follows what you play"
+            checked: JustPlayed.enabled
+            onToggled: JustPlayed.enabled = !JustPlayed.enabled
+        }
+
         // The licences ask for it wherever the data is used.
         DataCredit {
             width: parent.width

@@ -53,7 +53,13 @@ ApplicationWindow {
     property bool nowPlayingOpen: false
     // Opening Now Playing takes the picture back from the small panel; closing
     // it again leaves the picture off until the panel is asked for once more.
-    onNowPlayingOpenChanged: if (nowPlayingOpen) videoPip = false
+    // Closed over Home, it is a visit to Home (HomeView.revisit).
+    onNowPlayingOpenChanged: {
+        if (nowPlayingOpen)
+            videoPip = false
+        else if (currentView === "home")
+            homeView.revisit()
+    }
     // The part of Settings a link asked for, until Settings has scrolled to it.
     property string settingsSection: ""
     // Set from the command line (--effects-popup): the player bar's effects
@@ -323,6 +329,41 @@ ApplicationWindow {
         // should suggest. This rebuilds only when something did change.
         if (currentView === "search" || currentView === "home")
             Recs.refresh()
+    }
+
+    // — the suggestions after a listen —
+    // While Home follows what you play, Made for you is built again a moment
+    // after a listen closes, at most once a minute, and only where no one is
+    // reading what it would change: not on Search, a See all of the
+    // suggestions, or Home in front (Now Playing over it is not). What is
+    // skipped is caught up on the next visit.
+    property real recsAfterListenAt: 0
+    function tryRecsRefresh() {
+        const now = Date.now()
+        if (now - recsAfterListenAt < 60000 || currentView === "search" || currentView.indexOf("recs:") === 0
+                || (currentView === "home" && !nowPlayingOpen))
+            return
+        recsAfterListenAt = now
+        Recs.refresh()
+    }
+    Timer {
+        id: recsAfterListen
+        interval: 4000
+        onTriggered: window.tryRecsRefresh()
+    }
+    Connections {
+        target: Player
+        function onPlayEventsWritten() {
+            if (JustPlayed.enabled)
+                recsAfterListen.restart()
+        }
+    }
+    // JustPlayed asks nothing while no one can see the window: hidden,
+    // minimised, in the tray or made the mini player.
+    Binding {
+        target: JustPlayed
+        property: "watching"
+        value: window.visible && window.visibility !== Window.Minimized
     }
 
     // Below this width the sidebar leaves the layout and becomes an overlay —
@@ -707,7 +748,10 @@ ApplicationWindow {
                     shown: window.currentView === "home"
 
                     HomeView {
+                        id: homeView
                         anchors.fill: parent
+                        // Nothing on it moves while a menu is open over it.
+                        holdUpdates: trackMenu.visible || cardMenu.visible || playlistMenu.visible
                         onPageRequested: function(browseId) { window.openPage(browseId) }
                         onViewRequested: function(view) { window.navigate(view) }
                     }
