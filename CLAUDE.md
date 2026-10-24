@@ -69,7 +69,10 @@ owner's iPhone app (AryaMusix / "Mediano", Swift, not in this repo).
   scratch folder only, never the real Start menu or desktop), `--search-test` (a search's pages after the
   first, on a stand-in YouTube Music), `--startup-test` (opening at sign-in, on a scratch registry key; a
   scratch library never writes the real Run key), `--tray-test` (closing to the system tray: the switch, the menu), `--sleep-test` (the sleep timer on a stand-in player), `--import-test` (playlist import on stand-in sources;
-  asserts no cookie or account header is ever sent), `--backup-test` (the library's backup file and its merge:
+  asserts no cookie or account header is ever sent), `--just-played-test` (Home's just-played rows on a stand-in
+  YouTube Music with a signed-in fake account: one cookieless look-up a settled song, none for a skip, the
+  pacing, caps, rests and holds, and the rows built from the answers), `--just-played-probe <id>...` (live, up
+  to 5 ids 20 s apart, cookieless; not in the gate), `--backup-test` (the library's backup file and its merge:
   a round trip, every merge rule both ways, a second merge changing nothing, refusals, nothing device-specific,
   times later than now left out),
   `--drive-test` (the Google Drive backup's sign-in, tokens and sync on stand-ins for Google and Drive, never
@@ -158,6 +161,8 @@ owner's iPhone app (AryaMusix / "Mediano", Swift, not in this repo).
   would rest YouTube); the token to www.googleapis.com only; signing out of one leaves the other.
   Its client id and secret come from `MONOLIST_GOOGLE_CLIENT_ID`/`_SECRET` at build time, never
   committed; tests use `setTestClient` and loopback stand-ins only (`--drive-test`).
+- Home's just-played rows (`JustPlayed`) ask YouTube Music signed out and cookieless, never through
+  `AccountGuard`: at most one look-up a settled song, paced and persisted (`home.justPlayed.pace`).
 - Keep everything portable: Windows-only code behind `Q_OS_WIN` with a compiling
   fallback; macOS-only code in `src/macos/`.
 - Ask before downloading or installing anything (say what, where from, size).

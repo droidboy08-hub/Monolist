@@ -759,7 +759,12 @@ void JustPlayed::answered(const QString &videoId, const QList<InnerTube::Track> 
 {
     const qint64 at = now();
     m_nextAllowedAt = at + m_timing.gapMs + QRandomGenerator::global()->bounded(int(qMax<qint64>(0, m_timing.jitterMs)) + 1);
-    const QString title = seedTitle(videoId);
+    QString title = seedTitle(videoId);
+    // A seed a newer one has taken the place of: named as its radio names it.
+    for (qsizetype i = 0; title.isEmpty() && i < tracks.size(); ++i) {
+        if (tracks.at(i).videoId == videoId)
+            title = tracks.at(i).title;
+    }
     if (error.isEmpty() && !tracks.isEmpty()) {
         m_pace.failStreak = 0;
         m_pace.emptyStreak = 0;

@@ -409,6 +409,16 @@ nothing at all.
   at the header's end, beside the paging arrows.
   *Why.* One place and one look for "this whole list", so it is found where
   it was found last time, and it never competes with the page's own red Play.
+* **Home's first rows follow what was just played.** "More like <song>" for
+  the newest song heard, for one of another kind and for the taste the page
+  should not lose, and "Based on your recent listening" between them: plain
+  shelves with PLAY ALL, no strapline, no loading or error text; a row that
+  cannot be filled is absent. Home shows a copy of them, taken on a visit, or
+  while the pointer is off them, nothing scrolls and no menu is open; the
+  content under the reader stays where it was, and nothing animates.
+  *Why.* A row that changed under the pointer would play something other
+  than what was clicked, and a page that rearranged itself mid-read would be
+  the page moving, not the music.
 * **Lyrics sit at the right, the cover at the left.**
   *Why.* Lyrics are read left-to-right and change constantly; they need the
   wider side, clear of the picture, and they need to start at a consistent left

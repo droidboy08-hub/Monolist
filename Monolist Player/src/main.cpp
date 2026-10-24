@@ -64,6 +64,7 @@
 #include "searchselftest.h"
 #include "importselftest.h"
 #include "justplayed.h"
+#include "justplayedselftest.h"
 #include "playlistimport.h"
 #include "startup.h"
 #include "startupselftest.h"
@@ -391,6 +392,13 @@ int main(int argc, char *argv[])
         // in MONOLIST_DATA_DIR only.
         if (arguments.contains(QStringLiteral("--import-test")))
             return runImportSelfTest(&library) == 0 ? 0 : 1;
+        // Home's just-played rows: what is asked of YouTube Music and when,
+        // signed out and without cookies, paced, held and rested, and the
+        // rows made from the answers, on a stand-in on this computer with a
+        // signed-in account that must never be reached
+        // (justplayedselftest.cpp); in MONOLIST_DATA_DIR only.
+        if (arguments.contains(QStringLiteral("--just-played-test")))
+            return runJustPlayedSelfTest(&library) == 0 ? 0 : 1;
     }
 
     // Which page an artist's name opens: learnt from every answer that links

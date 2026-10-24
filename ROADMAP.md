@@ -78,6 +78,9 @@ Priority runs from 1 (first) to 9. Size: S under an hour, M a few hours, L a day
   Done when: play() first plays a library or download copy of the song if one exists. Otherwise it searches and caches the pick for a while, and later presses and Play all use the cache.
 - [ ] **R06** No 'Recommended' section on playlist pages, and queue radio never uses the recommender *(P5, L)*
   Done when: A playlist page ends with a Recommended list that is exactly what plays after it. A queue started from a playlist continues with a mix drawn from several of its songs, and falls back to the catalogue when YouTube doesn't answer.
+- [ ] **R07** Home follows what you just played (beta): 'More like <song>' rows from YouTube Music's own radio for the songs just heard, and 'Based on your recent listening' *(P3, L)*
+  *(Built 2026-10-23, on by default behind Settings > Recommendations > Home follows what you play, or `--set home.justPlayed 0`: JustPlayed and rec/sessionrows, the HomeView rows, `--just-played-test` and `--just-played-probe`. The radios are asked signed out and without cookies, never through AccountGuard, at most one a settled song, paced (20 s apart, 30 an hour, 200 a day, counted across restarts) and rested on failures, and kept in rec_radio, which Clear history empties.)*
+  Done when: The owner approves the beta.
 - [ ] **X09** The iPhone's listening history (play_events.jsonl) can't be imported *(P7, M)*
   Done when: Settings imports play_events.jsonl into play_events, skipping duplicates by title, artist and time, then rebuilds suggestions. Exporting in the same format is optional.
 
