@@ -238,6 +238,22 @@ owner's iPhone app (AryaMusix / "Mediano", Swift, not in this repo).
   or ReleaseWithinBounds taps) and has a `HoverHandler { blocking: true }`.
   Checked by real clicks (posted to Monolist's own window) on a scratch
   library; keys posted that way do not reach Qt's Shortcuts.
+- 2026-10-24, colour fades: never animate a colour to "transparent". It is
+  black at no opacity, and ColorAnimation interpolates the channels apart,
+  so a hover grey fading out to it passed through a translucent mid grey:
+  a dark band trailing the pointer down the sidebar (the owner's "weird
+  black overlay"). Fade to `Theme.clear(c)`, the same colour at no opacity.
+- 2026-10-24, menus made from a model (PlaylistSubmenu's Instantiator):
+  an entry whose click changes that model (adding a song resets
+  Library.playlists) is taken out of the menu inside its own click, with the
+  connection that closes the menus: they stayed open. Act after the click
+  (Qt.callLater).
+- 2026-10-24, frame rate on the Mac: the app as shipped runs Qt's threaded
+  render loop and draws at the display's rate (8 ms frames at 120 Hz while
+  scrolling). QSG_RENDER_LOOP=basic (a test setting) caps animations at
+  60 Hz, and --scroll-test counts frames only in the basic loop; measure the
+  default with QT_LOGGING_RULES=qt.scenegraph.time.renderloop=true and the
+  window in front (macOS draws nothing for a covered window).
 - Tooltips need the QtQuick.Controls module deployed (build-windows.ps1 copies
   it); importing QtQuick.Controls or QtQuick.Dialogs in QML makes windeployqt
   ship every style (~20 MB) — avoid.
@@ -368,9 +384,13 @@ reaching Google's identifier page, not yet signed in with a real account,
 and Google may refuse WebKit as it may WebView2). Signing (2026-10-24, the owner wants both
 builds): `build-macos.sh --sign <identity> [--notarize <profile>]` makes
 Monolist-unsigned.dmg and the Developer ID Monolist.dmg (README "Signed and
-notarised"); the owner has only an Apple Development identity so far (team
-7YWFR8A74F), which signs for testing on this Mac; notarising needs the paid
-program's Developer ID Application certificate. Keep mpv's Lua scripts off
+notarised"). Set up 2026-10-24: the owner's Developer ID Application
+identity (team 7YWFR8A74F, SHA-1 4DBD0474…) in the login keychain, the
+notary profile `monolist-notary` (an App Store Connect API key), and the
+same certificate and key as GitHub secrets, so release-macos.yml signs,
+notarises and publishes both images for macOS 15+ (a build on this Mac
+needs macOS 26: Homebrew builds for the macOS it runs on). Apple's verdict
+on the first: "Ready for distribution", no issues. Keep mpv's Lua scripts off
 on a Mac (MpvEngine): under the hardened runtime LuaJIT is killed whatever
 the entitlements; the app needs none. Left there: the Dock's
 icon while Monolist is closed (a dock tile plug-in), font weights (G04: 88
