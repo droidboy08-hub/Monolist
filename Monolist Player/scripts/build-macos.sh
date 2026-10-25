@@ -505,6 +505,22 @@ is_macho() {
     file -b "$1" | grep -q 'Mach-O'
 }
 
+# staple <file>: Apple's ticket attached to it. A ticket can take a while to
+# be served after the notary service has accepted: on GitHub's Mac the disk
+# image's first try failed seconds after "Accepted" (v0.1.177), so it is
+# asked again, for up to five minutes, before giving up.
+staple() {
+    for wait in 0 10 20 30 60 90 90; do
+        sleep "$wait"
+        if xcrun stapler staple -q "$1" 2>/dev/null; then
+            return 0
+        fi
+        say "The ticket for $(basename "$1") is not served yet; asking again."
+    done
+    xcrun stapler staple "$1" >&2 || true
+    return 1
+}
+
 # notarize <file>: through Apple's notary service, waiting for its answer;
 # its log is shown when it refuses.
 notarize() {
@@ -621,7 +637,7 @@ if [ -n "$identity" ]; then
         ditto -c -k --keepParent "$APP" "$app_zip"
         notarize "$app_zip"
         rm -rf "$(dirname "$app_zip")"
-        xcrun stapler staple -q "$APP" || fail "the app's ticket could not be stapled."
+        staple "$APP" || fail "the app's ticket could not be stapled."
     fi
 
     step "Making the signed disk image"
@@ -632,7 +648,7 @@ if [ -n "$identity" ]; then
         || fail "codesign would not sign the disk image."
     if [ "$notarize" -eq 1 ]; then
         notarize "$DMG"
-        xcrun stapler staple -q "$DMG" || fail "the disk image's ticket could not be stapled."
+        staple "$DMG" || fail "the disk image's ticket could not be stapled."
         # What another Mac's Gatekeeper will say, asked here.
         verdict="$(spctl --assess --type execute -v "$APP" 2>&1)" \
             || fail "Gatekeeper refuses the notarised app: $verdict"
