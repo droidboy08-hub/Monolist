@@ -687,7 +687,9 @@ cmake --build build          # build/Monolist.app
   Mission Control work as for any other window. The traffic lights are moved
   into the strip, centred in it at the sidebar's edge, with the name after
   them (the version beside the name gives way; Settings' About has it), and
-  put back whenever AppKit lays them out again. A double click on the strip
+  put back whenever AppKit lays them out again. A click on the name folds
+  the sidebar to its rail, as on Windows: the lights then stand across the
+  rail's top, with the "M." that opens it again under them. A double click on the strip
   does what System Settings › Desktop & Dock says. This needs Qt 6.9 or
   later; with an older Qt the system title bar simply stays. (Qt 6.9's
   ApplicationWindow pads its content by the safe area, which under the

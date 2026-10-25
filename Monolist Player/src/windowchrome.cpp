@@ -371,13 +371,29 @@ bool WindowChrome::eventFilter(QObject *watched, QEvent *event)
     return QObject::eventFilter(watched, event);
 }
 
+void WindowChrome::setNativeButtonsBox(int width)
+{
+    width = qMax(0, width);
+    if (width == m_nativeButtonsBox)
+        return;
+    m_nativeButtonsBox = width;
+    Q_EMIT nativeButtonsBoxChanged();
+    placeTrafficLights();
+}
+
 void WindowChrome::placeTrafficLights()
 {
 #ifdef MONOLIST_MAC_EXPANDED_TITLE_BAR
     // In the top strip, centred in its height (Theme.titleBarHeight), the
-    // close button's edge where the sidebar's content begins (Theme.space6).
+    // close button's edge where the sidebar's content begins (Theme.space6);
+    // with the sidebar folded, centred across its rail (nativeButtonsBox).
     constexpr int stripHeight = 64;
-    constexpr int left = 24;
+    int left = 24;
+    if (m_nativeButtonsBox > 0) {
+        const QRect now = MacWindow::trafficLights(m_window);
+        const int width = now.isEmpty() ? 60 : now.width();
+        left = qMax(4, (m_nativeButtonsBox - width) / 2);
+    }
     MacWindow::placeTrafficLights(m_window, left, stripHeight);
     // And the room they take, for what sits beside them: past the zoom
     // button by the gap the design leaves between neighbours (space4).

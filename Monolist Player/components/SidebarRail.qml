@@ -33,21 +33,30 @@ Rectangle {
 
     // — brand —
     // Part of the window's title bar, as the sidebar's is; the mark opens
-    // the sidebar again.
+    // the sidebar again. On a Mac the traffic lights take the band, centred
+    // across the rail (WindowChrome's nativeButtonsBox, set by Main), and the
+    // mark stands under it, at the head of the rail.
     Item {
         id: brand
+        readonly property bool markBelow: Chrome.nativeButtons
+        readonly property int markRow: 52
         anchors.top: parent.top
         anchors.left: parent.left
         width: root.railWidth
-        height: Theme.titleBarHeight
+        height: Theme.titleBarHeight + (markBelow ? markRow : 0)
 
         WindowDragArea {
-            anchors.fill: parent
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            height: Theme.titleBarHeight
         }
 
         Row {
             id: mark
-            anchors.centerIn: parent
+            anchors.horizontalCenter: parent.horizontalCenter
+            y: brand.markBelow ? Theme.titleBarHeight + Math.round((brand.markRow - height) / 2)
+                               : Math.round((Theme.titleBarHeight - height) / 2)
 
             Text {
                 text: "M"
@@ -78,8 +87,9 @@ Rectangle {
         ToolTip.delay: 600
         ToolTip.text: "Open the sidebar"
 
+        // Under the band, level with the top bar's own rule.
         Rectangle {
-            anchors.bottom: parent.bottom
+            y: Theme.titleBarHeight - Theme.ruleWidth
             width: parent.width
             height: Theme.ruleWidth
             color: Theme.divider

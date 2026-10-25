@@ -39,6 +39,10 @@ class WindowChrome : public QObject, public QAbstractNativeEventFilter
     // Room the native buttons need at the left of the title bar: from the
     // window's edge to past them. Known once the window is attached.
     Q_PROPERTY(int nativeButtonsInset READ nativeButtonsInset NOTIFY nativeButtonsInsetChanged)
+    // A box at the window's left edge, as wide as this, to centre the native
+    // buttons in: the folded sidebar's rail, whose corner they keep (macOS).
+    // 0, the default, puts them where the open sidebar's content begins.
+    Q_PROPERTY(int nativeButtonsBox READ nativeButtonsBox WRITE setNativeButtonsBox NOTIFY nativeButtonsBoxChanged)
     // Which corner the window buttons belong in, and which buttons, in the
     // order they are drawn from left to right ("minimize", "maximize",
     // "close"). Windows: the right, all three. Linux: wherever the desktop's
@@ -59,6 +63,8 @@ public:
     bool drawsResizeEdges() const;
     bool nativeButtons() const;
     int nativeButtonsInset() const;
+    int nativeButtonsBox() const { return m_nativeButtonsBox; }
+    void setNativeButtonsBox(int width);
     bool buttonsOnLeft() const;
     QStringList windowButtons() const;
     bool roundButtons() const;
@@ -90,6 +96,7 @@ public:
 
 Q_SIGNALS:
     void nativeButtonsInsetChanged();
+    void nativeButtonsBoxChanged();
 
 protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
@@ -106,4 +113,5 @@ private:
     mutable bool m_buttonsOnLeft = false;
     mutable QStringList m_windowButtons;
     int m_nativeButtonsInset = 0;
+    int m_nativeButtonsBox = 0;
 };

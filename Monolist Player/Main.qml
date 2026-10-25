@@ -622,11 +622,16 @@ ApplicationWindow {
 
         // The docked sidebar, or folded to its rail (the name folds it, the
         // rail's mark opens it again; kept in the settings). Its width is
-        // the animation, so the page beside it reflows with it. Not folded
-        // where the window's buttons sit in its corner (a Mac's).
+        // the animation, so the page beside it reflows with it. A Mac's
+        // traffic lights keep the corner, folded or not: across the rail's
+        // top, with the mark under them (SidebarRail). Not folded where the
+        // window buttons the app draws itself sit in that corner (a Linux
+        // desktop that keeps them on the left): the rail has no room for
+        // them.
         Item {
             id: dockedSidebar
-            readonly property bool folded: window.sidebarCollapsed && !Chrome.buttonsOnLeft
+            readonly property bool foldable: !Chrome.buttonsOnLeft || Chrome.nativeButtons
+            readonly property bool folded: window.sidebarCollapsed && foldable
             // Only folding animates; crossing the docking breakpoint snaps.
             property real dockWidth: folded ? 72 : Theme.sidebarWidth
             visible: window.sidebarDocked
@@ -647,7 +652,7 @@ ApplicationWindow {
                 height: parent.height
                 visible: opacity > 0
                 opacity: dockedSidebar.folded ? 0 : 1
-                collapsible: !Chrome.buttonsOnLeft
+                collapsible: dockedSidebar.foldable
                 currentView: window.currentView
                 onViewRequested: function(view) { window.sideNavigate(view) }
                 onNewPlaylistRequested: window.createPlaylist()
@@ -1129,6 +1134,15 @@ ApplicationWindow {
         target: Nav
         property: "pagesCovered"
         value: nowPlaying.settled || fullscreenVideo.active
+    }
+    // A Mac's traffic lights across the folded sidebar's rail, and back where
+    // the sidebar's content begins once it opens: moved halfway through the
+    // fold, where the two widths meet, so they never stand past the rail.
+    Binding {
+        target: Chrome
+        property: "nativeButtonsBox"
+        value: window.sidebarDocked && dockedSidebar.width < (72 + Theme.sidebarWidth) / 2
+               ? 72 - Theme.ruleWidth : 0
     }
 
     // The corner mask every list cover shares (Nav.coverMask): one small
