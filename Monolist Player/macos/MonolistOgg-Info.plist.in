@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+    MonolistOgg.mdimporter, inside Monolist.app's Contents/Library/Spotlight:
+    Spotlight's importer for Ogg Opus and Vorbis files (src/macos/oggimporter.c).
+    org.xiph.ogg-audio is macOS's own type for .opus, .ogg and .oga. CMake
+    fills in the MACOSX_BUNDLE_* values from the target's properties
+    (CMakeLists.txt), the versions the app's own. The factory's id is the
+    one FACTORY_ID in oggimporter.c names; 8B08C4BF-… is Spotlight's own
+    importer type (kMDImporterTypeID).
+-->
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleExecutable</key>
+    <string>${MACOSX_BUNDLE_EXECUTABLE_NAME}</string>
+    <key>CFBundleIdentifier</key>
+    <string>${MACOSX_BUNDLE_GUI_IDENTIFIER}</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>${MACOSX_BUNDLE_BUNDLE_NAME}</string>
+    <key>CFBundlePackageType</key>
+    <string>BNDL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>${MACOSX_BUNDLE_SHORT_VERSION_STRING}</string>
+    <key>CFBundleVersion</key>
+    <string>${MACOSX_BUNDLE_BUNDLE_VERSION}</string>
+    <key>NSHumanReadableCopyright</key>
+    <string>${MACOSX_BUNDLE_COPYRIGHT}</string>
+
+    <key>CFBundleDocumentTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleTypeRole</key>
+            <string>MDImporter</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>org.xiph.ogg-audio</string>
+            </array>
+        </dict>
+    </array>
+    <key>CFPlugInDynamicRegistration</key>
+    <string>NO</string>
+    <key>CFPlugInFactories</key>
+    <dict>
+        <key>D8464DC8-F3D9-4E35-BB1C-595380C5C9FD</key>
+        <string>MonolistOggImporterFactory</string>
+    </dict>
+    <key>CFPlugInTypes</key>
+    <dict>
+        <key>8B08C4BF-415B-11D8-B3F9-0003936726FC</key>
+        <array>
+            <string>D8464DC8-F3D9-4E35-BB1C-595380C5C9FD</string>
+        </array>
+    </dict>
+</dict>
+</plist>

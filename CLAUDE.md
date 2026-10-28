@@ -88,7 +88,9 @@ owner's iPhone app (AryaMusix / "Mediano", Swift, not in this repo).
   a round trip, every merge rule both ways, a second merge changing nothing, refusals, nothing device-specific,
   times later than now left out),
   `--drive-test` (the Google Drive backup's sign-in, tokens and sync on stand-ins for Google and Drive, never
-  Google; asserts no cookie sent, the token to Drive alone, no redirect elsewhere, no secret in the log) … Each
+  Google; asserts no cookie sent, the token to Drive alone, no redirect elsewhere, no secret in the log),
+  `--ogg-test` (Mac only: the Ogg tag and cover reader on files it writes page by page, the app's own
+  Spotlight importer loaded as Spotlight loads it, and a cover set as a scratch file's Finder icon) … Each
   prints `N checks, 0 failed`. All must pass, except `--scrobble-send-test`,
   which needs its local stand-in (`scripts/lastfm-mock.ps1`). `MONOLIST_MPV_AO=null` plays any run to no
   sound device (and `MONOLIST_MPV_VO=null` decodes a picture to nowhere, for an engine with no surface).
@@ -254,6 +256,26 @@ owner's iPhone app (AryaMusix / "Mediano", Swift, not in this repo).
   60 Hz, and --scroll-test counts frames only in the basic loop; measure the
   default with QT_LOGGING_RULES=qt.scenegraph.time.renderloop=true and the
   window in front (macOS draws nothing for a covered window).
+- 2026-10-27, Opus (Ogg) in the Finder: macOS 26 reads no Ogg tags or
+  cover, and app extensions cannot add them. Quick Look sends every audio
+  file to its own "secure" Audiovisual thumbnailer (public.audiovisual-
+  content), ahead of any app's thumbnail extension, even one for exactly
+  org.xiph.ogg-audio that the user switched on (that extension did run for
+  an unclaimed type); and a Core Spotlight import extension was called by
+  neither `mdimport -t` nor indexing. What works: a legacy .mdimporter in
+  Contents/Library/Spotlight (`MonolistOgg`), which Spotlight loads only
+  once told (`mdimport -r <importer>`, done once per build by the app), and
+  the cover as the file's custom icon (MacFinder, src/macos/finder.h).
+  Testing: Spotlight never indexes a hidden folder (this worktree under
+  .claude/), so check real indexing in a visible scratch folder; `mdimport
+  -t` and `qlmanage` read from anywhere. Spotlight keeps the first path it
+  learned for an importer's bundle id (`mdimport -L`), presumably until mds
+  restarts (not yet seen): `mdimport -r` on another copy, or a newer
+  version, did not replace it,
+  and a user `mdworker` keeps the old binary loaded (it ignores SIGTERM).
+  So an importer `mdimport -r`'d from a scratch or build folder is the one
+  this Mac goes on using; don't announce one from a folder that will go. NSURLCustomIconKey answers nil for a custom icon: read the
+  Finder info's kHasCustomIcon instead.
 - Tooltips need the QtQuick.Controls module deployed (build-windows.ps1 copies
   it); importing QtQuick.Controls or QtQuick.Dialogs in QML makes windeployqt
   ship every style (~20 MB) — avoid.

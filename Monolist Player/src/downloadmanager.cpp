@@ -1,6 +1,9 @@
 #include "downloadmanager.h"
 #include "appdatabase.h"
 #include "saavndownload.h"
+#ifdef Q_OS_MACOS
+#include "macos/finder.h"
+#endif
 
 #include <QDesktopServices>
 #include <QDir>
@@ -12,6 +15,7 @@
 #include <QSqlError>
 #include <QSqlQuery>
 #include <QStandardPaths>
+#include <QThreadPool>
 #include <QUrl>
 #include <QVariant>
 
@@ -21,6 +25,12 @@ const QString kFormatKey = QStringLiteral("download_format");
 const QString kSkipNonMusicKey = QStringLiteral("download_skip_non_music");
 // The folder the listener chose; empty or missing for the default.
 const QString kDirectoryKey = QStringLiteral("download_dir");
+#ifdef Q_OS_MACOS
+// The Spotlight importer Spotlight was last told of ("<build> <path>"), and
+// whether the Ogg downloads saved before covers became icons have theirs.
+const QString kSpotlightImporterKey = QStringLiteral("finder.spotlightImporter");
+const QString kOggIconsKey = QStringLiteral("finder.oggIcons");
+#endif
 // How stale a look for the tools may be before it is taken again. Not on every
 // call: "Download all" enqueues a whole album in one go, and a tool that is not
 // bundled is looked for along the whole of PATH.
@@ -83,6 +93,30 @@ DownloadManager::DownloadManager(QObject *parent)
 
     loadStored();
     m_library.reload();
+#ifdef Q_OS_MACOS
+    // Ogg in the Finder (macos/finder.h). Spotlight is told of the importer
+    // once for each build that brings it, or brings it somewhere new, and
+    // reads every Ogg file again, those saved before included; not from a
+    // test's scratch library, whose build is not the one kept. And the Ogg
+    // downloads saved before covers became icons get theirs, once, off the
+    // interface's thread.
+    const QString importer = MacFinder::spotlightImporter();
+    if (!importer.isEmpty() && qEnvironmentVariable("MONOLIST_DATA_DIR").isEmpty()
+        && settingValue(kSpotlightImporterKey, QString()) != importer) {
+        MacFinder::announceSpotlightImporter();
+        setSettingValue(kSpotlightImporterKey, importer);
+    }
+    if (settingValue(kOggIconsKey, QString()).isEmpty()) {
+        const QStringList saved = m_stored.values();
+        QThreadPool::globalInstance()->start([saved]() {
+            for (const QString &path : saved) {
+                if (!MacFinder::hasCustomIcon(path))
+                    MacFinder::setCover(path);
+            }
+        });
+        setSettingValue(kOggIconsKey, QStringLiteral("1"));
+    }
+#endif
 
     m_queueSave.setSingleShot(true);
     m_queueSave.setInterval(kQueueSaveDelayMs);
@@ -777,6 +811,13 @@ void DownloadManager::complete(const QString &videoId, const QString &reportedPa
     // A partial file an earlier launch left that this one did not carry on
     // from (another format, say) has nothing left to finish.
     removeLeftovers(m_directory, videoId, filesFor(m_directory, videoId), path);
+#ifdef Q_OS_MACOS
+    // The Finder reads no cover from Opus (Ogg): the file is given the one
+    // it carries as its own icon, as an M4A's shows (macos/finder.h). Off
+    // the interface's thread: decoding the cover and writing the icon take
+    // about 70 ms.
+    QThreadPool::globalInstance()->start([path]() { MacFinder::setCover(path); });
+#endif
 
     recordStored(item, path);
     m_stored.insert(videoId, path);

@@ -91,6 +91,7 @@
 #include "macos/macwindow.h"
 #include "macos/mediasession.h"
 #include "macos/menubar.h"
+#include "macos/oggselftest.h"
 #include "macos/toolstore.h"
 #endif
 #ifdef Q_OS_WIN
@@ -192,6 +193,13 @@ int main(int argc, char *argv[])
         return runSecretStoreSelfTest() == 0 ? 0 : 1;
     if (app.arguments().contains(QStringLiteral("--lastfm-test")))
         return runLastFmSelfTest() == 0 ? 0 : 1;
+#ifdef Q_OS_MACOS
+    // --ogg-test: the reader of Ogg tags and covers on files of its own, the
+    // app's Spotlight importer loaded as Spotlight loads it, and a cover set
+    // as a Finder icon, in MONOLIST_DATA_DIR only (macos/oggselftest.cpp).
+    if (app.arguments().contains(QStringLiteral("--ogg-test")))
+        return runOggSelfTest() == 0 ? 0 : 1;
+#endif
     // --cookie-test: the YouTube Music import parser and the SAPISIDHASH
     // known answers, on invented cookies (ytmselftest.cpp).
     if (app.arguments().contains(QStringLiteral("--cookie-test")))

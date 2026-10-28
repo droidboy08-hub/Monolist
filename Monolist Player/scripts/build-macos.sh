@@ -412,10 +412,17 @@ fi
 # macdeployqt's changes void the linker's own signature. No account needed.
 step "Signing (ad hoc)"
 # Helper programs beside the executable are signed first, on their own:
-# signing the app seals them, but does not sign them.
+# signing the app seals them, but does not sign them. So is the Spotlight
+# importer for Ogg files (Contents/Library/Spotlight), a bundle Spotlight
+# loads into its own worker.
 for program in ffmpeg ffprobe; do
     if [ -f "$APP/Contents/MacOS/$program" ]; then
         codesign --force --sign - "$APP/Contents/MacOS/$program"
+    fi
+done
+for importer in "$APP"/Contents/Library/Spotlight/*.mdimporter; do
+    if [ -d "$importer" ]; then
+        codesign --force --sign - "$importer"
     fi
 done
 codesign --force --deep --sign - "$APP"
@@ -608,8 +615,8 @@ if [ -n "$identity" ]; then
         say "yt-dlp signed, inside its archive."
     fi
 
-    # Libraries, Qt's plugins and frameworks, and the helper programs beside
-    # the executable; then the app itself.
+    # Libraries, Qt's plugins and frameworks, the helper programs beside the
+    # executable and the Spotlight importer; then the app itself.
     find "$APP/Contents/Frameworks" -maxdepth 1 -type f -name '*.dylib' -print0 \
         | while IFS= read -r -d '' file; do sign_code "$file"; done
     find "$APP/Contents/PlugIns" -type f -name '*.dylib' -print0 \
@@ -622,11 +629,26 @@ if [ -n "$identity" ]; then
             sign_code "$APP/Contents/MacOS/$program" --identifier "$BUNDLE_ID.$program"
         fi
     done
+    # The Spotlight importer: a plug-in bundle, loaded by Spotlight's worker,
+    # so it has no entitlements of its own either.
+    for importer in "$APP"/Contents/Library/Spotlight/*.mdimporter; do
+        if [ -d "$importer" ]; then
+            sign_code "$importer"
+        fi
+    done
     sign_code "$APP"
 
     codesign --verify --deep --strict "$APP" \
         || fail "the Developer ID signature does not verify."
     team="$(codesign -dv "$APP" 2>&1 | sed -n 's/^TeamIdentifier=//p')"
+    # What was said above, checked: no piece asks for an entitlement.
+    for code in "$APP" "$APP"/Contents/Library/Spotlight/*.mdimporter; do
+        [ -e "$code" ] || continue
+        entitlements="$(codesign -d --entitlements - --xml "$code" 2>/dev/null | tr -d '\0' || true)"
+        case "$entitlements" in
+            *"<key>"*) fail "${code#$APP/} asks for entitlements: $entitlements" ;;
+        esac
+    done
     say "Signed: team $team, hardened runtime, no entitlements."
 
     if [ "$notarize" -eq 1 ]; then
