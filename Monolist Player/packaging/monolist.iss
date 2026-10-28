@@ -85,7 +85,29 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Explorer\StartupA
 
 [Run]
 Filename: "{app}\monolist.exe"; Description: "{cm:LaunchProgram,Monolist}"; Flags: nowait postinstall skipifsilent
+; Monolist updating itself (Settings > Updates, AppUpdater) runs this setup
+; quietly once Monolist has quit, with /VERYSILENT ... /RELAUNCH; the line
+; above is skipped then, so this one starts it again. As the user who asked
+; for the update, never as the administrator the setup may have become for
+; a copy installed for everyone.
+Filename: "{app}\monolist.exe"; WorkingDir: "{app}"; Flags: nowait runasoriginaluser; Check: RelaunchAsked
 
 ; Uninstalling removes the program only. The library, playlists, settings and
 ; any sign-in (in %APPDATA% and %LOCALAPPDATA%\Monolist) and the downloads (in
-; Music\Monolist) are the user's, and stay unless they delete them.
+; Music\Monolist) are the user's, and stay unless they delete them. Nothing
+; is kept in the program's folder, which is why an update may replace it
+; whole.
+
+[Code]
+// /RELAUNCH on the command line: Monolist, updating itself, asked to be
+// started again when the setup is done. Inno Setup passes over a parameter
+// it does not know, so an older setup given it is not troubled by it.
+function RelaunchAsked: Boolean;
+var
+  I: Integer;
+begin
+  Result := False;
+  for I := 1 to ParamCount do
+    if CompareText(ParamStr(I), '/RELAUNCH') = 0 then
+      Result := True;
+end;

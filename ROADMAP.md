@@ -210,6 +210,9 @@ Priority runs from 1 (first) to 9. Size: S under an hour, M a few hours, L a day
 - [x] **G02** No Windows build that can be given to someone else *(P8, M)*
   Done 2026-09-29: package-windows.ps1 (-Installer), packaging/monolist.iss, .github/workflows/release-windows.yml. Installed and run with the toolchain out of PATH: self-tests, playback, a download through the bundled yt-dlp and FFmpeg; uninstalled clean.
   Done when: A -Package option, or an Inno Setup/CPack step, produces a self-contained zip or installer with real copies of the tools, a Start-menu shortcut and the icon.
+- [x] **G09** Updating means going to GitHub and installing each release by hand *(P5, L)*
+  Done 2026-10-28 (the owner's request): Settings › Updates' UPDATE downloads the release's file for this copy (the Mac's disk image of the same kind, Developer ID or ad hoc; Windows' setup for an installed copy, the zip for a portable one) from GitHub only, checked against its published SHA-256, gets it ready (the Mac's app checked: codesign --deep --strict, identifier, newer build, Developer ID team), and RESTART hands over to a helper that swaps it in once Monolist has quit, with a way back, and starts it again (AppUpdater; monolist.iss /RELAUNCH). `--update-test`, in both release gates; end to end on a Mac with `--update-run` on scratch copies.
+  Done when: GET IT downloads and installs the update on both platforms without the release page, which stays as the last resort.
 - [ ] **G03** *(Partly done: the recommendation data is credited in Settings and About; bundled components still have no notices.)* No licence notices for bundled components, and no credit for the recommendation data *(P8, S)*
   Done when: About → Acknowledgements lists every component with its licence text, and the texts ship in the Windows package and inside the Mac app. A credit line for the data appears whenever a catalogue or graph is loaded.
 

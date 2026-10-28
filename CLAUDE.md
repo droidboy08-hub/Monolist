@@ -89,6 +89,12 @@ owner's iPhone app (AryaMusix / "Mediano", Swift, not in this repo).
   times later than now left out),
   `--drive-test` (the Google Drive backup's sign-in, tokens and sync on stand-ins for Google and Drive, never
   Google; asserts no cookie sent, the token to Drive alone, no redirect elsewhere, no secret in the log),
+  `--update-test` (the in-app update on a stand-in for GitHub and scratch copies: the file per kind of copy,
+  GitHub-only origins, SHA-256, cancel/quit leaving no .part, and on a Mac scratch bundles in disk images and
+  the helper's swap and way back, on Windows a portable copy's zip and swap and the setup's arguments; in the
+  release gate), `--update-run` (About's CHECK, UPDATE and RESTART with no window, against `--set update.feed
+  <stand-in>`: it REPLACES THE COPY IT RUNS FROM, so only ever a scratch copy under /private/tmp;
+  `MONOLIST_UPDATE_TEST_FAULT=move-new` makes the Mac swap fail, to show the way back),
   `--ogg-test` (Mac only: the Ogg tag and cover reader on files it writes page by page, the app's own
   Spotlight importer loaded as Spotlight loads it, and a cover set as a scratch file's Finder icon) … Each
   prints `N checks, 0 failed`. All must pass, except `--scrobble-send-test`,
@@ -186,6 +192,13 @@ owner's iPhone app (AryaMusix / "Mediano", Swift, not in this repo).
   committed; tests use `setTestClient` and loopback stand-ins only (`--drive-test`).
 - Home's just-played rows (`JustPlayed`) ask YouTube Music signed out and cookieless, never through
   `AccountGuard`: at most one look-up a settled song, paced and persisted (`home.justPlayed.pace`).
+- The in-app update (`AppUpdater`, Settings › Updates; the owner's request, 2026-10-28) takes the release's
+  files only over HTTPS from github.com and *.githubusercontent.com (plain HTTP only on loopback, for a
+  loopback feed), redirects included, never with a cookie, and nothing it has not matched against the
+  published `.sha256`; on a Mac it keeps the copy's kind (Developer ID or ad hoc) and checks the staged app
+  (codesign --deep --strict, identifier, newer build, team 7YWFR8A74F for Developer ID) before touching the
+  old one; RESTART stays a press of its own. Never run `--update-run` or the helper against /Applications,
+  Program Files or the owner's copy.
 - Keep everything portable: Windows-only code behind `Q_OS_WIN` with a compiling
   fallback; macOS-only code in `src/macos/`.
 - Ask before downloading or installing anything (say what, where from, size).
@@ -287,6 +300,12 @@ owner's iPhone app (AryaMusix / "Mediano", Swift, not in this repo).
   So an importer `mdimport -r`'d from a scratch or build folder is the one
   this Mac goes on using; don't announce one from a folder that will go. NSURLCustomIconKey answers nil for a custom icon: read the
   Finder info's kHasCustomIcon instead.
+- 2026-10-28, volumes on a Mac: QStorageInfo matches mount points by the path's text, so a path under one
+  of macOS's firmlinks (/Applications, /Users, /private) reads as on "/", the sealed read-only system
+  volume: every scratch copy looked like one on a disk image. Ask `statfs` (MNT_RDONLY) and compare
+  `stat`'s st_dev for "read-only" and "same volume". And `hdiutil attach` now and then attaches an
+  image and mounts nothing of it: let it go by its device (`/dev/diskN` in the -plist answer), never
+  leave it attached, and try once more.
 - Tooltips need the QtQuick.Controls module deployed (build-windows.ps1 copies
   it); importing QtQuick.Controls or QtQuick.Dialogs in QML makes windeployqt
   ship every style (~20 MB) — avoid.

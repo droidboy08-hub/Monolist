@@ -78,6 +78,7 @@ ScrollPage {
                    : section === "signin" ? ytmRow
                    : section === "ytmusic" ? (homeToggle.visible ? homeToggle : ytmRow)
                    : section === "backup" ? backupHeader
+                   : section === "updates" ? updatesHeader
                    : section === "about" ? aboutHeader : null
         revealed = target
         placeRevealed()
@@ -1912,11 +1913,17 @@ ScrollPage {
 
         // — updates —
         SectionHeader {
+            id: updatesHeader
             width: parent.width
             number: "08"
             title: "Updates"
         }
 
+        // Monolist updates itself: UPDATE downloads the release for this copy
+        // from GitHub and checks it, then RESTART puts it in place. RESTART is
+        // a press of its own, never automatic, because it stops the music; the
+        // download asks nothing of the listener, so it starts on the one
+        // press. The release page stays as the last resort.
         Item {
             width: parent.width
             height: Math.max(appUpdate.implicitHeight, checkButton.implicitHeight)
@@ -1942,20 +1949,81 @@ ScrollPage {
                     wrapMode: Text.WordWrap
                     font.family: Theme.fontFamily
                     font.pixelSize: 13
-                    // A found update is the one thing here worth the accent.
-                    color: About.updateAvailable ? Theme.accent : Theme.neutral700
+                    // An update found, and one ready to go in, are the things
+                    // here worth the accent.
+                    color: About.updateAvailable || About.readyToRestart ? Theme.accent : Theme.neutral700
+                }
+                // How far the download has come: a 2px rule, red as far as it
+                // has got. It steps a whole percent at a time and never
+                // animates (DESIGN 2.7).
+                Item {
+                    visible: About.downloading
+                    width: parent.width
+                    height: Theme.space2 + Theme.ruleWidth
+
+                    Rectangle {
+                        anchors.bottom: parent.bottom
+                        width: parent.width
+                        height: Theme.ruleWidth
+                        color: Theme.neutral300
+                    }
+                    Rectangle {
+                        anchors.bottom: parent.bottom
+                        width: Math.round(parent.width * Math.max(0, About.updateProgress) / 100)
+                        height: Theme.ruleWidth
+                        color: Theme.accent
+                    }
+                }
+                // The last resort, quiet: the release page, where the files are.
+                Text {
+                    id: releaseLink
+                    visible: (About.updateFailed || About.manualUpdate) && About.updateUrl.length > 0
+                    width: parent.width
+                    text: "Or download it from its <a href=\"" + About.updateUrl + "\">release page</a>."
+                    textFormat: Text.StyledText
+                    wrapMode: Text.WordWrap
+                    font.family: Theme.fontFamily
+                    font.pixelSize: 12
+                    color: Theme.neutral700
+                    linkColor: Theme.text
+                    topPadding: Theme.space1
+                    onLinkActivated: function(link) { Qt.openUrlExternally(link) }
+
+                    HoverHandler {
+                        cursorShape: releaseLink.hoveredLink.length > 0 ? Qt.PointingHandCursor : Qt.ArrowCursor
+                    }
                 }
             }
 
+            // One button, saying what a press does now: CHECK; UPDATE (GET IT,
+            // the release page, for a copy that cannot update itself); CANCEL
+            // while it downloads; RESTART once it is ready; TRY AGAIN after a
+            // failure; SHOW, for a copy that has to be replaced by hand.
             ActionButton {
                 id: checkButton
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                text: About.updateAvailable ? "GET IT" : "CHECK"
-                primary: About.updateAvailable
-                enabled: !About.checking
-                onClicked: About.updateAvailable ? About.openUpdatePage()
-                                                   : About.checkForUpdate()
+                text: About.readyToRestart ? "RESTART"
+                      : About.downloading ? "CANCEL"
+                      : About.preparing ? "CHECKING…"
+                      : About.updateFailed ? "TRY AGAIN"
+                      : About.manualUpdate ? "SHOW"
+                      : About.updateAvailable ? (About.canUpdateInApp ? "UPDATE" : "GET IT")
+                      : "CHECK"
+                primary: About.updateAvailable || About.readyToRestart
+                enabled: !About.checking && !About.preparing
+                onClicked: {
+                    if (About.readyToRestart)
+                        About.restartToUpdate()
+                    else if (About.downloading)
+                        About.cancelUpdate()
+                    else if (About.manualUpdate)
+                        About.showDownloadedUpdate()
+                    else if (About.updateAvailable || About.updateFailed)
+                        About.downloadUpdate()
+                    else
+                        About.checkForUpdate()
+                }
             }
         }
 

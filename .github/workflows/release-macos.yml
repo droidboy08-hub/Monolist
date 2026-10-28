@@ -142,7 +142,7 @@ jobs:
           failed=""
           for test in --account-guard-test --cookie-test --secret-test --lastfm-test --saavn-test \
                       --lyrics-query-test --format-test --sound-test --icon-test --startup-test \
-                      --ogg-test; do
+                      --ogg-test --update-test; do
             data="$RUNNER_TEMP/${test#--}"
             mkdir -p "$data"
             set +e

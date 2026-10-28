@@ -5,7 +5,10 @@
 #include <QObject>
 #include <QPointer>
 #include <QString>
+#include <QUrl>
 #include <QVariantList>
+
+#include "appupdater.h"
 
 class QNetworkAccessManager;
 class QNetworkReply;
@@ -43,11 +46,27 @@ class AppInfo : public QObject
 
     Q_PROPERTY(int updateState READ updateState NOTIFY updateChanged)
     Q_PROPERTY(QString updateMessage READ updateMessage NOTIFY updateChanged)
+    // The release's page on GitHub: the last resort when the app cannot
+    // update itself, or did not manage to.
     Q_PROPERTY(QString updateUrl READ updateUrl NOTIFY updateChanged)
-    // The two the interface actually asks about, named rather than compared
-    // against an enum value that reads as a magic number in QML.
+    // What the interface asks about, named rather than compared against an
+    // enum value that reads as a magic number in QML.
     Q_PROPERTY(bool checking READ checking NOTIFY updateChanged)
     Q_PROPERTY(bool updateAvailable READ updateAvailable NOTIFY updateChanged)
+    // Available, and this copy can download and install it itself (UPDATE);
+    // otherwise the release page is where it is (GET IT).
+    Q_PROPERTY(bool canUpdateInApp READ canUpdateInApp NOTIFY updateChanged)
+    Q_PROPERTY(bool downloading READ downloading NOTIFY updateChanged)
+    // Downloaded and checked against its checksum; being unpacked, checked.
+    Q_PROPERTY(bool preparing READ preparing NOTIFY updateChanged)
+    // RESTART puts it in place.
+    Q_PROPERTY(bool readyToRestart READ readyToRestart NOTIFY updateChanged)
+    // Downloaded, for the user to put in place by hand.
+    Q_PROPERTY(bool manualUpdate READ manualUpdate NOTIFY updateChanged)
+    // The download or its checks failed: TRY AGAIN.
+    Q_PROPERTY(bool updateFailed READ updateFailed NOTIFY updateChanged)
+    // 0-100 while downloading; -1 when the size is not known.
+    Q_PROPERTY(int updateProgress READ updateProgress NOTIFY updateChanged)
 
     Q_PROPERTY(int toolsState READ toolsState NOTIFY toolsChanged)
     Q_PROPERTY(QString toolsMessage READ toolsMessage NOTIFY toolsChanged)
@@ -64,7 +83,12 @@ public:
         UpToDate,
         Available,      // something newer exists
         NotConfigured,  // no release feed has been set, so there is nothing to ask
-        Failed
+        Failed,         // the check failed
+        Downloading,    // the update for this copy is arriving
+        Preparing,      // and being unpacked and checked
+        Ready,          // RESTART puts it in place
+        Manual,         // downloaded, but this copy cannot be replaced where it is
+        DownloadFailed  // the download or its checks failed
     };
     Q_ENUM(State)
 
@@ -86,6 +110,13 @@ public:
     QString updateUrl() const { return m_updateUrl; }
     bool checking() const { return m_updateState == Working; }
     bool updateAvailable() const { return m_updateState == Available; }
+    bool canUpdateInApp() const { return m_updateState == Available && m_canUpdateInApp; }
+    bool downloading() const { return m_updateState == Downloading; }
+    bool preparing() const { return m_updateState == Preparing; }
+    bool readyToRestart() const { return m_updateState == Ready; }
+    bool manualUpdate() const { return m_updateState == Manual; }
+    bool updateFailed() const { return m_updateState == DownloadFailed; }
+    int updateProgress() const { return m_updateProgress; }
 
     int toolsState() const { return m_toolsState; }
     QString toolsMessage() const { return m_toolsMessage; }
@@ -102,6 +133,13 @@ public:
     // than `right`: "1.2.10" after "1.2.9", "2026.08.19.1" after "2026.08.19".
     static int compareVersions(const QString &left, const QString &right);
 
+    // This build as releases are tagged ("0.1.191"), and its build number.
+    static QString currentRelease();
+    static QString currentBuild();
+
+    // The in-app update's own machinery, made on first use; for the test.
+    AppUpdater *updater();
+
 public Q_SLOTS:
     // Asks the versions of the bundled tools, one process each, all at once
     // and in the background; componentsChanged says when every one has
@@ -113,7 +151,27 @@ public Q_SLOTS:
     // The "advanced" update: brings the bundled open-source tools up to date
     // by running the same setup script that installed them.
     void updateTools();
+    // The release page, in the browser: the last resort.
     void openUpdatePage();
+    // UPDATE: downloads the update for this copy, checks it and gets it
+    // ready (Downloading, Preparing, then Ready or Manual); TRY AGAIN after
+    // a failure. Falls back to the release page when this copy cannot.
+    void downloadUpdate();
+    // CANCEL: stops the download, and deletes what it left.
+    void cancelUpdate();
+    // RESTART: hands over to the helper, which puts the update in place once
+    // Monolist has quit and starts it again; and quits. A separate press,
+    // never automatic: it stops the music.
+    void restartToUpdate();
+    // Manual: the downloaded disk image or zip shown again.
+    void showDownloadedUpdate();
+    // At launch, once the window is up: what the last RESTART came to (a
+    // toast), and the update's leftovers cleared away.
+    void startUpdateHousekeeping();
+    // --update-demo <state>: Settings › Updates in that state (available,
+    // downloading, preparing, ready, manual, failed, getit), with an invented
+    // release and nothing fetched, for a look or a screenshot.
+    bool showUpdateDemo(const QString &state);
     // macOS: once a day, update yt-dlp quietly and announce anything else
     // newer (ToolStore). Nothing elsewhere, where the setup script does it.
     void startToolChecks();
@@ -137,9 +195,13 @@ Q_SIGNALS:
     // The setup script has run, so the tools on disk may not be the ones the
     // rest of the app looked for at launch.
     void toolsUpdated();
+    // The update is downloaded and ready: a toast with RESTART, wherever the
+    // user has gone while it downloaded.
+    void updateReady(const QString &text);
 
 private:
     void setUpdate(int state, const QString &message, const QString &url = {});
+    void followUpdater();
     void setTools(int state, const QString &message);
     // Starts one tool's --version; its first line lands in m_versionAnswers
     // under `tool`, or nothing when it cannot be run or does not answer.
@@ -167,6 +229,12 @@ private:
     int m_updateState = Idle;
     QString m_updateMessage;
     QString m_updateUrl;
+    int m_updateProgress = -1;
+    // The release the last check found, and the feed it came from.
+    UpdateRelease m_release;
+    QUrl m_releaseFeed;
+    bool m_canUpdateInApp = false;
+    AppUpdater *m_updater = nullptr;
 
     int m_toolsState = Idle;
     QString m_toolsMessage;

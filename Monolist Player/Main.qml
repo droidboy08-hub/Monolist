@@ -1587,6 +1587,10 @@ ApplicationWindow {
     Connections {
         target: About
         function onNotice(text) { window.say(text) }
+        // The update downloaded while the listener went elsewhere: said
+        // wherever they are, with the way to finish it. Never done for them:
+        // RESTART stops the music.
+        function onUpdateReady(text) { window.say(text, "RESTART", function() { About.restartToUpdate() }) }
     }
 
     // The library's backup: what Export or Import did (or why not), and what

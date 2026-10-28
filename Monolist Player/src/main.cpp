@@ -59,6 +59,7 @@
 #include "googlesignin.h"
 #include "instanceguard.h"
 #include "appinfo.h"
+#include "appupdaterselftest.h"
 #include "appicon.h"
 #include "appiconselftest.h"
 #include "searchselftest.h"
@@ -413,6 +414,14 @@ int main(int argc, char *argv[])
         // (justplayedselftest.cpp); in MONOLIST_DATA_DIR only.
         if (arguments.contains(QStringLiteral("--just-played-test")))
             return runJustPlayedSelfTest(&library) == 0 ? 0 : 1;
+        // The in-app update: the release's file for each kind of copy, only
+        // from GitHub, its SHA-256, cancels and quits mid-download, and (on
+        // a Mac) the disk image's app checked, or (on Windows) the zip
+        // unpacked, then the helper's swap and its way back, on stand-ins
+        // and scratch copies on this computer (appupdaterselftest.cpp); in
+        // MONOLIST_DATA_DIR only.
+        if (arguments.contains(QStringLiteral("--update-test")))
+            return runUpdateSelfTest() == 0 ? 0 : 1;
     }
 
     // Which page an artist's name opens: learnt from every answer that links
@@ -438,6 +447,16 @@ int main(int argc, char *argv[])
             library.setSetting(arguments.at(i + 1), arguments.at(i + 2));
             qWarning("Monolist: setting %s = %s", qPrintable(arguments.at(i + 1)), qPrintable(arguments.at(i + 2)));
         }
+
+        // --update-run: Settings › Updates' UPDATE and RESTART, start to
+        // finish and with no window, through About's own code: the check
+        // against update.feed (--set it to a stand-in), the download, its
+        // checks, and the hand-over to the helper, after which this copy
+        // quits and is replaced. The end-to-end test of the in-app update;
+        // in MONOLIST_DATA_DIR only. After --set, so that the feed can be
+        // given.
+        if (arguments.contains(QStringLiteral("--update-run")))
+            return runUpdateRun();
 
         // --just-played-probe <id>...: YouTube Music's radio for up to five
         // songs, asked as Home's just-played rows ask (signed out, without
@@ -792,6 +811,14 @@ int main(int argc, char *argv[])
                          if (state == Qt::ApplicationActive)
                              downloads.refreshToolsIfStale();
                      });
+    // --update-demo <state>: Settings › Updates in that state (available,
+    // downloading, preparing, ready, manual, failed, getit), with an
+    // invented release and nothing fetched, for a look or a screenshot (with
+    // --settings-section updates).
+    const int updateDemoFlag = int(app.arguments().indexOf(QStringLiteral("--update-demo")));
+    if (updateDemoFlag >= 0 && updateDemoFlag + 1 < app.arguments().size()
+        && !appInfo.showUpdateDemo(app.arguments().at(updateDemoFlag + 1)))
+        qWarning("Monolist: --update-demo does not know that state");
     qmlRegisterSingletonInstance("Monolist.Backend", 1, 0, "About",     &appInfo);
     Recommender recommender;
     recommender.setPlayer(&player);
@@ -1018,6 +1045,11 @@ int main(int argc, char *argv[])
         };
         QObject::connect(&instance, &InstanceGuard::filesArrived, window, playOpened);
         playOpened();
+        // What the last RESTART for an update came to ("Monolist is now
+        // 0.1.191", or why the old copy is still the one running), said once
+        // the window is up; and the update's leftovers cleared away.
+        if (updateDemoFlag < 0)
+            QTimer::singleShot(3000, &appInfo, [&appInfo]() { appInfo.startUpdateHousekeeping(); });
         // A damaged library put back from its backup, or begun afresh: said
         // once the window is up.
         if (!AppDatabase::recoveryNote().isEmpty()) {

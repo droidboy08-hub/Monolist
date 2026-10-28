@@ -528,6 +528,28 @@ nothing at all.
   file stands beside the Drive row, not under it. A sync is a promise kept in
   the background: at rest the row shows its last success, and it stays quiet
   until something needs a person.
+* **An update is one row and one button, saying what a press does now.**
+  The owner's (2026-10-28): Monolist downloads and installs its updates
+  itself, rather than sending the listener to GitHub. Settings › Updates:
+  the version in bold, and under it what is happening, in grey, or in red for
+  an update found or one ready to go in. The button is CHECK; UPDATE (red,
+  primary) when there is a newer release, GET IT for a copy that cannot
+  update itself, which opens the release page as before; CANCEL while it
+  downloads ("Downloading Monolist 0.1.191… 37 %", over a 2px rule red as far
+  as it has got, stepping a percent at a time); CHECKING… while it is
+  unpacked and checked; RESTART (red) once it is ready ("Monolist 0.1.191 is
+  ready: Monolist restarts to finish."); TRY AGAIN after a failure, which says
+  what failed; SHOW for a copy that has to be put in place by hand (its disk
+  image or zip shown again). After a failure, or for that copy, a small link
+  under the words leads to the release page, as the last resort. A download
+  that ends while the listener is elsewhere says so in a toast with RESTART.
+  The next launch says how it went: "Monolist is now 0.1.191.", or why the
+  old copy is still the one running.
+  *Why.* RESTART is a press of its own because it stops the music: the
+  download asks nothing of the listener and can run under a song, the
+  restart cannot. One button that changes its word keeps the row as quiet
+  as the rest of Settings, and the release page stays one click away for
+  when the app cannot do it.
 * **Closing keeps the music: the window goes to the tray.** As Spotify does it,
   unless Settings turns it off; the icon by the clock brings it back, and its
   menu has the song, play, next, previous, the window, the mini player and

@@ -87,6 +87,14 @@ qt_add_executable(monolist
     src/lyricsselftest.h           src/lyricsselftest.cpp
     src/windowchrome.h             src/windowchrome.cpp
     src/appinfo.h                  src/appinfo.cpp
+    # The in-app update (Settings › Updates): the release's file for this
+    # copy downloaded from GitHub and checked, got ready, and put in place by
+    # a helper once Monolist has quit; Windows' part (all of it inside
+    # Q_OS_WIN), the Mac's below; and its test (--update-test) and the
+    # end-to-end run (--update-run).
+    src/appupdater.h               src/appupdater.cpp
+    src/appupdater_win.cpp
+    src/appupdaterselftest.h       src/appupdaterselftest.cpp
     # — the recommender core, ported from the iOS player —
     # Plain C++ over QtCore: no BLAS, no ANN index, no new dependency. The
     # catalogue and graph files it reads are not shipped with the app; see
@@ -470,6 +478,9 @@ if(APPLE)
         src/macos/mediasession.h       src/macos/mediasession.mm
         # yt-dlp and Deno: unpacked from the app, then kept current.
         src/macos/toolstore.h          src/macos/toolstore.cpp
+        # The in-app update's Mac part: the disk image's app checked, and
+        # the helper that swaps it in (AppUpdater).
+        src/macos/appupdater_mac.h     src/macos/appupdater_mac.mm
         # The system's own picture in picture (SystemPip).
         src/macos/systempip.mm
         # Sign-ins kept in the login Keychain (SecretStore).
@@ -488,7 +499,7 @@ if(APPLE)
     target_compile_definitions(monolist PRIVATE MONOLIST_HAVE_KEYCHAIN)
     set_source_files_properties(src/macos/macwindow.mm src/macos/mediasession.mm
                                 src/macos/systempip.mm src/macos/loginitem.mm
-                                src/macos/finder.mm
+                                src/macos/finder.mm src/macos/appupdater_mac.mm
         PROPERTIES COMPILE_OPTIONS "-fobjc-arc")
     set_source_files_properties(macos/Monolist.icns
         PROPERTIES MACOSX_PACKAGE_LOCATION Resources)

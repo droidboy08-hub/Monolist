@@ -100,6 +100,16 @@ AppInfo::AppInfo(QObject *parent)
 #endif
 }
 
+QString AppInfo::currentRelease()
+{
+    return QStringLiteral(MONOLIST_VERSION "." MONOLIST_BUILD_NUMBER);
+}
+
+QString AppInfo::currentBuild()
+{
+    return QStringLiteral(MONOLIST_BUILD_NUMBER);
+}
+
 QString AppInfo::version() const     { return QStringLiteral(MONOLIST_VERSION); }
 QString AppInfo::buildNumber() const { return QStringLiteral(MONOLIST_BUILD_NUMBER); }
 QString AppInfo::commit() const      { return QStringLiteral(MONOLIST_COMMIT); }
@@ -313,7 +323,9 @@ void AppInfo::setUpdate(int state, const QString &message, const QString &url)
 
 void AppInfo::checkForUpdate()
 {
-    if (m_updateState == Working)
+    // Not while an update is on its way: CHECK is not offered then either.
+    if (m_updateState == Working || m_updateState == Downloading || m_updateState == Preparing
+        || m_updateState == Ready)
         return;
 
     const QString feed = updateFeed();
@@ -336,7 +348,7 @@ void AppInfo::checkForUpdate()
     QNetworkReply *reply = m_network->get(request);
     m_updateReply = reply;
 
-    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+    connect(reply, &QNetworkReply::finished, this, [this, reply, feed]() {
         reply->deleteLater();
         if (m_updateReply != reply)
             return;
@@ -348,15 +360,13 @@ void AppInfo::checkForUpdate()
             return;
         }
 
-        const QJsonObject root = QJsonDocument::fromJson(reply->readAll()).object();
-        QString tag = root.value(QStringLiteral("tag_name")).toString();
-        const QString page = root.value(QStringLiteral("html_url")).toString();
+        const UpdateRelease release = UpdateRules::parseRelease(reply->readAll());
+        const QString tag = release.version;
+        const QString page = release.page.toString();
         if (tag.isEmpty()) {
             setUpdate(Failed, QStringLiteral("The release feed did not name a version."));
             return;
         }
-        if (tag.startsWith(QLatin1Char('v')))
-            tag.remove(0, 1);
 
         // Releases are tagged with the build number after the version
         // (v0.1.130), which is what tells two builds of one version apart.
@@ -367,21 +377,26 @@ void AppInfo::checkForUpdate()
         // Windows files alone.
         const QString macImage = QStringLiteral("-macos-%1.dmg").arg(QSysInfo::currentCpuArchitecture());
         bool forThisMac = false;
-        for (const QJsonValue &asset : root.value(QStringLiteral("assets")).toArray())
-            forThisMac = forThisMac
-                         || asset.toObject().value(QStringLiteral("name")).toString().endsWith(macImage);
+        for (const UpdateAsset &asset : release.assets)
+            forThisMac = forThisMac || asset.name.endsWith(macImage);
         if (newer && !forThisMac) {
             setUpdate(UpToDate, QStringLiteral("This is the newest release for a Mac (%1); %2 has no Mac "
                                                "download yet.").arg(version(), tag));
             return;
         }
 #endif
-        if (newer) {
-            setUpdate(Available, QStringLiteral("Monolist %1 is available.").arg(tag), page);
-        } else {
+        if (!newer) {
             setUpdate(UpToDate,
                       QStringLiteral("This is the newest release (%1).").arg(version()));
+            return;
         }
+        m_release = release;
+        m_releaseFeed = QUrl(feed);
+        QString why;
+        m_canUpdateInApp = updater()->canUpdate(release, &why);
+        if (!m_canUpdateInApp && !why.isEmpty())
+            qInfo("update: %s is on its release page only: %s", qPrintable(tag), qPrintable(why));
+        setUpdate(Available, QStringLiteral("Monolist %1 is available.").arg(tag), page);
     });
 }
 
@@ -389,6 +404,133 @@ void AppInfo::openUpdatePage()
 {
     if (!m_updateUrl.isEmpty())
         QDesktopServices::openUrl(QUrl(m_updateUrl));
+}
+
+AppUpdater *AppInfo::updater()
+{
+    if (!m_updater) {
+        m_updater = new AppUpdater(m_network, this);
+        connect(m_updater, &AppUpdater::changed, this, &AppInfo::followUpdater);
+    }
+    return m_updater;
+}
+
+// The updater's phase, as Settings › Updates shows it.
+void AppInfo::followUpdater()
+{
+    const int was = m_updateState;
+    m_updateProgress = m_updater->percent();
+    const QString message = m_updater->message();
+    switch (m_updater->phase()) {
+    case AppUpdater::Idle:
+        // Cancelled: back to what the check found.
+        m_updateProgress = -1;
+        setUpdate(Available, QStringLiteral("Monolist %1 is available.").arg(m_release.version), m_updateUrl);
+        return;
+    case AppUpdater::Downloading:
+        setUpdate(Downloading, message, m_updateUrl);
+        return;
+    case AppUpdater::Preparing:
+        setUpdate(Preparing, message, m_updateUrl);
+        return;
+    case AppUpdater::Ready:
+        setUpdate(Ready, message, m_updateUrl);
+        if (was != Ready)
+            Q_EMIT updateReady(message);
+        return;
+    case AppUpdater::Manual:
+        setUpdate(Manual, message, m_updateUrl);
+        // The disk image or the zip, shown for the user to put in place.
+        if (was != Manual)
+            m_updater->showDownloaded();
+        return;
+    case AppUpdater::Failed:
+        setUpdate(DownloadFailed, message, m_updateUrl);
+        return;
+    }
+}
+
+void AppInfo::downloadUpdate()
+{
+    if (!m_release.isValid())
+        return;
+    if (!m_canUpdateInApp) {
+        openUpdatePage();
+        return;
+    }
+    m_updateProgress = -1;
+    updater()->start(m_release, m_releaseFeed);
+}
+
+void AppInfo::cancelUpdate()
+{
+    if (m_updater && (m_updateState == Downloading || m_updateState == Preparing))
+        m_updater->cancel();
+}
+
+void AppInfo::restartToUpdate()
+{
+    if (!m_updater || m_updateState != Ready)
+        return;
+    QString error;
+    if (!m_updater->handOver(&error)) {
+        if (!error.isEmpty())
+            error[0] = error.at(0).toUpper();
+        setUpdate(DownloadFailed, QStringLiteral("The update could not be started: %1.").arg(error), m_updateUrl);
+        return;
+    }
+    // The helper waits for this process to end; everything a quit saves is
+    // saved on the way out.
+    QCoreApplication::quit();
+}
+
+void AppInfo::showDownloadedUpdate()
+{
+    if (m_updater && m_updateState == Manual)
+        m_updater->showDownloaded();
+}
+
+void AppInfo::startUpdateHousekeeping()
+{
+    bool ok = true;
+    const QString said = updater()->housekeeping(&ok);
+    if (said.isEmpty())
+        return;
+    if (!ok)
+        setUpdate(Failed, said);
+    Q_EMIT notice(said);
+}
+
+bool AppInfo::showUpdateDemo(const QString &state)
+{
+    const QString tag = QStringLiteral("%1.%2").arg(version()).arg(currentBuild().toInt() + 7);
+    m_release.version = tag;
+    m_release.page = QUrl(QStringLiteral("https://github.com/droidboy08-hub/Monolist/releases/tag/v") + tag);
+    m_canUpdateInApp = state != QLatin1String("getit");
+    const QString page = m_release.page.toString();
+    m_updateProgress = -1;
+    if (state == QLatin1String("available") || state == QLatin1String("getit")) {
+        setUpdate(Available, QStringLiteral("Monolist %1 is available.").arg(tag), page);
+    } else if (state == QLatin1String("downloading")) {
+        m_updateProgress = 37;
+        setUpdate(Downloading, QStringLiteral("Downloading Monolist %1… 37 %").arg(tag), page);
+    } else if (state == QLatin1String("preparing")) {
+        m_updateProgress = 100;
+        setUpdate(Preparing, QStringLiteral("Checking Monolist %1…").arg(tag), page);
+    } else if (state == QLatin1String("ready")) {
+        setUpdate(Ready, QStringLiteral("Monolist %1 is ready: Monolist restarts to finish.").arg(tag), page);
+    } else if (state == QLatin1String("manual")) {
+        setUpdate(Manual, QStringLiteral("Monolist %1 is downloaded, but this copy cannot be replaced where it is: "
+                                         "Monolist may not change the folder it is in. Drag Monolist from the "
+                                         "window that opened to Applications, then open it from there.").arg(tag),
+                  page);
+    } else if (state == QLatin1String("failed")) {
+        setUpdate(DownloadFailed, QStringLiteral("The download did not match its published checksum, so it was "
+                                                 "deleted."), page);
+    } else {
+        return false;
+    }
+    return true;
 }
 
 // ------------------------------------------------------------ tool updates
