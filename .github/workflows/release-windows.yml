@@ -103,7 +103,11 @@ jobs:
             $p = Start-Process $exe -ArgumentList $test -Wait -PassThru -NoNewWindow -RedirectStandardError "$data\err.txt" -RedirectStandardOutput "$data\out.txt"
             $summary = (Get-Content "$data\err.txt", "$data\out.txt" | Select-String 'checks?, \d+ failed' | Select-Object -Last 1).Line
             Write-Host "$test  exit $($p.ExitCode)  $summary"
-            if ($p.ExitCode -ne 0) { $failed += $test }
+            if ($p.ExitCode -ne 0) {
+              $failed += $test
+              # What failed, and around it, for the log.
+              Get-Content "$data\err.txt" | Select-String -Context 6, 1 'FAIL' | ForEach-Object { Write-Host $_ }
+            }
           }
           if ($failed.Count -gt 0) { throw "Self-tests failed: $($failed -join ', ')" }
 

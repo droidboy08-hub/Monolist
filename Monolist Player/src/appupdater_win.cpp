@@ -114,8 +114,20 @@ function Say([string] $text) {
     Move-Item -LiteralPath $temp -Destination $Result -Force
 }
 
+# A program started as Explorer would start it, its handle kept from the
+# start: Start-Process -PassThru looks the process up afresh, and one that has
+# already ended (a setup that fails at once) then has no exit code, or throws.
+function Start-Program([string] $file, [string] $arguments, [string] $folder) {
+    $info = New-Object Diagnostics.ProcessStartInfo
+    $info.FileName = $file
+    $info.Arguments = $arguments
+    $info.WorkingDirectory = $folder
+    $info.UseShellExecute = $true
+    return [Diagnostics.Process]::Start($info)
+}
+
 function Start-Monolist([string] $folder) {
-    return Start-Process -FilePath (Join-Path $folder 'monolist.exe') -WorkingDirectory $folder -PassThru
+    return Start-Program (Join-Path $folder 'monolist.exe') '' $folder
 }
 
 # Whether the Monolist just started got going: its word ($Started), or still
@@ -196,8 +208,7 @@ if ($Mode -eq 'setup') {
             Start-Monolist $App | Out-Null
             exit 1
         }
-        $process = Start-Process -FilePath $Setup -ArgumentList $arguments -WorkingDirectory (Split-Path -Parent $Setup) -PassThru
-        $null = $process.Handle
+        $process = Start-Program $Setup ($arguments -join ' ') (Split-Path -Parent $Setup)
         if (-not $process.WaitForExit($SetupMinutes * 60 * 1000)) {
             $hold.Dispose()
             Say 'failed: the installer did not finish in time (was Windows asking for permission?), so Monolist was started again as it was.'
