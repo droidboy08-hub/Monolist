@@ -1077,8 +1077,13 @@ int main(int argc, char *argv[])
                          });
         menuBar.attach(window);
         // Once the app has settled: a stale yt-dlp is the usual reason a
-        // track will not play, so it is kept current without asking.
-        QTimer::singleShot(10000, &appInfo, [&appInfo]() { appInfo.startToolChecks(); });
+        // track will not play, so it is kept current without asking. Not
+        // from a scratch library (MONOLIST_DATA_DIR): the tools live in the
+        // real Application Support folder, which a test run never changes;
+        // an update's end-to-end run reopens a window that would otherwise
+        // do it ten seconds in.
+        if (qEnvironmentVariableIsEmpty("MONOLIST_DATA_DIR"))
+            QTimer::singleShot(10000, &appInfo, [&appInfo]() { appInfo.startToolChecks(); });
 #endif
 
         // --scroll-test: the page --view opened, scrolled the ways a person

@@ -151,9 +151,15 @@ public:
     static QString runningBuild();
     static QString runningVersion();
 
-    UpdateTarget target() const { return m_target; }
+    // This copy, described when first asked (it reads the registry, or
+    // this app's signature), never at launch.
+    UpdateTarget target();
     // For the test: another copy to update than this one.
-    void setTarget(const UpdateTarget &target) { m_target = target; }
+    void setTarget(const UpdateTarget &target)
+    {
+        m_target = target;
+        m_targetKnown = true;
+    }
     void setDirectory(const QString &directory) { m_directory = directory; }
     QString workDirectory() const { return m_directory.isEmpty() ? directory() : m_directory; }
 
@@ -168,7 +174,7 @@ public:
 
     // Whether this copy can be updated from inside the app for that release
     // (a file for it exists in the release), and why not when it cannot.
-    bool canUpdate(const UpdateRelease &release, QString *why = nullptr) const;
+    bool canUpdate(const UpdateRelease &release, QString *why = nullptr);
 
     // Downloads, checks and gets ready the release's file for this copy.
     void start(const UpdateRelease &release, const QUrl &feed);
@@ -241,6 +247,7 @@ private:
     QNetworkAccessManager *m_network;
     QString m_directory;
     UpdateTarget m_target;
+    bool m_targetKnown = false;
     UpdateRelease m_release;
     QUrl m_feed;
     UpdateRules::Choice m_choice;

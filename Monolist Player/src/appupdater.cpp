@@ -229,7 +229,6 @@ UpdateTarget WinUpdate::describeFolder(const QString &folder, const QString &cur
 AppUpdater::AppUpdater(QNetworkAccessManager *network, QObject *parent)
     : QObject(parent)
     , m_network(network)
-    , m_target(describeThisCopy())
 {
 }
 
@@ -280,9 +279,18 @@ void AppUpdater::fail(const QString &message)
     setPhase(Failed, message);
 }
 
-bool AppUpdater::canUpdate(const UpdateRelease &release, QString *why) const
+UpdateTarget AppUpdater::target()
 {
-    const UpdateRules::Choice choice = UpdateRules::choose(release, m_target, QSysInfo::currentCpuArchitecture());
+    if (!m_targetKnown) {
+        m_target = describeThisCopy();
+        m_targetKnown = true;
+    }
+    return m_target;
+}
+
+bool AppUpdater::canUpdate(const UpdateRelease &release, QString *why)
+{
+    const UpdateRules::Choice choice = UpdateRules::choose(release, target(), QSysInfo::currentCpuArchitecture());
     if (why)
         *why = choice.missing;
     return !choice.file.isNull();
@@ -297,7 +305,7 @@ void AppUpdater::start(const UpdateRelease &release, const QUrl &feed)
     m_percent = -1;
     m_file.clear();
     m_staged.clear();
-    m_choice = UpdateRules::choose(release, m_target, QSysInfo::currentCpuArchitecture());
+    m_choice = UpdateRules::choose(release, target(), QSysInfo::currentCpuArchitecture());
     if (m_choice.file.isNull()) {
         fail(m_choice.missing);
         return;
