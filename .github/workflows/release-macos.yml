@@ -141,7 +141,8 @@ jobs:
           exe="Monolist Player/build-macos/Monolist.app/Contents/MacOS/Monolist"
           failed=""
           for test in --account-guard-test --cookie-test --secret-test --lastfm-test --saavn-test \
-                      --lyrics-query-test --format-test --sound-test --icon-test --startup-test; do
+                      --lyrics-query-test --format-test --sound-test --icon-test --startup-test \
+                      --ogg-test; do
             data="$RUNNER_TEMP/${test#--}"
             mkdir -p "$data"
             set +e

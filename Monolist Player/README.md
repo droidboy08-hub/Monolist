@@ -721,6 +721,30 @@ cmake --build build          # build/Monolist.app
   `/usr/local/bin`) and `~/.deno/bin` are added to it at startup: builds that
   do not carry their own tools (Xcode's) still find Homebrew's.
 * **Appearance.** Light, Dark or Match macOS, as Windows has Match Windows.
+* **Opus in the Finder.** Downloads in the original format are Opus in Ogg
+  (.opus), whose tags and cover macOS cannot read: Spotlight imports Ogg
+  "with no plugIn", so Get Info shows no title, artist or album, and the
+  Finder draws a blank note. The app fills both in:
+  * its tags come from `MonolistOgg.mdimporter`, a Spotlight importer inside
+    the app (`Contents/Library/Spotlight`, `src/macos/oggimporter.c`): the
+    title, artists, album, length, genre, track, year, codec, rate and
+    channels, the attributes Apple's own importer gives an M4A. Get Info's
+    More Info and Spotlight searches show them. Spotlight is told of the
+    importer once per build (`mdimport -r`), which has it read every Ogg
+    file on the Mac again, so songs saved before show their tags too;
+  * its cover becomes the file's own Finder icon as the download is saved
+    (`src/macos/finder.mm`): 256 px in the file's resource fork, about
+    200 KB beside the song, the audio untouched. Opus downloads saved
+    before get theirs at the first launch of a build that does this.
+    An app extension could not do it: Quick Look gives every audio file to
+    macOS's own thumbnailer, which reads no Ogg cover (on macOS 26 a
+    Quick Look thumbnail extension for Ogg is never asked, and a Core
+    Spotlight import extension is never called either).
+
+  Quick Look itself (the space bar, the Gallery view's preview) still shows
+  no cover or title for Opus; M4A shows both everywhere. Both are read by
+  one small parser of Ogg pages, OpusTags and FLAC picture blocks
+  (`src/macos/oggtags.c`, no dependencies), checked by `--ogg-test`.
 
 The app is signed ad hoc ("Sign to Run Locally"), which is all a Mac needs to
 run what was built on it, and is what `build-macos.sh --dmg` makes: the
@@ -759,10 +783,11 @@ image is made but not notarised.
 
 What signing does (`build-macos.sh`, "Developer ID"): every piece of code
 signed again from the inside out with the hardened runtime and a timestamp:
-Qt's libraries, plugins and frameworks, FFmpeg, and yt-dlp inside its archive
-(its Python.framework's links, packed as copies by its project, put back
-first); Deno is signed and notarised by its makers and left alone. The app
-asks for no entitlements. It needs mpv's Lua scripts off (MpvEngine does so
+Qt's libraries, plugins and frameworks, FFmpeg, the Spotlight importer, and
+yt-dlp inside its archive (its Python.framework's links, packed as copies by
+its project, put back first); Deno is signed and notarised by its makers and
+left alone. The app asks for no entitlements, and neither does the importer
+(the script checks both): Spotlight loads it into its own worker. It needs mpv's Lua scripts off (MpvEngine does so
 on a Mac): LuaJIT's run-time code is killed under the hardened runtime.
 
 The first launch of a Developer ID build on a Mac that ran an ad hoc one asks

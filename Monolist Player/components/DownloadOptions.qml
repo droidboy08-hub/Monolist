@@ -58,11 +58,15 @@ Column {
                      + "usually Opus at 130–160 kbps. Nothing is re-encoded."
                    : "The stream exactly as YouTube publishes it, usually Opus at 130–160 kbps. Nothing is "
                      + "re-encoded.")
-                  // Opus is kept in Ogg (.opus), whose tags and cover the
-                  // Finder cannot read (its Get Info and icons show none),
-                  // though they are in the file and other players show them.
+                  // Opus is kept in Ogg (.opus), whose tags and cover macOS
+                  // cannot read. Monolist gives the Finder both: its tags
+                  // through the app's Spotlight importer, its cover as the
+                  // file's icon (src/macos/finder.h). Quick Look still shows
+                  // neither: its thumbnail is a plain note, and AVFoundation,
+                  // which it reads audio with, finds no title or cover in Ogg.
                   + (Qt.platform.os === "osx"
-                     ? " The Finder shows no tags or cover for an Opus file; M4A shows both." : "")
+                     ? " In the Finder an Opus file shows its cover and, in Get Info, its tags; Quick Look shows "
+                       + "neither, M4A both." : "")
         wrapMode: Text.WordWrap
         font.family: Theme.fontFamily
         font.pixelSize: 12

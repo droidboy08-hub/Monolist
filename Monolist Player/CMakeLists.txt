@@ -7,8 +7,9 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 if(APPLE)
     # The few parts that talk to AppKit and MediaPlayer (src/macos/) are
-    # Objective-C++.
+    # Objective-C++; the reader of Ogg files (src/macos/oggtags.c), C.
     enable_language(OBJCXX)
+    enable_language(C)
     set(CMAKE_OBJCXX_STANDARD 17)
     set(CMAKE_OBJCXX_STANDARD_REQUIRED ON)
 
@@ -477,18 +478,24 @@ if(APPLE)
         src/macos/loginitem.h          src/macos/loginitem.mm
         # The menu bar: Monolist, Controls, Window.
         src/macos/menubar.h            src/macos/menubar.cpp
+        # An Ogg download's cover as its icon in the Finder, and the check
+        # of the Ogg reader it shares with the Spotlight importer below.
+        src/macos/oggtags.h            src/macos/oggtags.c
+        src/macos/finder.h           src/macos/finder.mm
+        src/macos/oggselftest.h        src/macos/oggselftest.cpp
         macos/Monolist.icns
     )
     target_compile_definitions(monolist PRIVATE MONOLIST_HAVE_KEYCHAIN)
     set_source_files_properties(src/macos/macwindow.mm src/macos/mediasession.mm
                                 src/macos/systempip.mm src/macos/loginitem.mm
+                                src/macos/finder.mm
         PROPERTIES COMPILE_OPTIONS "-fobjc-arc")
     set_source_files_properties(macos/Monolist.icns
         PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
     target_link_libraries(monolist PRIVATE "-framework AppKit" "-framework MediaPlayer" "-framework Security"
         "-framework ServiceManagement"
         "-framework AVFoundation" "-framework AVKit" "-framework CoreMedia" "-framework CoreVideo"
-        "-framework QuartzCore")
+        "-framework QuartzCore" "-framework ImageIO" "-framework CoreServices")
 
     # The build number the stamp above just worked out, for CFBundleVersion.
     file(STRINGS "${MONOLIST_BUILDINFO}" _monolist_build_line REGEX "MONOLIST_BUILD_NUMBER")
@@ -533,6 +540,48 @@ if(APPLE)
         # build's console shows it.
         XCODE_SCHEME_ENVIRONMENT "QT_FORCE_STDERR_LOGGING=1"
     )
+
+    # — Opus and Ogg files in the Finder —
+    # macOS reads no tags or cover from Ogg (.opus, .ogg): Spotlight imports
+    # it "with no plugIn", so Get Info shows no title, artist or album, and
+    # the Finder draws a blank note. MonolistOgg.mdimporter, inside the app
+    # (Contents/Library/Spotlight), is Spotlight's importer for them, read
+    # with src/macos/oggtags.c; Spotlight finds it when macOS registers the
+    # app and runs it in its own worker. A plain bundle with no Qt, loaded
+    # into Spotlight's process, so no entitlements. The cover is the app's
+    # own doing (src/macos/finder.mm), as a download is saved.
+    add_library(MonolistOgg MODULE
+        src/macos/oggtags.h src/macos/oggtags.c src/macos/oggimporter.c)
+    set_target_properties(MonolistOgg PROPERTIES
+        BUNDLE TRUE
+        BUNDLE_EXTENSION mdimporter
+        LINKER_LANGUAGE C
+        MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/macos/MonolistOgg-Info.plist.in"
+        MACOSX_BUNDLE_GUI_IDENTIFIER "io.github.droidboy08-hub.monolist.spotlight"
+        MACOSX_BUNDLE_BUNDLE_NAME "MonolistOgg"
+        MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}"
+        MACOSX_BUNDLE_BUNDLE_VERSION "${MONOLIST_BUNDLE_BUILD}"
+        MACOSX_BUNDLE_COPYRIGHT "Monolist"
+        XCODE_ATTRIBUTE_CODE_SIGN_STYLE "Manual"
+        XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "-"
+    )
+    target_link_libraries(MonolistOgg PRIVATE "-framework CoreFoundation" "-framework CoreServices")
+    add_dependencies(monolist MonolistOgg)
+    # Into the app, signed ad hoc where it is built (scripts/build-macos.sh
+    # signs it again). In Xcode, by the app's own step, before Xcode signs
+    # the app; elsewhere, whenever the importer is built.
+    set(_monolist_spotlight "$<TARGET_BUNDLE_CONTENT_DIR:monolist>/Library/Spotlight")
+    if(CMAKE_GENERATOR STREQUAL "Xcode")
+        set(_monolist_importer_target monolist)
+    else()
+        set(_monolist_importer_target MonolistOgg)
+    endif()
+    add_custom_command(TARGET ${_monolist_importer_target} POST_BUILD
+        COMMAND codesign --force --sign - "$<TARGET_BUNDLE_DIR:MonolistOgg>"
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${_monolist_spotlight}"
+        COMMAND ${CMAKE_COMMAND} -E rm -rf "${_monolist_spotlight}/MonolistOgg.mdimporter"
+        COMMAND ditto "$<TARGET_BUNDLE_DIR:MonolistOgg>" "${_monolist_spotlight}/MonolistOgg.mdimporter"
+        VERBATIM)
 endif()
 
 # On Windows the app is a GUI binary; keep the console attached in debug builds
