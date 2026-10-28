@@ -424,43 +424,71 @@ About singleton); the release page on GitHub stays as the last resort.
   copy and the `.sha256` published beside it: on a Mac the disk image of the
   same kind as the running app (the Developer ID one for a Developer ID copy,
   `-unsigned` for an ad hoc one); on Windows the setup for a copy the setup
-  installed (its uninstall key names this folder), the zip for a portable
-  one. Both come over HTTPS from `github.com` or `*.githubusercontent.com`
-  only, every redirect checked too, with no cookie; plain HTTP is allowed
-  only on this computer, and only when the feed is there too (the tests).
-  The file is streamed to `<name>.part`, hashed as it arrives, and renamed
-  only when it matches the published SHA-256; a mismatch, a cut, CANCEL or
-  quitting deletes the part. A file already downloaded and still matching is
-  used again.
+  installed (its uninstall key names this folder; the key is only read,
+  never made), the zip for a portable one. Both come over HTTPS from the
+  project's release files on `github.com`
+  (`/droidboy08-hub/Monolist/releases/download/`), redirected only to
+  GitHub's two download hosts (`objects.githubusercontent.com`,
+  `release-assets.githubusercontent.com`), every hop checked, with no
+  cookie. Plain HTTP is allowed only on this computer, only when the feed is
+  there too, and only for a scratch library (the tests). The file is
+  streamed to `<name>.part`, hashed as it arrives, stopped if it grows past
+  the size the feed gave, and renamed only when it matches the published
+  SHA-256; a mismatch, a cut, CANCEL or quitting deletes the part. A file
+  already downloaded and still matching is used again. Links are logged
+  without their query (GitHub's signed tokens).
 * It is then got ready. **Mac**: the image attached hidden and read-only,
   Monolist.app copied out with `ditto` beside the update on the app's own
   volume, the image let go of, and the copy checked before anything is
   touched: `codesign --verify --deep --strict`, the same bundle identifier, a
   newer `CFBundleVersion`, and for a Developer ID copy the Developer ID
-  requirement for team 7YWFR8A74F. A copy that cannot be replaced in place
-  (opened from where it was downloaded, from a disk image, from a folder the
-  user may not change, from its build folder) gets the disk image opened in
-  the Finder instead, and the words to drag it to Applications. **Windows**:
-  the setup needs nothing; the zip is unpacked beside the portable copy. The
+  requirement for team 7YWFR8A74F. A download that fails these is deleted. A
+  copy that cannot be replaced in place (opened from where it was downloaded,
+  from a disk image, from a folder the user may not change, from its build
+  folder) is put through the same checks; only then is its disk image marked
+  as downloaded (quarantined, so Gatekeeper checks what is dragged out of
+  it) and opened in the Finder, with the words to drag it to Applications.
+  **Windows**: the setup needs nothing; the zip is unpacked beside the
+  portable copy. A portable copy whose folder holds the library or the
+  downloads is never swapped: the zip is shown, to be copied in by hand. The
   Windows builds are not code-signed: HTTPS from GitHub and the SHA-256 are
   what vouch for them there.
 * **RESTART** is a press of its own (it stops the music; a toast offers it
-  when the download ends elsewhere). It starts a helper (`update-helper.sh`
-  or `.ps1`, written into the updates folder, every path an argument) and
-  quits. The helper waits for Monolist to end, then: on a Mac moves the old
-  app aside, the new one into its place, registers it with LaunchServices,
-  opens it, and only then deletes the old one, putting the old one back and
-  opening it if any step fails; on Windows runs the setup quietly with this
-  folder and `/RELAUNCH` (packaging/monolist.iss starts Monolist again when
-  it is done), or swaps a portable copy's folder for the new one, with the
-  same way back. It leaves a word in `result.txt`, and the next launch says
-  how it went ("Monolist is now 0.1.191", or why the old copy is still the
-  one running) and clears what is left.
+  when the download ends). A second press starts nothing more. It starts a
+  helper, every path an argument, and quits. The helper waits for Monolist
+  to end, then:
+  * **Mac**: the helper is Monolist's own executable (`--update-swap`),
+    signed as the app is, by the same developer as the app it replaces,
+    which macOS's App Management asks of whatever changes a notarised app.
+    It checks the new app's signature once more, moves the old app aside
+    and the new one into its place, registers it with LaunchServices, opens
+    it, waits for it to start (the word `started` it leaves once its window
+    is up, or it still running after a minute), and only then deletes the
+    old one. If any step fails, or the new one ends before it has started,
+    the old one is put back and opened.
+  * **Windows**: for an installed copy, it hashes the setup again, holds it
+    open so that nothing can change it, and runs it quietly with this
+    folder and `/RELAUNCH` (packaging/monolist.iss starts Monolist again when
+    it is done); a copy installed for everyone makes Windows ask first. For
+    a portable copy it swaps the folder for the new one, starts it, and
+    puts the old one back if it ends with an error at once. The old folder
+    is deleted only when every file in it is also in the new one; otherwise
+    it is kept beside it (`Monolist.old-<n>`) and the next launch says
+    where. The helper runs in the updates folder, never in Monolist's own.
+  
+  It leaves a word in `result.txt`; the next launch waits for it, says how
+  it went ("Monolist is now 0.1.191", or why the old copy is still the one
+  running, with TRY AGAIN and the release page), keeps that sentence in
+  `last.txt`, and clears what is left (never while an update is under way):
+  half downloads, staged copies, a disk image a crash left attached, a zip a
+  crash left unpacked.
+* **TRY AGAIN** looks for the release again before downloading, as a newer
+  one may have come out.
 
 The updates folder is `updates` in the cache (`~/Library/Caches/Monolist/
 Monolist`, `%LOCALAPPDATA%\Monolist\Monolist\cache`), or in
 `MONOLIST_DATA_DIR`. Nothing of the user's lives in the program's folder or
-the bundle, which is why either can be replaced whole.
+the bundle unless they put it there, which the update checks for.
 
 ## Layout
 
@@ -1151,24 +1179,34 @@ first failure`.
                                                     in the log (needs MONOLIST_DATA_DIR)
     monolist --update-test                          the in-app update on a stand-in for GitHub and scratch
                                                     copies, never GitHub or the real app: the feed read, the
-                                                    file for each kind of copy, HTTPS from GitHub only (and
-                                                    every redirect), checksums, a mismatch, a cut, CANCEL and
-                                                    a quit mid-download leaving no .part, a download used
-                                                    again, CHECK/UPDATE/CANCEL as About runs them, what the
-                                                    next launch says; on a Mac, scratch bundles in disk images
-                                                    got ready and refused (another app, not newer, a broken
-                                                    seal, not the Developer ID), the copies that cannot be
-                                                    replaced in place, and the helper's swap, its way back and
-                                                    its wait; on Windows, a portable copy's zip and swap, the
-                                                    way back, and the setup's arguments (needs
-                                                    MONOLIST_DATA_DIR)
+                                                    file for each kind of copy, the project's release files
+                                                    on GitHub only (and every redirect), checksums, a mismatch,
+                                                    more than promised, a cut, CANCEL and a quit mid-download
+                                                    leaving no .part, a launch's cleanup leaving a download
+                                                    alone, CHECK/UPDATE/CANCEL/TRY AGAIN as About runs them (a
+                                                    double-click's CANCEL let go), what the next launch says
+                                                    and its wait for the helper; on a Mac, scratch bundles in
+                                                    disk images got ready and refused (another app, not newer,
+                                                    a broken seal, not the Developer ID), a copy put in place
+                                                    by hand shown only a checked, quarantined image, and the
+                                                    helper (--update-swap): its swap, second signature check,
+                                                    way back (cannot move in, will not open, does not start)
+                                                    and wait; on Windows, a portable copy's zip and swap (the
+                                                    helper started inside its folder; an old folder with the
+                                                    user's files kept; one holding the downloads left alone),
+                                                    the way back, and the setup's arguments, never run once
+                                                    changed (needs MONOLIST_DATA_DIR)
     monolist --set update.feed <url> --update-run   About's CHECK, UPDATE and RESTART with no window: this
                                                     copy downloads the update, hands over and quits, and is
                                                     replaced and opened again. The end-to-end test, against
                                                     a feed on this computer; it replaces the copy it runs
                                                     from, so only ever a scratch copy (needs
                                                     MONOLIST_DATA_DIR; MONOLIST_UPDATE_TEST_FAULT=move-new
-                                                    makes the swap fail, to see the way back)
+                                                    makes the swap fail, to see the way back;
+                                                    MONOLIST_TEST_VERSION=0.1.1 has one build play an older
+                                                    one, scratch libraries only). scripts/update-e2e-windows.ps1
+                                                    runs it on GitHub's Windows machine for copies installed
+                                                    by a real setup and a portable one
     monolist --update-demo <state>                  Settings › Updates in a state (available, getit,
                                                     downloading, preparing, ready, manual, failed), nothing
                                                     fetched; with --settings-section updates for a shot

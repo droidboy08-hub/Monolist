@@ -536,15 +536,21 @@ nothing at all.
   primary) when there is a newer release, GET IT for a copy that cannot
   update itself, which opens the release page as before; CANCEL while it
   downloads ("Downloading Monolist 0.1.191… 37 %", over a 2px rule red as far
-  as it has got, stepping a percent at a time); CHECKING… while it is
-  unpacked and checked; RESTART (red) once it is ready ("Monolist 0.1.191 is
-  ready: Monolist restarts to finish."); TRY AGAIN after a failure, which says
-  what failed; SHOW for a copy that has to be put in place by hand (its disk
-  image or zip shown again). After a failure, or for that copy, a small link
-  under the words leads to the release page, as the last resort. A download
-  that ends while the listener is elsewhere says so in a toast with RESTART.
-  The next launch says how it went: "Monolist is now 0.1.191.", or why the
-  old copy is still the one running.
+  as it has got, stepping a percent at a time) and while it is unpacked and
+  checked ("Checking Monolist 0.1.191…"); RESTART (red) once it is ready
+  ("Monolist 0.1.191 is ready: Monolist restarts to finish."; for a Windows
+  copy installed for everyone, that Windows asks first); TRY AGAIN after a
+  failure, which says what failed in plain words (no tool output, no paths)
+  and looks for the release again; SHOW for a copy that has to be put in
+  place by hand (its disk image or zip shown again, only ever one that
+  passed the checks). After a failure, or for that copy, a small link under
+  the words leads to the release page, as the last resort. A press within
+  half a second of the button changing its word is let go: it is the second
+  click of a double-click on what the button said before (UPDATE, then at
+  once CANCEL). A finished download is said in a toast with RESTART,
+  wherever the listener is. The next launch says how it went: "Monolist is
+  now 0.1.191.", or, in the row as a failure with TRY AGAIN and the link, why
+  the old copy is still the one running.
   *Why.* RESTART is a press of its own because it stops the music: the
   download asks nothing of the listener and can run under a song, the
   restart cannot. One button that changes its word keeps the row as quiet

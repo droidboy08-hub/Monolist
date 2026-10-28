@@ -90,11 +90,18 @@ owner's iPhone app (AryaMusix / "Mediano", Swift, not in this repo).
   `--drive-test` (the Google Drive backup's sign-in, tokens and sync on stand-ins for Google and Drive, never
   Google; asserts no cookie sent, the token to Drive alone, no redirect elsewhere, no secret in the log),
   `--update-test` (the in-app update on a stand-in for GitHub and scratch copies: the file per kind of copy,
-  GitHub-only origins, SHA-256, cancel/quit leaving no .part, and on a Mac scratch bundles in disk images and
-  the helper's swap and way back, on Windows a portable copy's zip and swap and the setup's arguments; in the
-  release gate), `--update-run` (About's CHECK, UPDATE and RESTART with no window, against `--set update.feed
-  <stand-in>`: it REPLACES THE COPY IT RUNS FROM, so only ever a scratch copy under /private/tmp;
-  `MONOLIST_UPDATE_TEST_FAULT=move-new` makes the Mac swap fail, to show the way back),
+  the project's release files only, SHA-256, size cap, cancel/quit leaving no .part, a launch's cleanup
+  leaving a download alone, a double-click's CANCEL let go, TRY AGAIN re-checking; on a Mac scratch bundles
+  in disk images, a by-hand copy shown only a checked, quarantined image, and the helper's swap, second
+  signature check and way back (cannot move in, will not open, does not start); on Windows a portable copy's
+  zip and swap with the helper started inside its folder, an old folder with the user's files kept, the
+  downloads inside left alone, and the setup's arguments; in the release gate), `--update-run` (About's
+  CHECK, UPDATE and RESTART with no window, against `--set update.feed <stand-in>`: it REPLACES THE COPY IT
+  RUNS FROM, so only ever a scratch copy under /private/tmp; `MONOLIST_UPDATE_TEST_FAULT=move-new` makes the
+  Mac swap fail, to show the way back; `MONOLIST_TEST_VERSION=0.1.1` has one build play an older one,
+  scratch libraries only, taken out of the environment at launch). `scripts/update-e2e-windows.ps1` (in
+  release-windows.yml) installs an older setup made from the package, for the user and for everyone, and a
+  portable copy, on GitHub's machine, and has each update itself from a loopback feed,
   `--ogg-test` (Mac only: the Ogg tag and cover reader on files it writes page by page, the app's own
   Spotlight importer loaded as Spotlight loads it, and a cover set as a scratch file's Finder icon) … Each
   prints `N checks, 0 failed`. All must pass, except `--scrobble-send-test`,
@@ -202,12 +209,17 @@ owner's iPhone app (AryaMusix / "Mediano", Swift, not in this repo).
 - Home's just-played rows (`JustPlayed`) ask YouTube Music signed out and cookieless, never through
   `AccountGuard`: at most one look-up a settled song, paced and persisted (`home.justPlayed.pace`).
 - The in-app update (`AppUpdater`, Settings › Updates; the owner's request, 2026-10-28) takes the release's
-  files only over HTTPS from github.com and *.githubusercontent.com (plain HTTP only on loopback, for a
-  loopback feed), redirects included, never with a cookie, and nothing it has not matched against the
-  published `.sha256`; on a Mac it keeps the copy's kind (Developer ID or ad hoc) and checks the staged app
-  (codesign --deep --strict, identifier, newer build, team 7YWFR8A74F for Developer ID) before touching the
-  old one; RESTART stays a press of its own. Never run `--update-run` or the helper against /Applications,
-  Program Files or the owner's copy.
+  files only over HTTPS from github.com/droidboy08-hub/Monolist/releases/download/, redirected only to
+  objects.githubusercontent.com or release-assets.githubusercontent.com (plain HTTP only on loopback, for a
+  loopback feed and a scratch library), never with a cookie, never past the feed's size, and nothing it has
+  not matched against the published `.sha256`; on a Mac it keeps the copy's kind (Developer ID or ad hoc)
+  and checks the staged app (codesign --deep --strict, identifier, newer build, team 7YWFR8A74F for
+  Developer ID) before touching the old one, and before showing a by-hand copy its (then quarantined) disk
+  image; RESTART stays a press of its own. The Mac helper is Monolist's own executable (`--update-swap`,
+  dispatched first in main(), before any application object): App Management lets only the same developer
+  change a notarised app, which a shell is not. Windows' portable swap never deletes a folder holding a file
+  the new one lacks, and never swaps a folder holding the library or the downloads. Never run `--update-run`
+  or the helper against /Applications, Program Files or the owner's copy.
 - Keep everything portable: Windows-only code behind `Q_OS_WIN` with a compiling
   fallback; macOS-only code in `src/macos/`.
 - Ask before downloading or installing anything (say what, where from, size).
@@ -315,6 +327,13 @@ owner's iPhone app (AryaMusix / "Mediano", Swift, not in this repo).
   `stat`'s st_dev for "read-only" and "same volume". And `hdiutil attach` now and then attaches an
   image and mounts nothing of it: let it go by its device (`/dev/diskN` in the -plist answer), never
   leave it attached, and try once more.
+- 2026-10-28, the update's review: QSettings opened on a registry path (`HKEY_CURRENT_USER\\...`) MAKES
+  the key when it is not there, even to read; Inno Setup takes any key under Uninstall\\{AppId}_is1 for an
+  installation, so a CHECK on a portable copy invented a per-user install. Read the registry with
+  RegOpenKeyEx/RegGetValue. A Windows process holds its current folder (no FILE_SHARE_DELETE): a helper that
+  renames Monolist's folder must not start in it (QProcess inherits it; Explorer starts an exe in its own
+  folder). PowerShell's names ignore case: `$started` is the parameter `$Started`. And `QByteArray::contains`
+  of an empty array is true: a test's "is this image attached" said yes for a file that was gone.
 - Tooltips need the QtQuick.Controls module deployed (build-windows.ps1 copies
   it); importing QtQuick.Controls or QtQuick.Dialogs in QML makes windeployqt
   ship every style (~20 MB) — avoid.
