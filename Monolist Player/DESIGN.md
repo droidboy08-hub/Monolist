@@ -396,13 +396,19 @@ nothing at all.
 * **A card that opens a page can also be played where it stands.** Under the
   pointer an album's or a playlist's cover takes a play plate in its corner;
   the card still opens the page, the plate plays it. A song's card has no
-  plate, because pressing the card already plays it.
+  plate, because pressing the card already plays it. The card of the song
+  playing follows a row's cover: in colour, its footer mark turned to the
+  playing bars, and under the pointer the mark says pause (or play while
+  paused); pressing it pauses or goes on rather than starting the song again.
   *Why.* "Play this album" is the commonest wish on a shelf, and opening the
   page to press Play is a page load and a second click for it. The mark sits
   on the picture, so it is a plate (paper square, ink glyph) rather than a
   bare glyph, for the reason full screen on the video is (2.6a is about glyphs on
   paper); and it is there only under the pointer, so a shelf at rest is still
-  covers and titles.
+  covers and titles. The song playing is the exception to "the mark says what
+  a press does" only in looks: a press on it pauses, so its mark says so, as
+  the list's does (TrackCover); a triangle that restarted the song would be
+  the one press on the page that throws away where the listener was.
 * **A shelf says what it offers as a whole in its header**, as a section
   does: SHOW ALL where YouTube Music has a page of everything the shelf shows
   a few of, PLAY ALL where the shelf is songs. The same small tracked link,

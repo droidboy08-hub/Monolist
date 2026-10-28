@@ -1,5 +1,6 @@
 import QtQuick
 import Monolist
+import Monolist.Backend
 
 // A card: the cover, a title, a line under it, and a footer label with the
 // play mark. The cover blooms into colour under the pointer.
@@ -7,6 +8,11 @@ import Monolist
 // A card that opens a page (an album, a playlist) can also be played from
 // where it stands: with `playable` set, a play plate comes onto the cover's
 // corner under the pointer, and pressing it plays instead of opening.
+//
+// A song's card that is the song playing (`active`) follows the rules of a
+// list row's cover (TrackCover): in colour, the footer's mark turned to the
+// playing bars, and under the pointer the mark says what a press now does,
+// pause or go on.
 Rectangle {
     id: root
 
@@ -30,6 +36,9 @@ Rectangle {
     // A menu, from three dots in the footer under the pointer or a right
     // click anywhere on the card: what the owner opens (Menus).
     property bool hasMenu: false
+    // This is the song playing, or paused (a song's card only): what a press
+    // does is then the owner's (ShelfCard pauses or goes on).
+    property bool active: false
     // The card itself pressed: open it (or, for a song, play it).
     signal playRequested()
     // The play plate pressed.
@@ -59,7 +68,7 @@ Rectangle {
             artworks: root.artworks && root.artworks.length > 0 ? root.artworks
                     : root.artwork.length > 0 ? [root.artwork] : []
             plate: root.plate
-            colour: hover.hovered
+            colour: hover.hovered || root.active
 
             // On the picture, so a plate rather than a bare glyph (see
             // PlateButton). It arrives with the pointer and leaves over
@@ -151,15 +160,34 @@ Rectangle {
             onClicked: root.menuRequested()
         }
 
+        // For the song playing, under the pointer, what a press does now:
+        // pause it, or go on with it (TrackCover).
         Icon {
             id: playMark
+            visible: !root.active || hover.hovered
             anchors.right: parent.right
             anchors.bottom: parent.bottom
             anchors.bottomMargin: 1
-            name: root.plate === "new" ? "plus" : root.opensPage ? "arrow-right" : "play"
+            name: root.plate === "new" ? "plus" : root.opensPage ? "arrow-right"
+                  : root.active && Player.playing ? "pause" : "play"
             width: 14
             height: 14
             color: Theme.accent
+        }
+
+        // At rest, the song playing carries the bars in the mark's place,
+        // held still while it is paused. Made on that one card only.
+        Loader {
+            active: root.active
+            visible: !hover.hovered
+            anchors.centerIn: playMark
+            sourceComponent: PlayingBars {
+                width: 14
+                height: 12
+                color: Theme.accent
+                running: Player.playing
+                covered: Nav.pagesCovered
+            }
         }
     }
 
@@ -168,6 +196,11 @@ Rectangle {
     // the page as well would take the reader away from where they pressed.
     TapHandler {
         onTapped: {
+            // A double-click's second press is not a second press of the
+            // card: the first started the song, and a second would pause it
+            // before it is heard (TrackCover).
+            if (tapCount > 1)
+                return
             if (!playPlate.visible || !playPlate.hovered)
                 root.playRequested()
         }

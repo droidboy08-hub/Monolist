@@ -35,11 +35,20 @@ AlbumCard {
     // A song or a video plays; anything else opens its page.
     opensPage: (card.videoId || "").length === 0
     playLoading: playable && Catalog.collectionLoading === card.browseId
+    // A song's or a video's card that is the song playing, or paused.
+    active: !opensPage && !collection && card.videoId === Player.currentSourceId
     // A song's or a video's is the song menu; anything else's, the card's.
     // A card Monolist put there (Home's rows from the songs just heard) is
     // a suggestion, whose menu can turn it down.
     hasMenu: (card.videoId || "").length > 0 || (card.browseId || "").length > 0
-    onPlayRequested: root.activated(root.card)
+    // The song playing is paused or goes on, as its row's cover does
+    // (TrackCover), rather than starting again from the top.
+    onPlayRequested: {
+        if (root.active)
+            Player.togglePlay()
+        else
+            root.activated(root.card)
+    }
     onPlayClicked: Catalog.playCollection(root.card.browseId, root.card.title || "", root.origin)
     onMenuRequested: {
         if (!root.collection && card.type !== "artist" && (card.videoId || "").length > 0)
