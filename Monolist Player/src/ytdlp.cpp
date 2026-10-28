@@ -512,6 +512,11 @@ QString YtDlp::ffmpegPath()
     return findTool(QStringLiteral("ffmpeg"));
 }
 
+QString YtDlp::ffprobePath()
+{
+    return findTool(QStringLiteral("ffprobe"));
+}
+
 QString YtDlp::denoPath()
 {
     return findTool(QStringLiteral("deno"));

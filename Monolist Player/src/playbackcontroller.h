@@ -5,6 +5,7 @@
 #include <QObject>
 #include <QSet>
 #include <QString>
+#include <QStringList>
 #include <QTimer>
 #include <QVariantMap>
 
@@ -272,6 +273,13 @@ public Q_SLOTS:
                     const QString &origin = QString(),
                     const QString &primaryArtist = QString());
 
+    // Files opened with Monolist (the Finder, Open With, the command line),
+    // played as a queue in their order. A file that is one of Monolist's own
+    // downloads plays as that song, as it would from Downloads, and autoplay
+    // carries on from it; any other plays as a file of its own, named by its
+    // tags and with its cover (ffprobe), and no YouTube song behind it.
+    void playFiles(const QStringList &paths);
+
     // Every YouTube video has a thumbnail at a predictable URL, so a track with
     // a source id never has to show a blank plate even when no artwork field
     // was stored. Exposed to QML so lists can use it for their own rows.
@@ -358,6 +366,14 @@ private:
     // The copy of `track` on disk: its download, or its own source where
     // that is a file. Empty when it has to be streamed.
     QString localCopyOf(const QVariantMap &track) const;
+    // playFiles' files read one after another, `found` so far and the rest
+    // `remaining`, then played together; unless the listener opened others
+    // meanwhile (`request` is no longer m_openRequest).
+    void openFiles(QStringList remaining, QList<QueueTrack> found, quint64 request);
+    // The song `path` is the download of: a file named with Monolist's
+    // "[<video id>]" that is the very file Downloads keeps for that song.
+    // Empty for any other file.
+    QVariantMap downloadedSong(const QString &path) const;
     // The song playing, as sound again from where it is: from its file when
     // it has one, otherwise resolved, with `resolvingText` meanwhile.
     void backToSound(bool keepPlaying, const QString &resolvingText);
@@ -410,6 +426,7 @@ private:
 
     QueueModel m_queue;
     InnerTube m_innerTube;   // for the radio
+    quint64 m_openRequest = 0;   // playFiles calls so far
 
     QVariantMap m_currentTrack;
     QString m_pendingVideoId;        // resolution in flight for this id

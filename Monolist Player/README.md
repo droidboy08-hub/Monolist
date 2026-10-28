@@ -716,6 +716,19 @@ cmake --build build          # build/Monolist.app
   the Touch Bar, Control Center and the lock screen control Monolist and show
   the song, its cover and its position. Without this, the play key opens
   Apple Music.
+* **Opus and Ogg files from the Finder.** Monolist is in Open With for
+  `.opus`, `.ogg` and `.oga` (the system's `org.xiph.ogg-audio`, in
+  `macos/Info.plist.in`), and takes a file dropped on its Dock icon. The
+  file plays at once, whether Monolist was open or not (the running app gets
+  it, never a second copy), several in the order selected. One of its own
+  downloads (named `… [<video id>].opus`, and the very file Downloads keeps)
+  plays as its song, and autoplay carries on from it; any other plays as a
+  file of its own, with the title, artist, album and cover its tags give
+  (ffprobe; the cover is copied out by FFmpeg into `file-covers` in the data
+  folder) and no radio after it. M4A and MP3 stay with the apps that have
+  them. On Windows the same files can be given on the command line (Open
+  With › Choose another app › `monolist.exe`), and a second start hands them
+  to the one running.
 * **Tools from Finder.** An app opened from Finder or the Dock does not get
   the shell's PATH, so Homebrew's folders (`/opt/homebrew/bin`,
   `/usr/local/bin`) and `~/.deno/bin` are added to it at startup: builds that
@@ -957,7 +970,9 @@ first failure`.
     monolist --startup-test                         opening at sign-in: the Run value written, read back and
                                                     taken away, on a scratch key; Windows' own switch read;
                                                     a value naming a Monolist gone repaired; a sign-in start
-                                                    leaving an open Monolist's window alone
+                                                    leaving an open Monolist's window alone; files opened
+                                                    with Monolist (a second start's, the system's open-file
+                                                    events, the command line's) handed over whole and in order
                                                     (needs MONOLIST_DATA_DIR; in the release gate)
     monolist --sleep-test                           the sleep timer on a stand-in player: the countdown,
                                                     the fade and the volume put back, +10 minutes, the end
@@ -1241,6 +1256,7 @@ only ever go to ws.audioscrobbler.com.
     secrets           <AppData>/secrets  (sign-in keys, encrypted with DPAPI for the Windows user)
     yt-dlp cookies    <LocalAppData>/yt-dlp-cookies  (one lookup's copy of the session, deleted after it)
     artwork           <Cache>/artwork  (256 MB cap)
+    opened files      <AppData>/file-covers  (the covers of files opened with Monolist, one per file version)
     Drive backup      monolist-library.json in the Google account's hidden appDataFolder (signed in only)
 
 On a Mac, `<Music>` is `~/Music`, `<AppData>` is

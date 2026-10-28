@@ -154,6 +154,7 @@ public:
 
     // Full paths, or empty when the tool is missing.
     static QString ffmpegPath();
+    static QString ffprobePath();
     static QString denoPath();
     // The command that runs yt-dlp: the program first, then any arguments that
     // have to precede its own (a pip install needs "-m yt_dlp"). Empty when it

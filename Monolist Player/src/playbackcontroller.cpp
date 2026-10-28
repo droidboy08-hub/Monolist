@@ -7,18 +7,26 @@
 #include "mpvengine.h"
 #include "streamresolver.h"
 #include "trackmodel.h"
+#include "ytdlp.h"
 
 #include <QAbstractItemModel>
 #include <QCoreApplication>
+#include <QCryptographicHash>
+#include <QDateTime>
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QProcess>
+#include <QRegularExpression>
 #include <QSqlError>
 #include <QSqlQuery>
 #include <QUrl>
 #include <QVariant>
 
+#include <memory>
 #include <utility>
 
 namespace {
@@ -182,6 +190,166 @@ QList<QueueTrack> tracksFromModel(QAbstractItemModel *model)
         tracks.append(QueueTrack::fromMap(map));
     }
     return tracks;
+}
+
+// Files opened at once beyond this many are left out: a folder's worth
+// selected by mistake is not read one by one before anything plays.
+constexpr int kMostFilesOpened = 500;
+// ffprobe or FFmpeg on one file, at most: a damaged file, or a disk that
+// has gone to sleep, is given up on rather than holding the rest back.
+constexpr int kToolLimitMs = 8000;
+
+// Monolist's own downloads end their names in "[<video id>].<extension>"
+// (DownloadManager::filesFor).
+const QRegularExpression &downloadName()
+{
+    static const QRegularExpression named(QStringLiteral(R"(\[([A-Za-z0-9_-]{11})\]\.[^.]+$)"));
+    return named;
+}
+
+// A tool run to its end in the background: `done` once, with whether it
+// ended well and what it printed.
+void runTool(const QString &program, const QStringList &arguments, QObject *context,
+             std::function<void(bool ok, const QByteArray &out)> done)
+{
+    auto *process = new QProcess(context);
+    const auto answered = std::make_shared<bool>(false);
+    const auto finish = [process, answered, done](bool ok) {
+        if (std::exchange(*answered, true))
+            return;
+        const QByteArray out = ok ? process->readAllStandardOutput() : QByteArray();
+        process->deleteLater();
+        done(ok, out);
+    };
+    QObject::connect(process, &QProcess::finished, context, [process, finish]() {
+        finish(process->exitStatus() == QProcess::NormalExit && process->exitCode() == 0);
+    });
+    QObject::connect(process, &QProcess::errorOccurred, context, [finish](QProcess::ProcessError error) {
+        if (error == QProcess::FailedToStart)
+            finish(false);
+    });
+    QTimer::singleShot(kToolLimitMs, process, [process]() { process->kill(); });
+    process->start(program, arguments);
+}
+
+// What a file says of itself, as a track's fields: title, artist, album and
+// durationMs, as ffprobe reads them, and artwork, its cover (a picture kept
+// in the file, as a download's is), copied out by FFmpeg into `covers` once
+// for each version of the file. Whatever it does not say is left out: all
+// of it without ffprobe. `done` is called once, later.
+void readFileTags(const QString &path, const QString &covers, QObject *context,
+                  std::function<void(const QVariantMap &)> done)
+{
+    const QString ffprobe = YtDlp::ffprobePath();
+    if (ffprobe.isEmpty()) {
+        QMetaObject::invokeMethod(context, [done]() { done({}); }, Qt::QueuedConnection);
+        return;
+    }
+    // "file:", so that nothing in the path is read as another of FFmpeg's
+    // protocols, or a drive letter as one.
+    const QString input = QStringLiteral("file:") + QDir::toNativeSeparators(path);
+    const QStringList arguments = {
+        QStringLiteral("-v"), QStringLiteral("error"),
+        QStringLiteral("-print_format"), QStringLiteral("json"),
+        QStringLiteral("-show_entries"),
+        QStringLiteral("format=duration:format_tags:stream=index,codec_type,codec_name"
+                       ":stream_disposition=attached_pic:stream_tags"),
+        QStringLiteral("-i"), input
+    };
+    runTool(ffprobe, arguments, context, [path, covers, input, context, done](bool, const QByteArray &out) {
+        const QJsonObject root = QJsonDocument::fromJson(out).object();
+        const QJsonObject format = root.value(QStringLiteral("format")).toObject();
+        // The container's tags (MP3, M4A), then the sound's own, which is
+        // where Ogg keeps them; the first of any name that says something.
+        QHash<QString, QString> tags;
+        const auto take = [&tags](const QJsonObject &object) {
+            for (auto it = object.begin(); it != object.end(); ++it) {
+                const QString value = it.value().toString().trimmed();
+                if (!value.isEmpty() && !tags.contains(it.key().toLower()))
+                    tags.insert(it.key().toLower(), value);
+            }
+        };
+        take(format.value(QStringLiteral("tags")).toObject());
+        int coverStream = -1;
+        QString coverCodec;
+        bool sound = false;
+        for (const QJsonValue &value : root.value(QStringLiteral("streams")).toArray()) {
+            const QJsonObject stream = value.toObject();
+            const QString type = stream.value(QStringLiteral("codec_type")).toString();
+            if (type == QLatin1String("audio") && !sound) {
+                sound = true;
+                take(stream.value(QStringLiteral("tags")).toObject());
+            } else if (type == QLatin1String("video") && coverStream < 0
+                       && stream.value(QStringLiteral("disposition")).toObject()
+                                  .value(QStringLiteral("attached_pic")).toInt() == 1) {
+                coverStream = stream.value(QStringLiteral("index")).toInt();
+                coverCodec = stream.value(QStringLiteral("codec_name")).toString();
+            }
+        }
+
+        QVariantMap found;
+        const auto say = [&found, &tags](const char *field, std::initializer_list<const char *> names) {
+            for (const char *name : names) {
+                const QString value = tags.value(QLatin1String(name));
+                if (!value.isEmpty()) {
+                    found.insert(QLatin1String(field), value);
+                    return;
+                }
+            }
+        };
+        say("title", { "title" });
+        say("artist", { "artist", "album_artist", "albumartist" });
+        say("album", { "album" });
+        const double seconds = format.value(QStringLiteral("duration")).toString().toDouble();
+        if (seconds > 0)
+            found.insert(QStringLiteral("durationMs"), qint64(seconds * 1000.0));
+
+        const QString ffmpeg = coverStream >= 0 ? YtDlp::ffmpegPath() : QString();
+        if (ffmpeg.isEmpty()) {
+            done(found);
+            return;
+        }
+        // Named by the file as it is now, so opening it again finds the copy
+        // made last time, and a file changed since gets its new cover.
+        const QFileInfo file(path);
+        const QByteArray version = (file.canonicalFilePath() + QLatin1Char('|') + QString::number(file.size())
+                                    + QLatin1Char('|') + QString::number(file.lastModified().toMSecsSinceEpoch()))
+                                       .toUtf8();
+        // A JPEG or PNG as it is in the file; anything else made a PNG.
+        const bool jpeg = coverCodec == QLatin1String("mjpeg");
+        const QString cover = QDir(covers).filePath(
+            QString::fromLatin1(QCryptographicHash::hash(version, QCryptographicHash::Sha1).toHex().left(20))
+            + (jpeg ? QStringLiteral(".jpg") : QStringLiteral(".png")));
+        if (QFileInfo::exists(cover)) {
+            found.insert(QStringLiteral("artwork"), QUrl::fromLocalFile(cover).toString());
+            done(found);
+            return;
+        }
+        QDir().mkpath(covers);
+        // Written beside it and renamed once whole, so a copy cut short is
+        // never taken for the cover.
+        const QString part = cover + QStringLiteral(".part");
+        QStringList copy = {
+            QStringLiteral("-v"), QStringLiteral("error"), QStringLiteral("-nostdin"), QStringLiteral("-y"),
+            QStringLiteral("-i"), input,
+            QStringLiteral("-map"), QStringLiteral("0:%1").arg(coverStream),
+            QStringLiteral("-frames:v"), QStringLiteral("1")
+        };
+        if (jpeg || coverCodec == QLatin1String("png"))
+            copy << QStringLiteral("-c") << QStringLiteral("copy");
+        else
+            copy << QStringLiteral("-c:v") << QStringLiteral("png");
+        // One picture, and the name only a name, never a pattern.
+        copy << QStringLiteral("-f") << QStringLiteral("image2") << QStringLiteral("-update") << QStringLiteral("1")
+             << QDir::toNativeSeparators(part);
+        runTool(ffmpeg, copy, context, [found, cover, part, done](bool ok, const QByteArray &) mutable {
+            if (ok && QFileInfo(part).size() > 0 && QFile::rename(part, cover))
+                found.insert(QStringLiteral("artwork"), QUrl::fromLocalFile(cover).toString());
+            else
+                QFile::remove(part);
+            done(found);
+        });
+    });
 }
 
 } // namespace
@@ -1196,6 +1364,92 @@ void PlaybackController::playSource(const QString &videoId,
     track.isVideo = isVideo;
     track.artwork = artwork.isEmpty() ? artworkForSource(videoId) : artwork;
     startQueue({ track }, 0, /*autoPlay=*/true);
+}
+
+void PlaybackController::playFiles(const QStringList &paths)
+{
+    QStringList files;
+    for (const QString &path : paths) {
+        const QFileInfo file(path);
+        if (file.isFile() && files.size() < kMostFilesOpened)
+            files.append(file.absoluteFilePath());
+    }
+    if (files.isEmpty())
+        return;
+    qInfo("files: %d opened with Monolist", int(files.size()));
+    openFiles(files, {}, ++m_openRequest);
+}
+
+void PlaybackController::openFiles(QStringList remaining, QList<QueueTrack> found, quint64 request)
+{
+    if (request != m_openRequest)
+        return;
+    while (!remaining.isEmpty()) {
+        const QString path = remaining.takeFirst();
+        if (const QVariantMap song = downloadedSong(path); !song.isEmpty()) {
+            found.append(QueueTrack::fromMap(song));
+            qInfo("files: \"%s\" is the download of %s", qPrintable(QFileInfo(path).fileName()),
+                  qPrintable(found.last().videoId));
+            continue;
+        }
+        // Covers of opened files beside the library, in its data folder.
+        const QString covers = QFileInfo(AppDatabase::databaseFilePath()).dir().filePath(QStringLiteral("file-covers"));
+        readFileTags(path, covers, this, [this, path, remaining, found, request](const QVariantMap &tags) mutable {
+            QueueTrack track;
+            track.sourceUrl = path;
+            // Untagged, it goes by its name, less the "[<video id>]" of a
+            // download made on another computer.
+            track.title = tags.value(QStringLiteral("title")).toString();
+            if (track.title.isEmpty()) {
+                const QFileInfo file(path);
+                track.title = file.completeBaseName();
+                if (downloadName().match(file.fileName()).hasMatch()) {
+                    const QString bare = track.title.left(track.title.lastIndexOf(QLatin1Char('['))).trimmed();
+                    if (!bare.isEmpty())
+                        track.title = bare;
+                }
+            }
+            track.artist = tags.value(QStringLiteral("artist")).toString();
+            track.album = tags.value(QStringLiteral("album")).toString();
+            track.durationMs = tags.value(QStringLiteral("durationMs")).toLongLong();
+            track.artwork = tags.value(QStringLiteral("artwork")).toString();
+            qInfo("files: \"%s\" plays as a file of its own (%s, %s)", qPrintable(QFileInfo(path).fileName()),
+                  tags.contains(QStringLiteral("title")) ? "tagged" : "untagged",
+                  track.artwork.isEmpty() ? "no cover" : "a cover");
+            found.append(track);
+            openFiles(std::move(remaining), std::move(found), request);
+        });
+        return;
+    }
+    if (found.isEmpty())
+        return;
+    m_source = QStringLiteral("file");
+    startQueue(found, 0, /*autoPlay=*/true);
+}
+
+QVariantMap PlaybackController::downloadedSong(const QString &path) const
+{
+    const QRegularExpressionMatch named = downloadName().match(QFileInfo(path).fileName());
+    if (!named.hasMatch() || !m_downloads)
+        return {};
+    const QString videoId = named.captured(1);
+    const QString kept = m_downloads->localPathFor(videoId);
+    // The same file however the two paths are spelt: compared as the file
+    // system has them.
+    if (kept.isEmpty() || QFileInfo(kept) != QFileInfo(path))
+        return {};
+    // The library's row, which is every download's, with its likes and plays.
+    if (m_library) {
+        if (const int row = m_library->tracks()->indexOfSource(videoId); row >= 0)
+            return m_library->tracks()->get(row);
+    }
+    DownloadLibraryModel *stored = m_downloads->library();
+    for (int row = 0; row < stored->rowCount(); ++row) {
+        const QVariantMap song = stored->get(row);
+        if (song.value(QStringLiteral("videoId")).toString() == videoId)
+            return song;
+    }
+    return {};
 }
 
 // Both of these are the listener's own choice, whatever the song was before:
