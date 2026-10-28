@@ -120,6 +120,15 @@ owner's iPhone app (AryaMusix / "Mediano", Swift, not in this repo).
   touch items for the scratch library. `--scrobble-kill-test` waits to be
   killed by hand, and `--library-test`, `--queue-test`, `--rec-test` need an
   argument (without one the app just starts).
+  The bundled tools (yt-dlp, Deno) live in the REAL Application Support folder
+  whatever MONOLIST_DATA_DIR says: a deployed app that carries them unpacks
+  them there at launch, even on a scratch library (a scratch library starts
+  no daily tool check since 2026-10-28). Copies for tests that launch a
+  deployed app (the update's end-to-end run) are built with
+  `build-macos.sh --no-tools`. The end-to-end run reopens the updated copy
+  through LaunchServices (a window, briefly): close it by its PID, and
+  `lsregister -u` the scratch copy afterwards, since it shares the owner's
+  bundle id and is a newer build.
 - Recommender checks (need the data): `--artist-test <EmbeddingData> <GraphData>`
   (baseline 17 graph / 5 sounds-like / 0 none, 0 leaks), `--graph-test` (22
   countries, 0 leaks), `--content-test <EmbeddingData> <report>` (0 of 19 and
