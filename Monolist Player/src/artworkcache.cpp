@@ -245,9 +245,12 @@ void ArtworkFetcher::fetch(ArtworkResponse *response,
 
     // Shown larger than the small thumbnail holds: ask for the big one, and
     // keep the small one in hand for the videos that have no big one.
+    // hqdefault is 480×360, but a 16:9 picture letterboxed: 270 pixels high
+    // once its bars are cut, so any square drawn larger than that (in device
+    // pixels, as Artwork asks) would be upscaled from it.
     QUrl wanted = url;
     QUrl fallback;
-    if (qMax(requestedSize.width(), requestedSize.height()) > 480) {
+    if (qMax(requestedSize.width(), requestedSize.height()) > 270) {
         const QUrl larger = largestThumbnail(url);
         if (!larger.isEmpty()) {
             wanted = larger;

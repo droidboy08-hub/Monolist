@@ -59,9 +59,13 @@ Rectangle {
         source: root.address.length > 0
                 ? "image://artwork/" + encodeURIComponent(root.address)
                 : ""
-        // In device pixels, so a cover is decoded at the size it is drawn.
-        sourceSize.width: Math.max(1, root.wanted)
-        sourceSize.height: Math.max(1, root.wanted)
+        // In the item's own (logical) pixels: for an image:// source Qt
+        // multiplies sourceSize by the window's device pixel ratio itself,
+        // so the cover is still decoded at the size it is drawn. Given in
+        // device pixels it was decoded at twice that on a Retina screen
+        // (four times the memory), upscaled from the bucket fetched.
+        sourceSize.width: Math.max(1, Math.ceil(root.wanted / Screen.devicePixelRatio))
+        sourceSize.height: Math.max(1, Math.ceil(root.wanted / Screen.devicePixelRatio))
         fillMode: Image.PreserveAspectCrop
         asynchronous: true
         cache: true

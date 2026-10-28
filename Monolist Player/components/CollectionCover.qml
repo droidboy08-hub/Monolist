@@ -26,10 +26,18 @@ Rectangle {
     border.color: Theme.text
     clip: true
 
+    // The pictures are asked for once the cover is first in view, and kept
+    // from then on. Not bound to `visible` itself, which reads false while
+    // any parent is hidden: a page left dropped every picture on it, and
+    // they were all fetched and decoded again when it came back.
+    property bool seen: false
+    onVisibleChanged: if (visible) seen = true
+    Component.onCompleted: if (visible) seen = true
+
     Artwork {
         anchors.fill: parent
         visible: root.photographic && root.count < 4
-        source: visible ? root.artworks[0] : ""
+        source: root.seen && root.photographic && root.count < 4 ? root.artworks[0] : ""
         placeholder: ""
         colour: root.colour
     }
@@ -40,7 +48,7 @@ Rectangle {
         columns: 2
 
         Repeater {
-            model: parent.visible ? 4 : 0
+            model: root.seen && root.photographic && root.count >= 4 ? 4 : 0
 
             delegate: Artwork {
                 required property int index

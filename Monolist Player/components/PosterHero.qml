@@ -20,15 +20,19 @@ Rectangle {
 
     // The poster red as printed: its paper type reads on it in either.
     color: Theme.red
-    implicitHeight: Math.max(content.implicitHeight, cover.visible ? cover.height : 0) + Theme.space8 * 2
+    implicitHeight: Math.max(content.implicitHeight, root.showsCover ? cover.height : 0) + Theme.space8 * 2
+
+    // Whether the poster has room for its cover. Not `cover.visible`, which
+    // reads false while the page is out of view and so dropped the picture.
+    readonly property bool showsCover: root.artwork.length > 0 && root.width >= 760
 
     Artwork {
         id: cover
-        visible: root.artwork.length > 0 && root.width >= 760
+        visible: root.showsCover
         anchors.right: parent.right
         anchors.top: parent.top
         anchors.margins: Theme.space8
-        width: visible ? Math.min(280, Math.round(root.width * 0.26)) : 0
+        width: root.showsCover ? Math.min(280, Math.round(root.width * 0.26)) : 0
         // A deeper red under the cover while it loads, not a grey plate.
         color: Theme.accent600
         height: width
@@ -39,7 +43,7 @@ Rectangle {
     Column {
         id: content
         anchors.left: parent.left
-        anchors.right: cover.visible ? cover.left : parent.right
+        anchors.right: root.showsCover ? cover.left : parent.right
         anchors.top: parent.top
         anchors.margins: Theme.space8
         spacing: Theme.space4
