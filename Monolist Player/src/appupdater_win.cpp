@@ -268,15 +268,19 @@ if (-not $wentOn) {
     }
     exit 1
 }
-if (Test-Leftovers $Aside $App) {
-    Say ("ok`nkept: " + $Aside)
-} else {
-    Say 'ok'
+# Tidied before the word is left: whoever reads it finds the helper done.
+$keep = Test-Leftovers $Aside $App
+if (-not $keep) {
     Remove-Item -LiteralPath $Aside -Recurse -Force -ErrorAction SilentlyContinue
 }
 $root = Split-Path -Parent $Staged
 if ((Test-Path -LiteralPath $root) -and -not (Get-ChildItem -LiteralPath $root -Force)) {
     Remove-Item -LiteralPath $root -Force -ErrorAction SilentlyContinue
+}
+if ($keep) {
+    Say ("ok`nkept: " + $Aside)
+} else {
+    Say 'ok'
 }
 exit 0
 )HELPER";
