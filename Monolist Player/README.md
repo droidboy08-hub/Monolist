@@ -716,9 +716,11 @@ cmake --build build          # build/Monolist.app
   the Touch Bar, Control Center and the lock screen control Monolist and show
   the song, its cover and its position. Without this, the play key opens
   Apple Music.
-* **Opus and Ogg files from the Finder.** Monolist is in Open With for
-  `.opus`, `.ogg` and `.oga` (the system's `org.xiph.ogg-audio`, in
-  `macos/Info.plist.in`), and takes a file dropped on its Dock icon. The
+* **Opus and Ogg files from the Finder.** Monolist claims `.opus`, `.ogg`
+  and `.oga` (the system's `org.xiph.ogg-audio`, in `macos/Info.plist.in`)
+  at Default rank, so a double-click can open them in it; where another app
+  already has them, Get Info › Open with › Change All makes Monolist the
+  one. Open With and a file dropped on the Dock icon work either way. The
   file plays at once, whether Monolist was open or not (the running app gets
   it, never a second copy), several in the order selected. One of its own
   downloads (named `… [<video id>].opus`, and the very file Downloads keeps)

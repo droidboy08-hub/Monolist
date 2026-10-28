@@ -41,8 +41,9 @@
         own downloads, which are Opus in Ogg, and anyone else's. macOS 26
         types .opus, .ogg and .oga alike as the system's Ogg audio. The other
         sound files it saves (M4A, MP3) are left to the apps that have them.
-        Alternate: offered in Open With, and the Finder's double-click stays
-        with whichever app had it.
+        Default (the owner's choice, 2026-10-27): a double-click can open
+        them in Monolist. Another app claiming them at Default too may still
+        be kept by macOS; Get Info › Open with › Change All settles it.
     -->
     <key>CFBundleDocumentTypes</key>
     <array>
@@ -52,7 +53,7 @@
             <key>CFBundleTypeRole</key>
             <string>Viewer</string>
             <key>LSHandlerRank</key>
-            <string>Alternate</string>
+            <string>Default</string>
             <key>LSItemContentTypes</key>
             <array>
                 <string>org.xiph.ogg-audio</string>
