@@ -135,7 +135,15 @@ owner's iPhone app (AryaMusix / "Mediano", Swift, not in this repo).
   `build-macos.sh --no-tools`. The end-to-end run reopens the updated copy
   through LaunchServices (a window, briefly): close it by its PID, and
   `lsregister -u` the scratch copy afterwards, since it shares the owner's
-  bundle id and is a newer build.
+  bundle id and is a newer build. LaunchServices marks apps under /private/tmp
+  "in-temp-dir" and never lists them as a file type's handler, so a scratch
+  copy there cannot show which app opens .opus. App Management (macOS 13+:
+  only the same developer may change a notarised, Gatekeeper-approved app)
+  cannot be seen on a scratch copy either: a local build is not notarised,
+  and the owner's installed one (from build-macos.sh) is "Unnotarized
+  Developer ID" (spctl). The notary profile `monolist-notary` was not
+  readable from an agent's session on 2026-10-28 ("No Keychain password
+  item found").
 - Recommender checks (need the data): `--artist-test <EmbeddingData> <GraphData>`
   (baseline 17 graph / 5 sounds-like / 0 none, 0 leaks), `--graph-test` (22
   countries, 0 leaks), `--content-test <EmbeddingData> <report>` (0 of 19 and

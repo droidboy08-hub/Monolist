@@ -80,7 +80,7 @@ New-Item -ItemType Directory -Force $Work | Out-Null
 $stage = Join-Path $Package 'Monolist'
 $setup = Get-ChildItem -LiteralPath $Package -Filter 'Monolist-*-setup-win64.exe' | Select-Object -First 1
 $zip = Get-ChildItem -LiteralPath $Package -Filter 'Monolist-*-win64.zip' | Select-Object -First 1
-if (-not $setup -or -not $zip) { throw "No setup or zip in $Package: run package-windows.ps1 -Installer first." }
+if (-not $setup -or -not $zip) { throw "No setup or zip in ${Package}: run package-windows.ps1 -Installer first." }
 $version = [regex]::Match($setup.Name, '^Monolist-(.+)-setup-win64\.exe$').Groups[1].Value
 Write-Host "update-e2e: updating to $version, from 0.1.1"
 
@@ -149,7 +149,7 @@ try {
     $inst = Join-Path $Work 'Programs x\Monolist'
     $p = Start-Process -FilePath $oldSetup -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/CURRENTUSER', "/DIR=`"$inst`"" -PassThru
     $null = $p.Handle
-    $p.WaitForExit()
+    if (-not $p.WaitForExit(5 * 60 * 1000)) { Stop-Process -Id $p.Id -Force; throw 'The older setup did not finish.' }
     $entry = Get-Entry 'HKCU'
     Check ($p.ExitCode -eq 0 -and $entry -and (Same-Folder $entry.InstallLocation $inst) -and $entry.DisplayVersion -eq '0.1.1') `
         'the older setup installed this user''s copy' "exit $($p.ExitCode), $($entry.InstallLocation), $($entry.DisplayVersion)"
@@ -166,7 +166,10 @@ try {
     $everyone = Join-Path $Work 'Everyone x\Monolist'
     $p = Start-Process -FilePath $oldSetup -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/ALLUSERS', "/DIR=`"$everyone`"" -PassThru
     $null = $p.Handle
-    $p.WaitForExit()
+    # Waiting on a permission prompt nobody will answer: given up.
+    if (-not $p.WaitForExit(5 * 60 * 1000)) {
+        Get-Process -Name 'old-setup*' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+    }
     $entry = Get-Entry 'HKLM'
     if ($p.ExitCode -ne 0 -or -not $entry -or -not (Same-Folder $entry.InstallLocation $everyone)) {
         Write-Host "update-e2e: (an install for everyone needs to ask on this PC: exit $($p.ExitCode); not run)"
