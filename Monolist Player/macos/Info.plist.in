@@ -36,6 +36,31 @@
     <key>LSMinimumSystemVersion</key>
     <string>${MONOLIST_MACOS_MINIMUM}</string>
 
+    <!--
+        Opus and Ogg files open in Monolist (InstanceGuard, playFiles): its
+        own downloads, which are Opus in Ogg, and anyone else's. macOS 26
+        types .opus, .ogg and .oga alike as the system's Ogg audio. The other
+        sound files it saves (M4A, MP3) are left to the apps that have them.
+        Default (the owner's choice, 2026-10-27): a double-click can open
+        them in Monolist. Another app claiming them at Default too may still
+        be kept by macOS; Get Info › Open with › Change All settles it.
+    -->
+    <key>CFBundleDocumentTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleTypeName</key>
+            <string>Ogg audio</string>
+            <key>CFBundleTypeRole</key>
+            <string>Viewer</string>
+            <key>LSHandlerRank</key>
+            <string>Default</string>
+            <key>LSItemContentTypes</key>
+            <array>
+                <string>org.xiph.ogg-audio</string>
+            </array>
+        </dict>
+    </array>
+
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
     <key>NSHighResolutionCapable</key>

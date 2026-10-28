@@ -8,6 +8,7 @@
 #include <QEventLoop>
 #include <QFile>
 #include <QFileInfo>
+#include <QFileOpenEvent>
 #include <QThread>
 #include <QTimer>
 
@@ -169,20 +170,23 @@ int runStartupSelfTest()
 
     // A start at sign-in (--login) that finds Monolist already open on its
     // library: answered, so it ends, and that one's window left where it is;
-    // any other second start still brings it forward (InstanceGuard).
+    // any other second start still brings it forward (InstanceGuard). One
+    // given files hands them over.
     {
         const QString folder = QDir(scratchLibrary).filePath(QStringLiteral("guard"));
         InstanceGuard running(folder);
         int wakes = 0;
+        int told = 0;
         QObject::connect(&running, &InstanceGuard::wakeRequested, [&wakes]() { ++wakes; });
+        QObject::connect(&running, &InstanceGuard::filesArrived, [&told]() { ++told; });
         // Each second start on a thread of its own, as in a process of its
         // own, while this thread's event loop, the first Monolist's, hears
         // it. True when it was answered, and so ends.
-        const auto secondStart = [&folder](bool wake) {
+        const auto secondStart = [&folder](bool wake, const QStringList &files = {}) {
             bool first = true;
             bool answered = false;
-            QThread *start = QThread::create([&folder, wake, &first, &answered]() {
-                InstanceGuard guard(folder, wake);
+            QThread *start = QThread::create([&folder, wake, &files, &first, &answered]() {
+                InstanceGuard guard(folder, wake, files);
                 first = guard.first();
                 answered = guard.answered();
             });
@@ -201,8 +205,48 @@ int runStartupSelfTest()
                 QStringLiteral("a start at sign-in finding Monolist open: answered, its window left alone"),
                 QStringLiteral("wakes %1").arg(wakes));
         const bool opened = secondStart(true);
-        t.check(opened && wakes == 1, QStringLiteral("  any other second start brings the window forward"),
-                QStringLiteral("wakes %1").arg(wakes));
+        t.check(opened && wakes == 1 && told == 0, QStringLiteral("  any other second start brings the window forward"),
+                QStringLiteral("wakes %1, files told %2").arg(wakes).arg(told));
+
+        // Files opened with Monolist: a second start's (Open With on
+        // Windows), and the system's (the Finder on a Mac), each heard whole
+        // and in their order, and said once for several.
+        const QStringList given = {
+            QDir(folder).filePath(QStringLiteral("Kevin MacLeod - Monkeys Spinning Monkeys [LrM_Y39Gmhk].opus")),
+            QDir(folder).filePath(QStringLiteral("Sigur Rós — Hoppípolla (ä, 1).ogg"))
+        };
+        const bool handed = secondStart(true, given);
+        const QStringList heard = running.takeFiles();
+        t.check(handed && wakes == 2 && told == 1 && heard == given,
+                QStringLiteral("a second start given files hands them to the first, whole and in order, and brings it forward"),
+                QStringLiteral("wakes %1, told %2 times: %3").arg(wakes).arg(told).arg(heard.join(QStringLiteral(" | "))));
+        for (const QString &file : given) {
+            QFileOpenEvent open(file);
+            QCoreApplication::sendEvent(QCoreApplication::instance(), &open);
+        }
+        settle(100);
+        const QStringList sent = running.takeFiles();
+        t.check(told == 2 && sent == given && wakes == 2,
+                QStringLiteral("  the system's open-file events: kept until taken, told once for several"),
+                QStringLiteral("told %1 times: %2").arg(told).arg(sent.join(QStringLiteral(" | "))));
+        const bool quiet = secondStart(false);
+        t.check(quiet && wakes == 2 && told == 2 && running.takeFiles().isEmpty(),
+                QStringLiteral("  a start at sign-in after them still leaves it alone"),
+                QStringLiteral("wakes %1, told %2").arg(wakes).arg(told));
+
+        // The command line: files only from a start given files alone, so a
+        // file a self-test is handed is never played.
+        QFile song(given.first());
+        song.open(QIODevice::WriteOnly);
+        song.write("OggS");
+        song.close();
+        const QString program = QCoreApplication::applicationFilePath();
+        const QString missing = QDir(folder).filePath(QStringLiteral("not here.opus"));
+        t.check(InstanceGuard::filesIn({ program, given.first() }) == QStringList{ given.first() }
+                    && InstanceGuard::filesIn({ program }).isEmpty()
+                    && InstanceGuard::filesIn({ program, QStringLiteral("--shot"), given.first() }).isEmpty()
+                    && InstanceGuard::filesIn({ program, given.first(), missing }).isEmpty(),
+                QStringLiteral("files on the command line: only from a start given nothing but files"));
     }
 
 #ifdef Q_OS_WIN

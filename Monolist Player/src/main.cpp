@@ -216,12 +216,16 @@ int main(int argc, char *argv[])
     // One Monolist a library (InstanceGuard): a second start on the same
     // data folder brings the first one's window forward, and ends. A start
     // at sign-in (--login, Startup) that finds it open leaves it as it is:
-    // the user opened it first, and it stays wherever they put it.
+    // the user opened it first, and it stays wherever they put it. A start
+    // given files to play (Open With on Windows) hands them to the first.
     const bool atSignIn = app.arguments().contains(QStringLiteral("--login"));
-    InstanceGuard instance(QFileInfo(AppDatabase::databaseFilePath()).absolutePath(), !atSignIn);
+    const QStringList filesGiven = atSignIn ? QStringList() : InstanceGuard::filesIn(app.arguments());
+    InstanceGuard instance(QFileInfo(AppDatabase::databaseFilePath()).absolutePath(), !atSignIn, filesGiven);
     if (!instance.first() && instance.answered()) {
         if (atSignIn)
             qWarning("Monolist: already open on this library; a start at sign-in leaves it as it is");
+        else if (!filesGiven.isEmpty())
+            qWarning("Monolist: already open on this library; %d file(s) handed to it", int(filesGiven.size()));
         else
             qWarning("Monolist: already open on this library; its window was brought forward");
         return 0;
@@ -1001,6 +1005,19 @@ int main(int argc, char *argv[])
             QMetaObject::invokeMethod(window, "enterMini");
         });
         QObject::connect(&instance, &InstanceGuard::wakeRequested, window, [bringBack]() { bringBack(false); });
+        // Files opened with Monolist (InstanceGuard): a double-click in the
+        // Finder, Open With, a file dropped on the Dock icon, the command
+        // line, a second start's. Played at once, in front, whatever was
+        // playing or loaded as the launch opened.
+        const auto playOpened = [&instance, &player, bringBack]() {
+            const QStringList files = instance.takeFiles();
+            if (files.isEmpty())
+                return;
+            player.playFiles(files);
+            bringBack(false);
+        };
+        QObject::connect(&instance, &InstanceGuard::filesArrived, window, playOpened);
+        playOpened();
         // A damaged library put back from its backup, or begun afresh: said
         // once the window is up.
         if (!AppDatabase::recoveryNote().isEmpty()) {
