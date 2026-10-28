@@ -47,7 +47,8 @@ ScrollPage {
     readonly property bool personal: Catalog.personalFeed
 
     // — the songs just heard (JustPlayed) —
-    // The rows as shown: JustPlayed.rows when last taken (commitSession).
+    // The rows as shown: JustPlayed.rows when last taken (commitSession), as
+    // values of their own (rowsNow).
     property var sessionShown: []
     // JustPlayed has rows not taken yet, held while the reader was on them.
     property bool sessionPending: false
@@ -113,6 +114,17 @@ ScrollPage {
         return null
     }
 
+    // JustPlayed's rows now, copied into values of their own. A row read
+    // from the property is not one: Qt (6.9 on) reads it as "row i of
+    // JustPlayed.rows", looked up again whenever it is read, so a row kept in
+    // the copy shown became JustPlayed's next row i with nothing told. The
+    // shelves went on drawing the rows last taken, a press looked its row up
+    // in the new ones and played nothing, and the next commit found the new
+    // rows already shown and never drew them (2026-10-27).
+    function rowsNow() {
+        return JustPlayed.enabled ? JSON.parse(JSON.stringify(JustPlayed.rows)) : []
+    }
+
     // JustPlayed's rows taken as the ones shown, unless the reader is on
     // them (`force`: a visit, where nothing is being read yet). Below them,
     // the page moves by what changed above, in the same frame, so what is in
@@ -125,7 +137,7 @@ ScrollPage {
         }
         sessionPending = false
         sessionTurnedDown = false
-        const rows = JustPlayed.enabled ? JustPlayed.rows : []
+        const rows = rowsNow()
         const next = []
         let same = rows.length === sessionShown.length
         for (let i = 0; i < rows.length; ++i) {
@@ -215,32 +227,32 @@ ScrollPage {
         onTriggered: root.tryCommit()
     }
 
-    // A session card plays its row, as shown, from that card on.
-    function playSessionRow(key, index) {
-        for (let r = 0; r < sessionShown.length; ++r) {
-            const row = sessionShown[r]
-            if (row.key !== key)
-                continue
-            const tracks = []
-            for (let i = 0; i < row.items.length; ++i) {
-                const card = row.items[i]
-                tracks.push({
-                    sourceId: card.videoId,
-                    title: card.title,
-                    artist: card.artist ? card.artist : card.subtitle,
-                    album: card.album ? card.album : "",
-                    albumId: card.albumId ? card.albumId : "",
-                    credits: card.credits ? card.credits : [],
-                    artwork: card.artwork,
-                    durationMs: card.durationMs ? card.durationMs : 0,
-                    isVideo: card.type === "video",
-                    primaryArtist: card.primaryArtist ? card.primaryArtist : ""
-                })
-            }
-            if (tracks.length > 0)
-                Player.playTracks(tracks, Math.max(0, Math.min(tracks.length - 1, index)), "home")
-            return
+    // A session card plays the row its shelf draws (`row`, handed over with
+    // the press, never looked up again), from that card on: what plays is
+    // what the reader pressed. A card that is not where it says in that row
+    // plays alone, never nothing.
+    function playSessionRow(row, pressed) {
+        const items = row && row.items ? row.items : []
+        const index = pressed.rowIndex
+        const inRow = index >= 0 && index < items.length && items[index].videoId === pressed.videoId
+        const cards = inRow ? items : [pressed]
+        const tracks = []
+        for (let i = 0; i < cards.length; ++i) {
+            const card = cards[i]
+            tracks.push({
+                sourceId: card.videoId,
+                title: card.title,
+                artist: card.artist ? card.artist : card.subtitle,
+                album: card.album ? card.album : "",
+                albumId: card.albumId ? card.albumId : "",
+                credits: card.credits ? card.credits : [],
+                artwork: card.artwork,
+                durationMs: card.durationMs ? card.durationMs : 0,
+                isVideo: card.type === "video",
+                primaryArtist: card.primaryArtist ? card.primaryArtist : ""
+            })
         }
+        Player.playTracks(tracks, inRow ? index : 0, "home")
     }
 
     // — the filter —
@@ -475,10 +487,9 @@ ScrollPage {
         function onHomeMoreChanged() { Qt.callLater(root.askForMore) }
     }
 
+    // (A session card plays its shelf's row: SessionShelf, playSessionRow.)
     function openCard(card) {
-        if (card.rowKey !== undefined)
-            root.playSessionRow(card.rowKey, card.rowIndex)
-        else if (card.quickIndex !== undefined)
+        if (card.quickIndex !== undefined)
             Player.playModel(Catalog.quickPicks, card.quickIndex, "home")
         else if (card.type === "album" || card.type === "playlist")
             pageRequested(card.browseId)
@@ -615,7 +626,7 @@ ScrollPage {
             title: slot.row !== null ? slot.row.title : ""
             items: slot.row !== null ? root.cardsFor(slot.row.items) : []
             origin: "home"
-            onCardActivated: function(card) { root.openCard(card) }
+            onCardActivated: function(card) { root.playSessionRow(slot.row, card) }
         }
     }
 

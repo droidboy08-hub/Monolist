@@ -250,6 +250,17 @@ owner's iPhone app (AryaMusix / "Mediano", Swift, not in this repo).
   Library.playlists) is taken out of the menu inside its own click, with the
   connection that closes the menus: they stayed open. Act after the click
   (Qt.callLater).
+- 2026-10-27, lists read from C++ (Qt 6.9 on, so the Mac's 6.12 and
+  Windows' 6.11 alike): an element read from a QVariantList property
+  (`JustPlayed.rows[i]`) is not a value but "element i of that property",
+  read again whenever it is read. Kept in a JS array, an object's field or a
+  closure, it turns into the property's next element i with nothing told;
+  assigned to a `var` property or passed through a signal it is detached.
+  Home's just-played rows kept them in `sessionShown`: the shelves went on
+  drawing old cards, a press looked its row up in the new ones and played
+  nothing (the owner's "Home cards don't play after a playlist"). Copy before
+  keeping (`JSON.parse(JSON.stringify(...))`), and have a press act on what
+  its delegate draws, never on a lookup in another copy.
 - 2026-10-24, frame rate on the Mac: the app as shipped runs Qt's threaded
   render loop and draws at the display's rate (8 ms frames at 120 Hz while
   scrolling). QSG_RENDER_LOOP=basic (a test setting) caps animations at
