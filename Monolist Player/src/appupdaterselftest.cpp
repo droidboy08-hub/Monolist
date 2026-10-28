@@ -1327,7 +1327,13 @@ void checkMac(Checks &c, const QString &scratch, StandIn &stand, QNetworkAccessM
             const QString blocker = MacUpdate::blockerFor(point + QStringLiteral("/Monolist.app"));
             c.check(blocker.contains(QLatin1String("disk image")),
                     QStringLiteral("nor one running from a disk image"), blocker);
-            runCommand(QStringLiteral("/usr/bin/hdiutil"), { QStringLiteral("detach"), device });
+            // As the update lets go of it (AppUpdater::detachImage): forced
+            // when macOS still holds the volume (Spotlight reading a freshly
+            // mounted image kept it busy once, and the image left attached
+            // failed the checks after it too).
+            if (runCommand(QStringLiteral("/usr/bin/hdiutil"), { QStringLiteral("detach"), device }).code != 0)
+                runCommand(QStringLiteral("/usr/bin/hdiutil"), { QStringLiteral("detach"), QStringLiteral("-force"),
+                                                                 device });
             c.check(!imageAttached(images + QStringLiteral("/mac-new.dmg")),
                     QStringLiteral("an image is let go of by its device"));
         }
