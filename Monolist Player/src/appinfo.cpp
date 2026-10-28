@@ -21,15 +21,26 @@
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QProcess>
+#include <QRegularExpression>
 #include <QSqlQuery>
 #include <QStandardPaths>
 #include <QTimer>
 #include <QUrl>
 #include <QVariantMap>
 
+#include <utility>
+
 namespace {
 
 constexpr int kFeedTimeoutMs = 10000;
+// A press that comes this soon after the button changed what it does is the
+// second half of a double-click (Button sends clicked for each), not a
+// choice: UPDATE then at once CANCEL, say.
+constexpr qint64 kSecondPressMs = 500;
+// How long a launch waits for the update's helper to finish its word before
+// saying what came of it: the helper waits up to a minute for the new copy.
+constexpr int kHelperWaitTries = 45;
+constexpr int kHelperWaitStepMs = 2000;
 // A tool that will not answer --version in this long is not going to. Nothing
 // waits on the answer, so this can be generous: yt-dlp is a Python program,
 // and started cold under x64 emulation it has taken several seconds.
@@ -100,14 +111,48 @@ AppInfo::AppInfo(QObject *parent)
 #endif
 }
 
+namespace {
+
+// MONOLIST_TEST_VERSION: the version this copy takes itself for, for the
+// in-app update's end-to-end tests (one build playing an older one); with a
+// scratch library (MONOLIST_DATA_DIR) only. Read once, at launch, and taken
+// out of the environment, so that nothing this copy starts (the update's
+// helper, the setup, the Monolist it starts again) inherits it.
+QString &testVersion()
+{
+    static QString version = []() {
+        QString given = qEnvironmentVariable("MONOLIST_TEST_VERSION").trimmed();
+        qunsetenv("MONOLIST_TEST_VERSION");
+        static const QRegularExpression shape(QStringLiteral("^[0-9]+(\\.[0-9]+)+$"));
+        if (qEnvironmentVariableIsEmpty("MONOLIST_DATA_DIR") || !shape.match(given).hasMatch())
+            given.clear();
+        else
+            qWarning("Monolist: taking this copy for %s (MONOLIST_TEST_VERSION, a test's)", qPrintable(given));
+        return given;
+    }();
+    return version;
+}
+
+} // namespace
+
+void AppInfo::readTestVersion()
+{
+    testVersion();
+}
+
+bool AppInfo::testVersionGiven()
+{
+    return !testVersion().isEmpty();
+}
+
 QString AppInfo::currentRelease()
 {
-    return QStringLiteral(MONOLIST_VERSION "." MONOLIST_BUILD_NUMBER);
+    return testVersionGiven() ? testVersion() : QStringLiteral(MONOLIST_VERSION "." MONOLIST_BUILD_NUMBER);
 }
 
 QString AppInfo::currentBuild()
 {
-    return QStringLiteral(MONOLIST_BUILD_NUMBER);
+    return testVersionGiven() ? testVersion().section(QLatin1Char('.'), -1) : QStringLiteral(MONOLIST_BUILD_NUMBER);
 }
 
 QString AppInfo::version() const     { return QStringLiteral(MONOLIST_VERSION); }
@@ -315,10 +360,18 @@ void AppInfo::copyReport()
 
 void AppInfo::setUpdate(int state, const QString &message, const QString &url)
 {
+    if (state != m_updateState)
+        m_updateStateSince.start();
     m_updateState = state;
     m_updateMessage = message;
-    m_updateUrl = url;
+    // The release page is only ever the project's own on GitHub.
+    m_updateUrl = url.isEmpty() ? QString() : UpdateRules::safePage(QUrl(url)).toString();
     Q_EMIT updateChanged();
+}
+
+bool AppInfo::pressTooSoon() const
+{
+    return m_updateStateSince.isValid() && m_updateStateSince.elapsed() < kSecondPressMs;
 }
 
 void AppInfo::checkForUpdate()
@@ -355,6 +408,7 @@ void AppInfo::checkForUpdate()
         m_updateReply = nullptr;
 
         if (reply->error() != QNetworkReply::NoError) {
+            m_downloadAfterCheck = false;
             setUpdate(Failed, QStringLiteral("Could not reach the release feed: %1")
                                   .arg(reply->errorString()));
             return;
@@ -364,13 +418,14 @@ void AppInfo::checkForUpdate()
         const QString tag = release.version;
         const QString page = release.page.toString();
         if (tag.isEmpty()) {
+            m_downloadAfterCheck = false;
             setUpdate(Failed, QStringLiteral("The release feed did not name a version."));
             return;
         }
 
         // Releases are tagged with the build number after the version
         // (v0.1.130), which is what tells two builds of one version apart.
-        const bool newer = compareVersions(version() + QLatin1Char('.') + buildNumber(), tag) < 0;
+        const bool newer = compareVersions(currentRelease(), tag) < 0;
 #ifdef Q_OS_MACOS
         // A release is a Mac's only once it carries a disk image for this
         // Mac's processor (release-macos.yml): until then its page has the
@@ -380,12 +435,14 @@ void AppInfo::checkForUpdate()
         for (const UpdateAsset &asset : release.assets)
             forThisMac = forThisMac || asset.name.endsWith(macImage);
         if (newer && !forThisMac) {
+            m_downloadAfterCheck = false;
             setUpdate(UpToDate, QStringLiteral("This is the newest release for a Mac (%1); %2 has no Mac "
                                                "download yet.").arg(version(), tag));
             return;
         }
 #endif
         if (!newer) {
+            m_downloadAfterCheck = false;
             setUpdate(UpToDate,
                       QStringLiteral("This is the newest release (%1).").arg(version()));
             return;
@@ -397,13 +454,19 @@ void AppInfo::checkForUpdate()
         if (!m_canUpdateInApp && !why.isEmpty())
             qInfo("update: %s is on its release page only: %s", qPrintable(tag), qPrintable(why));
         setUpdate(Available, QStringLiteral("Monolist %1 is available.").arg(tag), page);
+        // TRY AGAIN: checked afresh (a newer release may have come out since),
+        // then downloaded at once.
+        if (std::exchange(m_downloadAfterCheck, false) && m_canUpdateInApp) {
+            m_updateProgress = -1;
+            updater()->start(m_release, m_releaseFeed);
+        }
     });
 }
 
 void AppInfo::openUpdatePage()
 {
     if (!m_updateUrl.isEmpty())
-        QDesktopServices::openUrl(QUrl(m_updateUrl));
+        QDesktopServices::openUrl(UpdateRules::safePage(QUrl(m_updateUrl)));
 }
 
 AppUpdater *AppInfo::updater()
@@ -452,7 +515,16 @@ void AppInfo::followUpdater()
 
 void AppInfo::downloadUpdate()
 {
-    if (!m_release.isValid())
+    if (m_updater && m_updater->handedOver())
+        return;
+    // TRY AGAIN: the release looked for again first, as a newer one may have
+    // come out since (and after a launch there is no release in hand).
+    if (m_updateState == DownloadFailed) {
+        m_downloadAfterCheck = true;
+        checkForUpdate();
+        return;
+    }
+    if (m_updateState != Available || !m_release.isValid())
         return;
     if (!m_canUpdateInApp) {
         openUpdatePage();
@@ -464,6 +536,10 @@ void AppInfo::downloadUpdate()
 
 void AppInfo::cancelUpdate()
 {
+    // The second click of a double-click on UPDATE lands here, on the same
+    // button now saying CANCEL: not a cancel.
+    if (pressTooSoon())
+        return;
     if (m_updater && (m_updateState == Downloading || m_updateState == Preparing))
         m_updater->cancel();
 }
@@ -471,6 +547,10 @@ void AppInfo::cancelUpdate()
 void AppInfo::restartToUpdate()
 {
     if (!m_updater || m_updateState != Ready)
+        return;
+    // Once: a second press (the toast's after Settings', say) starts no
+    // second helper.
+    if (m_updater->handedOver())
         return;
     QString error;
     if (!m_updater->handOver(&error)) {
@@ -492,12 +572,25 @@ void AppInfo::showDownloadedUpdate()
 
 void AppInfo::startUpdateHousekeeping()
 {
+    // The helper of a RESTART still at work (it waits for this copy to
+    // start, then lets go of the old one): asked again in a moment, so that
+    // its word is read once it is whole.
+    if (!updater()->helperDone() && m_housekeepingTries < kHelperWaitTries) {
+        ++m_housekeepingTries;
+        QTimer::singleShot(kHelperWaitStepMs, this, &AppInfo::startUpdateHousekeeping);
+        return;
+    }
     bool ok = true;
-    const QString said = updater()->housekeeping(&ok);
+    QString to;
+    const QString said = updater()->housekeeping(&ok, &to);
     if (said.isEmpty())
         return;
-    if (!ok)
-        setUpdate(Failed, said);
+    // Said as the download's failures are, with TRY AGAIN (which looks for
+    // the release again) and the release page beside it.
+    if (!ok && m_updateState != Working && !updater()->busy())
+        setUpdate(DownloadFailed, said,
+                  QStringLiteral("https://github.com/%1/releases/tag/v%2")
+                      .arg(QLatin1String(UpdateRules::kRepository), to));
     Q_EMIT notice(said);
 }
 

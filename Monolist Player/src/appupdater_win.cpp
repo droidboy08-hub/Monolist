@@ -10,7 +10,8 @@
 //
 // The Windows builds are not code-signed. What vouches for a download here
 // is that it came over HTTPS from GitHub and matched the SHA-256 published
-// beside it (AppUpdater); there is no signature to check.
+// beside it (AppUpdater), checked again by the helper just before it runs a
+// setup; there is no signature to check.
 #ifdef Q_OS_WIN
 
 #include <QCoreApplication>
@@ -18,7 +19,6 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QProcess>
-#include <QSettings>
 
 #include <windows.h>
 
@@ -26,8 +26,8 @@ namespace {
 
 // Where the setup records itself (packaging/monolist.iss, AppId); never
 // changes.
-const QString kUninstallKey = QStringLiteral(
-    "\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{8E0B6F4A-5C2D-4B7E-9A31-6D2F0C8E4B19}_is1");
+const wchar_t kUninstallKey[] =
+    L"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{8E0B6F4A-5C2D-4B7E-9A31-6D2F0C8E4B19}_is1";
 constexpr int kUnpackTimeoutMs = 10 * 60 * 1000;
 
 QString native(const QString &path)
@@ -35,10 +35,29 @@ QString native(const QString &path)
     return QDir::toNativeSeparators(path);
 }
 
-QString installLocation(const QString &hive)
+// The setup's InstallLocation in one hive and view, read only: the key is
+// opened, never made (QSettings would make an empty one, and Inno Setup
+// takes any key there for an installation of this user's).
+QString installLocation(HKEY hive, REGSAM view)
 {
-    const QSettings key(hive + kUninstallKey, QSettings::NativeFormat);
-    return key.value(QStringLiteral("InstallLocation")).toString();
+    HKEY key = nullptr;
+    if (RegOpenKeyExW(hive, kUninstallKey, 0, KEY_QUERY_VALUE | view, &key) != ERROR_SUCCESS)
+        return {};
+    wchar_t buffer[2048];
+    DWORD size = sizeof(buffer);
+    const LSTATUS status = RegGetValueW(key, nullptr, L"InstallLocation", RRF_RT_REG_SZ, nullptr, buffer, &size);
+    RegCloseKey(key);
+    if (status != ERROR_SUCCESS || size < sizeof(wchar_t))
+        return {};
+    return QString::fromWCharArray(buffer, int(size / sizeof(wchar_t)) - 1);
+}
+
+QString allUsersLocation()
+{
+    // The setup runs in 64-bit mode (monolist.iss), so its key is in the
+    // 64-bit view; an older 32-bit one would have written the other.
+    const QString wide = installLocation(HKEY_LOCAL_MACHINE, KEY_WOW64_64KEY);
+    return wide.isEmpty() ? installLocation(HKEY_LOCAL_MACHINE, KEY_WOW64_32KEY) : wide;
 }
 
 QString powerShell()
@@ -60,14 +79,23 @@ param(
     [string] $Result = '',
     [string] $Zip = '',
     [string] $Setup = '',
+    [string] $Sha256 = '',
     [switch] $AllUsers,
     [string] $Staged = '',
     [string] $Aside = '',
+    [string] $Started = '',
     [int] $WaitPid = 0,
-    [int] $TimeoutSeconds = 60
+    [int] $TimeoutSeconds = 60,
+    [int] $StartSeconds = 60,
+    [int] $SetupMinutes = 30
 )
 
 $ErrorActionPreference = 'Stop'
+
+# Never in Monolist's folder: a process's current folder cannot be renamed.
+if ($Result) {
+    try { [IO.Directory]::SetCurrentDirectory((Split-Path -Parent $Result)) } catch { }
+}
 
 if ($Mode -eq 'unzip') {
     try {
@@ -81,11 +109,29 @@ if ($Mode -eq 'unzip') {
 }
 
 function Say([string] $text) {
-    [IO.File]::WriteAllText($Result, $text + "`n")
+    $temp = $Result + '.tmp'
+    [IO.File]::WriteAllText($temp, $text + "`n")
+    Move-Item -LiteralPath $temp -Destination $Result -Force
 }
 
 function Start-Monolist([string] $folder) {
-    Start-Process -FilePath (Join-Path $folder 'monolist.exe') -WorkingDirectory $folder | Out-Null
+    return Start-Process -FilePath (Join-Path $folder 'monolist.exe') -WorkingDirectory $folder -PassThru
+}
+
+# Whether the Monolist just started got going: its word ($Started), or still
+# running, or ended of itself (exit code 0), when the time is up. Only one
+# that ended with an error and left no word did not.
+function Test-Started($process) {
+    $deadline = (Get-Date).AddSeconds($StartSeconds)
+    while ((Get-Date) -lt $deadline) {
+        if ($Started -and (Test-Path -LiteralPath $Started)) { return $true }
+        if ($process.HasExited) {
+            if ($Started -and (Test-Path -LiteralPath $Started)) { return $true }
+            return ($process.ExitCode -eq 0)
+        }
+        Start-Sleep -Milliseconds 200
+    }
+    return $true
 }
 
 # A folder renamed, tried for a while: an antivirus reading the files just
@@ -100,6 +146,25 @@ function Move-Folder([string] $from, [string] $to) {
         }
     }
     return $false
+}
+
+# Whether the old folder holds anything the new one does not: a file of the
+# user's, or one the old package had and the new one drops; or a link to
+# somewhere else (a junction), never followed. Such a folder is kept, never
+# deleted.
+function Test-Leftovers([string] $old, [string] $new) {
+    try {
+        $links = @(Get-ChildItem -LiteralPath $old -Recurse -Force -Attributes ReparsePoint -ErrorAction Stop)
+        if ($links.Count -gt 0) { return $true }
+        $prefix = $old.TrimEnd('\') + '\'
+        foreach ($file in (Get-ChildItem -LiteralPath $old -Recurse -Force -File -ErrorAction Stop)) {
+            $relative = $file.FullName.Substring($prefix.Length)
+            if (-not (Test-Path -LiteralPath (Join-Path $new $relative) -PathType Leaf)) { return $true }
+        }
+        return $false
+    } catch {
+        return $true
+    }
 }
 
 # Until Monolist has quit.
@@ -118,19 +183,38 @@ if ($Mode -eq 'setup') {
     $arguments = @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/CLOSEAPPLICATIONS',
                    ('/DIR="' + $App + '"'), '/RELAUNCH')
     if ($AllUsers) { $arguments += '/ALLUSERS' } else { $arguments += '/CURRENTUSER' }
+    $hold = $null
     try {
-        $process = Start-Process -FilePath $Setup -ArgumentList $arguments -PassThru
+        # Read once more just before it runs, and held, so that nothing can
+        # change it in between: the file run is the one that matched.
+        $hold = [IO.File]::Open($Setup, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
+        $hasher = [Security.Cryptography.SHA256]::Create()
+        $got = ([BitConverter]::ToString($hasher.ComputeHash($hold))).Replace('-', '').ToLowerInvariant()
+        if ($Sha256 -and $got -ne $Sha256.ToLowerInvariant()) {
+            $hold.Dispose()
+            Say 'failed: the installer had changed since it was checked, so it was not run.'
+            Start-Monolist $App | Out-Null
+            exit 1
+        }
+        $process = Start-Process -FilePath $Setup -ArgumentList $arguments -WorkingDirectory (Split-Path -Parent $Setup) -PassThru
         $null = $process.Handle
-        $process.WaitForExit()
+        if (-not $process.WaitForExit($SetupMinutes * 60 * 1000)) {
+            $hold.Dispose()
+            Say 'failed: the installer did not finish in time (was Windows asking for permission?), so Monolist was started again as it was.'
+            Start-Monolist $App | Out-Null
+            exit 1
+        }
         $code = $process.ExitCode
+        $hold.Dispose()
     } catch {
+        if ($hold) { $hold.Dispose() }
         Say ('failed: the installer could not be started (' + $_.Exception.Message + '), so nothing was changed.')
-        Start-Monolist $App
+        Start-Monolist $App | Out-Null
         exit 1
     }
     if ($code -ne 0) {
         Say ('failed: the installer stopped (code ' + $code + ') and left this copy as it was.')
-        Start-Monolist $App
+        Start-Monolist $App | Out-Null
         exit 1
     }
     Say 'ok'
@@ -140,36 +224,45 @@ if ($Mode -eq 'setup') {
 # A portable copy: its folder swapped for the new one, with a way back.
 if (-not (Test-Path -LiteralPath (Join-Path $Staged 'monolist.exe'))) {
     Say 'failed: the new Monolist was not where it was left, so nothing was changed.'
-    Start-Monolist $App
+    Start-Monolist $App | Out-Null
     exit 1
 }
 if (-not (Move-Folder $App $Aside)) {
     Say 'failed: the folder of this copy was in use, so nothing was changed.'
-    Start-Monolist $App
+    Start-Monolist $App | Out-Null
     exit 1
 }
 if (-not (Move-Folder $Staged $App)) {
     if (Move-Folder $Aside $App) {
         Say 'failed: the new Monolist could not be put in place, so the one you had is back.'
-        Start-Monolist $App
+        Start-Monolist $App | Out-Null
     } else {
         Say ('failed: the new Monolist could not be put in place, and the one you had is at ' + $Aside + '.')
     }
     exit 1
 }
+# (PowerShell's names ignore case: $Started is the word's file.)
+$wentOn = $false
 try {
-    Start-Monolist $App
+    $wentOn = Test-Started (Start-Monolist $App)
 } catch {
+    $wentOn = $false
+}
+if (-not $wentOn) {
     if ((Move-Folder $App $Staged) -and (Move-Folder $Aside $App)) {
         Say 'failed: the new Monolist would not start, so the one you had is back.'
-        Start-Monolist $App
+        Start-Monolist $App | Out-Null
     } else {
         Say ('failed: the new Monolist would not start, and the one you had is at ' + $Aside + '.')
     }
     exit 1
 }
-Say 'ok'
-Remove-Item -LiteralPath $Aside -Recurse -Force -ErrorAction SilentlyContinue
+if (Test-Leftovers $Aside $App) {
+    Say ("ok`nkept: " + $Aside)
+} else {
+    Say 'ok'
+    Remove-Item -LiteralPath $Aside -Recurse -Force -ErrorAction SilentlyContinue
+}
 $root = Split-Path -Parent $Staged
 if ((Test-Path -LiteralPath $root) -and -not (Get-ChildItem -LiteralPath $root -Force)) {
     Remove-Item -LiteralPath $root -Force -ErrorAction SilentlyContinue
@@ -183,7 +276,7 @@ QString writeHelper(const QString &folder, QString *error)
     const QString script = QDir(folder).filePath(AppUpdater::helperFileName());
     QFile file(script);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate) || file.write(AppUpdater::helperScript()) < 0) {
-        *error = QStringLiteral("Monolist could not write in %1").arg(native(folder));
+        *error = QStringLiteral("Monolist could not write on this computer's disk");
         return {};
     }
     return script;
@@ -205,13 +298,38 @@ void withoutWindow(QProcess &process)
     });
 }
 
+// The zip unpacked beside this copy, left by a crash or a failed swap:
+// nothing in it but the zip's own folder.
+bool isUnpackedZip(const QString &folder)
+{
+    const QFileInfoList entries = QDir(folder).entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden);
+    for (const QFileInfo &entry : entries) {
+        if (!entry.isDir() || entry.isSymLink() || !QFileInfo::exists(QDir(entry.filePath()).filePath(QStringLiteral("monolist.exe"))))
+            return false;
+    }
+    return true;
+}
+
 } // namespace
 
 UpdateTarget AppUpdater::describeThisCopy()
 {
-    return WinUpdate::describeFolder(QCoreApplication::applicationDirPath(),
-                                     installLocation(QStringLiteral("HKEY_CURRENT_USER")),
-                                     installLocation(QStringLiteral("HKEY_LOCAL_MACHINE")));
+    // Compared as the folders they are, whichever way written: a short
+    // (8.3) name, a junction or a subst drive in one and not the other.
+    const auto real = [](const QString &path) {
+        const QString canonical = path.isEmpty() ? QString() : QFileInfo(path).canonicalFilePath();
+        return canonical.isEmpty() ? path : canonical;
+    };
+    const QString mine = installLocation(HKEY_CURRENT_USER, KEY_WOW64_64KEY);
+    const QString everyone = allUsersLocation();
+    UpdateTarget target = WinUpdate::describeFolder(real(QCoreApplication::applicationDirPath()), real(mine),
+                                                    real(everyone), userFolders());
+    // The setup is given the folder as it recorded it.
+    if (target.kind == UpdateTarget::WindowsSetup) {
+        const QString recorded = target.allUsers ? everyone : mine;
+        target.path = QDir::cleanPath(QString(recorded).replace(QLatin1Char('\\'), QLatin1Char('/')));
+    }
+    return target;
 }
 
 QString AppUpdater::helperFileName()
@@ -238,13 +356,13 @@ void AppUpdater::stagePlatform()
     m_stagingRoot = QDir(app.absolutePath()).filePath(app.fileName() + QStringLiteral(".update"));
     QDir(m_stagingRoot).removeRecursively();
     if (!QDir().mkpath(m_stagingRoot)) {
-        fail(QStringLiteral("Monolist could not make a folder beside this copy (%1).").arg(native(m_stagingRoot)));
+        fail(QStringLiteral("Monolist could not make a folder beside this copy for the update."), m_stagingRoot);
         return;
     }
     QString error;
     const QString script = writeHelper(workDirectory(), &error);
     if (script.isEmpty()) {
-        fail(error + QLatin1Char('.'));
+        fail(error + QLatin1Char('.'), workDirectory());
         return;
     }
     run(powerShell(),
@@ -252,8 +370,8 @@ void AppUpdater::stagePlatform()
                             << native(m_file) << QStringLiteral("-Staged") << native(m_stagingRoot),
         kUnpackTimeoutMs, [this, version](int code, const QByteArray &, const QByteArray &err) {
             if (code != 0) {
-                fail(QStringLiteral("The zip of Monolist %1 could not be unpacked: %2")
-                         .arg(version, QString::fromLocal8Bit(err).trimmed().section(QLatin1Char('\n'), 0, 0)));
+                fail(QStringLiteral("The zip of Monolist %1 could not be unpacked beside this copy.").arg(version),
+                     QString::fromLocal8Bit(err).trimmed().section(QLatin1Char('\n'), 0, 0));
                 return;
             }
             // The zip's one folder ("Monolist"), whatever it is called.
@@ -265,8 +383,8 @@ void AppUpdater::stagePlatform()
                 }
             }
             if (staged.isEmpty()) {
-                fail(QStringLiteral("The zip of Monolist %1 has no monolist.exe in it, so nothing was changed.")
-                         .arg(version));
+                reject(QStringLiteral("The zip of Monolist %1 has no monolist.exe in it, so nothing was changed.")
+                           .arg(version));
                 return;
             }
             m_staged = staged;
@@ -290,18 +408,37 @@ void AppUpdater::stopPlatform()
     m_staged.clear();
 }
 
+void AppUpdater::markDownloaded()
+{
+}
+
+void AppUpdater::clearPlatformLeftovers()
+{
+    // The zip a crash, or a swap that did not go in, left unpacked beside a
+    // portable copy. Never a copy put aside (".old-…"): one kept is kept
+    // because it holds the user's files.
+    const QString app = m_targetKnown ? m_target.path : QCoreApplication::applicationDirPath();
+    const QString unpacked = app + QStringLiteral(".update");
+    if (QFileInfo(unpacked).isDir() && isUnpackedZip(unpacked))
+        QDir(unpacked).removeRecursively();
+}
+
 bool AppUpdater::launchHelper(QString *error)
 {
     const QString script = writeHelper(workDirectory(), error);
     if (script.isEmpty())
         return false;
     const qint64 pid = m_helper.pid > 0 ? m_helper.pid : QCoreApplication::applicationPid();
+    const QDir work(workDirectory());
     QStringList arguments = helperStart(script);
     arguments << QStringLiteral("-WaitPid") << QString::number(pid) << QStringLiteral("-App") << native(m_target.path)
-              << QStringLiteral("-Result") << native(QDir(workDirectory()).filePath(QStringLiteral("result.txt")))
-              << QStringLiteral("-TimeoutSeconds") << QString::number(qMax(1, m_helper.timeoutSeconds));
+              << QStringLiteral("-Result") << native(work.filePath(QStringLiteral("result.txt")))
+              << QStringLiteral("-Started") << native(work.filePath(QStringLiteral("started")))
+              << QStringLiteral("-TimeoutSeconds") << QString::number(qMax(1, m_helper.timeoutSeconds))
+              << QStringLiteral("-StartSeconds") << QString::number(qMax(1, m_helper.startSeconds));
     if (m_target.kind == UpdateTarget::WindowsSetup) {
-        arguments << QStringLiteral("-Mode") << QStringLiteral("setup") << QStringLiteral("-Setup") << native(m_staged);
+        arguments << QStringLiteral("-Mode") << QStringLiteral("setup") << QStringLiteral("-Setup") << native(m_staged)
+                  << QStringLiteral("-Sha256") << m_expectedSha;
         if (m_target.allUsers)
             arguments << QStringLiteral("-AllUsers");
     } else {
@@ -316,6 +453,9 @@ bool AppUpdater::launchHelper(QString *error)
     QProcess helper;
     helper.setProgram(powerShell());
     helper.setArguments(arguments);
+    // Started in the updates folder, never in Monolist's own, which it
+    // would hold: Windows cannot rename a folder a process is in.
+    helper.setWorkingDirectory(workDirectory());
     withoutWindow(helper);
     if (m_helper.wait) {
         helper.start();
@@ -335,7 +475,7 @@ bool AppUpdater::launchHelper(QString *error)
 
 void AppUpdater::showDownloaded()
 {
-    if (m_file.isEmpty())
+    if (m_file.isEmpty() || m_phase != Manual)
         return;
     QProcess explorer;
     explorer.setProgram(QStringLiteral("explorer.exe"));

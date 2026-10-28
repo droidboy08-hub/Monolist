@@ -4,6 +4,7 @@
 
 #include <QByteArray>
 #include <QString>
+#include <QStringList>
 #include <QVariantMap>
 
 // The Mac's part of the in-app update (appupdater_mac.mm), named here for
@@ -36,5 +37,29 @@ QVariantMap bundleInfo(const QString &bundle);
 // nothing of it was mounted.
 QString mountPointFrom(const QByteArray &plist);
 QString deviceFrom(const QByteArray &plist);
+// From `hdiutil info -plist`: the devices of the images attached from a
+// file under `folder` (a launch lets go of those a crash left).
+QStringList devicesAttachedFrom(const QByteArray &plist, const QString &folder);
+
+// Whether macOS has the file marked as downloaded (com.apple.quarantine),
+// so that Gatekeeper checks what comes out of it.
+bool isQuarantined(const QString &path);
+
+// The helper's first argument after --update-swap: what this build's
+// helper understands. The arguments are a contract within one build only:
+// the running Monolist starts its own program as the helper.
+inline constexpr char kSwapProtocol[] = "1";
+
+// --update-swap: this program, run by the Monolist that is updating (its
+// own executable, signed by the same developer as the app it replaces, as
+// macOS's App Management asks of whatever changes a notarised app), once
+// that Monolist has quit: waits for it to end, checks the new app's
+// signature once more, swaps old for new with a way back, registers the new
+// one with LaunchServices, opens it, waits for it to start, and only then
+// deletes the old one. Its arguments, after the flag:
+//   protocol  pid  app  new  aside  lsregister  opener  result  started
+//   quitSeconds  startSeconds  requirement  NAME=value...
+// Called from main() before anything else; returns the exit code.
+int runSwapHelper(int argc, char **argv);
 
 } // namespace MacUpdate

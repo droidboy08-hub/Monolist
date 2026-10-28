@@ -1997,25 +1997,33 @@ ScrollPage {
 
             // One button, saying what a press does now: CHECK; UPDATE (GET IT,
             // the release page, for a copy that cannot update itself); CANCEL
-            // while it downloads; RESTART once it is ready; TRY AGAIN after a
-            // failure; SHOW, for a copy that has to be replaced by hand.
+            // while it downloads and while it is checked; RESTART once it is
+            // ready; TRY AGAIN after a failure (which looks for the release
+            // again); SHOW, for a copy that has to be replaced by hand.
             ActionButton {
                 id: checkButton
+                // When the button last changed what it does. A press within
+                // half a second of that is the second click of a double-click
+                // on what it did before (UPDATE, then at once CANCEL), and is
+                // let go.
+                property double changedAt: 0
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
                 text: About.readyToRestart ? "RESTART"
-                      : About.downloading ? "CANCEL"
-                      : About.preparing ? "CHECKING…"
+                      : About.downloading || About.preparing ? "CANCEL"
                       : About.updateFailed ? "TRY AGAIN"
                       : About.manualUpdate ? "SHOW"
                       : About.updateAvailable ? (About.canUpdateInApp ? "UPDATE" : "GET IT")
                       : "CHECK"
+                onTextChanged: changedAt = Date.now()
                 primary: About.updateAvailable || About.readyToRestart
-                enabled: !About.checking && !About.preparing
+                enabled: !About.checking
                 onClicked: {
+                    if (Date.now() - changedAt < 500)
+                        return
                     if (About.readyToRestart)
                         About.restartToUpdate()
-                    else if (About.downloading)
+                    else if (About.downloading || About.preparing)
                         About.cancelUpdate()
                     else if (About.manualUpdate)
                         About.showDownloadedUpdate()

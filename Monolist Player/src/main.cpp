@@ -94,6 +94,7 @@
 #include "macos/menubar.h"
 #include "macos/oggselftest.h"
 #include "macos/toolstore.h"
+#include "macos/appupdater_mac.h"
 #endif
 #ifdef Q_OS_WIN
 #include "winmediasession.h"
@@ -115,6 +116,18 @@ int main(int argc, char *argv[])
             return runFakeYtDlp(core.arguments());
         }
     }
+#ifdef Q_OS_MACOS
+    // --update-swap ...: this program as the in-app update's helper, started
+    // by the Monolist that is updating, which then quits (AppUpdater,
+    // macos/appupdater_mac.mm): puts the new Monolist.app in place of the old
+    // and opens it. First, before any application object, window, library
+    // or tool: it is a helper, not Monolist.
+    if (argc > 1 && qstrcmp(argv[1], "--update-swap") == 0)
+        return MacUpdate::runSwapHelper(argc, argv);
+#endif
+    // A test's stand-in version (MONOLIST_TEST_VERSION), taken before this
+    // copy starts anything that could inherit it.
+    AppInfo::readTestVersion();
 
 #ifdef Q_OS_WIN
     // Direct3D's copy swap chain, not Qt's default flip one. A flip swap chain
@@ -1045,9 +1058,12 @@ int main(int argc, char *argv[])
         };
         QObject::connect(&instance, &InstanceGuard::filesArrived, window, playOpened);
         playOpened();
-        // What the last RESTART for an update came to ("Monolist is now
-        // 0.1.191", or why the old copy is still the one running), said once
-        // the window is up; and the update's leftovers cleared away.
+        // The word the update's helper waits for after a RESTART: this copy
+        // started, as far as its window. Then what that RESTART came to
+        // ("Monolist is now 0.1.191", or why the old copy is still the one
+        // running), said a moment later; and the update's leftovers cleared
+        // away.
+        AppUpdater::noteStarted();
         if (updateDemoFlag < 0)
             QTimer::singleShot(3000, &appInfo, [&appInfo]() { appInfo.startUpdateHousekeeping(); });
         // A damaged library put back from its backup, or begun afresh: said

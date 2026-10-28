@@ -166,6 +166,11 @@ public:
     // test run with a scratch database never writes to the real Music folder;
     // otherwise <Music>/Monolist.
     static QString chooseDirectory();
+    // Where downloads are written now, as a DownloadManager made now would
+    // have it: the folder chosen in Settings, unless MONOLIST_DOWNLOAD_DIR
+    // names one; else chooseDirectory(). For the in-app update, which never
+    // moves a folder holding it (AppUpdater::userFolders).
+    static QString currentDirectory();
 
     // The names of the files in `directory` that belong to `videoId`: every
     // file a download writes carries "[<video id>]." in its name. Taken as a

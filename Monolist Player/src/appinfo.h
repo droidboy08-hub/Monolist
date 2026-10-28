@@ -2,6 +2,7 @@
 
 #include <QHash>
 #include <QList>
+#include <QElapsedTimer>
 #include <QObject>
 #include <QPointer>
 #include <QString>
@@ -133,9 +134,14 @@ public:
     // than `right`: "1.2.10" after "1.2.9", "2026.08.19.1" after "2026.08.19".
     static int compareVersions(const QString &left, const QString &right);
 
-    // This build as releases are tagged ("0.1.191"), and its build number.
+    // This build as releases are tagged ("0.1.191"), and its build number;
+    // a test's stand-in (MONOLIST_TEST_VERSION, scratch libraries only) when
+    // one was given. readTestVersion() takes it at launch, before anything
+    // is started that could inherit it.
     static QString currentRelease();
     static QString currentBuild();
+    static void readTestVersion();
+    static bool testVersionGiven();
 
     // The in-app update's own machinery, made on first use; for the test.
     AppUpdater *updater();
@@ -202,6 +208,7 @@ Q_SIGNALS:
 private:
     void setUpdate(int state, const QString &message, const QString &url = {});
     void followUpdater();
+    bool pressTooSoon() const;
     void setTools(int state, const QString &message);
     // Starts one tool's --version; its first line lands in m_versionAnswers
     // under `tool`, or nothing when it cannot be run or does not answer.
@@ -235,6 +242,11 @@ private:
     QUrl m_releaseFeed;
     bool m_canUpdateInApp = false;
     AppUpdater *m_updater = nullptr;
+    // When the update's state last changed: the button's meaning with it.
+    QElapsedTimer m_updateStateSince;
+    // TRY AGAIN asked for a fresh check, to download what it finds.
+    bool m_downloadAfterCheck = false;
+    int m_housekeepingTries = 0;
 
     int m_toolsState = Idle;
     QString m_toolsMessage;

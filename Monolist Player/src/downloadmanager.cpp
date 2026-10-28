@@ -1102,6 +1102,18 @@ void DownloadManager::removePartialFiles(const QString &videoId)
     removeLeftovers(m_directory, videoId, before, m_stored.value(videoId));
 }
 
+QString DownloadManager::currentDirectory()
+{
+    if (qEnvironmentVariable("MONOLIST_DOWNLOAD_DIR").isEmpty()) {
+        QSqlQuery query(AppDatabase::connection());
+        query.prepare(QStringLiteral("SELECT value FROM settings WHERE key = ?"));
+        query.addBindValue(kDirectoryKey);
+        if (query.exec() && query.next() && !query.value(0).toString().isEmpty())
+            return QDir::cleanPath(query.value(0).toString());
+    }
+    return chooseDirectory();
+}
+
 QString DownloadManager::chooseDirectory()
 {
     // Named outright: for a test, or for keeping downloads somewhere else.

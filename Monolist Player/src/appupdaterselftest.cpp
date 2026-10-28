@@ -421,42 +421,94 @@ void checkRules(Checks &c)
     c.check(UpdateRules::choose(oddNames, windows, arch).file.isNull(),
             QStringLiteral("a -dirty zip is never taken"));
 
-    // Where a download may come from.
+    // Where a download may come from: the project's release files on
+    // github.com, and GitHub's two download hosts as places it redirects to.
     const QUrl github(QStringLiteral("https://api.github.com/repos/droidboy08-hub/Monolist/releases/latest"));
     const QUrl loopback(QStringLiteral("http://127.0.0.1:8123/feed"));
     struct Case {
         const char *url;
         const QUrl *feed;
+        bool redirect;
         bool allowed;
     };
     const Case cases[] = {
-        { "https://github.com/droidboy08-hub/Monolist/releases/download/v1/x.dmg", &github, true },
-        { "https://objects.githubusercontent.com/github-production-release-asset/1/2", &github, true },
-        { "https://release-assets.githubusercontent.com/github-production-release-asset/1/2", &github, true },
-        { "HTTPS://GitHub.com/x", &github, true },
-        { "http://github.com/droidboy08-hub/Monolist/releases/download/v1/x.dmg", &github, false },
-        { "https://github.com:8443/x", &github, false },
-        { "https://user:secret@github.com/x", &github, false },
-        { "https://example.com/x.dmg", &github, false },
-        { "https://githubusercontent.com.example.com/x", &github, false },
-        { "https://evilgithubusercontent.com/x", &github, false },
-        { "https://github.com.example.com/x", &github, false },
-        { "ftp://github.com/x", &github, false },
-        { "http://127.0.0.1:8123/files/x", &github, false },
-        { "http://127.0.0.1:8123/files/x", &loopback, true },
-        { "http://localhost:9/x", &loopback, true },
-        { "http://[::1]:9/x", &loopback, true },
-        { "http://example.com/x", &loopback, false },
-        { "https://github.com/x", &loopback, true },
+        { "https://github.com/droidboy08-hub/Monolist/releases/download/v1/x.dmg", &github, false, true },
+        { "HTTPS://GitHub.com/droidboy08-hub/monolist/releases/download/v1/x.dmg", &github, false, true },
+        { "https://github.com/droidboy08-hub/Monolist/releases/download/v1/x.dmg", &github, true, true },
+        { "https://objects.githubusercontent.com/github-production-release-asset/1/2", &github, true, true },
+        { "https://release-assets.githubusercontent.com/github-production-release-asset/1/2", &github, true, true },
+        { "https://objects.githubusercontent.com/github-production-release-asset/1/2", &github, false, false },
+        { "https://raw.githubusercontent.com/droidboy08-hub/Monolist/main/x.dmg", &github, true, false },
+        { "https://gist.githubusercontent.com/someone/1/raw/x.dmg", &github, true, false },
+        { "https://user-images.githubusercontent.com/1/x.dmg", &github, true, false },
+        { "https://github.com/someone/else/releases/download/v1/x.dmg", &github, false, false },
+        { "https://github.com/someone/else/releases/download/v1/x.dmg", &github, true, false },
+        { "https://github.com/droidboy08-hub/Monolist/releases/download/../../../someone/x.dmg", &github, false, false },
+        { "https://github.com/droidboy08-hub/Monolist/raw/main/x.dmg", &github, false, false },
+        { "https://github.com/x", &github, false, false },
+        { "http://github.com/droidboy08-hub/Monolist/releases/download/v1/x.dmg", &github, false, false },
+        { "https://github.com:8443/droidboy08-hub/Monolist/releases/download/v1/x.dmg", &github, false, false },
+        { "https://user:secret@github.com/droidboy08-hub/Monolist/releases/download/v1/x.dmg", &github, false, false },
+        { "https://example.com/x.dmg", &github, false, false },
+        { "https://githubusercontent.com.example.com/x", &github, true, false },
+        { "https://evilgithubusercontent.com/x", &github, true, false },
+        { "https://github.com.example.com/droidboy08-hub/Monolist/releases/download/v1/x", &github, false, false },
+        { "ftp://github.com/droidboy08-hub/Monolist/releases/download/v1/x", &github, false, false },
+        { "http://127.0.0.1:8123/files/x", &github, false, false },
+        { "http://127.0.0.1:8123/files/x", &loopback, false, true },
+        { "http://127.0.0.1:8123/files/x", &loopback, true, true },
+        { "http://localhost:9/x", &loopback, false, true },
+        { "http://[::1]:9/x", &loopback, false, true },
+        { "http://example.com/x", &loopback, false, false },
+        { "https://github.com/droidboy08-hub/Monolist/releases/download/v1/x", &loopback, false, true },
     };
     for (const Case &test : cases) {
-        const bool allowed = UpdateRules::allowedSource(QUrl(QString::fromLatin1(test.url)), *test.feed);
+        const bool allowed = UpdateRules::allowedSource(QUrl(QString::fromLatin1(test.url)), *test.feed,
+                                                        test.redirect);
         c.check(allowed == test.allowed,
-                QStringLiteral("%1 %2 (feed %3)")
-                    .arg(QString::fromLatin1(test.url), test.allowed ? QStringLiteral("allowed")
-                                                                     : QStringLiteral("refused"),
-                         test.feed == &github ? QStringLiteral("GitHub") : QStringLiteral("loopback")));
+                QStringLiteral("%1 %2 (feed %3, %4)")
+                    .arg(QString::fromLatin1(test.url),
+                         test.allowed ? QStringLiteral("allowed") : QStringLiteral("refused"),
+                         test.feed == &github ? QStringLiteral("GitHub") : QStringLiteral("loopback"),
+                         test.redirect ? QStringLiteral("as a redirect") : QStringLiteral("as the link")));
     }
+    // This computer's stand-in only for a scratch library: a feed setting
+    // left behind in a real one never opens it.
+    {
+        const QByteArray scratch = qgetenv("MONOLIST_DATA_DIR");
+        qunsetenv("MONOLIST_DATA_DIR");
+        const bool allowed = UpdateRules::allowedSource(QUrl(QStringLiteral("http://127.0.0.1:8123/files/x")),
+                                                        loopback);
+        qputenv("MONOLIST_DATA_DIR", scratch);
+        c.check(!allowed, QStringLiteral("a stand-in on this computer is refused without a scratch library"));
+    }
+
+    // The release page: GitHub's, the project's, or its list of releases.
+    const QString releases = QStringLiteral("https://github.com/droidboy08-hub/Monolist/releases");
+    c.check(UpdateRules::safePage(QUrl(QStringLiteral("https://github.com/droidboy08-hub/Monolist/releases/tag/v1")))
+                    .toString() == QStringLiteral("https://github.com/droidboy08-hub/Monolist/releases/tag/v1")
+                && UpdateRules::safePage(QUrl(QStringLiteral("https://example.com/x"))).toString() == releases
+                && UpdateRules::safePage(QUrl(QStringLiteral("javascript:alert(1)"))).toString() == releases
+                && UpdateRules::safePage(QUrl(QStringLiteral("https://github.com/someone/else"))).toString()
+                       == releases
+                && UpdateRules::safePage(QUrl(QStringLiteral("http://github.com/droidboy08-hub/Monolist/x")))
+                           .toString() == releases,
+            QStringLiteral("the release page is only ever the project's on GitHub"));
+    UpdateRelease oddPage = full;
+    oddPage.page = QUrl(QStringLiteral("file:///etc/passwd"));
+    c.check(UpdateRules::parseRelease(feedJson(oddPage)).page.toString() == releases,
+            QStringLiteral("a feed's release page elsewhere is replaced by the list of releases"));
+
+    // Links as they may be written down, and how much may arrive.
+    c.check(UpdateRules::withoutQuery(QStringLiteral(
+                "Error transferring https://release-assets.githubusercontent.com/a/b?sp=r&sig=SECRET&jwt=x.y.z - "
+                "server replied: Forbidden"))
+                == QStringLiteral("Error transferring https://release-assets.githubusercontent.com/a/b - server "
+                                  "replied: Forbidden"),
+            QStringLiteral("a link's signed query is left out of what is logged"));
+    c.check(UpdateRules::sizeLimit(1000) == 1000 + 1024 * 1024
+                && UpdateRules::sizeLimit(0) == qint64(1024) * 1024 * 1024,
+            QStringLiteral("a download may be a little over what the feed says, or 1 GB when it says nothing"));
 
     // Checksum files.
     const QString hex = QStringLiteral("ab12").repeated(16);
@@ -500,6 +552,28 @@ void checkWindowsFolders(Checks &c, const QString &scratch)
     target = WinUpdate::describeFolder(package, QStringLiteral("C:\\Elsewhere"), package);
     c.check(target.kind == UpdateTarget::WindowsSetup && target.allUsers,
             QStringLiteral("the folder everyone's uninstall key names is the setup's, for all users"));
+    // The user's own folders inside it: never swapped.
+    target = WinUpdate::describeFolder(package, QString(), QString(),
+                                       { QStringLiteral("C:/Users/A/Music/Monolist"),
+                                         QDir(package).filePath(QStringLiteral("Downloads")) });
+    c.check(target.kind == UpdateTarget::WindowsPortable && target.blocker.contains(QLatin1String("your downloads")),
+            QStringLiteral("a portable copy whose folder holds the downloads is not swapped"), target.blocker);
+    target = WinUpdate::describeFolder(package, QString(), QString(), { package });
+    c.check(!target.blocker.isEmpty(), QStringLiteral("nor one that is the library's folder itself"));
+    target = WinUpdate::describeFolder(package, QString(), QString(),
+                                       { package + QStringLiteral("2/library"), QStringLiteral("C:/Elsewhere") });
+    c.check(target.blocker.isEmpty(), QStringLiteral("folders beside it, or elsewhere, do not count"),
+            target.blocker);
+    c.check(WinUpdate::isWithin(QStringLiteral("C:\\Apps\\Monolist\\music"), QStringLiteral("c:/apps/monolist/"))
+                && WinUpdate::isWithin(QStringLiteral("C:/Apps/Monolist"), QStringLiteral("C:/Apps/Monolist"))
+                && !WinUpdate::isWithin(QStringLiteral("C:/Apps/Monolist2"), QStringLiteral("C:/Apps/Monolist"))
+                && !WinUpdate::isWithin(QString(), QStringLiteral("C:/Apps")),
+            QStringLiteral("inside a folder, whatever the case and slashes; not one beside it"));
+    writeFile(package + QStringLiteral("/unins000.exe"), "MZ");
+    target = WinUpdate::describeFolder(package, QStringLiteral("C:\\Elsewhere"), QString());
+    c.check(target.kind == UpdateTarget::Unsupported,
+            QStringLiteral("a folder the setup made, that no uninstall key names, is never taken for a portable one"));
+    QFile::remove(package + QStringLiteral("/unins000.exe"));
     writeFile(package + QStringLiteral("/CMakeCache.txt"), "CMAKE");
     target = WinUpdate::describeFolder(package, QString(), QString());
     c.check(target.kind == UpdateTarget::Unsupported,
@@ -726,6 +800,42 @@ void checkDownloads(Checks &c, const QString &scratch, StandIn &stand, QNetworkA
                 QStringLiteral("a download cut short fails and leaves nothing"), describe(*updater));
     }
 
+    // More than the feed said the file is: stopped before it can fill the
+    // disk, and deleted.
+    {
+        StandIn::Answer big;
+        big.body = good.data;
+        stand.routes.insert("/big/" + name.toLatin1(), big);
+        auto updater = fresh(QStringLiteral("big"));
+        updater->start(servedRelease(stand, "/good", name, 1024 * 1024, "/big"), feed);
+        waitUntil([&]() { return settled(*updater); }, 30000);
+        c.check(updater->phase() == AppUpdater::Failed && updater->message().contains(QLatin1String("bigger than"))
+                    && QDir(updater->workDirectory()).entryList(QDir::Files).isEmpty(),
+                QStringLiteral("a download bigger than the feed said is stopped and deleted"), describe(*updater));
+    }
+
+    // A launch's cleanup while a download is under way (UPDATE pressed in
+    // the first seconds): the download is left alone.
+    {
+        StandIn::Answer slow;
+        slow.body = good.data;
+        slow.chunk = 128 * 1024;
+        slow.delayMs = 40;
+        stand.routes.insert("/during/" + name.toLatin1(), slow);
+        auto updater = fresh(QStringLiteral("during"));
+        updater->start(servedRelease(stand, "/good", name, good.data.size(), "/during"), feed);
+        const QString part = QDir(updater->workDirectory()).filePath(name + QStringLiteral(".part"));
+        waitUntil([&]() { return updater->percent() >= 10; }, 20000);
+        const QString said = updater->housekeeping();
+        const bool partKept = QFileInfo::exists(part);
+        waitUntil([&]() { return settled(*updater); }, 30000);
+        c.check(said.isEmpty() && partKept && updater->phase() == AppUpdater::Ready,
+                QStringLiteral("a launch's cleanup during a download leaves it to finish"), describe(*updater));
+        updater->housekeeping();
+        c.check(QFileInfo::exists(updater->downloadedFile()),
+                QStringLiteral("nor clears one that is ready to go in"));
+    }
+
     // Cancelled, and quit, part way.
     {
         StandIn::Answer slow;
@@ -831,7 +941,14 @@ void checkAbout(Checks &c, const QString &scratch, StandIn &stand)
         info.checkForUpdate();
         waitUntil([&]() { return !info.checking(); }, 15000);
         info.downloadUpdate();
-        waitUntil([&]() { return info.downloading() && info.updateProgress() >= 5; }, 20000);
+        // A double-click on UPDATE: its second click lands on CANCEL.
+        info.cancelUpdate();
+        c.check(info.downloading(), QStringLiteral("a CANCEL a moment after UPDATE (a double-click) is not a cancel"),
+                info.updateMessage());
+        QElapsedTimer since;
+        since.start();
+        waitUntil([&]() { return info.downloading() && info.updateProgress() >= 5 && since.elapsed() > 700; },
+                  20000);
         const bool wasDownloading = info.downloading()
                                     && info.updateMessage().startsWith(QStringLiteral("Downloading Monolist %1… ")
                                                                            .arg(kVersion))
@@ -839,6 +956,60 @@ void checkAbout(Checks &c, const QString &scratch, StandIn &stand)
         info.cancelUpdate();
         c.check(wasDownloading && info.updateAvailable() && info.canUpdateInApp(),
                 QStringLiteral("CANCEL goes back to UPDATE"), info.updateMessage());
+    }
+    {
+        // TRY AGAIN looks for the release again, then downloads it: here the
+        // checksum is wrong the first time, and put right before the second.
+        const QString retryName = name;
+        serve(stand, "/retry", retryName, good.data, sha256Of("not the file"));
+        UpdateRelease retry = servedRelease(stand, "/retry", retryName, good.data.size());
+        retry.assets << asset(image, stand.url("/about/" + image.toLatin1()));
+        StandIn::Answer answer;
+        answer.body = feedJson(retry);
+        stand.routes.insert("/feed-retry", answer);
+        AppInfo::setUpdateFeed(stand.url("/feed-retry"));
+        AppInfo info;
+        info.updater()->setTarget(setup);
+        info.updater()->setDirectory(QDir(scratch).filePath(QStringLiteral("updates-about-retry")));
+        info.checkForUpdate();
+        waitUntil([&]() { return !info.checking(); }, 15000);
+        info.downloadUpdate();
+        waitUntil([&]() { return info.updateFailed() || info.readyToRestart(); }, 30000);
+        const bool failedFirst = info.updateFailed() && !info.updateUrl().isEmpty();
+        serve(stand, "/retry", retryName, good.data, good.sha);
+        const int feeds = stand.count("/feed-retry");
+        info.downloadUpdate();
+        waitUntil([&]() { return info.readyToRestart() || (info.updateFailed() && stand.count("/feed-retry") > feeds); },
+                  30000);
+        c.check(failedFirst && info.readyToRestart() && stand.count("/feed-retry") == feeds + 1,
+                QStringLiteral("TRY AGAIN checks for the release again, then downloads it"), info.updateMessage());
+    }
+    {
+        // What a launch says of a RESTART that did not go in: said as a
+        // failure, with TRY AGAIN and the release's page; and not before the
+        // helper has left its word.
+        const QString work = QDir(scratch).filePath(QStringLiteral("updates-about-launch"));
+        QDir(work).removeRecursively();
+        AppInfo info;
+        info.updater()->setDirectory(work);
+        writeFile(QDir(work).filePath(QStringLiteral("pending.json")),
+                  QJsonDocument(QJsonObject{ { QStringLiteral("from"), QStringLiteral("0.0.1") },
+                                             { QStringLiteral("to"), kVersion } })
+                      .toJson());
+        QString noticed;
+        QObject::connect(&info, &AppInfo::notice, &info, [&noticed](const QString &text) { noticed = text; });
+        info.startUpdateHousekeeping();
+        const bool waited = noticed.isEmpty() && QFileInfo::exists(QDir(work).filePath(QStringLiteral("pending.json")));
+        writeFile(QDir(work).filePath(QStringLiteral("result.txt")),
+                  "failed: the new Monolist did not start, so the one you had is back.\n");
+        waitUntil([&]() { return !noticed.isEmpty(); }, 8000);
+        c.check(waited, QStringLiteral("a launch waits for the helper's word before saying anything"));
+        c.check(info.updateFailed() && info.updateMessage().contains(QLatin1String("did not start"))
+                    && info.updateUrl() == QStringLiteral("https://github.com/droidboy08-hub/Monolist/releases/tag/v")
+                                               + kVersion
+                    && noticed == info.updateMessage(),
+                QStringLiteral("then says it did not go in, with TRY AGAIN and the release's page"),
+                info.updateMessage() + QStringLiteral(" / ") + info.updateUrl());
     }
     {
         // A copy that cannot update itself is shown the page instead.
@@ -932,12 +1103,22 @@ void checkHousekeeping(Checks &c, const QString &scratch, QNetworkAccessManager 
             QStringLiteral("a RESTART that left no word says it did not finish"), said);
 
     pending(running);
+    c.check(!updater.helperDone(), QStringLiteral("a RESTART whose helper has left no word is not done"));
     writeFile(QDir(work).filePath(QStringLiteral("result.txt")), "ok\n");
+    c.check(updater.helperDone(), QStringLiteral("and is once it has"));
     said = updater.housekeeping(&ok);
     c.check(ok && said == QStringLiteral("Monolist is now %1.").arg(running),
             QStringLiteral("a launch of the version a RESTART put in place says so"), said);
+    c.check(QString::fromUtf8(readFile(QDir(work).filePath(QStringLiteral("last.txt")))).trimmed() == said,
+            QStringLiteral("and keeps what it said, for a look afterwards"));
     said = updater.housekeeping(&ok);
     c.check(ok && said.isEmpty(), QStringLiteral("and nothing the next time"));
+
+    pending(running);
+    writeFile(QDir(work).filePath(QStringLiteral("result.txt")), "ok\nkept: C:/Apps/Monolist.old-1234\n");
+    said = updater.housekeeping(&ok);
+    c.check(ok && said.contains(QLatin1String("kept at")) && said.contains(QLatin1String("Monolist.old-1234")),
+            QStringLiteral("a portable copy's old folder kept for the files in it is said, with where"), said);
 }
 
 #ifdef Q_OS_MACOS
@@ -1001,8 +1182,11 @@ bool makeImage(const QString &bundle, const QString &image)
 
 bool imageAttached(const QString &image)
 {
+    if (image.isEmpty())
+        return false;
     const Ran info = runCommand(QStringLiteral("/usr/bin/hdiutil"), { QStringLiteral("info") });
-    return info.out.contains(QFile::encodeName(QFileInfo(image).canonicalFilePath()))
+    const QString canonical = QFileInfo(image).canonicalFilePath();
+    return (!canonical.isEmpty() && info.out.contains(QFile::encodeName(canonical)))
            || info.out.contains(QFile::encodeName(image));
 }
 
@@ -1021,12 +1205,15 @@ qint64 gone()
 }
 
 // An opener or lsregister that writes down how it was called, one line per
-// call, and answers as the file `<log>.answer` says (0 when there is none).
+// call, answers as the file `<it>.answer` says (0 when there is none), and
+// makes the file `<it>.touch` names, if there is one: the word a Monolist
+// it opened would leave once started.
 QString recorder(const QString &path)
 {
     writeFile(path, "#!/bin/sh\n"
                     "log=\"$0.log\"\n"
                     "printf '%s\\n' \"$*\" >> \"$log\"\n"
+                    "if [ -f \"$0.touch\" ]; then : > \"$(cat \"$0.touch\")\"; fi\n"
                     "if [ -f \"$0.answer\" ]; then exit \"$(cat \"$0.answer\")\"; fi\n"
                     "exit 0\n");
     QFile(path).setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
@@ -1209,11 +1396,14 @@ void checkMac(Checks &c, const QString &scratch, StandIn &stand, QNetworkAccessM
         c.check(updater.phase() == AppUpdater::Failed
                     && updater.message().contains(QString::fromLatin1(refusal.said)),
                 QString::fromLatin1(refusal.what), describe(updater));
-        c.check(!imageAttached(updater.downloadedFile()), QStringLiteral("  and its image is let go of"));
+        c.check(!imageAttached(work + QLatin1Char('/') + unsignedName)
+                    && !QFileInfo::exists(work + QLatin1Char('/') + unsignedName),
+                QStringLiteral("  and its image is let go of, and deleted"));
     }
     c.check(buildOf(installed) == QLatin1String("100"), QStringLiteral("none of that touched the copy in place"));
 
-    // A blocked copy: downloaded, for the user.
+    // A copy that cannot be replaced where it is: the download checked all
+    // the same, and only one that passes shown, marked as downloaded.
     {
         AppUpdater updater(&network);
         UpdateTarget blocked = target;
@@ -1221,32 +1411,101 @@ void checkMac(Checks &c, const QString &scratch, StandIn &stand, QNetworkAccessM
         updater.setTarget(blocked);
         updater.setDirectory(work);
         updater.start(servedRelease(stand, "/mac-new", unsignedName, 0), feed);
-        waitUntil([&]() { return settled(updater); }, 60000);
+        waitUntil([&]() { return settled(updater); }, 180000);
         c.check(updater.phase() == AppUpdater::Manual && updater.message().contains(QLatin1String("Drag Monolist"))
                     && QFileInfo::exists(updater.downloadedFile()),
-                QStringLiteral("a copy that cannot be replaced in place gets the disk image, and the words to "
-                               "drag it"), describe(updater));
+                QStringLiteral("a copy that cannot be replaced in place gets the disk image, checked, and the words "
+                               "to drag it"), describe(updater));
+        c.check(MacUpdate::isQuarantined(updater.downloadedFile()),
+                QStringLiteral("marked as downloaded, so that Gatekeeper checks what is dragged out of it"));
+        c.check(updater.stagedPath().isEmpty() && !QFileInfo::exists(work + QStringLiteral("/staged/new/Monolist.app"))
+                    && !imageAttached(updater.downloadedFile()),
+                QStringLiteral("and the copy made to check it is gone, its image let go of"));
+    }
+    {
+        AppUpdater updater(&network);
+        UpdateTarget blocked = target;
+        blocked.blocker = QStringLiteral("Monolist may not change the folder it is in");
+        blocked.developerId = true;
+        updater.setTarget(blocked);
+        updater.setDirectory(work);
+        const QString signedName = QStringLiteral("Monolist-%1-macos-%2.dmg").arg(kVersion, arch);
+        updater.start(servedRelease(stand, "/mac-signed", signedName, 0), feed);
+        waitUntil([&]() { return settled(updater); }, 180000);
+        c.check(updater.phase() == AppUpdater::Failed
+                    && updater.message().contains(QLatin1String("not signed by Monolist's developer"))
+                    && !QFileInfo::exists(work + QLatin1Char('/') + signedName),
+                QStringLiteral("nor is an image whose app is not signed as this copy is shown: it is deleted"),
+                describe(updater));
+        updater.showDownloaded();
+        c.check(updater.phase() == AppUpdater::Failed, QStringLiteral("  and SHOW has nothing to show"));
+    }
+    {
+        AppUpdater updater(&network);
+        UpdateTarget blocked = target;
+        blocked.blocker = QStringLiteral("Monolist may not change the folder it is in");
+        updater.setTarget(blocked);
+        updater.setDirectory(work);
+        updater.start(servedRelease(stand, "/mac-other", unsignedName, 0), feed);
+        waitUntil([&]() { return settled(updater); }, 180000);
+        c.check(updater.phase() == AppUpdater::Failed && updater.message().contains(QLatin1String("another app")),
+                QStringLiteral("nor one that is another app"), describe(updater));
     }
 
-    // The helper.
+    // A disk image of the update's that a crash left attached: let go of at
+    // the next launch.
+    {
+        const QString leftover = root + QStringLiteral("/leftover");
+        QDir().mkpath(leftover + QStringLiteral("/mount"));
+        const QString image = leftover + QLatin1Char('/') + unsignedName;
+        QFile::copy(images + QStringLiteral("/mac-new.dmg"), image);
+        runCommand(QStringLiteral("/usr/bin/hdiutil"),
+                   { QStringLiteral("attach"), QStringLiteral("-nobrowse"), QStringLiteral("-readonly"),
+                     QStringLiteral("-noautoopen"), QStringLiteral("-mountrandom"), leftover + QStringLiteral("/mount"),
+                     image });
+        const Ran info = runCommand(QStringLiteral("/usr/bin/hdiutil"), { QStringLiteral("info"), QStringLiteral("-plist") });
+        const QStringList devices = MacUpdate::devicesAttachedFrom(info.out, leftover);
+        const bool was = imageAttached(image);
+        AppUpdater updater(&network);
+        updater.setDirectory(leftover);
+        updater.housekeeping();
+        c.check(was && devices.size() == 1 && !imageAttached(image),
+                QStringLiteral("an image a crash left attached is let go of at the next launch"),
+                devices.join(QLatin1Char(' ')));
+        c.check(MacUpdate::devicesAttachedFrom(info.out, images).isEmpty(),
+                QStringLiteral("  and only the update's own"));
+    }
+
+    // The helper: this program, run as --update-swap.
     const QString tools = root + QStringLiteral("/tools");
     const QString opener = recorder(tools + QStringLiteral("/open"));
     const QString lsregister = recorder(tools + QStringLiteral("/lsregister"));
     const QString openerLog = opener + QStringLiteral(".log");
     const QString lsregisterLog = lsregister + QStringLiteral(".log");
-    const auto handOver = [&](AppUpdater &updater, qint64 pid, int timeout, QString *error) {
+    const QString result = work + QStringLiteral("/result.txt");
+    const QString started = work + QStringLiteral("/started");
+    const auto handOver = [&](AppUpdater &updater, qint64 pid, int timeout, QString *error, bool starts = true,
+                              int startSeconds = 2) {
         AppUpdater::HelperOptions options;
         options.pid = pid;
         options.opener = opener;
         options.lsregister = lsregister;
         options.timeoutSeconds = timeout;
+        options.startSeconds = startSeconds;
         options.wait = true;
         updater.setHelperOptions(options);
         QFile::remove(openerLog);
         QFile::remove(lsregisterLog);
-        return updater.handOver(error);
+        // The new copy, opened, leaves the word it started (as the app does
+        // once its window is up), or does not.
+        if (starts)
+            writeFile(opener + QStringLiteral(".touch"), started.toUtf8());
+        else
+            QFile::remove(opener + QStringLiteral(".touch"));
+        const bool handed = updater.handOver(error);
+        QFile::remove(opener + QStringLiteral(".touch"));
+        return handed;
     };
-    const QString result = work + QStringLiteral("/result.txt");
     const auto said = [&]() { return QString::fromUtf8(readFile(result)).trimmed(); };
 
     {
@@ -1265,7 +1524,7 @@ void checkMac(Checks &c, const QString &scratch, StandIn &stand, QNetworkAccessM
                 buildOf(installed));
         c.check(!QFileInfo::exists(work + QStringLiteral("/staged/old/Monolist.app"))
                     && !QFileInfo::exists(work + QStringLiteral("/staged/new/Monolist.app")),
-                QStringLiteral("and the old one is gone"));
+                QStringLiteral("and the old one is gone, once the new one has started"));
         c.check(log.startsWith(QStringLiteral("-n ")) && log.trimmed().endsWith(installed)
                     && log.contains(QStringLiteral("--env MONOLIST_DATA_DIR=") + qEnvironmentVariable("MONOLIST_DATA_DIR")),
                 QStringLiteral("it opens the new one, as a new instance, with this library"), log.trimmed());
@@ -1275,6 +1534,14 @@ void checkMac(Checks &c, const QString &scratch, StandIn &stand, QNetworkAccessM
         c.check(pending.value(QStringLiteral("to")).toString() == kVersion
                     && pending.value(QStringLiteral("from")).toString() == AppUpdater::runningVersion(),
                 QStringLiteral("RESTART leaves word of what it was for, for the next launch"));
+        // A second RESTART: nothing more is started.
+        QFile::remove(result);
+        QString again;
+        c.check(updater.handOver(&again) && !QFileInfo::exists(result)
+                    && QString::fromUtf8(readFile(openerLog)).count(QLatin1Char('\n')) == 1,
+                QStringLiteral("a second RESTART starts no second helper"));
+        updater.cancel();
+        c.check(updater.handedOver(), QStringLiteral("  and nothing cancels one handed over"));
     }
 
     // The way back: the new app cannot be moved in (made immutable, by the
@@ -1286,9 +1553,8 @@ void checkMac(Checks &c, const QString &scratch, StandIn &stand, QNetworkAccessM
         const QString staged = updater.stagedPath();
         qputenv("MONOLIST_UPDATE_TEST_FAULT", "move-new");
         QString error;
-        const bool handed = handOver(updater, gone(), 30, &error);
+        handOver(updater, gone(), 30, &error);
         qunsetenv("MONOLIST_UPDATE_TEST_FAULT");
-        Q_UNUSED(handed);
         c.check(said().startsWith(QLatin1String("failed: the new Monolist could not be put in place, so the one you "
                                                 "had is back")),
                 QStringLiteral("when the new app cannot be moved in, the helper says so"), said());
@@ -1316,6 +1582,69 @@ void checkMac(Checks &c, const QString &scratch, StandIn &stand, QNetworkAccessM
                 QStringLiteral("registered again, the old one too"));
     }
 
+    // The way back: the new app opens, and ends before it has started (a
+    // part of it missing): the old one is kept until then, and put back.
+    {
+        makeBundle(installed, id, QStringLiteral("100"));
+        AppUpdater updater(&network);
+        prepare(updater, "/mac-new", false);
+        QString error;
+        QElapsedTimer clock;
+        clock.start();
+        handOver(updater, gone(), 30, &error, false, 1);
+        c.check(said().startsWith(QLatin1String("failed: the new Monolist did not start, so the one you had is back")),
+                QStringLiteral("when the new app does not start, the helper says so"),
+                said() + QStringLiteral(" after %1 ms").arg(clock.elapsed()));
+        c.check(buildOf(installed) == QLatin1String("100")
+                    && QString::fromUtf8(readFile(openerLog)).count(QLatin1Char('\n')) == 2,
+                QStringLiteral("and puts the old one back, and opens it"), buildOf(installed));
+    }
+
+    // Checked once more just before it goes in: changed since it was checked.
+    {
+        makeBundle(installed, id, QStringLiteral("100"));
+        AppUpdater updater(&network);
+        prepare(updater, "/mac-new", false);
+        writeFile(updater.stagedPath() + QStringLiteral("/Contents/Resources/note.txt"), "changed while it waited");
+        QString error;
+        handOver(updater, gone(), 30, &error);
+        c.check(said().startsWith(QLatin1String("failed: the new Monolist no longer passed its signature check"))
+                    && buildOf(installed) == QLatin1String("100")
+                    && QString::fromUtf8(readFile(openerLog)).trimmed().endsWith(installed),
+                QStringLiteral("a new app changed after its check is not put in place; the old one is opened again"),
+                said());
+    }
+
+    // A path that a shell would read as commands: taken as a path.
+    {
+        const QString odd = root + QStringLiteral("/a b'c $(touch PWNED) `id` \"d;e");
+        const QString oddInstalled = odd + QStringLiteral("/Monolist.app");
+        makeBundle(oddInstalled, id, QStringLiteral("100"));
+        AppUpdater updater(&network);
+        UpdateTarget wanted = MacUpdate::describeBundle(oddInstalled, false);
+        updater.setTarget(wanted);
+        const QString oddWork = odd + QStringLiteral("/updates");
+        updater.setDirectory(oddWork);
+        updater.start(servedRelease(stand, "/mac-new", unsignedName, 0), feed);
+        waitUntil([&]() { return settled(updater); }, 180000);
+        AppUpdater::HelperOptions options;
+        options.pid = gone();
+        options.opener = opener;
+        options.lsregister = lsregister;
+        options.startSeconds = 2;
+        options.wait = true;
+        updater.setHelperOptions(options);
+        writeFile(opener + QStringLiteral(".touch"), (oddWork + QStringLiteral("/started")).toUtf8());
+        QString error;
+        updater.handOver(&error);
+        QFile::remove(opener + QStringLiteral(".touch"));
+        c.check(QString::fromUtf8(readFile(oddWork + QStringLiteral("/result.txt"))).trimmed() == QLatin1String("ok")
+                    && buildOf(oddInstalled) == QLatin1String("101") && filesEnding(root, QStringLiteral("PWNED")).isEmpty()
+                    && !QFileInfo::exists(QDir::currentPath() + QStringLiteral("/PWNED")),
+                QStringLiteral("a folder named with quotes, $( ) and backticks is only ever a path"),
+                QString::fromUtf8(readFile(oddWork + QStringLiteral("/result.txt"))).trimmed());
+    }
+
     // Monolist does not quit.
     {
         makeBundle(installed, id, QStringLiteral("100"));
@@ -1336,6 +1665,13 @@ void checkMac(Checks &c, const QString &scratch, StandIn &stand, QNetworkAccessM
                 said() + QStringLiteral(" after %1 ms").arg(waited));
         QFile::remove(work + QStringLiteral("/pending.json"));
     }
+
+    // A helper given arguments of another build's: does nothing.
+    {
+        const Ran ran = runCommand(QCoreApplication::applicationFilePath(),
+                                   { QStringLiteral("--update-swap"), QStringLiteral("0"), QStringLiteral("1") });
+        c.check(ran.code == 2, QStringLiteral("the helper refuses arguments it does not know"));
+    }
 }
 
 #endif // Q_OS_MACOS
@@ -1350,14 +1686,25 @@ QString systemTool(const QString &name)
                                         .filePath(QStringLiteral("System32/") + name));
 }
 
-// A scratch portable copy: whoami.exe as its monolist.exe (it starts, says
-// who, and ends), a package's licence, and a mark of which it is.
-bool makeCopy(const QString &folder, const QByteArray &mark)
+// A scratch portable copy: `program` (whoami.exe: it starts, says who, and
+// ends) as its monolist.exe, a package's licence, and a mark of which it is.
+bool makeCopy(const QString &folder, const QByteArray &mark,
+              const QString &program = QStringLiteral("whoami.exe"))
 {
     QDir(folder).removeRecursively();
     return writeFile(folder + QStringLiteral("/LICENSES/Monolist-MIT.txt"), "MIT")
            && writeFile(folder + QStringLiteral("/") + QString::fromLatin1(mark) + QStringLiteral(".txt"), mark)
-           && QFile::copy(systemTool(QStringLiteral("whoami.exe")), folder + QStringLiteral("/monolist.exe"));
+           && QFile::copy(systemTool(program), folder + QStringLiteral("/monolist.exe"));
+}
+
+// `folder` zipped as package-windows.ps1 zips the package: its one folder.
+QByteArray zipOf(const QString &parent, const QString &folder, const QString &zip)
+{
+    QFile::remove(zip);
+    runCommand(systemTool(QStringLiteral("tar.exe")),
+               { QStringLiteral("-a"), QStringLiteral("-c"), QStringLiteral("-f"), QDir::toNativeSeparators(zip),
+                 QStringLiteral("-C"), QDir::toNativeSeparators(parent), folder });
+    return readFile(zip);
 }
 
 void checkWindows(Checks &c, const QString &scratch, StandIn &stand, QNetworkAccessManager &network)
@@ -1368,72 +1715,143 @@ void checkWindows(Checks &c, const QString &scratch, StandIn &stand, QNetworkAcc
     const UpdateTarget self = AppUpdater::describeThisCopy();
     c.note(QStringLiteral("this copy: kind %1, %2").arg(int(self.kind)).arg(self.path));
 
-    // The new copy, zipped as package-windows.ps1 zips it.
+    // The new copy, zipped as package-windows.ps1 zips it; and one whose
+    // monolist.exe ends with an error at once (findstr.exe, given nothing).
     const QString zipName = QStringLiteral("Monolist-%1-win64.zip").arg(kVersion);
-    const QString source = root + QStringLiteral("/zip/Monolist");
-    const QString zip = root + QStringLiteral("/") + zipName;
-    bool made = makeCopy(source, "new");
-    made = made && runCommand(systemTool(QStringLiteral("tar.exe")),
-                              { QStringLiteral("-a"), QStringLiteral("-c"), QStringLiteral("-f"),
-                                QDir::toNativeSeparators(zip), QStringLiteral("-C"),
-                                QDir::toNativeSeparators(root + QStringLiteral("/zip")), QStringLiteral("Monolist") })
-                           .code == 0;
-    const QByteArray zipped = readFile(zip);
+    bool made = makeCopy(root + QStringLiteral("/zip/Monolist"), "new");
+    const QByteArray zipped = zipOf(root + QStringLiteral("/zip"), QStringLiteral("Monolist"),
+                                    root + QStringLiteral("/") + zipName);
     serve(stand, "/win", zipName, zipped, sha256Of(zipped));
-    if (!c.check(made && !zipped.isEmpty(), QStringLiteral("a scratch portable copy, zipped")))
+    made = made && makeCopy(root + QStringLiteral("/broken/Monolist"), "new", QStringLiteral("findstr.exe"));
+    const QByteArray broken = zipOf(root + QStringLiteral("/broken"), QStringLiteral("Monolist"),
+                                    root + QStringLiteral("/broken.zip"));
+    serve(stand, "/winbroken", zipName, broken, sha256Of(broken));
+    if (!c.check(made && !zipped.isEmpty() && !broken.isEmpty(), QStringLiteral("scratch portable copies, zipped")))
         return;
 
-    const QString app = root + QStringLiteral("/apps/Monolist");
+    const QString app = root + QStringLiteral("/apps x/Monolist");
     const QString work = root + QStringLiteral("/updates");
     const QUrl feed(stand.url("/feed"));
-    const auto prepare = [&](AppUpdater &updater) {
+    const auto prepare = [&](AppUpdater &updater, const QByteArray &folder) {
         const UpdateTarget target = WinUpdate::describeFolder(app, QString(), QString());
         updater.setTarget(target);
         updater.setDirectory(work);
-        updater.start(servedRelease(stand, "/win", zipName, zipped.size()), feed);
+        updater.start(servedRelease(stand, folder, zipName, 0), feed);
         waitUntil([&]() { return settled(updater); }, 120000);
     };
     const QString result = work + QStringLiteral("/result.txt");
     const auto said = [&]() { return QString::fromUtf8(readFile(result)).trimmed(); };
-    const auto handOver = [&](AppUpdater &updater, QString *error) {
-        // Detached, as Monolist is to the helper.
+    // Detached, as Monolist is to the helper.
+    const auto standInMonolist = []() {
         qint64 running = 0;
         QProcess::startDetached(systemTool(QStringLiteral("PING.EXE")),
                                 { QStringLiteral("-n"), QStringLiteral("2"), QStringLiteral("127.0.0.1") }, QString(),
                                 &running);
+        return running;
+    };
+    const auto handOver = [&](AppUpdater &updater, QString *error) {
         AppUpdater::HelperOptions options;
-        options.pid = running;
+        options.pid = standInMonolist();
         options.timeoutSeconds = 30;
+        options.startSeconds = 10;
         options.wait = true;
         updater.setHelperOptions(options);
         return updater.handOver(error);
     };
+    const QDir parent(root + QStringLiteral("/apps x"));
+    const auto folders = [&]() { return parent.entryList(QDir::Dirs | QDir::NoDotAndDotDot); };
 
-    makeCopy(app, "old");
+    // Swapped, with nothing of the old folder's but what the new one has
+    // too: the old one is deleted. Started the way Monolist starts it: its
+    // current folder Monolist's own, which the helper must not keep.
+    makeCopy(app, "new");
     {
         AppUpdater updater(&network);
-        prepare(updater);
+        prepare(updater, "/win");
         c.check(updater.phase() == AppUpdater::Ready
                     && QFileInfo::exists(updater.stagedPath() + QStringLiteral("/monolist.exe"))
                     && QFileInfo::exists(updater.stagedPath() + QStringLiteral("/new.txt")),
                 QStringLiteral("a portable copy's zip is unpacked beside it, ready"), describe(updater));
+        writeFile(app + QStringLiteral("/new.txt"), "the old copy's, to be replaced");
+        AppUpdater::HelperOptions options;
+        options.pid = standInMonolist();
+        options.timeoutSeconds = 30;
+        options.startSeconds = 10;
+        updater.setHelperOptions(options);
+        QFile::remove(result);
+        const QString was = QDir::currentPath();
+        QDir::setCurrent(app);
         QString error;
-        const bool handed = handOver(updater, &error);
-        c.check(handed && said() == QLatin1String("ok"), QStringLiteral("the helper swaps the folders"),
-                error + said());
-        c.check(QFileInfo::exists(app + QStringLiteral("/new.txt")) && !QFileInfo::exists(app + QStringLiteral("/old.txt")),
+        const bool handed = updater.handOver(&error);
+        // Monolist quits, and lets go of its folder; the helper must not
+        // have taken it over.
+        QDir::setCurrent(was);
+        waitUntil([&]() { return QFileInfo::exists(result); }, 90000);
+        c.check(handed && said() == QLatin1String("ok"),
+                QStringLiteral("the helper, started from inside Monolist's folder, swaps the folders"), error + said());
+        c.check(readFile(app + QStringLiteral("/new.txt")) == "new",
                 QStringLiteral("the new copy is in the old one's folder"));
-        QDir parent(root + QStringLiteral("/apps"));
-        c.check(parent.entryList(QDir::Dirs | QDir::NoDotAndDotDot) == QStringList{ QStringLiteral("Monolist") },
-                QStringLiteral("and the old copy, and the unpacked zip's folder, are gone"),
-                parent.entryList(QDir::Dirs | QDir::NoDotAndDotDot).join(QLatin1Char(' ')));
+        c.check(folders() == QStringList{ QStringLiteral("Monolist") },
+                QStringLiteral("and the old copy, all of whose files the new one has, is gone; the unpacked zip's "
+                               "folder too"),
+                folders().join(QLatin1Char(' ')));
+    }
+
+    // A file of the user's in the old folder (one the new copy does not
+    // have): the old folder is kept, and said where; never deleted.
+    makeCopy(app, "old");
+    writeFile(app + QStringLiteral("/My notes.txt"), "mine");
+    {
+        AppUpdater updater(&network);
+        prepare(updater, "/win");
+        QString error;
+        QFile::remove(result);
+        const bool handed = handOver(updater, &error);
+        const QString kept = QString::fromUtf8(readFile(result)).section(QLatin1Char('\n'), 1, 1).trimmed();
+        c.check(handed && said().startsWith(QLatin1String("ok")) && kept.startsWith(QLatin1String("kept: ")),
+                QStringLiteral("a swap that leaves files of the old folder behind says it kept it"), said());
+        const QString aside = kept.mid(6);
+        c.check(QFileInfo::exists(app + QStringLiteral("/new.txt"))
+                    && readFile(aside + QStringLiteral("/My notes.txt")) == "mine"
+                    && QFileInfo::exists(aside + QStringLiteral("/old.txt")),
+                QStringLiteral("the new copy is in place, and the user's file is kept, in the old folder"), aside);
+        // A launch clears a zip left unpacked, never a folder kept.
+        QDir().mkpath(app + QStringLiteral(".update/Monolist"));
+        QFile::copy(systemTool(QStringLiteral("whoami.exe")), app + QStringLiteral(".update/Monolist/monolist.exe"));
+        AppUpdater later(&network);
+        later.setTarget(WinUpdate::describeFolder(app, QString(), QString()));
+        later.setDirectory(work);
+        later.housekeeping();
+        c.check(!QFileInfo::exists(app + QStringLiteral(".update"))
+                    && QFileInfo::exists(aside + QStringLiteral("/My notes.txt")),
+                QStringLiteral("a launch clears a zip left unpacked beside it, and keeps the old folder kept"));
+        QDir(aside).removeRecursively();
+    }
+
+    // The user's downloads inside the copy's folder: never swapped; the zip
+    // downloaded for them to copy in by hand.
+    makeCopy(app, "old");
+    {
+        AppUpdater updater(&network);
+        const UpdateTarget target = WinUpdate::describeFolder(app, QString(), QString(),
+                                                              { app + QStringLiteral("/Music") });
+        updater.setTarget(target);
+        updater.setDirectory(work);
+        updater.start(servedRelease(stand, "/win", zipName, 0), feed);
+        waitUntil([&]() { return settled(updater); }, 60000);
+        c.check(updater.phase() == AppUpdater::Manual && updater.message().contains(QLatin1String("your downloads"))
+                    && updater.message().contains(QLatin1String("copy everything"))
+                    && QFileInfo::exists(app + QStringLiteral("/old.txt"))
+                    && !folders().join(QLatin1Char(' ')).contains(QLatin1String(".old-")),
+                QStringLiteral("a copy whose folder holds the downloads is not swapped; the zip is for copying in"),
+                describe(updater));
     }
 
     // The way back: the new folder held open, so it cannot be moved in.
     makeCopy(app, "old");
     {
         AppUpdater updater(&network);
-        prepare(updater);
+        prepare(updater, "/win");
         QFile held(updater.stagedPath() + QStringLiteral("/new.txt"));
         const bool holding = held.open(QIODevice::ReadOnly);
         QString error;
@@ -1444,6 +1862,21 @@ void checkWindows(Checks &c, const QString &scratch, StandIn &stand, QNetworkAcc
                 QStringLiteral("when the new folder cannot be moved in, the helper says so"), said());
         c.check(QFileInfo::exists(app + QStringLiteral("/old.txt")),
                 QStringLiteral("and the old copy is back in its folder"));
+        updater.cancel();
+    }
+
+    // The way back: the new monolist.exe ends with an error at once.
+    makeCopy(app, "old");
+    {
+        AppUpdater updater(&network);
+        prepare(updater, "/winbroken");
+        QString error;
+        handOver(updater, &error);
+        c.check(said().startsWith(QLatin1String("failed: the new Monolist would not start, so the one you had is back"))
+                    && QFileInfo::exists(app + QStringLiteral("/old.txt"))
+                    && !folders().join(QLatin1Char(' ')).contains(QLatin1String(".old-")),
+                QStringLiteral("a new copy that will not start is taken out, and the old one put back"),
+                said() + QStringLiteral(" / ") + folders().join(QLatin1Char(' ')));
         updater.cancel();
     }
 
@@ -1469,21 +1902,26 @@ void checkWindows(Checks &c, const QString &scratch, StandIn &stand, QNetworkAcc
         c.check(QFileInfo::exists(app + QStringLiteral("/old.txt")), QStringLiteral("  untouched"));
 
         // And one that works, run as the helper runs it, recording what it
-        // was given.
-        const QString fake = root + QStringLiteral("/fake-setup.cmd");
+        // was given; and one changed since it was checked, never run.
+        const QString fake = root + QStringLiteral("/fake setup.cmd");
         const QString record = root + QStringLiteral("/fake-setup.txt");
         writeFile(fake, "@echo %* > \"%~dp0fake-setup.txt\"\r\n@exit /b 0\r\n");
         const QString script = work + QStringLiteral("/") + AppUpdater::helperFileName();
         writeFile(script, AppUpdater::helperScript());
-        QFile::remove(result);
-        const Ran ran = runCommand(QStringLiteral("powershell.exe"),
-                                   { QStringLiteral("-NoProfile"), QStringLiteral("-NonInteractive"),
-                                     QStringLiteral("-ExecutionPolicy"), QStringLiteral("Bypass"),
-                                     QStringLiteral("-File"), QDir::toNativeSeparators(script),
-                                     QStringLiteral("-Mode"), QStringLiteral("setup"),
-                                     QStringLiteral("-App"), QDir::toNativeSeparators(app),
-                                     QStringLiteral("-Result"), QDir::toNativeSeparators(result),
-                                     QStringLiteral("-Setup"), QDir::toNativeSeparators(fake) });
+        const auto runSetup = [&](const QString &sha) {
+            QFile::remove(result);
+            QFile::remove(record);
+            return runCommand(QStringLiteral("powershell.exe"),
+                              { QStringLiteral("-NoProfile"), QStringLiteral("-NonInteractive"),
+                                QStringLiteral("-ExecutionPolicy"), QStringLiteral("Bypass"),
+                                QStringLiteral("-File"), QDir::toNativeSeparators(script),
+                                QStringLiteral("-Mode"), QStringLiteral("setup"),
+                                QStringLiteral("-App"), QDir::toNativeSeparators(app),
+                                QStringLiteral("-Result"), QDir::toNativeSeparators(result),
+                                QStringLiteral("-Setup"), QDir::toNativeSeparators(fake),
+                                QStringLiteral("-Sha256"), sha });
+        };
+        const Ran ran = runSetup(sha256Of(readFile(fake)));
         const QString given = QString::fromLocal8Bit(readFile(record)).trimmed();
         c.check(ran.code == 0 && said() == QLatin1String("ok"), QStringLiteral("a setup that works is reported"),
                 said() + QString::fromLocal8Bit(ran.err));
@@ -1491,7 +1929,12 @@ void checkWindows(Checks &c, const QString &scratch, StandIn &stand, QNetworkAcc
                     && given.contains(QLatin1String("/NORESTART")) && given.contains(QLatin1String("/CLOSEAPPLICATIONS"))
                     && given.contains(QLatin1String("/RELAUNCH")) && given.contains(QLatin1String("/CURRENTUSER"))
                     && given.contains(QStringLiteral("/DIR=\"") + QDir::toNativeSeparators(app) + QLatin1Char('"')),
-                QStringLiteral("the setup is given this folder, quietly, and asked to start Monolist again"), given);
+                QStringLiteral("the setup is given this folder (spaces and all), quietly, and asked to start Monolist "
+                               "again"), given);
+        runSetup(sha256Of("something else"));
+        c.check(said().startsWith(QLatin1String("failed: the installer had changed since it was checked"))
+                    && !QFileInfo::exists(record),
+                QStringLiteral("a setup changed since it was checked is never run"), said());
     }
 }
 

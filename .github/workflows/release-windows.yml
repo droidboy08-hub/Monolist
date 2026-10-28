@@ -107,6 +107,16 @@ jobs:
           }
           if ($failed.Count -gt 0) { throw "Self-tests failed: $($failed -join ', ')" }
 
+      # Monolist updating itself, for real, on this machine (never on the
+      # owner's PC): a copy installed by an older setup made from this
+      # package, one installed for everyone, and a portable one, each told it
+      # is 0.1.1 and updated through Settings' own code from a stand-in for
+      # GitHub on 127.0.0.1; the setup run quietly with /RELAUNCH, the
+      # portable folder swapped, and each new copy seen to start.
+      - name: The in-app update, end to end
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File "Monolist Player\scripts\update-e2e-windows.ps1"
+
       - name: Keep the files
         uses: actions/upload-artifact@v4
         with:
