@@ -22,6 +22,15 @@ struct DownloadOptions
     bool embedMetadata = true;   // title, artist, album, date
     bool embedArtwork = true;    // the thumbnail, cropped square, as cover art
     bool skipNonMusic = true;    // cut SponsorBlock's "music_offtopic" segments
+
+    // The song as the app names it (the list it was downloaded from, as the
+    // file is named and a JioSaavn copy is tagged), written into the tags in
+    // place of what yt-dlp reads off the video page: the video's own title
+    // ("Artist - Song (Official Video)"), the channel for the artist, and
+    // seldom an album. Each left empty keeps yt-dlp's.
+    QString title;
+    QString artist;
+    QString album;
 };
 
 // One yt-dlp invocation. Owns its QProcess and reports back through signals;

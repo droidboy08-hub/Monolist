@@ -568,7 +568,13 @@ void DownloadManager::startYtDlp(const QString &videoId)
     // Without a title the stem is left to yt-dlp, which names the file from
     // the metadata it fetches.
     const QString stem = queued->title.isEmpty() ? QString() : fileStem(videoId, queued->title, queued->artist);
-    YtDlpRequest *request = YtDlp::download(videoId, m_directory, stem, options(), this);
+    // Tagged with the names the file is named by and the library shows, as a
+    // JioSaavn copy is, rather than the video page's.
+    DownloadOptions downloadOptions = options();
+    downloadOptions.title = queued->title;
+    downloadOptions.artist = queued->artist;
+    downloadOptions.album = queued->album;
+    YtDlpRequest *request = YtDlp::download(videoId, m_directory, stem, downloadOptions, this);
     m_requests.insert(videoId, request);
 
     connect(request, &YtDlpRequest::progress, this,

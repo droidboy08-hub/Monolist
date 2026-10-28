@@ -3261,11 +3261,13 @@ int main(int argc, char *argv[])
         });
     }
 
-    // --download <videoId> [seconds]
+    // --download <videoId> [seconds] [--as "<title>" "<artist>" ["<album>"]]
     //
     // The same for the offline path: one download through yt-dlp and FFmpeg,
     // reporting progress, and quitting when the file is written, when it fails,
-    // or when the time runs out. Only on a scratch database: a finished
+    // or when the time runs out. With --as it is queued under those names, as
+    // a list in the interface queues it (named and tagged by them); without,
+    // yt-dlp names it from the video page. Only on a scratch database: a finished
     // download is written into the library (a downloads row and a tracks
     // row), and MONOLIST_DOWNLOAD_DIR alone moves the folder but not the
     // database, so the test song would stay in the real library, pointing at
@@ -3279,7 +3281,15 @@ int main(int argc, char *argv[])
             return 1;
         }
         const QString videoId = args.at(downloadFlag + 1);
-        const int seconds = (downloadFlag + 2 < args.size()) ? args.at(downloadFlag + 2).toInt() : 120;
+        const int given = (downloadFlag + 2 < args.size()) ? args.at(downloadFlag + 2).toInt() : 0;
+        const int seconds = given > 0 ? given : 120;
+        QString asTitle, asArtist, asAlbum;
+        if (const int asFlag = args.indexOf(QStringLiteral("--as")); asFlag >= 0 && asFlag + 2 < args.size()) {
+            asTitle = args.at(asFlag + 1);
+            asArtist = args.at(asFlag + 2);
+            if (asFlag + 3 < args.size() && !args.at(asFlag + 3).startsWith(QLatin1String("--")))
+                asAlbum = args.at(asFlag + 3);
+        }
 
         QObject::connect(&downloads, &DownloadManager::progressChanged, &app,
                          [](const QString &, qreal progress) {
@@ -3303,7 +3313,7 @@ int main(int argc, char *argv[])
                              QCoreApplication::exit(1);
                          });
 
-        QTimer::singleShot(500, &app, [&downloads, videoId]() {
+        QTimer::singleShot(500, &app, [&downloads, videoId, asTitle, asArtist, asAlbum]() {
             qWarning("selftest: downloading %s as %s into %s (tools: yt-dlp %s, ffmpeg %s, deno %s)",
                      qPrintable(videoId), qPrintable(downloads.format()),
                      qPrintable(downloads.downloadDirectory()),
@@ -3315,7 +3325,7 @@ int main(int argc, char *argv[])
                 QCoreApplication::quit();
                 return;
             }
-            downloads.enqueue(videoId, QString(), QString());
+            downloads.enqueue(videoId, asTitle, asArtist, QString(), 0, false, asAlbum);
         });
         QTimer::singleShot(seconds * 1000, &app, []() {
             qWarning("selftest: timed out");

@@ -123,6 +123,16 @@ bool isMarker(const QString &line)
         || line.startsWith(kMetaMarker) || line.startsWith(kFileMarker);
 }
 
+// One word as a POSIX shell quotes it, which is how yt-dlp splits a --ppa
+// value (Python's shlex.split, on Windows too): in single quotes, inside
+// which nothing is special, and each ' as '\''.
+QString shellQuoted(const QString &text)
+{
+    QString quoted = text;
+    quoted.replace(QLatin1Char('\''), QStringLiteral("'\\''"));
+    return QLatin1Char('\'') + quoted + QLatin1Char('\'');
+}
+
 } // namespace
 
 // ---------------------------------------------------------------- YtDlpRequest
@@ -770,6 +780,22 @@ YtDlpRequest *YtDlp::download(const QString &videoIdOrUrl,
         args << QStringLiteral("--embed-metadata")
              << QStringLiteral("--parse-metadata")
              << QStringLiteral("%(artist,creator,uploader|)s:^(?P<meta_artist>.+?)(?: - Topic|VEVO)?$");
+
+        // Then the names the app knows, over those. yt-dlp's Metadata step
+        // gives FFmpeg its --ppa arguments after its own -metadata, and of
+        // two for one key FFmpeg writes the last; the cover and the rest of
+        // yt-dlp's tags (date, link) stay as they were.
+        QStringList tags;
+        const auto tag = [&tags](const QString &key, const QString &value) {
+            const QString text = value.simplified();
+            if (!text.isEmpty())
+                tags << QStringLiteral("-metadata") << shellQuoted(key + QLatin1Char('=') + text);
+        };
+        tag(QStringLiteral("title"), options.title);
+        tag(QStringLiteral("artist"), options.artist);
+        tag(QStringLiteral("album"), options.album);
+        if (!tags.isEmpty())
+            args << QStringLiteral("--ppa") << QStringLiteral("Metadata+FFmpeg_o:") + tags.join(QLatin1Char(' '));
     }
 
     if (canConvert && options.embedArtwork) {

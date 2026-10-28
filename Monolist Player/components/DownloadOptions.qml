@@ -58,6 +58,11 @@ Column {
                      + "usually Opus at 130–160 kbps. Nothing is re-encoded."
                    : "The stream exactly as YouTube publishes it, usually Opus at 130–160 kbps. Nothing is "
                      + "re-encoded.")
+                  // Opus is kept in Ogg (.opus), whose tags and cover the
+                  // Finder cannot read (its Get Info and icons show none),
+                  // though they are in the file and other players show them.
+                  + (Qt.platform.os === "osx"
+                     ? " The Finder shows no tags or cover for an Opus file; M4A shows both." : "")
         wrapMode: Text.WordWrap
         font.family: Theme.fontFamily
         font.pixelSize: 12
